@@ -16,10 +16,10 @@
   transition: 0.8s;
   min-width: 0px !important;
   width: 0px;
-  margin-right: 350px;
 }
 
 .commonButtonStyle {
+  background-color: transparent;
   width: 50px;
   cursor: pointer;
   border: 0px;
@@ -29,11 +29,6 @@
   svg {
     padding: 10px;
     font-size: 20px;
-  }
-
-  &:hover {
-    background-color: rgb(215, 211, 211);
-    border-radius: 5px
   }
 }
 
