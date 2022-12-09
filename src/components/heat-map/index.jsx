@@ -12,12 +12,12 @@ const HeatMap = ({ data }) => {
           target: "inchlib",
           metadata: true,
           column_metadata: true,
-          max_height: 780,
-          width: 1000,
+          max_height: 1000,
+          width: 800,
           heatmap_colors: "Greens",
           metadata_colors: "Reds",
         });
-        window.inchlib.read_data(data);
+        window.inchlib.read_data(JSON.parse(data));
         window.inchlib.draw();
       });
     }
@@ -27,7 +27,7 @@ const HeatMap = ({ data }) => {
 };
 
 HeatMap.propTypes = {
-  data: PropTypes.object.isRequired,
+  data: PropTypes.string.isRequired,
 };
 
 export { HeatMap };

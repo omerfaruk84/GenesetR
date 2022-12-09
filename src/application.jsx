@@ -1,11 +1,13 @@
 import React from 'react';
-import { HeatMap } from './components/heat-map';
-import ExampleJson from './components/heat-map/example.json';
+import { MainView } from './components/main-view';
+import { SideBar } from './components/side-bar';
+import './global.scss';
 
 const Application = () => {
   return (
-    <div>
-      <HeatMap data={ExampleJson} />
+    <div className='application'>
+      <SideBar />
+      <MainView />
     </div>
   );
 };
