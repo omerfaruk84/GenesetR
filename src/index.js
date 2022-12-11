@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import reportWebVitals from './reportWebVitals';
 import { Application } from './application';
+import '@oliasoft-open-source/react-ui-library/dist/global.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
