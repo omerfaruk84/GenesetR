@@ -8,7 +8,7 @@ const Settings = ({
   settings,
   isAccordion,
 }) => {
-  console.log(expended);
+
   return (
     <div className={styles.settingsSection}>
       {
