@@ -1,5 +1,11 @@
+.mainView {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .page_404 {
-  width: 50%;
+  width: 30%;
   text-align: center;
   padding: 40px 0;
   background: #fff;

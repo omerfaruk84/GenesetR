@@ -1,11 +1,12 @@
 import React from 'react';
+import { useNavigate, useLocation, } from 'react-router-dom';
+import { TopBar as TopBarCmp } from '@oliasoft-open-source/react-ui-library';
 import { FaRegCopy, FaHome } from 'react-icons/fa';
-import { Link, useLocation } from 'react-router-dom';
 import { ROUTES, isActiveTab } from '../../common/routes';
-import styles from './top-bar.module.scss';
 
 const TopBar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { pathname } = location;
   const navLinks = [
     {
@@ -55,21 +56,22 @@ const TopBar = () => {
     },
   ]
   return (
-    <div className={styles.topBar}>
-      <ul>
-        {navLinks.map(({ icon, name, toLink }, key) => (
-          <li key={key}>
-            <Link
-              className={isActiveTab(pathname, toLink) ? styles.active : ''}
-              to={toLink}
-            >
-              <span>{icon()}</span>
-              {name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <TopBarCmp
+      content={
+        navLinks.map(({ icon, name, toLink }) => ({
+          icon: icon(),
+          label: name,
+          onClick: () => navigate(toLink),
+          type: 'Link',
+          active: isActiveTab(pathname, toLink),
+        }))
+      }
+      title={{
+        label: 'Perturb-Seq Analyzer',
+        onClick: () => navigate(ROUTES.HOME),
+        version: 'V0.0.1'
+      }}
+    />
   );
 };
 

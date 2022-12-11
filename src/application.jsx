@@ -8,7 +8,6 @@ const Application = () => {
   return (
     <div className='application'>
       <Router>
-        <SideBar />
         <MainView />
       </Router>
     </div>

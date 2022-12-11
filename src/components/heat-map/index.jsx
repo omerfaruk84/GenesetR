@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import $ from 'jquery';
-import InCHlib from 'biojs-vis-inchlib'
+import InCHlib from 'biojs-vis-inchlib';
+import styles from './heat-map.module.scss';
 
 const HeatMap = ({ data }) => {
   useEffect(() => {
@@ -23,7 +24,11 @@ const HeatMap = ({ data }) => {
     }
   }, [data]);
 
-  return <div id='inchlib'></div>;
+  return (
+    <div className={styles.mainView}>
+      <div id='inchlib'></div>
+    </div>
+  );
 };
 
 HeatMap.propTypes = {
