@@ -14,7 +14,7 @@ const SideBar = () => {
     <Drawer
       border
       button
-      closedWidth={20}
+      closedWidth={10}
       open
       width={sideBarWith}
       onResize={handleSideBarResize}

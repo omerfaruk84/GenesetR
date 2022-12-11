@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  BrowserRouter as Router,
   Routes,
   Route,
 } from 'react-router-dom';
@@ -15,13 +16,15 @@ import { SideBar } from '../side-bar';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
-      <TopBar />
-      <SideBar />
-      <Spacer />
-      <Routes>
-        <Route exact path={ROUTES.HEATMAP} element={<HeatMap data={ExampleJson} />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      <Router>    
+        <TopBar />
+        <SideBar />
+        <Spacer />
+        <Routes>
+          <Route exact path={ROUTES.HEATMAP} element={<HeatMap data={ExampleJson} />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
     </div>
   );
 };
