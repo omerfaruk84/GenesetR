@@ -3,6 +3,7 @@ import { useNavigate, useLocation, } from 'react-router-dom';
 import { TopBar as TopBarCmp } from '@oliasoft-open-source/react-ui-library';
 import { FaRegCopy, FaHome } from 'react-icons/fa';
 import { ROUTES, isActiveTab } from '../../common/routes';
+import { TabNames } from './enums';
 
 const TopBar = () => {
   const location = useLocation();
@@ -11,47 +12,47 @@ const TopBar = () => {
   const navLinks = [
     {
       icon: () => <FaHome />,
-      name: 'Home',
+      name: TabNames.HOME,
       toLink: ROUTES.HOME
     },
     {
       icon: () => <FaRegCopy />,
-      name: 'Correlation',
+      name: TabNames.CORRELATION,
       toLink: ROUTES.CORRELATION
     },
     {
       icon: () => '🐙',
-      name: 'PCA',
+      name: TabNames.PCA,
       toLink: ROUTES.PCA
     },
     {
       icon: () => '🐙',
-      name: 'MDE',
+      name: TabNames.MDE,
       toLink: ROUTES.MDE
     },
     {
       icon: () => '🐙',
-      name: 'UMAP',
+      name: TabNames.UMAP,
       toLink: ROUTES.UMAP
     },
     {
       icon: () => '🐙',
-      name: 'tSNE',
+      name: TabNames.TSNE,
       toLink: ROUTES.TSNE
     },
     {
       icon: () => '🐙',
-      name: 'Bi-Clustering',
+      name: TabNames.BI_CLUSTERING,
       toLink: ROUTES.BI_CLUSTERING
     },
     {
       icon: () => '🐙',
-      name: 'Gene-Regulation',
+      name: TabNames.GENE_REGULATION,
       toLink: ROUTES.GENE_REGULATION
     },
     {
       icon: () => '🗺️',
-      name: 'HeatMap',
+      name: TabNames.HEATMAP,
       toLink: ROUTES.HEATMAP
     },
   ]
