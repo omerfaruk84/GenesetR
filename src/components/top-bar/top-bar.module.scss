@@ -2,7 +2,7 @@
   background-color: blue;
   max-width: 1200px;
   height: 60px;
-  border: 1px solid green;
+  border: 2px solid blue;
   margin-top: 30px;
   ul {
     height: 100%;
@@ -21,6 +21,8 @@
       display: flex;
       align-items: center;
       a {
+        display: flex;
+        align-items: center;
         border-radius: 5px;
         font-size: 20px;
         padding: 10px;
