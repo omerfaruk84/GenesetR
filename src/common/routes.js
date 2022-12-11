@@ -1,6 +1,6 @@
 const ROUTES = Object.freeze({
   HOME: '/home',
-  GENEREGULATION: '/generegulation',
+  CORRELATION: '/correlation',
   PCA: '/pca',
   MDE: '/mde',
   UMAP: '/umap',

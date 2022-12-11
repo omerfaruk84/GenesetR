@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaHome } from 'react-icons/fa';
+import { FaRegCopy, FaHome } from 'react-icons/fa';
 import { Link, useLocation } from 'react-router-dom';
 import { ROUTES, isActiveTab } from '../../common/routes';
 import styles from './top-bar.module.scss';
@@ -14,9 +14,9 @@ const TopBar = () => {
       toLink: ROUTES.HOME
     },
     {
-      icon: () => '🐙',
-      name: 'GeneRegulation',
-      toLink: ROUTES.GENEREGULATION
+      icon: () => <FaRegCopy />,
+      name: 'Correlation',
+      toLink: ROUTES.CORRELATION
     },
     {
       icon: () => '🐙',
@@ -49,7 +49,7 @@ const TopBar = () => {
       toLink: ROUTES.GENE_REGULATION
     },
     {
-      icon: () => '🐙',
+      icon: () => '🗺️',
       name: 'HeatMap',
       toLink: ROUTES.HEATMAP
     },
