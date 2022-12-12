@@ -1,9 +1,9 @@
 ### Install the dependencies
 ```
-npm install
+yarn
 ```
 
 ### Run the application
 ```
-npm run start
+yarn run start
 ```
