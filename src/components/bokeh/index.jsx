@@ -1,20 +1,16 @@
-import React, { Component } from 'react';
-import {Button} from '@material-ui/core';
-import Axios from 'axios';
+import React from 'react';
+import { Button } from '@oliasoft-open-source/react-ui-library';
 
-// ran into this issue (hence no npm import of bokehjs):
-// https://github.com/bokeh/bokeh/issues/8197
-class Bokeh extends Component {
-  handlePlot1 = () => {
-    
-    
-    Axios.get("https://20d5-2001-700-4a01-10-00-39.eu.ngrok.io/plot1?callback=?", {
+const Bokeh = () => {
+  const handlePlot1 = () => {
+    fetch("https://20d5-2001-700-4a01-10-00-39.eu.ngrok.io/plot1?callback=?", {
       headers: {
-        'ngrok-skip-browser-warning': '69420'
-      }
-    }).then(resp => window.Bokeh.embed.embed_item(JSON.parse(resp.data), 'myplot')).catch(
-      
-      function (error) {
+        'ngrok-skip-browser-warning': '69420',
+      },
+      mode: 'no-cors'
+    })
+      .then(resp => window.Bokeh.embed.embed_item(JSON.parse(resp.data), 'myplot'))
+      .catch((error) => {
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
@@ -31,23 +27,19 @@ class Bokeh extends Component {
           console.log('Error', error.message);
         }
         console.log(error.config);
-      }
-      
-      )
-    
+      })
   }
 
-  render() {
-    return (
-      <div className="Bokeh" style={{margin: 20}}>        
-        <Button variant="contained" style={{margin: 10}} color="primary" onClick={this.handlePlot1}>
-          Get Plot
-        </Button>       
-        <div id='myplot' className="bk-root">       
-        </div>
+  return (
+    <div className="Bokeh" style={{ margin: 20 }}>
+      <Button
+        label='Get Plot'
+        onClick={handlePlot1}
+      />
+      <div id='myplot' className="bk-root">
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
 export { Bokeh };;
