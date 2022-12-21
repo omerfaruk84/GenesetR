@@ -3,6 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { ROUTES } from '../../../common/routes';
 import { Settings } from './settings';
 import { CoreSettings } from './core-settings';
+import { TsneSettings } from './tsne-settings';
+import { BiClusteringSettings } from './bi-clustering-settings';
+import { GeneRegulationSettings } from './gene-regulation-settings';
+import { HeatmapSettings } from './heatmap-settings';
 import { SettingsTypes } from './enums';
 
 const SettingsSelector = () => {
@@ -74,7 +78,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.TSNE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <TsneSettings />
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
@@ -88,13 +92,13 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.BI_CLUSTERING_SETTINGS,
-        settings: <CoreSettings />
+        settings: <BiClusteringSettings />
       },
     ],
     [ROUTES.GENE_REGULATION]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <GeneRegulationSettings />
       },
       {
         settingsName: SettingsTypes.GENE_REGULATION_SETTINGS,
@@ -114,7 +118,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.HEAT_MAP,
-        settings: <CoreSettings />
+        settings: <HeatmapSettings />
       },
     ],
   };

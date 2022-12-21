@@ -1,5 +1,5 @@
 const ROUTES = Object.freeze({
-  HOME: '/home',
+  HOME: '/',
   CORRELATION: '/correlation',
   PCA: '/pca',
   MDE: '/mde',
