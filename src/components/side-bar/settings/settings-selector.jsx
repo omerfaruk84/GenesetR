@@ -5,12 +5,15 @@ import { Settings } from './settings';
 import { CoreSettings } from './core-settings';
 import { TsneSettings } from './tsne-settings';
 import { BiClusteringSettings } from './bi-clustering-settings';
-import { GeneRegulationSettings } from './gene-regulation-settings';
+import { GeneRegulationSettings } from './gene-regulation-core-settings';
+import { GeneRegulationExtraSettings } from './gene-regulation-extra-settings';
 import { CorrelationSettings } from './correlation-settings';
 import { ClusteringSettings } from './clustering-settings';
 import { PcaSettings } from './pca-settings';
+import { UmapSettings } from './umap-settings';
 import { EmbeddingSettings } from './embedding-settings';
 import { HeatmapSettings } from './heatmap-settings';
+import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
 const SettingsSelector = () => {
@@ -68,7 +71,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.UMAP_SETTINGS,
-        settings: <CoreSettings />
+        settings: <UmapSettings />
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
@@ -106,7 +109,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.GENE_REGULATION_SETTINGS,
-        settings: <>not accordion</>,
+        settings: <GeneRegulationExtraSettings />,
         isAccordion: false,
       },
     ],
@@ -117,7 +120,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.HEAT_MAP_TARGET_GENE_LIST,
-        settings: <>not accordion</>,
+        settings: <HeatmapTargetGeneListSettings />,
         isAccordion: false,
       },
       {
