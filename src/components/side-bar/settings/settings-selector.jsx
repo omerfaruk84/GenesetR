@@ -6,6 +6,8 @@ import { CoreSettings } from './core-settings';
 import { TsneSettings } from './tsne-settings';
 import { BiClusteringSettings } from './bi-clustering-settings';
 import { GeneRegulationSettings } from './gene-regulation-settings';
+import { CorrelationSettings } from './correlation-settings';
+import { ClusteringSettings } from './clustering-settings';
 import { HeatmapSettings } from './heatmap-settings';
 import { SettingsTypes } from './enums';
 
@@ -26,7 +28,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.CORRELATION_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CorrelationSettings />
       },
     ],
     [ROUTES.PCA]: [
@@ -40,7 +42,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
-        settings: <CoreSettings />
+        settings: <ClusteringSettings />
       },
     ],
     [ROUTES.MDE]: [
@@ -54,7 +56,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
-        settings: <CoreSettings />
+        settings: <ClusteringSettings />
       },
     ],
     [ROUTES.UMAP]: [
@@ -68,7 +70,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
-        settings: <CoreSettings />
+        settings: <ClusteringSettings />
       },
     ],
     [ROUTES.TSNE]: [
@@ -82,7 +84,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
-        settings: <CoreSettings />
+        settings: <ClusteringSettings />
       },
     ],
     [ROUTES.BI_CLUSTERING]: [
