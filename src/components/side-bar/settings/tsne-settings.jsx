@@ -1,5 +1,5 @@
 import React from 'react';
-import { Field, Select, CheckBox, Text } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
@@ -23,6 +23,7 @@ const TsneSettings = () => {
           onChange={onChangetsneSource}
           options={tsneSourceOptions}
         />
+        <Spacer height={10} />
         <Text>You need to first perform PCA to use it in embeding!</Text>
       </Field>
       <Field label='Perplexity'>

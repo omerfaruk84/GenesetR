@@ -1,5 +1,5 @@
 import React from 'react';
-import { Field, Select, TextArea, Text } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 
 const CoreSettings = () => {
   const cellLineOptions = [
@@ -55,6 +55,7 @@ const CoreSettings = () => {
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
         />
+        <Spacer height={10} />
         <Text>0 genes</Text>
       </Field>
       <Field label='Graph Type'>

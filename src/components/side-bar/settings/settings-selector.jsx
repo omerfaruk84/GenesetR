@@ -8,6 +8,8 @@ import { BiClusteringSettings } from './bi-clustering-settings';
 import { GeneRegulationSettings } from './gene-regulation-settings';
 import { CorrelationSettings } from './correlation-settings';
 import { ClusteringSettings } from './clustering-settings';
+import { PcaSettings } from './pca-settings';
+import { EmbeddingSettings } from './embedding-settings';
 import { HeatmapSettings } from './heatmap-settings';
 import { SettingsTypes } from './enums';
 
@@ -38,7 +40,7 @@ const SettingsSelector = () => {
       },
       {
         settingsName: SettingsTypes.PCA_SETTINGS,
-        settings: <CoreSettings />
+        settings: <PcaSettings />
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
@@ -51,8 +53,8 @@ const SettingsSelector = () => {
         settings: <CoreSettings />
       },
       {
-        settingsName: SettingsTypes.EMBEGGING_SETTINGS,
-        settings: <CoreSettings />
+        settingsName: SettingsTypes.EMBEDDING_SETTINGS,
+        settings: <EmbeddingSettings />
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,

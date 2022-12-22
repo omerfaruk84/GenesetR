@@ -3,7 +3,7 @@ const SettingsTypes = {
   CORRELATION_SETTINGS: 'Correlation Settings',
   PCA_SETTINGS: 'PCA Settings',
   CLUSTERING_SETTINGS: 'Clustering Settings',
-  EMBEGGING_SETTINGS: 'Embedding Settings',
+  EMBEDDING_SETTINGS: 'Embedding Settings',
   UMAP_SETTINGS: 'UMAP Settings',
   TSNE_SETTINGS: 'tSNE Settings',
   BI_CLUSTERING_SETTINGS: 'biClustering Settings',
