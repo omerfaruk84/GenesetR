@@ -48,20 +48,20 @@ const CoreSettings = ({
         <Select
           onChange={onChangeCellLine}
           options={cellLineOptions}
-          value={coreSettings.cellLine}
+          value={coreSettings?.cellLine}
         />
       </Field>
       <Field label='Data Type'>
         <Select
           onChange={onChangeDataType}
           options={dataTypeOptions}
-          value={coreSettings.dataType}
+          value={coreSettings?.dataType}
         />
       </Field>
       <Field label='Perturbation list'>
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
-          value={coreSettings.peturbationList}
+          value={coreSettings?.peturbationList}
         />
         <Spacer height={10} />
         <Text>0 genes</Text>
@@ -70,13 +70,13 @@ const CoreSettings = ({
         <Select
           onChange={onChangeGraphType}
           options={graphTypeOptions}
-          value={coreSettings.graphType}
+          value={coreSettings?.graphType}
         />
       </Field>
       <Field label='Highlight Genes'>
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
-          value={coreSettings.highlightGenes}
+          value={coreSettings?.highlightGenes}
         />
       </Field>
     </>
