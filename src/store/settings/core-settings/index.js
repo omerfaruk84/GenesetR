@@ -1,11 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  cellLine: 'K562-Whole Genome',
+  cellLine: 'K562-Whole Gensome',
   dataType: 'Perturbation',
-  peturbationList: [],
+  peturbationList: '',
   graphType: '2D',
-  highlightGenes: [],
+  highlightGenes: '',
 };
 
 export const coreSettingsSlice = createSlice({
