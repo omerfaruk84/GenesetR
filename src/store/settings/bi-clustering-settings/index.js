@@ -9,12 +9,17 @@ export const biClusteringSettingsSlice = createSlice({
   name: 'biClustering',
   initialState,
   reducers: {
-    biClusteringSourceChanged: (state, action) => {
-      console.log(state, action);
-    }
+    biClusteringSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
+    },
   },
 });
 
 const biClusteringSettingsReducer = biClusteringSettingsSlice.reducer;
+
+export const {
+  biClusteringSettingsChanged,
+} = biClusteringSettingsSlice.actions;
 
 export { biClusteringSettingsReducer };

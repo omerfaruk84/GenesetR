@@ -15,12 +15,17 @@ export const clusteringSettingsSlice = createSlice({
   name: 'clustering',
   initialState,
   reducers: {
-    showLegendChanged: (state, action) => {
-      console.log(state, action);
-    }
+    clusteringSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
+    },
   },
 });
 
 const clusteringSettingsReducer = clusteringSettingsSlice.reducer;
+
+export const {
+  clusteringSettingsChanged
+} = clusteringSettingsSlice.actions;
 
 export { clusteringSettingsReducer };

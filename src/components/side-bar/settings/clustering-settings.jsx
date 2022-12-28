@@ -1,12 +1,15 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { ClusteringSettingsTypes } from './enums';
+import { clusteringSettingsChanged } from '../../../store/settings/clustering-settings';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const ClusteringSettings = ({
   clusteringSettings,
+  clusteringSettingsChanged,
 }) => {
   const clusteringMetricOptions = [
     {
@@ -21,30 +24,32 @@ const ClusteringSettings = ({
     }
   ];
 
-  const onChangeClusteringMetric = (evt) => {
-    console.log(evt);
-  }
-  const onChangeClusteringMethod = (evt) => {
-    console.log(evt);
-  }
-
   return (
     <>
       <CheckBox
         label='Show legend'
-        onChange={() => { }}
+        onChange={({ target: { checked } }) => clusteringSettingsChanged({
+          settingName: ClusteringSettingsTypes.SHOW_LEGEND,
+          newValue: checked
+        })}
         checked={clusteringSettings?.showLegend}
       />
       <Spacer height={5} />
       <CheckBox
         label='Show cluster centers'
-        onChange={() => { }}
+        onChange={({ target: { checked } }) => clusteringSettingsChanged({
+          settingName: ClusteringSettingsTypes.SHOW_CLUSTER_CENTERS,
+          newValue: checked
+        })}
         checked={clusteringSettings?.showClusterCenters}
       />
       <Spacer height={5} />
       <CheckBox
         label='Highlight clusters'
-        onChange={() => { }}
+        onChange={({ target: { checked } }) => clusteringSettingsChanged({
+          settingName: ClusteringSettingsTypes.HIGHLIGHT_CLUSTERS,
+          newValue: checked
+        })}
         checked={clusteringSettings?.highlightClusters}
       />
       <Spacer height={10} />
@@ -60,14 +65,20 @@ const ClusteringSettings = ({
       </Field>
       <Field label='Clustering Metric'>
         <Select
-          onChange={onChangeClusteringMetric}
+          onChange={({ target: { value } }) => clusteringSettingsChanged({
+            settingName: ClusteringSettingsTypes.CLUSTERING_METRIC,
+            newValue: value
+          })}
           options={clusteringMetricOptions}
           value={clusteringSettings?.clusteringMetric}
         />
       </Field>
       <Field label='Clustering Method'>
         <Select
-          onChange={onChangeClusteringMethod}
+          onChange={({ target: { value } }) => clusteringSettingsChanged({
+            settingName: ClusteringSettingsTypes.CLUSTERING_METHOD,
+            newValue: value
+          })}
           options={clusteringMethodOptions}
           value={clusteringSettings?.clusteringMethod}
         />
@@ -100,7 +111,9 @@ const mapStateToProps = ({ settings }) => ({
   clusteringSettings: settings?.clustering
 });
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  clusteringSettingsChanged
+};
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(ClusteringSettings);
 
