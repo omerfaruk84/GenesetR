@@ -46,8 +46,6 @@ const CorrelationSettings = ({
     console.log(evt);
   }
 
-  console.log(correlationSettings);
-
   return (
     <>
       <CheckBox

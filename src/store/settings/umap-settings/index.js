@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  umapSource: 'PC Data',
+  umapSource: 'PCA Data',
   dimensionCount: 2,
   minimumDistance: 0.1,
   numberOfNeighbours: 5,

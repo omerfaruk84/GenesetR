@@ -1,10 +1,13 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
-const HeatmapSettings = () => {
+const HeatmapSettings = ({
+  heatMapSettings,
+}) => {
   const linkageMethodOptions = [
     {
       label: 'complete',
@@ -58,30 +61,35 @@ const HeatmapSettings = () => {
         <Select
           onChange={onChangeLinkageMethod}
           options={linkageMethodOptions}
+          value={heatMapSettings?.linkageMethod}
         />
       </Field>
       <Field label='Distance Metric'>
         <Select
           onChange={onChangeDistanceMetric}
           options={distanceMetricOptions}
+          value={heatMapSettings?.distanceMetric}
         />
       </Field>
       <Field label='Map Color'>
         <Select
           onChange={onChangeMapColor}
           options={mapColorOptions}
+          value={heatMapSettings?.mapColor}
         />
       </Field>
       <Field label='Z Score Normalization'>
         <Select
           onChange={onChangeZScoreNormalization}
           options={zScoreNormalizationOptions}
+          value={heatMapSettings?.zScoreNormalization}
         />
       </Field>
       <Field label='Standardization'>
         <Select
           onChange={onChangeStandardization}
           options={standardizationOptions}
+          value={heatMapSettings?.standardization}
         />
       </Field>
       <Field label='Coloring range'>
@@ -89,7 +97,7 @@ const HeatmapSettings = () => {
           <InputRange
             maxValue={0.8}
             minValue={-0.8}
-            value={{ min: -0.5, max: 0.5 }}
+            value={heatMapSettings?.coloringRange}
             onChange={value => console.log(value)}
             onChangeComplete={value => console.log(value)}
           />
@@ -100,7 +108,7 @@ const HeatmapSettings = () => {
           <InputRange
             maxValue={20}
             minValue={1}
-            value={5}
+            value={heatMapSettings?.size}
             onChange={value => console.log(value)}
           />
         </div>
@@ -109,4 +117,12 @@ const HeatmapSettings = () => {
   );
 };
 
-export { HeatmapSettings };
+const mapStateToProps = ({ settings }) => ({
+  heatMapSettings: settings?.heatMap ?? {},
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(HeatmapSettings);
+
+export { MainContainer as HeatmapSettings };

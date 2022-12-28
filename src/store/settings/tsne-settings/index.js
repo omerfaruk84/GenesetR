@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  tsneSource: 'PC Data',
+  tsneSource: 'PCA Data',
   perplexity: 5,
   learningRate: 200,
   numberOfIterations: 1000,

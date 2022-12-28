@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
-const GeneRegulationSettings = () => {
-  const [value, setValue] = useState(0.1);
+const GeneRegulationSettings = ({
+  geneRegulationCoreSettings,
+}) => {
   const geneOptions = [
     {
       label: 'SLC39A10',
@@ -23,6 +25,7 @@ const GeneRegulationSettings = () => {
         <Select
           onChange={onChangeGene}
           options={geneOptions}
+          value={geneRegulationCoreSettings?.selectedGene}
         />
       </Field>
       <Field label='Absolute Z Score/Correlation r'>
@@ -30,8 +33,8 @@ const GeneRegulationSettings = () => {
           <InputRange
             maxValue={1}
             minValue={0}
-            value={value}
-            onChange={value => setValue(value)}
+            value={geneRegulationCoreSettings?.absoluteZScore}
+            onChange={value => console.log(value)}
           />
         </div>
       </Field>
@@ -39,4 +42,12 @@ const GeneRegulationSettings = () => {
   );
 };
 
-export { GeneRegulationSettings };
+const mapStateToProps = ({ settings }) => ({
+  geneRegulationCoreSettings: settings?.geneRegulationCore ?? {},
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneRegulationSettings);
+
+export { MainContainer as GeneRegulationSettings };

@@ -40,8 +40,6 @@ const CoreSettings = ({
     console.log(evt);
   };
 
-  console.log(coreSettings);
-
   return (
     <>
       <Field label='Cell Line'>
@@ -83,10 +81,8 @@ const CoreSettings = ({
   );
 };
 
-const mapStateToProps = ({
-  settings
-}) => ({
-  coreSettings: settings?.core ?? {}
+const mapStateToProps = ({ settings }) => ({
+  coreSettings: settings?.core ?? {},
 });
 
 const mapDispatchToProps = {};

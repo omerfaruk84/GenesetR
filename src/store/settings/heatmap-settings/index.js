@@ -10,7 +10,8 @@ const initialState = {
     min: -0.50,
     max: 0.50,
   },
-  size: 5
+  size: 5,
+  targetGeneList: '',
 };
 
 export const heatMapSettingsSlice = createSlice({

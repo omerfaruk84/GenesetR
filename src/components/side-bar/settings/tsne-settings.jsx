@@ -1,10 +1,13 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
-const TsneSettings = () => {
+const TsneSettings = ({
+  tsneSettings,
+}) => {
   const tsneSourceOptions = [
     {
       label: 'PCA Data',
@@ -22,6 +25,7 @@ const TsneSettings = () => {
         <Select
           onChange={onChangetsneSource}
           options={tsneSourceOptions}
+          value={tsneSettings?.tsneSource}
         />
         <Spacer height={10} />
         <Text>You need to first perform PCA to use it in embeding!</Text>
@@ -31,7 +35,7 @@ const TsneSettings = () => {
           <InputRange
             maxValue={300}
             minValue={1}
-            value={5}
+            value={tsneSettings?.perplexity}
             onChange={value => console.log({ value })}
           />
         </div>
@@ -41,7 +45,7 @@ const TsneSettings = () => {
           <InputRange
             maxValue={1000}
             minValue={10}
-            value={200}
+            value={tsneSettings?.learningRate}
             onChange={value => console.log({ value })}
           />
         </div>
@@ -51,7 +55,7 @@ const TsneSettings = () => {
           <InputRange
             maxValue={5000}
             minValue={250}
-            value={1000}
+            value={tsneSettings?.numberOfIterations}
             onChange={value => console.log({ value })}
           />
         </div>
@@ -61,7 +65,7 @@ const TsneSettings = () => {
           <InputRange
             maxValue={25}
             minValue={1}
-            value={5}
+            value={tsneSettings?.earlyExaggeration}
             onChange={value => console.log({ value })}
           />
         </div>
@@ -70,11 +74,19 @@ const TsneSettings = () => {
         <CheckBox
           label="HDB Scan Clustering"
           onChange={() => { }}
-          checked={true}
+          checked={tsneSettings?.hdbScanClustering}
         />
       </Field>
     </>
   );
 };
 
-export { TsneSettings };
+const mapStateToProps = ({ settings }) => ({
+  tsneSettings: settings?.tsne ?? {},
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(TsneSettings);
+
+export { MainContainer as TsneSettings };

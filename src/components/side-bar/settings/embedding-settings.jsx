@@ -1,10 +1,13 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
-const EmbeddingSettings = () => {
+const EmbeddingSettings = ({
+  embeddingSettings,
+}) => {
   const embedingSourceOptions = [
     {
       label: 'PCA Data',
@@ -13,17 +16,18 @@ const EmbeddingSettings = () => {
   ];
   const mdeConstraintOptions = [
     {
-      label: 'PCA Data',
-      value: 'PCA Data',
+      label: 'Standardized',
+      value: 'Standardized',
     }
   ];
 
   const onChangeEmbedingSource = (evt) => {
     console.log(evt);
-  }
+  };
+
   const onChangeMdeConstraint = (evt) => {
     console.log(evt);
-  }
+  };
 
   return (
     <>
@@ -31,6 +35,7 @@ const EmbeddingSettings = () => {
         <Select
           onChange={onChangeEmbedingSource}
           options={embedingSourceOptions}
+          value={embeddingSettings?.embedingSource}
         />
         <Spacer height={10} />
         <Text>You need to first perform PCA to use it in embeding!</Text>
@@ -40,7 +45,7 @@ const EmbeddingSettings = () => {
           <InputRange
             maxValue={4}
             minValue={2}
-            value={2}
+            value={embeddingSettings?.dimensionCount}
             onChange={value => console.log(value)}
           />
         </div>
@@ -49,6 +54,7 @@ const EmbeddingSettings = () => {
         <Select
           onChange={onChangeMdeConstraint}
           options={mdeConstraintOptions}
+          value={embeddingSettings?.mdeContrsaint}
         />
       </Field>
       <Field label='Repulsive Fraction'>
@@ -56,7 +62,7 @@ const EmbeddingSettings = () => {
           <InputRange
             maxValue={5}
             minValue={0.1}
-            value={0.5}
+            value={embeddingSettings?.repulsiveFraction}
             onChange={value => console.log(value)}
           />
         </div>
@@ -64,9 +70,18 @@ const EmbeddingSettings = () => {
       <CheckBox
         label='HDB Scan Clustering'
         onChange={() => { }}
+        checked={embeddingSettings?.hdbScanClustering}
       />
     </>
   );
 };
 
-export { EmbeddingSettings };
+const mapStateToProps = ({ settings }) => ({
+  embeddingSettings: settings?.embedding ?? {},
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(EmbeddingSettings);
+
+export { MainContainer as EmbeddingSettings };

@@ -1,14 +1,17 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
-const ClusteringSettings = () => {
+const ClusteringSettings = ({
+  clusteringSettings,
+}) => {
   const clusteringMetricOptions = [
     {
-      label: 'eulidean',
-      value: 'eulidean',
+      label: 'euclidean',
+      value: 'euclidean',
     }
   ];
   const clusteringMethodOptions = [
@@ -30,16 +33,19 @@ const ClusteringSettings = () => {
       <CheckBox
         label='Show legend'
         onChange={() => { }}
+        checked={clusteringSettings?.showLegend}
       />
       <Spacer height={5} />
       <CheckBox
         label='Show cluster centers'
         onChange={() => { }}
+        checked={clusteringSettings?.showClusterCenters}
       />
       <Spacer height={5} />
       <CheckBox
         label='Highlight clusters'
         onChange={() => { }}
+        checked={clusteringSettings?.highlightClusters}
       />
       <Spacer height={10} />
       <Field label='Minimum Cluster Size'>
@@ -47,7 +53,7 @@ const ClusteringSettings = () => {
           <InputRange
             maxValue={100}
             minValue={3}
-            value={10}
+            value={clusteringSettings?.minimumClusterSize}
             onChange={value => console.log(value)}
           />
         </div>
@@ -56,30 +62,32 @@ const ClusteringSettings = () => {
         <Select
           onChange={onChangeClusteringMetric}
           options={clusteringMetricOptions}
+          value={clusteringSettings?.clusteringMetric}
         />
       </Field>
       <Field label='Clustering Method'>
         <Select
           onChange={onChangeClusteringMethod}
           options={clusteringMethodOptions}
+          value={clusteringSettings?.clusteringMethod}
         />
       </Field>
-            <Field label='Minimum Samples'>
+      <Field label='Minimum Samples'>
         <div className={styles.inputRange}>
           <InputRange
             maxValue={100}
             minValue={3}
-            value={10}
+            value={clusteringSettings?.minimumSamples}
             onChange={value => console.log(value)}
           />
         </div>
       </Field>
-            <Field label='Cluster Selection Epsilon'>
+      <Field label='Cluster Selection Epsilon'>
         <div className={styles.inputRange}>
           <InputRange
             maxValue={1}
             minValue={0}
-            value={0}
+            value={clusteringSettings?.clusterSelectionEpsilon}
             onChange={value => console.log(value)}
           />
         </div>
@@ -88,4 +96,12 @@ const ClusteringSettings = () => {
   );
 };
 
-export { ClusteringSettings };
+const mapStateToProps = ({ settings }) => ({
+  clusteringSettings: settings?.clustering
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(ClusteringSettings);
+
+export { MainContainer as ClusteringSettings };

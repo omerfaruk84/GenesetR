@@ -8,7 +8,7 @@ const initialState = {
   clusteringMetric: 'euclidean',
   clusteringMethod: 'EOM',
   minimumSamples: 10,
-  ClusterSelectionEpsilon: 0.00,
+  clusterSelectionEpsilon: 0.00,
 };
 
 export const clusteringSettingsSlice = createSlice({

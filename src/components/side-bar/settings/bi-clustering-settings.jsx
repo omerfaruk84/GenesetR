@@ -1,7 +1,10 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Field, Select, Input } from '@oliasoft-open-source/react-ui-library';
 
-const BiClusteringSettings = () => {
+const BiClusteringSettings = ({
+  biClusteringSettings,
+}) => {
   const biClusteringSourceOptions = [
     {
       label: 'PCA Data',
@@ -11,7 +14,7 @@ const BiClusteringSettings = () => {
 
   const onChangeBiClusterSource = (evt) => {
     console.log(evt);
-  }
+  };
 
   return (
     <>
@@ -19,13 +22,14 @@ const BiClusteringSettings = () => {
         <Select
           onChange={onChangeBiClusterSource}
           options={biClusteringSourceOptions}
+          value={biClusteringSettings?.biClusteringSource}
         />
       </Field>
       <Field label='Cluster Count'>
         <Input
           onChange={({ target: { value } }) => console.log(value)}
           placeholder=""
-          value=""
+          value={biClusteringSettings?.clusterCount}
           type='number'
         />
       </Field>
@@ -33,4 +37,13 @@ const BiClusteringSettings = () => {
   );
 };
 
-export { BiClusteringSettings };
+
+const mapStateToProps = ({ settings }) => ({
+  biClusteringSettings: settings?.biClustering ?? {},
+});
+
+const mapDispatchToProps = {};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(BiClusteringSettings);
+
+export { MainContainer as BiClusteringSettings };

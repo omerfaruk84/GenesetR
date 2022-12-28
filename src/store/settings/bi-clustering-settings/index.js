@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  biClusteringSource: 'PC Data',
+  biClusteringSource: 'PCA Data',
   clusterCount: 10,
 };
 
