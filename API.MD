@@ -75,11 +75,15 @@ Followings are available options for the `request`:
     **Optional arguments:** `dataSource` (int) sets the source for PCA analysis. 1 for Perturbation/Expression data. 2 for Correlation data. `n_clusters` determines 
   the number of biclusters to find. The default value is number of genes divided by 20. `n_init` (int) sets number of random initializations that are tried with the k-means algorithm (Default=10). For details of these parameters please see [SPECTRAL COCLUSTERING PARAMETERS](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralCoclustering.html).  
   
+   
   - **`findPath`** Tries to identify pathways among the submitted up and down regulated gene list, considering Perturb-Seq data, and returns the results as a JSON file that can be loaded by CytoscapeJS.
     
     **Required arguments:** `downgeneList`. The `downgeneList` should contain at least two down regulated genes in an RNA-Seq experiment.
   
     **Optional arguments:**  `upgeneList` should contain the genes upregulated in an RNA-seq experiment. `cutoff` (float) sets the Z-Score cutoff for assesing downregulation of a gene by a perturbation (Default: 0.1) `depth` sets the search dept for pathway Can be 1 (default) or 2. 'checkCorr' sets whether to include perturbation correlation data in the network (Default: True).  `corrCutOff` (float) sets the cutoff for correlations to include (Default: 0.1).  `BioGridData` sets whether to include protein-protein interaction data in the network (Default: True).
+    
+    ### HOW BACK END WORKS
+  When users reach to the homepage, a unique `user_id` is generated and returned as a JSON response. At the backend this ID is cached to REDIS server as an active online user. In the fron end, this needs to be saved to the local storage and submitted to the API in every future request.
    
   
   
