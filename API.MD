@@ -83,7 +83,8 @@ Followings are available options for the `request`:
     **Optional arguments:**  `upgeneList` should contain the genes upregulated in an RNA-seq experiment. `cutoff` (float) sets the Z-Score cutoff for assesing downregulation of a gene by a perturbation (Default: 0.1) `depth` sets the search dept for pathway Can be 1 (default) or 2. 'checkCorr' sets whether to include perturbation correlation data in the network (Default: True).  `corrCutOff` (float) sets the cutoff for correlations to include (Default: 0.1).  `BioGridData` sets whether to include protein-protein interaction data in the network (Default: True).
     
     ### HOW BACK END WORKS
-  When users reach to the homepage, a unique `user_id` is generated and returned as a JSON response. At the backend this ID is cached to REDIS server as an active online user. In the fron end, this needs to be saved to the local storage and submitted to the API in every future request.
+  When a user reachs to the homepage, a unique `user_id` is generated and returned as a JSON response. At the backend this ID is cached to the REDIS server as an active online user. In the front end, this needs to be saved to the local storage and submitted to the API in every future request. When a request is submitted, a task is generated and qued by Celery. A unique `task_id` is generated and returned to the client side. In the mean time, this `task_id` is also saved to the users task list. So when a user closes its connection all the results can be removed from the Redis database.  Client can request the status of the task by querying  `/tasks/{task_id}`, which returns a JSON response containing `task_status`, `task_result` together with the `task_id`.  The parameters for each request submitted to the `/getData`  is hashed and the results are saved to the REDIS. So if a request with the same parameters gets submmited the results are returned from the REDIS cache.
+  
    
   
   
