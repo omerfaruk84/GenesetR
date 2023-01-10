@@ -14,7 +14,11 @@ const CoreSettings = ({
   const dataTypeOptions = [
     {
       label: 'Perturbation',
-      value: 'Perturbation',
+      value: 1,
+    },
+    {
+      label: 'Correlation data',
+      value: 2,
     }
   ];
   const graphTypeOptions = [
