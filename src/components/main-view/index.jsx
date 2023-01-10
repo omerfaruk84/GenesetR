@@ -12,6 +12,7 @@ import styles from './main-view.module.scss';
 import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
+import { Bokeh } from '../bokeh';
 
 const MainView = () => {
   return (
@@ -22,6 +23,7 @@ const MainView = () => {
         <Spacer />
         <Routes>
           <Route exact path={ROUTES.HEATMAP} element={<HeatMap data={ExampleJson} />} />
+          <Route exact path={ROUTES.PCA} element={<Bokeh />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
