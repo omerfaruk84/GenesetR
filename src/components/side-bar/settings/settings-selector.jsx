@@ -1,5 +1,4 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
 import { ROUTES } from '../../../common/routes';
 import { Settings } from './settings';
 import { CoreSettings } from './core-settings';
@@ -16,9 +15,7 @@ import { HeatmapSettings } from './heatmap-settings';
 import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
-const SettingsSelector = () => {
-  const location = useLocation();
-  const { pathname } = location;
+const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
     [ROUTES.HOME]: [
       {

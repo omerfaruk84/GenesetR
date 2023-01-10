@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { Drawer } from '@oliasoft-open-source/react-ui-library';
+import { connect } from 'react-redux'; 
+import { useLocation } from 'react-router-dom';
+import { Drawer, Button, Spacer, Flex } from '@oliasoft-open-source/react-ui-library';
 import { SettingsSelector } from './settings/settings-selector';
+import { runCalculation } from '../../store/results/index';
 
-const SideBar = () => {
+const SideBar = ({
+  runCalculation,
+}) => {
   const [sideBarWith, setSideBarWith] = useState(420);
   const handleSideBarResize = (size) => {
     if (size > 420 || size < 300) {
@@ -10,6 +15,10 @@ const SideBar = () => {
     }
     setSideBarWith(size);
   }
+
+  const location = useLocation();
+  const { pathname } = location;
+
   return (
     <Drawer
       border
@@ -19,9 +28,24 @@ const SideBar = () => {
       width={sideBarWith}
       onResize={handleSideBarResize}
     >
-      <SettingsSelector />
+      <Spacer />
+      <Flex justifyContent='center'>
+        <Button
+          label="Run calculation"
+          colored
+          width="90%"
+          onClick={() => runCalculation(pathname)}
+        />
+      </Flex>
+      <SettingsSelector pathname={pathname} />
     </Drawer>
   );
 };
 
-export { SideBar };
+const mapDispatchToProps = {
+  runCalculation,
+};
+
+const MainContainer = connect(null, mapDispatchToProps)(SideBar);
+
+export { MainContainer as SideBar };
