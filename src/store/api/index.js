@@ -2,7 +2,7 @@ import Axios from 'axios';
 
 const runPcaGraphCalc = async (core, pca, _clustering) => {
   const body = {
-    geneList: core.peturbationList,
+    geneList: core.peturbationList?.replaceAll('\n', ';'),
     dataType: core.dataType,
     filter: "",
     dataSource: pca.pcaSource,
