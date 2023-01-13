@@ -84,6 +84,17 @@ const GeneRegulationCoreSettingsTypes = {
   ABSOLUTE_Z_SCORE: 'absoluteZScore',
 };
 
+const HeatMapSettingsTypes = {
+  LINKAGE_METHOD: 'linkageMethod',
+  DISTANCE_METRIC: 'distanceMetric',
+  MAP_COLOR: 'mapColor',
+  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
+  STANDARDIZATION: 'standardization',
+  COLORING_RANGE: 'coloringRange',
+  SIZE: 'size',
+  TARGET_GENE_LIST: 'targetGeneList',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -95,4 +106,5 @@ export {
   UmapSettingsTypes,
   TsneSettingsTypes,
   GeneRegulationCoreSettingsTypes,
+  HeatMapSettingsTypes,
 };

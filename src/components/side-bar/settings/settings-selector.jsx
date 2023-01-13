@@ -11,7 +11,7 @@ import { ClusteringSettings } from './clustering-settings';
 import { PcaSettings } from './pca-settings';
 import { UmapSettings } from './umap-settings';
 import { EmbeddingSettings } from './embedding-settings';
-import { HeatmapSettings } from './heatmap-settings';
+import { HeatMapSettings } from './heatmap-settings';
 import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
@@ -122,7 +122,7 @@ const SettingsSelector = ({ pathname }) => {
       },
       {
         settingsName: SettingsTypes.HEAT_MAP,
-        settings: <HeatmapSettings />
+        settings: <HeatMapSettings />
       },
     ],
   };
