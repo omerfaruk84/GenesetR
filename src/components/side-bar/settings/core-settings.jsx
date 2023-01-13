@@ -35,6 +35,11 @@ const CoreSettings = ({
     }
   ];
 
+  const numberOfGenesEntered = coreSettings?.peturbationList
+    ?.replaceAll('\n', ';')
+    ?.split(';')
+    ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
+
   return (
     <>
       <Field label='Cell Line'>
@@ -67,7 +72,7 @@ const CoreSettings = ({
           })}
         />
         <Spacer height={10} />
-        <Text>0 genes</Text>
+        <Text>{numberOfGenesEntered} genes</Text>
       </Field>
       <Field label='Graph Type'>
         <Select
