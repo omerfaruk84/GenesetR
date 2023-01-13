@@ -79,6 +79,11 @@ const TsneSettingsTypes = {
   HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
+const GeneRegulationCoreSettingsTypes = {
+  SELECTED_GENE: 'selectedGene',
+  ABSOLUTE_Z_SCORE: 'absoluteZScore',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -89,4 +94,5 @@ export {
   EmbeddingSettingsTypes,
   UmapSettingsTypes,
   TsneSettingsTypes,
+  GeneRegulationCoreSettingsTypes,
 };
