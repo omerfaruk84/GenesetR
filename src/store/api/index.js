@@ -11,7 +11,7 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
     request: 'PCAGraph'
   };
 
-  const { task_id } = await Axios.post("https://88d9-2001-700-4a01-10-00-40.eu.ngrok.io/getData", {
+  const { task_id } = await Axios.post("https://94bf-2001-700-4a01-10-00-36.eu.ngrok.io/getData", {
     body: JSON.stringify(body),
     request: 'longTask',
   })
@@ -22,7 +22,7 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
   const fetchPcaGraph = async () => {
     let times = 10;
     do {
-      const { _status, data: { task_result } }  = await Axios.get("https://88d9-2001-700-4a01-10-00-40.eu.ngrok.io/tasks/" + task_id, {
+      const { data: { task_result } }  = await Axios.get("https://94bf-2001-700-4a01-10-00-36.eu.ngrok.io/tasks/" + task_id, {
         headers: {
           'ngrok-skip-browser-warning': '69420',
         },

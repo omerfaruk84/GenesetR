@@ -44,10 +44,6 @@ const CoreSettings = ({
     }
   ];
 
-  const onChangeGraphType = (evt) => {
-    console.log(evt);
-  };
-
   return (
     <>
       <Field label='Cell Line'>
