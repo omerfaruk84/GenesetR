@@ -26,10 +26,17 @@ const ClusteringSettingsTypes = {
   CLUSTERING_METHOD: 'clusteringMethod',
   MINIMUM_SAMPLES: 'minimumSamples',
   CLUSTER_SELECTION_EPSILON: 'clusterSelectionEpsilon',
-}
+};
+
+const PcaSettingsTypes = {
+  PCA_SOURCE: 'pcaSource',
+  NUMBER_OF_COMPONENTS: 'numberOfComponents',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
 
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
   ClusteringSettingsTypes,
+  PcaSettingsTypes,
 };

@@ -2,15 +2,14 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, CheckBox } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
-import { pcaSourceChanged, numberOfComponentsChanged, hdbScanClusteringChanged } from '../../../store/settings/pca-settings';
+import { pcaSettingsChanged } from '../../../store/settings/pca-settings';
+import { PcaSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const PcaSettings = ({
   pcaSettings,
-  pcaSourceChanged,
-  numberOfComponentsChanged,
-  hdbScanClusteringChanged,
+  pcaSettingsChanged,
 }) => {
   const pcaSourceOptions = [
     {
@@ -27,7 +26,10 @@ const PcaSettings = ({
     <>
       <Field label='PCA Source'>
         <Select
-          onChange={({ target: { value } }) => pcaSourceChanged({ value })}
+          onChange={({ target: { value } }) => pcaSettingsChanged({
+            settingName: PcaSettingsTypes.PCA_SOURCE,
+            newValue: value
+          })}
           options={pcaSourceOptions}
           value={pcaSettings?.pcaSource}
         />
@@ -38,13 +40,19 @@ const PcaSettings = ({
             maxValue={100}
             minValue={2}
             value={pcaSettings?.numberOfComponents}
-            onChange={value => numberOfComponentsChanged({ value })}
+            onChange={value => pcaSettingsChanged({
+              settingName: PcaSettingsTypes.NUMBER_OF_COMPONENTS,
+              newValue: value
+            })}
           />
         </div>
       </Field>
       <CheckBox
         label='HDB Scan Clustering'
-        onChange={({ target: { checked } }) => hdbScanClusteringChanged({ value: checked })}
+        onChange={({ target: { checked } }) => pcaSettingsChanged({
+          settingName: PcaSettingsTypes.HDB_SCAN_CLUSTERING,
+          newValue: checked
+        })}
         checked={pcaSettings?.hdbScanClustering}
       />
     </>
@@ -56,9 +64,7 @@ const mapStateToProps = ({ settings }) => ({
 });
 
 const mapDispatchToProps = {
-  pcaSourceChanged,
-  numberOfComponentsChanged,
-  hdbScanClusteringChanged,
+  pcaSettingsChanged,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(PcaSettings);

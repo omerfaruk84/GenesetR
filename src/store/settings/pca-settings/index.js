@@ -10,25 +10,15 @@ export const pcaSettingsSlice = createSlice({
   name: 'pca',
   initialState,
   reducers: {
-    pcaSourceChanged: (state, action) => {
-      const { value } = action.payload;
-      state.pcaSource = value;
-    },
-    numberOfComponentsChanged: (state, action) => {
-      const { value } = action.payload;
-      state.numberOfComponents = value;
-    },
-    hdbScanClusteringChanged: (state, action) => {
-      const { value } = action.payload;
-      state.hdbScanClustering = value;
+    pcaSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     },
   },
 });
 
 export const {
-  pcaSourceChanged,
-  numberOfComponentsChanged,
-  hdbScanClusteringChanged,
+  pcaSettingsChanged,
 } = pcaSettingsSlice.actions;
 
 const pcaSettingsReducer = pcaSettingsSlice.reducer;
