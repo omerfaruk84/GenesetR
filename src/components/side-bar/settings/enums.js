@@ -42,10 +42,23 @@ const CoreSettingsTypes = {
   HIGHLIGHT_GENES: 'highlightGenes',
 };
 
+const CorrelationSettingsTypes = {
+  REMOVE_LOW_CORRELATION: 'removeLowCorrelation',
+  MIN_CORRELATION: 'minCorrelation',
+  LINKAGE_METHOD: 'linkageMethod',
+  DISTANCE_METRIC: 'distanceMetric',
+  MAP_COLOR: 'mapColor',
+  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
+  STANDARDIZATION: 'standardization',
+  COLORING_RANGE: 'coloringRange',
+  SIZE: 'size',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
   ClusteringSettingsTypes,
   PcaSettingsTypes,
   CoreSettingsTypes,
+  CorrelationSettingsTypes,
 };
