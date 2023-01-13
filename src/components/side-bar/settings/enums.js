@@ -54,6 +54,14 @@ const CorrelationSettingsTypes = {
   SIZE: 'size',
 };
 
+const EmbeddingSettingsTypes = {
+  EMBEDDING_SOURCE: 'embedingSource',
+  DIMENSION_COUNT: 'dimensionCount',
+  MDE_CONTRSAINT: 'mdeContrsaint',
+  REPULSIVE_FRACTION: 'repulsiveFraction',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -61,4 +69,5 @@ export {
   PcaSettingsTypes,
   CoreSettingsTypes,
   CorrelationSettingsTypes,
+  EmbeddingSettingsTypes,
 };
