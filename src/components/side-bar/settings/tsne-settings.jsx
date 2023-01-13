@@ -2,11 +2,14 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
+import { tsneSettingsChanged } from '../../../store/settings/tsne-settings';
+import { TsneSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const TsneSettings = ({
   tsneSettings,
+  tsneSettingsChanged,
 }) => {
   const tsneSourceOptions = [
     {
@@ -14,16 +17,15 @@ const TsneSettings = ({
       value: 'PCA Data',
     }
   ];
-  
-  const onChangetsneSource = (evt) => {
-    console.log(evt);
-  };
 
   return (
     <>
       <Field label='tSNE Source'>
         <Select
-          onChange={onChangetsneSource}
+          onChange={({ target: { value } }) => tsneSettingsChanged({
+            settingName: TsneSettingsTypes.TSNE_SOURCE,
+            newValue: value,
+          })}
           options={tsneSourceOptions}
           value={tsneSettings?.tsneSource}
         />
@@ -36,7 +38,10 @@ const TsneSettings = ({
             maxValue={300}
             minValue={1}
             value={tsneSettings?.perplexity}
-            onChange={value => console.log({ value })}
+            onChange={(value) => tsneSettingsChanged({
+              settingName: TsneSettingsTypes.PERPLEXITY,
+              newValue: value
+            })}
           />
         </div>
       </Field>
@@ -46,17 +51,23 @@ const TsneSettings = ({
             maxValue={1000}
             minValue={10}
             value={tsneSettings?.learningRate}
-            onChange={value => console.log({ value })}
+            onChange={(value) => tsneSettingsChanged({
+              settingName: TsneSettingsTypes.LEARNING_RATE,
+              newValue: value
+            })}
           />
         </div>
       </Field>
-      <Field label='Learning Rate'>
+      <Field label='Number Of Iterations'>
         <div className={styles.inputRange}>
           <InputRange
             maxValue={5000}
             minValue={250}
             value={tsneSettings?.numberOfIterations}
-            onChange={value => console.log({ value })}
+            onChange={(value) => tsneSettingsChanged({
+              settingName: TsneSettingsTypes.NUMBER_OF_ITERATIONS,
+              newValue: value
+            })}
           />
         </div>
       </Field>
@@ -66,14 +77,20 @@ const TsneSettings = ({
             maxValue={25}
             minValue={1}
             value={tsneSettings?.earlyExaggeration}
-            onChange={value => console.log({ value })}
+            onChange={(value) => tsneSettingsChanged({
+              settingName: TsneSettingsTypes.EARLY_EXAGGERATION,
+              newValue: value
+            })}
           />
         </div>
       </Field>
       <Field>
         <CheckBox
           label="HDB Scan Clustering"
-          onChange={() => { }}
+          onChange={({ target: { checked } }) => tsneSettingsChanged({
+            settingName: TsneSettingsTypes.HDB_SCAN_CLUSTERING,
+            newValue: checked,
+          })}
           checked={tsneSettings?.hdbScanClustering}
         />
       </Field>
@@ -85,7 +102,9 @@ const mapStateToProps = ({ settings }) => ({
   tsneSettings: settings?.tsne ?? {},
 });
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  tsneSettingsChanged,
+};
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(TsneSettings);
 

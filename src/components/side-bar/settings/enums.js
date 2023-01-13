@@ -70,6 +70,15 @@ const UmapSettingsTypes = {
   HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
+const TsneSettingsTypes = {
+  TSNE_SOURCE: 'tsneSource',
+  PERPLEXITY: 'perplexity',
+  LEARNING_RATE: 'learningRate',
+  NUMBER_OF_ITERATIONS: 'numberOfIterations',
+  EARLY_EXAGGERATION: 'earlyExaggeration',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -79,4 +88,5 @@ export {
   CorrelationSettingsTypes,
   EmbeddingSettingsTypes,
   UmapSettingsTypes,
+  TsneSettingsTypes,
 };
