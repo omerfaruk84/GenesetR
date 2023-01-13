@@ -12,11 +12,16 @@ export const umapSettingsSlice = createSlice({
   name: 'umap',
   initialState,
   reducers: {
-    umapSourceChanged: (state, action) => {
-      console.log(state, action);
+    umapSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  umapSettingsChanged,
+} = umapSettingsSlice.actions;
 
 const umapSettingsReducer = umapSettingsSlice.reducer;
 

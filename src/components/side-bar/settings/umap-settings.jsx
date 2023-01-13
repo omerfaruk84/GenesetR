@@ -2,11 +2,14 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Spacer, Text } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
+import { umapSettingsChanged } from '../../../store/settings/umap-settings';
+import { UmapSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const UmapSettings = ({
   umapSettings,
+  umapSettingsChanged,
 }) => {
   const umapSourceOptions = [
     {
@@ -15,15 +18,14 @@ const UmapSettings = ({
     }
   ];
 
-  const onChangeUmapSource = (evt) => {
-    console.log(evt);
-  }
-
   return (
     <>
       <Field label='UMAP Source'>
         <Select
-          onChange={onChangeUmapSource}
+          onChange={({ target: { value } }) => umapSettingsChanged({
+            settingName: UmapSettingsTypes.UMAP_SOURCE,
+            newValue: value,
+          })}
           options={umapSourceOptions}
           value={umapSettings?.umapSource}
         />
@@ -36,7 +38,10 @@ const UmapSettings = ({
             maxValue={4}
             minValue={2}
             value={umapSettings?.dimensionCount}
-            onChange={value => console.log(value)}
+            onChange={(value) => umapSettingsChanged({
+              settingName: UmapSettingsTypes.DIMENSION_COUNT,
+              newValue: value,
+            })}
           />
         </div>
       </Field>
@@ -56,13 +61,19 @@ const UmapSettings = ({
             maxValue={200}
             minValue={2}
             value={umapSettings?.numberOfNeighbours}
-            onChange={value => console.log(value)}
+            onChange={(value) => umapSettingsChanged({
+              settingName: UmapSettingsTypes.NUMBER_OF_NEIGHBOURS,
+              newValue: value,
+            })}
           />
         </div>
       </Field>
       <CheckBox
         label='HDB Scan Clustering'
-        onChange={() => { }}
+        onChange={({ target: { checked } }) => umapSettingsChanged({
+          settingName: UmapSettingsTypes.HDB_SCAN_CLUSTERING,
+          newValue: checked,
+        })}
         checked={umapSettings?.hdbScanClustering}
       />
     </>
@@ -73,7 +84,9 @@ const mapStateToProps = ({ settings }) => ({
   umapSettings: settings?.umap ?? {},
 });
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  umapSettingsChanged,
+};
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(UmapSettings);
 

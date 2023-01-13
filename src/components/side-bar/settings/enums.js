@@ -62,6 +62,14 @@ const EmbeddingSettingsTypes = {
   HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
+const UmapSettingsTypes = {
+  UMAP_SOURCE: 'umapSource',
+  DIMENSION_COUNT: 'dimensionCount',
+  MINIMUM_DISTANCE: 'minimumDistance',
+  NUMBER_OF_NEIGHBOURS: 'numberOfNeighbours',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -70,4 +78,5 @@ export {
   CoreSettingsTypes,
   CorrelationSettingsTypes,
   EmbeddingSettingsTypes,
+  UmapSettingsTypes,
 };
