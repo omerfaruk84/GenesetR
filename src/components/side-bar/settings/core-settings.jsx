@@ -1,21 +1,12 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
-import {
-  cellLineChanged,
-  dataTypeChanged,
-  peturbationListChanged,
-  graphTypeChanged,
-  highlightGenesChanged,
-} from '../../../store/settings/core-settings';
+import { coreSettingsChanged } from '../../../store/settings/core-settings';
+import { CoreSettingsTypes } from './enums';
 
 const CoreSettings = ({
   coreSettings,
-  cellLineChanged,
-  dataTypeChanged,
-  peturbationListChanged,
-  graphTypeChanged,
-  highlightGenesChanged,
+  coreSettingsChanged,
 }) => {
   const cellLineOptions = [
     {
@@ -48,14 +39,20 @@ const CoreSettings = ({
     <>
       <Field label='Cell Line'>
         <Select
-          onChange={({ target: { value } }) => cellLineChanged({ value })}
+          onChange={({ target: { value } }) => coreSettingsChanged({
+            settingName: CoreSettingsTypes.CELL_LINE,
+            newValue: value
+          })}
           options={cellLineOptions}
           value={coreSettings?.cellLine}
         />
       </Field>
       <Field label='Data Type'>
         <Select
-          onChange={({ target: { value } }) => dataTypeChanged({ value })}
+          onChange={({ target: { value } }) => coreSettingsChanged({
+            settingName: CoreSettingsTypes.DATA_TYPE,
+            newValue: value
+          })}
           options={dataTypeOptions}
           value={coreSettings?.dataType}
         />
@@ -64,14 +61,20 @@ const CoreSettings = ({
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
           value={coreSettings?.peturbationList}
-          onChange={({ target: { value } }) => peturbationListChanged({ value })}
+          onChange={({ target: { value } }) => coreSettingsChanged({
+            settingName: CoreSettingsTypes.PETURBATION_LIST,
+            newValue: value
+          })}
         />
         <Spacer height={10} />
         <Text>0 genes</Text>
       </Field>
       <Field label='Graph Type'>
         <Select
-          onChange={({ target: { value } }) => graphTypeChanged({ value })}
+          onChange={({ target: { value } }) => coreSettingsChanged({
+            settingName: CoreSettingsTypes.GRAPH_TYPE,
+            newValue: value
+          })}
           options={graphTypeOptions}
           value={coreSettings?.graphType}
         />
@@ -80,7 +83,10 @@ const CoreSettings = ({
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
           value={coreSettings?.highlightGenes}
-          onChange={({ target: { value } }) => highlightGenesChanged({ value })}
+          onChange={({ target: { value } }) => coreSettingsChanged({
+            settingName: CoreSettingsTypes.HIGHLIGHT_GENES,
+            newValue: value
+          })}
         />
       </Field>
     </>
@@ -92,11 +98,7 @@ const mapStateToProps = ({ settings }) => ({
 });
 
 const mapDispatchToProps = {
-  cellLineChanged,
-  dataTypeChanged,
-  peturbationListChanged,
-  graphTypeChanged,
-  highlightGenesChanged,
+  coreSettingsChanged,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(CoreSettings);

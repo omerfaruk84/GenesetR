@@ -34,9 +34,18 @@ const PcaSettingsTypes = {
   HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
+const CoreSettingsTypes = {
+  CELL_LINE: 'cellLine',
+  DATA_TYPE: 'dataType',
+  PETURBATION_LIST: 'peturbationList',
+  GRAPH_TYPE: 'graphType',
+  HIGHLIGHT_GENES: 'highlightGenes',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
   ClusteringSettingsTypes,
   PcaSettingsTypes,
+  CoreSettingsTypes,
 };
