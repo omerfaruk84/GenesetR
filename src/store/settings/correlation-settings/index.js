@@ -19,11 +19,16 @@ export const correlationSettingsSlice = createSlice({
   name: 'correlation',
   initialState,
   reducers: {
-    minCorrelationChanged: (state, action) => {
-      console.log(state, action);
+    correlationSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  correlationSettingsChanged,
+} = correlationSettingsSlice.actions;
 
 const correlationSettingsReducer = correlationSettingsSlice.reducer;
 

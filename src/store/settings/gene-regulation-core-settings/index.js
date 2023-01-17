@@ -9,11 +9,16 @@ export const geneRegulationCoreSettingsSlice = createSlice({
   name: 'geneRegulationCore',
   initialState,
   reducers: {
-    selectedGeneChanged: (state, action) => {
-      console.log(state, action);
+    geneRegulationCoreSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  geneRegulationCoreSettingsChanged,
+} = geneRegulationCoreSettingsSlice.actions;
 
 const geneRegulationCoreSettingsReducer = geneRegulationCoreSettingsSlice.reducer;
 

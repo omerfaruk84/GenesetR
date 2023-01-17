@@ -2,11 +2,14 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
+import { embeddingSettingsChanged } from '../../../store/settings/embedding-settings';
+import { EmbeddingSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const EmbeddingSettings = ({
   embeddingSettings,
+  embeddingSettingsChanged,
 }) => {
   const embedingSourceOptions = [
     {
@@ -21,19 +24,14 @@ const EmbeddingSettings = ({
     }
   ];
 
-  const onChangeEmbedingSource = (evt) => {
-    console.log(evt);
-  };
-
-  const onChangeMdeConstraint = (evt) => {
-    console.log(evt);
-  };
-
   return (
     <>
       <Field label='Embeding Source'>
         <Select
-          onChange={onChangeEmbedingSource}
+          onChange={({ target: { value } }) => embeddingSettingsChanged({
+            settingName: EmbeddingSettingsTypes.EMBEDDING_SOURCE,
+            newValue: value,
+          })}
           options={embedingSourceOptions}
           value={embeddingSettings?.embedingSource}
         />
@@ -46,13 +44,19 @@ const EmbeddingSettings = ({
             maxValue={4}
             minValue={2}
             value={embeddingSettings?.dimensionCount}
-            onChange={value => console.log(value)}
+            onChange={(value) => embeddingSettingsChanged({
+              settingName: EmbeddingSettingsTypes.DIMENSION_COUNT,
+              newValue: value,
+            })}
           />
         </div>
       </Field>
       <Field label='MDE Constraint'>
         <Select
-          onChange={onChangeMdeConstraint}
+          onChange={({ target: { value } }) => embeddingSettingsChanged({
+            settingName: EmbeddingSettingsTypes.MDE_CONTRSAINT,
+            newValue: value,
+          })}
           options={mdeConstraintOptions}
           value={embeddingSettings?.mdeContrsaint}
         />
@@ -63,13 +67,19 @@ const EmbeddingSettings = ({
             maxValue={5}
             minValue={0.1}
             value={embeddingSettings?.repulsiveFraction}
-            onChange={value => console.log(value)}
+            onChange={(value) => embeddingSettingsChanged({
+              settingName: EmbeddingSettingsTypes.REPULSIVE_FRACTION,
+              newValue: value,
+            })}
           />
         </div>
       </Field>
       <CheckBox
         label='HDB Scan Clustering'
-        onChange={() => { }}
+          onChange={({ target: { value } }) => embeddingSettingsChanged({
+            settingName: EmbeddingSettingsTypes.HDB_SCAN_CLUSTERING,
+            newValue: value,
+          })}
         checked={embeddingSettings?.hdbScanClustering}
       />
     </>
@@ -80,7 +90,9 @@ const mapStateToProps = ({ settings }) => ({
   embeddingSettings: settings?.embedding ?? {},
 });
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  embeddingSettingsChanged,
+};
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(EmbeddingSettings);
 

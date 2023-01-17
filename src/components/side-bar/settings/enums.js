@@ -26,10 +26,85 @@ const ClusteringSettingsTypes = {
   CLUSTERING_METHOD: 'clusteringMethod',
   MINIMUM_SAMPLES: 'minimumSamples',
   CLUSTER_SELECTION_EPSILON: 'clusterSelectionEpsilon',
-}
+};
+
+const PcaSettingsTypes = {
+  PCA_SOURCE: 'pcaSource',
+  NUMBER_OF_COMPONENTS: 'numberOfComponents',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
+const CoreSettingsTypes = {
+  CELL_LINE: 'cellLine',
+  DATA_TYPE: 'dataType',
+  PETURBATION_LIST: 'peturbationList',
+  GRAPH_TYPE: 'graphType',
+  HIGHLIGHT_GENES: 'highlightGenes',
+};
+
+const CorrelationSettingsTypes = {
+  REMOVE_LOW_CORRELATION: 'removeLowCorrelation',
+  MIN_CORRELATION: 'minCorrelation',
+  LINKAGE_METHOD: 'linkageMethod',
+  DISTANCE_METRIC: 'distanceMetric',
+  MAP_COLOR: 'mapColor',
+  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
+  STANDARDIZATION: 'standardization',
+  COLORING_RANGE: 'coloringRange',
+  SIZE: 'size',
+};
+
+const EmbeddingSettingsTypes = {
+  EMBEDDING_SOURCE: 'embedingSource',
+  DIMENSION_COUNT: 'dimensionCount',
+  MDE_CONTRSAINT: 'mdeContrsaint',
+  REPULSIVE_FRACTION: 'repulsiveFraction',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
+const UmapSettingsTypes = {
+  UMAP_SOURCE: 'umapSource',
+  DIMENSION_COUNT: 'dimensionCount',
+  MINIMUM_DISTANCE: 'minimumDistance',
+  NUMBER_OF_NEIGHBOURS: 'numberOfNeighbours',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
+const TsneSettingsTypes = {
+  TSNE_SOURCE: 'tsneSource',
+  PERPLEXITY: 'perplexity',
+  LEARNING_RATE: 'learningRate',
+  NUMBER_OF_ITERATIONS: 'numberOfIterations',
+  EARLY_EXAGGERATION: 'earlyExaggeration',
+  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
+};
+
+const GeneRegulationCoreSettingsTypes = {
+  SELECTED_GENE: 'selectedGene',
+  ABSOLUTE_Z_SCORE: 'absoluteZScore',
+};
+
+const HeatMapSettingsTypes = {
+  LINKAGE_METHOD: 'linkageMethod',
+  DISTANCE_METRIC: 'distanceMetric',
+  MAP_COLOR: 'mapColor',
+  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
+  STANDARDIZATION: 'standardization',
+  COLORING_RANGE: 'coloringRange',
+  SIZE: 'size',
+  TARGET_GENE_LIST: 'targetGeneList',
+};
 
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
   ClusteringSettingsTypes,
+  PcaSettingsTypes,
+  CoreSettingsTypes,
+  CorrelationSettingsTypes,
+  EmbeddingSettingsTypes,
+  UmapSettingsTypes,
+  TsneSettingsTypes,
+  GeneRegulationCoreSettingsTypes,
+  HeatMapSettingsTypes,
 };
