@@ -8,9 +8,9 @@ import { runCalculation } from '../../store/results/index';
 const SideBar = ({
   runCalculation,
 }) => {
-  const [sideBarWith, setSideBarWith] = useState(420);
+  const [sideBarWith, setSideBarWith] = useState(325);
   const handleSideBarResize = (size) => {
-    if (size > 420 || size < 300) {
+    if (size > 400 || size < 250) {
       return;
     }
     setSideBarWith(size);
