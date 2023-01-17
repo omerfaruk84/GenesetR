@@ -18,11 +18,16 @@ export const heatMapSettingsSlice = createSlice({
   name: 'heatMap',
   initialState,
   reducers: {
-    linkageMethodChanged: (state, action) => {
-      console.log(state, action);
+    heatMapSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  heatMapSettingsChanged,
+} = heatMapSettingsSlice.actions;
 
 const heatMapSettingsReducer = heatMapSettingsSlice.reducer;
 

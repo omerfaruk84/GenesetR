@@ -12,11 +12,16 @@ export const embeddingSettingsSlice = createSlice({
   name: 'embedding',
   initialState,
   reducers: {
-    dimensionCountChanged: (state, action) => {
-      console.log(state, action);
+    embeddingSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  embeddingSettingsChanged,
+} = embeddingSettingsSlice.actions;
 
 const embeddingSettingsReducer = embeddingSettingsSlice.reducer;
 

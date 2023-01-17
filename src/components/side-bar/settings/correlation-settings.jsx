@@ -2,11 +2,14 @@ import React from 'react';
 import {connect} from 'react-redux';
 import { Field, Select, CheckBox } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
+import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
+import { CorrelationSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const CorrelationSettings = ({
   correlationSettings,
+  correlationSettingsChanged,
 }) => {
   const linkageMethodOptions = [
     {
@@ -33,30 +36,20 @@ const CorrelationSettings = ({
     }
   ];
 
-  const onChangeLinkageMethod = (evt) => {
-    console.log(evt);
-  }
-  const onChangeDistanceMetric = (evt) => {
-    console.log(evt);
-  }
-  const onChangeZScoreNormalization = (evt) => {
-    console.log(evt);
-  }
-  const onChangeStandardization = (evt) => {
-    console.log(evt);
-  }
-
   return (
     <>
       <CheckBox
         label="Remove low correlation"
-        onChange={() => { }}
+        onChange={({ target: { checked }}) => correlationSettingsChanged({
+          settingName: CorrelationSettingsTypes.REMOVE_LOW_CORRELATION,
+          newValue: checked
+        })}
         checked={correlationSettings?.removeLowCorrelation}
       />
       <Field label='Min Correlation'>
         <div className={styles.inputRange}>
           <InputRange
-            disabled
+            disabled={!correlationSettings?.removeLowCorrelation}
             maxValue={0.99}
             minValue={0}
             value={correlationSettings?.minCorrelation}
@@ -66,28 +59,40 @@ const CorrelationSettings = ({
       </Field>
       <Field label='Linkage Method'>
         <Select
-          onChange={onChangeLinkageMethod}
+          onChange={({ target: { value }}) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.LINKAGE_METHOD,
+            newValue: value
+          })}
           options={linkageMethodOptions}
           value={correlationSettings?.linkageMethod}
         />
       </Field>
       <Field label='Distance Metric'>
         <Select
-          onChange={onChangeDistanceMetric}
+          onChange={({ target: { value } }) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.DISTANCE_METRIC,
+            newValue: value
+          })}
           options={distanceMetricOptions}
           value={correlationSettings?.distanceMetric}
         />
       </Field>
       <Field label='Z Score Normalization'>
         <Select
-          onChange={onChangeZScoreNormalization}
+          onChange={({ target: { value } }) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.Z_SCORE_NORMALIZATION,
+            newValue: value
+          })}
           options={zScoreNormalizationOptions}
           value={correlationSettings?.zScoreNormalization}
         />
       </Field>
       <Field label='Standardization'>
         <Select
-          onChange={onChangeStandardization}
+          onChange={({ target: { value } }) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.STANDARDIZATION,
+            newValue: value
+          })}
           options={standardizationOptions}
           value={correlationSettings?.standardization}
         />
@@ -109,7 +114,10 @@ const CorrelationSettings = ({
             maxValue={20}
             minValue={1}
             value={correlationSettings?.size}
-            onChange={value => console.log(value)}
+            onChange={(value) => correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.SIZE,
+              newValue: value
+            })}
           />
         </div>
       </Field>
@@ -120,7 +128,9 @@ const CorrelationSettings = ({
 const mapStateToProps = ({ settings }) => ({
   correlationSettings: settings?.correlation ?? {}
 });
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  correlationSettingsChanged,
+};
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(CorrelationSettings);
 export { MainContainer as CorrelationSettings };

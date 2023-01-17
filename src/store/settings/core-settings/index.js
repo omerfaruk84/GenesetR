@@ -12,35 +12,15 @@ export const coreSettingsSlice = createSlice({
   name: 'core',
   initialState,
   reducers: {
-      cellLineChanged: (state, action) => {
-      const { value } = action.payload;
-      state.cellLine = value;
-    },
-    dataTypeChanged: (state, action) => {
-      const { value } = action.payload;
-      state.dataType = value;
-    },
-    peturbationListChanged: (state, action) => {
-      const { value } = action.payload;
-      state.peturbationList = value;
-    },
-    graphTypeChanged: (state, action) => {
-      const { value } = action.payload;
-      state.graphType = value;
-    },
-    highlightGenesChanged: (state, action) => {
-      const { value } = action.payload;
-      state.highlightGenes = value;
+    coreSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     },
   },
 });
 
 export const {
-  cellLineChanged,
-  dataTypeChanged,
-  peturbationListChanged,
-  graphTypeChanged,
-  highlightGenesChanged,
+  coreSettingsChanged
 } = coreSettingsSlice.actions;
 
 const coreSettingsReducer = coreSettingsSlice.reducer;

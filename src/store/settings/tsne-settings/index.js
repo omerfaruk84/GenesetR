@@ -13,11 +13,16 @@ export const tsneSettingsSlice = createSlice({
   name: 'tsne',
   initialState,
   reducers: {
-    tsneSourceChanged: (state, action) => {
-      console.log(state, action);
+    tsneSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
     }
   },
 });
+
+export const {
+  tsneSettingsChanged,
+} = tsneSettingsSlice.actions;
 
 const tsneSettingsReducer = tsneSettingsSlice.reducer;
 
