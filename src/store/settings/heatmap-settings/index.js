@@ -6,10 +6,7 @@ const initialState = {
   mapColor: 'bwr',
   zScoreNormalization: 'None',
   standardization: 'None',
-  coloringRange: {
-    min: -0.50,
-    max: 0.50,
-  },
+  coloringRange: [-0.50,0.50],
   size: 5,
   targetGeneList: '',
 };
