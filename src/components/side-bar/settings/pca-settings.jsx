@@ -11,29 +11,8 @@ const PcaSettings = ({
   pcaSettings,
   pcaSettingsChanged,
 }) => {
-  const pcaSourceOptions = [
-    {
-      label: 'Correlation Data',
-      value: 2,
-    },
-    {
-      label: 'Perturbation',
-      value: 1,
-    }
-  ];
-
   return (
-    <>
-      <Field label='PCA Source'>
-        <Select
-          onChange={({ target: { value } }) => pcaSettingsChanged({
-            settingName: PcaSettingsTypes.PCA_SOURCE,
-            newValue: value
-          })}
-          options={pcaSourceOptions}
-          value={pcaSettings?.pcaSource}
-        />
-      </Field>
+    <>      
       <Field label='Number of components'>
         <div className={styles.inputRange}>
           <InputRange

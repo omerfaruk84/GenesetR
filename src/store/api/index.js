@@ -1,11 +1,10 @@
 import Axios from 'axios';
 
-const runPcaGraphCalc = async (core, pca, _clustering) => {
+const runPcaGraphCalc = async (core, pca) => {
   const body = {
     geneList: core.peturbationList?.replaceAll('\n', ';'),
     dataType: core.dataType,
     filter: "",
-    dataSource: core.dataSource,
     numcomponents: pca.numberOfComponents,
     retType: 0,
     request: 'PCAGraph'
@@ -26,7 +25,9 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
           'ngrok-skip-browser-warning': '69420',
         },
       });
+      console.log("Checking task")
       if (task_result !== null) {
+        console.log(task_result)
         return task_result;
       };
 
