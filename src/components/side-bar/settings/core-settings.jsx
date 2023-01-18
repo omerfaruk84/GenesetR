@@ -82,8 +82,8 @@ const CoreSettings = ({
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
           tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
-          rows = {10}
-          resize = "False"
+          rows={10}
+          resize='vertical'
           value={coreSettings?.peturbationList}
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.PETURBATION_LIST,
