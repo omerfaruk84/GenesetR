@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import { tsneSettingsChanged } from '../../../store/settings/tsne-settings';
 import { TsneSettingsTypes } from './enums';
@@ -83,16 +83,6 @@ const TsneSettings = ({
             })}
           />
         </div>
-      </Field>
-      <Field>
-        <CheckBox
-          label="HDB Scan Clustering"
-          onChange={({ target: { checked } }) => tsneSettingsChanged({
-            settingName: TsneSettingsTypes.HDB_SCAN_CLUSTERING,
-            newValue: checked,
-          })}
-          checked={tsneSettings?.hdbScanClustering}
-        />
       </Field>
     </>
   );

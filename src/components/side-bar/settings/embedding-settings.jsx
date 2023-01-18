@@ -74,14 +74,6 @@ const EmbeddingSettings = ({
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-          onChange={({ target: { value } }) => embeddingSettingsChanged({
-            settingName: EmbeddingSettingsTypes.HDB_SCAN_CLUSTERING,
-            newValue: value,
-          })}
-        checked={embeddingSettings?.hdbScanClustering}
-      />
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox, Spacer, Text } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Spacer, Text } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import { umapSettingsChanged } from '../../../store/settings/umap-settings';
 import { UmapSettingsTypes } from './enums';
@@ -68,14 +68,6 @@ const UmapSettings = ({
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-        onChange={({ target: { checked } }) => umapSettingsChanged({
-          settingName: UmapSettingsTypes.HDB_SCAN_CLUSTERING,
-          newValue: checked,
-        })}
-        checked={umapSettings?.hdbScanClustering}
-      />
     </>
   );
 };

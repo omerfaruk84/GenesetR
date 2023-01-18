@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox } from '@oliasoft-open-source/react-ui-library';
+import { Field } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import { pcaSettingsChanged } from '../../../store/settings/pca-settings';
 import { PcaSettingsTypes } from './enums';
@@ -26,14 +26,6 @@ const PcaSettings = ({
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-        onChange={({ target: { checked } }) => pcaSettingsChanged({
-          settingName: PcaSettingsTypes.HDB_SCAN_CLUSTERING,
-          newValue: checked
-        })}
-        checked={pcaSettings?.hdbScanClustering}
-      />
     </>
   );
 };
