@@ -2,11 +2,10 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   showLegend: true,
-  showClusterCenters: true,
-  highlightClusters: true,
+
   minimumClusterSize: 10,
   clusteringMetric: 'euclidean',
-  clusteringMethod: 'EOM',
+  clusteringMethod: 'eom',
   minimumSamples: 10,
   clusterSelectionEpsilon: 0.00,
 };
