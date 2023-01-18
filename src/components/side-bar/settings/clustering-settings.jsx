@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { ClusteringSettingsTypes } from './enums';
 import { clusteringSettingsChanged } from '../../../store/settings/clustering-settings';
 import InputRange from 'react-input-range';
@@ -13,51 +13,38 @@ const ClusteringSettings = ({
 }) => {
   const clusteringMetricOptions = [
     {
-      label: 'euclidean',
+      label: 'Euclidean',
       value: 'euclidean',
+    },
+    {
+      label: 'Manhattan',
+      value: 'manhattan',
+    },    
+    {
+      label: 'Jaccard',
+      value: 'jaccard',
     }
   ];
   const clusteringMethodOptions = [
     {
       label: 'EOM',
-      value: 'EOM',
+      value: 'eom',
+    },
+    {
+      label: 'LEAF',
+      value: 'leaf',
     }
   ];
 
   return (
     <>
-      <CheckBox
-        label='Show legend'
-        onChange={({ target: { checked } }) => clusteringSettingsChanged({
-          settingName: ClusteringSettingsTypes.SHOW_LEGEND,
-          newValue: checked
-        })}
-        checked={clusteringSettings?.showLegend}
-      />
-      <Spacer height={5} />
-      <CheckBox
-        label='Show cluster centers'
-        onChange={({ target: { checked } }) => clusteringSettingsChanged({
-          settingName: ClusteringSettingsTypes.SHOW_CLUSTER_CENTERS,
-          newValue: checked
-        })}
-        checked={clusteringSettings?.showClusterCenters}
-      />
-      <Spacer height={5} />
-      <CheckBox
-        label='Highlight clusters'
-        onChange={({ target: { checked } }) => clusteringSettingsChanged({
-          settingName: ClusteringSettingsTypes.HIGHLIGHT_CLUSTERS,
-          newValue: checked
-        })}
-        checked={clusteringSettings?.highlightClusters}
-      />
+      
       <Spacer height={10} />
       <Field label='Minimum Cluster Size'>
         <div className={styles.inputRange}>
           <InputRange
-            maxValue={100}
-            minValue={3}
+            maxValue={200}
+            minValue={3} //How to set default values
             value={clusteringSettings?.minimumClusterSize}
             onChange={value => console.log(value)}
           />
@@ -83,11 +70,12 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMethod}
         />
       </Field>
+      
       <Field label='Minimum Samples'>
         <div className={styles.inputRange}>
           <InputRange
             maxValue={100}
-            minValue={3}
+            minValue={3} //How can we set default to None
             value={clusteringSettings?.minimumSamples}
             onChange={value => console.log(value)}
           />
@@ -96,7 +84,7 @@ const ClusteringSettings = ({
       <Field label='Cluster Selection Epsilon'>
         <div className={styles.inputRange}>
           <InputRange
-            maxValue={1}
+            maxValue={100}
             minValue={0}
             value={clusteringSettings?.clusterSelectionEpsilon}
             onChange={value => console.log(value)}

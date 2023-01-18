@@ -1,9 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  pcaSource: 2,
   numberOfComponents: 10,
-  hdbScanClustering: true,
 };
 
 export const pcaSettingsSlice = createSlice({

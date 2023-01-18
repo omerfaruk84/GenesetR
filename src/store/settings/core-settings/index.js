@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  cellLine: 'K562-Whole Gensome',
+  cellLine: 1,
   dataType: 1,
   peturbationList: '',
   graphType: '2D',

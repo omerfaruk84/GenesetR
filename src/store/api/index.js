@@ -5,7 +5,7 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
     geneList: core.peturbationList?.replaceAll('\n', ';'),
     dataType: core.dataType,
     filter: "",
-    dataSource: pca.pcaSource,
+    dataSource: core.dataSource,
     numcomponents: pca.numberOfComponents,
     retType: 0,
     request: 'PCAGraph'
@@ -13,14 +13,13 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
 
   const { task_id } = await Axios.post("https://94bf-2001-700-4a01-10-00-36.eu.ngrok.io/getData", {
     body: JSON.stringify(body),
-    request: 'longTask',
   })
     .then(response => response.data);
 
 
   const delay = ms => new Promise(res => setTimeout(res, ms));
   const fetchPcaGraph = async () => {
-    let times = 10;
+    let times = 1;
     do {
       const { data: { task_result } }  = await Axios.get("https://94bf-2001-700-4a01-10-00-36.eu.ngrok.io/tasks/" + task_id, {
         headers: {
@@ -31,9 +30,9 @@ const runPcaGraphCalc = async (core, pca, _clustering) => {
         return task_result;
       };
 
-      await delay(3000);
-      times--;
-    } while (times > 0);
+      await delay(times*250);
+      times++;
+    } while (times < 30);
   };
 
   return fetchPcaGraph(task_id);

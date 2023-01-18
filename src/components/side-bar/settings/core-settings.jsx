@@ -10,8 +10,16 @@ const CoreSettings = ({
 }) => {
   const cellLineOptions = [
     {
-      label: 'K562-Whole Gensome',
-      value: 'K562-Whole Gensome',
+      label: 'K562-Whole Genome',
+      value: 1,
+    },
+    {
+      label: 'K562-Essential',
+      value: 2,
+    },
+    {
+      label: 'RPE1-Essential',
+      value: 3,
     }
   ];
   const dataTypeOptions = [
@@ -20,8 +28,16 @@ const CoreSettings = ({
       value: 1,
     },
     {
-      label: 'Correlation data',
+      label: 'Gene Expression',
       value: 2,
+    },
+    {
+      label: 'Perturbation Correlation',
+      value: 3,
+    },
+    {
+      label: 'Expression Correlation',
+      value: 4,
     }
   ];
   const graphTypeOptions = [
@@ -65,6 +81,9 @@ const CoreSettings = ({
       <Field label='Perturbation list'>
         <TextArea
           placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
+          tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
+          rows = {10}
+          resize = "False"
           value={coreSettings?.peturbationList}
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.PETURBATION_LIST,
@@ -84,16 +103,7 @@ const CoreSettings = ({
           value={coreSettings?.graphType}
         />
       </Field>
-      <Field label='Highlight Genes'>
-        <TextArea
-          placeholder='Please enter gene list seperated by comma, new line, space, or semicolon!'
-          value={coreSettings?.highlightGenes}
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.HIGHLIGHT_GENES,
-            newValue: value
-          })}
-        />
-      </Field>
+    
     </>
   );
 };

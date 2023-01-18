@@ -18,9 +18,6 @@ const BiClusteringSettingsTypes = {
 };
 
 const ClusteringSettingsTypes = {
-  SHOW_LEGEND: 'showLegend',
-  SHOW_CLUSTER_CENTERS: 'showClusterCenters',
-  HIGHLIGHT_CLUSTERS: 'highlightClusters',
   MINIMUM_CLUSTER_SIZE: 'minimumClusterSize',
   CLUSTERING_METRIC: 'clusteringMetric',
   CLUSTERING_METHOD: 'clusteringMethod',
@@ -29,9 +26,7 @@ const ClusteringSettingsTypes = {
 };
 
 const PcaSettingsTypes = {
-  PCA_SOURCE: 'pcaSource',
   NUMBER_OF_COMPONENTS: 'numberOfComponents',
-  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
 const CoreSettingsTypes = {
@@ -59,7 +54,6 @@ const EmbeddingSettingsTypes = {
   DIMENSION_COUNT: 'dimensionCount',
   MDE_CONTRSAINT: 'mdeContrsaint',
   REPULSIVE_FRACTION: 'repulsiveFraction',
-  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
 const UmapSettingsTypes = {
@@ -67,7 +61,6 @@ const UmapSettingsTypes = {
   DIMENSION_COUNT: 'dimensionCount',
   MINIMUM_DISTANCE: 'minimumDistance',
   NUMBER_OF_NEIGHBOURS: 'numberOfNeighbours',
-  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
 const TsneSettingsTypes = {
@@ -76,7 +69,6 @@ const TsneSettingsTypes = {
   LEARNING_RATE: 'learningRate',
   NUMBER_OF_ITERATIONS: 'numberOfIterations',
   EARLY_EXAGGERATION: 'earlyExaggeration',
-  HDB_SCAN_CLUSTERING: 'hdbScanClustering',
 };
 
 const GeneRegulationCoreSettingsTypes = {
