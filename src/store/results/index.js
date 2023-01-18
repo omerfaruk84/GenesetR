@@ -27,8 +27,8 @@ const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
   switch (module) {
     case ROUTES.PCA:
-      const { core, pca, clustering } = settings;
-      const result = await runPcaGraphCalc(core, pca, clustering);
+      const { core, pca } = settings;
+      const result = await runPcaGraphCalc(core, pca);
       return dispatch(pcaGraphReceived({ result }));
     default:
       throw new Error('This module does not exists');

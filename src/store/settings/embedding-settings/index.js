@@ -5,7 +5,6 @@ const initialState = {
   dimensionCount: 2,
   mdeContrsaint: 'Standardized',
   repulsiveFraction: 0.50,
-  hdbScanClustering: true,
 };
 
 export const embeddingSettingsSlice = createSlice({

@@ -5,8 +5,7 @@ const initialState = {
   perplexity: 5,
   learningRate: 200,
   numberOfIterations: 1000,
-  earlyExaggeration: 5,
-  hdbScanClustering: true,
+  earlyExaggeration: 5,  
 };
 
 export const tsneSettingsSlice = createSlice({

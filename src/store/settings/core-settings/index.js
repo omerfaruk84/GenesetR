@@ -4,8 +4,7 @@ const initialState = {
   cellLine: 1,
   dataType: 1,
   peturbationList: '',
-  graphType: '2D',
-  highlightGenes: '',
+  graphType: '2D', 
 };
 
 export const coreSettingsSlice = createSlice({

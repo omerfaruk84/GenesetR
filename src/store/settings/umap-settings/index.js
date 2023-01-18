@@ -4,8 +4,7 @@ const initialState = {
   umapSource: 'PCA Data',
   dimensionCount: 2,
   minimumDistance: 0.1,
-  numberOfNeighbours: 5,
-  hdbScanClustering: true,
+  numberOfNeighbours: 5, 
 };
 
 export const umapSettingsSlice = createSlice({
