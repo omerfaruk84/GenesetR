@@ -52,7 +52,7 @@ const CoreSettings = ({
   ];
 
   const numberOfGenesEntered = coreSettings?.peturbationList
-    ?.replaceAll('\n', ';')
+    ?.replaceAll(/\s+|,\s+|,/g, ';')
     ?.split(';')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
 
