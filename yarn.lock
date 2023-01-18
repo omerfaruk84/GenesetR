@@ -1718,10 +1718,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@oliasoft-open-source/react-ui-library@^3.1.8":
-  version "3.1.8"
-  resolved "https://registry.yarnpkg.com/@oliasoft-open-source/react-ui-library/-/react-ui-library-3.1.8.tgz#53bc0f154d55bce4022b44a60e43aafde4259c9c"
-  integrity sha512-yF6fyjjXEWJyUnx7W27d//GMjpQF52tOUHLviyA6hSfeLDQ/0825JVvf3degr2UxJbCgBmCM6nsFigPTpceUfg==
+"@oliasoft-open-source/react-ui-library@^3.1.24":
+  version "3.1.24"
+  resolved "https://registry.yarnpkg.com/@oliasoft-open-source/react-ui-library/-/react-ui-library-3.1.24.tgz#a25ce9b5e097c9660924422d4e3088c0d1086e96"
+  integrity sha512-OvtHcUInZ0uEAN9x9iTXeVPiAla0b9f/kSEwhS/tF9C2DIVHwzIe/PM1AGTFL+WyfMyu8VXG8xmZo8QNOVamQw==
   dependencies:
     "@infinium/react-keyboard-event-handler" "^1.5.8"
     "@minoru/react-dnd-treeview" "^1.6.1"
