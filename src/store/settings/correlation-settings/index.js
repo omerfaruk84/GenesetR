@@ -2,16 +2,13 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   removeLowCorrelation: false,
-  minCorrelation: 0.30,
+  minCorrelation: 0.3,
   linkageMethod: 'complete',
   distanceMetric: 'euclidean',
   mapColor: 'bwr',
   zScoreNormalization: 'None',
   standardization: 'None',
-  coloringRange: {
-    min: -0.50,
-    max: 0.50,
-  },
+  coloringRange: [-0.50, 0.50],
   size: 5,
 };
 

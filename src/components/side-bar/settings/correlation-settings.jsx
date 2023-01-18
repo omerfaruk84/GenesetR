@@ -1,6 +1,6 @@
 import React from 'react';
 import {connect} from 'react-redux';
-import { Field, Select, CheckBox } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, CheckBox, Slider, Flex, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import InputRange from 'react-input-range';
 import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
 import { CorrelationSettingsTypes } from './enums';
@@ -40,7 +40,7 @@ const CorrelationSettings = ({
     <>
       <CheckBox
         label="Remove low correlation"
-        onChange={({ target: { checked }}) => correlationSettingsChanged({
+        onChange={({ target: { checked } }) => correlationSettingsChanged({
           settingName: CorrelationSettingsTypes.REMOVE_LOW_CORRELATION,
           newValue: checked
         })}
@@ -48,18 +48,26 @@ const CorrelationSettings = ({
       />
       <Field label='Min Correlation'>
         <div className={styles.inputRange}>
-          <InputRange
+          <Flex justifyContent="space-between">
+            <Text>{0}</Text>
+            <Text>{0.99}</Text>
+          </Flex>
+          <Slider
+            label={correlationSettings?.minCorrelation}
+            max={99}
+            min={0}
             disabled={!correlationSettings?.removeLowCorrelation}
-            maxValue={0.99}
-            minValue={0}
-            value={correlationSettings?.minCorrelation}
-            onChange={value => console.log(value)}
+            value={correlationSettings?.minCorrelation * 100}
+            onChange={({ target: { value } }) => correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.MIN_CORRELATION,
+              newValue: value / 100
+            })}
           />
         </div>
       </Field>
       <Field label='Linkage Method'>
         <Select
-          onChange={({ target: { value }}) => correlationSettingsChanged({
+          onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.LINKAGE_METHOD,
             newValue: value
           })}
@@ -99,28 +107,45 @@ const CorrelationSettings = ({
       </Field>
       <Field label='Coloring range'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={0.8}
-            minValue={-0.8}
-            value={correlationSettings?.coloringRange}
-            onChange={value => console.log(value)}
-            onChangeComplete={value => console.log(value)}
+          <Flex justifyContent="space-between">
+            <Text>{-0.88}</Text>
+            <Text>{0.88}</Text>
+          </Flex>
+          <Slider
+            max={88}
+            min={-88}
+            range
+            value={correlationSettings?.coloringRange?.map(value => value * 100)}
+            onChange={({ target: { value } }) => correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.COLORING_RANGE,
+              newValue: value?.map(value => value / 100)
+            })}
           />
+          <Flex justifyContent="space-between">
+            <Text>{correlationSettings?.coloringRange[0]}</Text>
+            <Text>{correlationSettings?.coloringRange[1]}</Text>
+          </Flex>
         </div>
       </Field>
       <Field label='Size'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={20}
-            minValue={1}
+          <Flex justifyContent="space-between">
+            <Text>{1}</Text>
+            <Text>{20}</Text>
+          </Flex>
+          <Slider
+            label={correlationSettings?.size}
+            max={20}
+            min={1}
             value={correlationSettings?.size}
-            onChange={(value) => correlationSettingsChanged({
+            onChange={({ target: { value } }) => correlationSettingsChanged({
               settingName: CorrelationSettingsTypes.SIZE,
               newValue: value
             })}
           />
         </div>
       </Field>
+      <Spacer height={50} />
     </>
   );
 };
