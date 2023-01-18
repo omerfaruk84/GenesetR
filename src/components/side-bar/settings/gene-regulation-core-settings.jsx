@@ -1,7 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select } from '@oliasoft-open-source/react-ui-library';
-import InputRange from 'react-input-range';
+import { Field, Select, Slider, Flex, Text } from '@oliasoft-open-source/react-ui-library';
 import { geneRegulationCoreSettingsChanged } from '../../../store/settings/gene-regulation-core-settings';
 import { GeneRegulationCoreSettingsTypes } from './enums';
 import 'react-input-range/lib/css/index.css';
@@ -32,13 +31,18 @@ const GeneRegulationSettings = ({
       </Field>
       <Field label='Absolute Z Score/Correlation r'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={1}
-            minValue={0}
-            value={geneRegulationCoreSettings?.absoluteZScore}
-            onChange={(value) => geneRegulationCoreSettingsChanged({
+          <Flex justifyContent="space-between">
+            <Text>{0}</Text>
+            <Text>{1}</Text>
+          </Flex>
+          <Slider
+            label={geneRegulationCoreSettings?.absoluteZScore}
+            max={10}
+            min={0}
+            value={geneRegulationCoreSettings?.absoluteZScore * 10}
+            onChange={({ target: { value } }) => geneRegulationCoreSettingsChanged({
               settingName: GeneRegulationCoreSettingsTypes.ABSOLUTE_Z_SCORE,
-              newValue: value
+              newValue: value / 10,
             })}
           />
         </div>
