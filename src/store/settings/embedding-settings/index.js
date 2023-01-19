@@ -4,7 +4,7 @@ const initialState = {
   embedingSource: 'PCA Data',
   dimensionCount: 2,
   mdeContrsaint: 'Standardized',
-  repulsiveFraction: 0.50,
+  repulsiveFraction: 0.5,
 };
 
 export const embeddingSettingsSlice = createSlice({

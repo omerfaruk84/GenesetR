@@ -1,10 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox } from '@oliasoft-open-source/react-ui-library';
-import InputRange from 'react-input-range';
+import { Field, Slider, Flex, Text } from '@oliasoft-open-source/react-ui-library';
 import { pcaSettingsChanged } from '../../../store/settings/pca-settings';
 import { PcaSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const PcaSettings = ({
@@ -12,28 +10,25 @@ const PcaSettings = ({
   pcaSettingsChanged,
 }) => {
   return (
-    <>      
+    <>
       <Field label='Number of components'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={100}
-            minValue={2}
+          <Flex justifyContent="space-between">
+            <Text>{2}</Text>
+            <Text>{100}</Text>
+          </Flex>
+          <Slider
+            label={pcaSettings?.numberOfComponents}
+            max={100}
+            min={2}
             value={pcaSettings?.numberOfComponents}
-            onChange={value => pcaSettingsChanged({
+            onChange={({ target: { value } }) => pcaSettingsChanged({
               settingName: PcaSettingsTypes.NUMBER_OF_COMPONENTS,
               newValue: value
             })}
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-        onChange={({ target: { checked } }) => pcaSettingsChanged({
-          settingName: PcaSettingsTypes.HDB_SCAN_CLUSTERING,
-          newValue: checked
-        })}
-        checked={pcaSettings?.hdbScanClustering}
-      />
     </>
   );
 };

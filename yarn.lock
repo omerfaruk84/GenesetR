@@ -1718,10 +1718,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@oliasoft-open-source/react-ui-library@^3.1.8":
-  version "3.1.8"
-  resolved "https://registry.yarnpkg.com/@oliasoft-open-source/react-ui-library/-/react-ui-library-3.1.8.tgz#53bc0f154d55bce4022b44a60e43aafde4259c9c"
-  integrity sha512-yF6fyjjXEWJyUnx7W27d//GMjpQF52tOUHLviyA6hSfeLDQ/0825JVvf3degr2UxJbCgBmCM6nsFigPTpceUfg==
+"@oliasoft-open-source/react-ui-library@^3.1.24":
+  version "3.1.24"
+  resolved "https://registry.yarnpkg.com/@oliasoft-open-source/react-ui-library/-/react-ui-library-3.1.24.tgz#a25ce9b5e097c9660924422d4e3088c0d1086e96"
+  integrity sha512-OvtHcUInZ0uEAN9x9iTXeVPiAla0b9f/kSEwhS/tF9C2DIVHwzIe/PM1AGTFL+WyfMyu8VXG8xmZo8QNOVamQw==
   dependencies:
     "@infinium/react-keyboard-event-handler" "^1.5.8"
     "@minoru/react-dnd-treeview" "^1.6.1"
@@ -3089,11 +3089,6 @@ at-least-node@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/at-least-node/-/at-least-node-1.0.0.tgz#602cd4b46e844ad4effc92a8011a3c46e0238dc2"
   integrity sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==
-
-autobind-decorator@^1.3.4:
-  version "1.4.3"
-  resolved "https://registry.yarnpkg.com/autobind-decorator/-/autobind-decorator-1.4.3.tgz#4c96ffa77b10622ede24f110f5dbbf56691417d1"
-  integrity sha512-FRzT10Vc0lzgDOhMTpm9a2kZF6Q+MMGwd6Y7OGgHigMZwGz7vpN4qH9ifiPTum8mhJQV9UqLPperHxc9yalAAA==
 
 autoprefixer@^10.4.13:
   version "10.4.13"
@@ -8260,7 +8255,7 @@ prompts@^2.0.1, prompts@^2.4.2:
     kleur "^3.0.3"
     sisteransi "^1.0.5"
 
-prop-types@15.x, prop-types@^15.5.8, prop-types@^15.6.2, prop-types@^15.7.2, prop-types@^15.8.1:
+prop-types@15.x, prop-types@^15.6.2, prop-types@^15.7.2, prop-types@^15.8.1:
   version "15.8.1"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.8.1.tgz#67d87bf1a694f48435cf332c24af10214a3140b5"
   integrity sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==
@@ -8575,14 +8570,6 @@ react-infinite-scroll-component@^6.1.0:
   integrity sha512-SQu5nCqy8DxQWpnUVLx7V7b7LcA37aM7tvoWjTLZp1dk6EJibM5/4EJKzOnl07/BsM1Y40sKLuqjCwwH/xV0TQ==
   dependencies:
     throttle-debounce "^2.1.0"
-
-react-input-range@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/react-input-range/-/react-input-range-1.3.0.tgz#f96d001631ab817417f1e26d8f9f9684b4827f59"
-  integrity sha512-G//kJqUHo7zQA5PuGZNKhuzhGcj83FJsv62tcP4Eo61DUC/0usHPYxFfIZ3zOfdMWuWEaduD6N4lNsZMmaOJgw==
-  dependencies:
-    autobind-decorator "^1.3.4"
-    prop-types "^15.5.8"
 
 react-is@^16.12.0, react-is@^16.13.1, react-is@^16.6.0, react-is@^16.7.0:
   version "16.13.1"

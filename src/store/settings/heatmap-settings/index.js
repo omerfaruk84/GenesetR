@@ -8,10 +8,7 @@ const initialState = {
   mapColor: 'bwr',
   normalize: "True",
   write_original: "True",  
-  coloringRange: {
-    min: -0.50,
-    max: 0.50,
-  },
+  coloringRange: [-0.50,0.50],
   size: 5,
   targetGeneList: '',
 };

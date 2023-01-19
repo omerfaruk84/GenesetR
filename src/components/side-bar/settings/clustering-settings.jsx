@@ -1,10 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Spacer, Slider, Text, Flex } from '@oliasoft-open-source/react-ui-library';
 import { ClusteringSettingsTypes } from './enums';
 import { clusteringSettingsChanged } from '../../../store/settings/clustering-settings';
-import InputRange from 'react-input-range';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const ClusteringSettings = ({
@@ -38,15 +36,22 @@ const ClusteringSettings = ({
 
   return (
     <>
-      
       <Spacer height={10} />
       <Field label='Minimum Cluster Size'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={200}
-            minValue={3} //How to set default values
+          <Flex justifyContent="space-between">
+            <Text>{3}</Text>
+            <Text>{200}</Text>
+          </Flex>
+          <Slider
+            label={clusteringSettings?.minimumClusterSize}
+            max={200}
+            min={3}
             value={clusteringSettings?.minimumClusterSize}
-            onChange={value => console.log(value)}
+            onChange={({ target: { value } }) => clusteringSettingsChanged({
+              settingName: ClusteringSettingsTypes.MINIMUM_CLUSTER_SIZE,
+              newValue: value
+            })}
           />
         </div>
       </Field>
@@ -70,24 +75,40 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMethod}
         />
       </Field>
-      
       <Field label='Minimum Samples'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={100}
-            minValue={3} //How can we set default to None
+          <Flex justifyContent="space-between">
+            <Text>{3}</Text>
+            <Text>{100}</Text>
+          </Flex>
+          <Slider
+            label={clusteringSettings?.minimumSamples}
+            max={100}
+            min={3}
             value={clusteringSettings?.minimumSamples}
-            onChange={value => console.log(value)}
+            onChange={({ target: { value } }) => clusteringSettingsChanged({
+              settingName: ClusteringSettingsTypes.MINIMUM_SAMPLES,
+              newValue: value
+            })}
           />
+ 
         </div>
       </Field>
       <Field label='Cluster Selection Epsilon'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={100}
-            minValue={0}
+          <Flex justifyContent="space-between">
+            <Text>{3}</Text>
+            <Text>{100}</Text>
+          </Flex>
+          <Slider
+            label={clusteringSettings?.clusterSelectionEpsilon}
+            max={100}
+            min={3}
             value={clusteringSettings?.clusterSelectionEpsilon}
-            onChange={value => console.log(value)}
+            onChange={({ target: { value } }) => clusteringSettingsChanged({
+              settingName: ClusteringSettingsTypes.CLUSTER_SELECTION_EPSILON,
+              newValue: value
+            })}
           />
         </div>
       </Field>

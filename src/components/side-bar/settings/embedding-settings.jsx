@@ -1,10 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
-import InputRange from 'react-input-range';
+import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
 import { embeddingSettingsChanged } from '../../../store/settings/embedding-settings';
 import { EmbeddingSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const EmbeddingSettings = ({
@@ -40,11 +38,16 @@ const EmbeddingSettings = ({
       </Field>
       <Field label='Dimension Count'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={4}
-            minValue={2}
+          <Flex justifyContent="space-between">
+            <Text>{2}</Text>
+            <Text>{4}</Text>
+          </Flex>
+          <Slider
+            label={embeddingSettings?.dimensionCount}
+            max={4}
+            min={2}
             value={embeddingSettings?.dimensionCount}
-            onChange={(value) => embeddingSettingsChanged({
+            onChange={({ target: { value } }) => embeddingSettingsChanged({
               settingName: EmbeddingSettingsTypes.DIMENSION_COUNT,
               newValue: value,
             })}
@@ -63,25 +66,22 @@ const EmbeddingSettings = ({
       </Field>
       <Field label='Repulsive Fraction'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={5}
-            minValue={0.1}
-            value={embeddingSettings?.repulsiveFraction}
-            onChange={(value) => embeddingSettingsChanged({
+          <Flex justifyContent="space-between">
+            <Text>{0.1}</Text>
+            <Text>{5}</Text>
+          </Flex>
+          <Slider
+            label={embeddingSettings?.repulsiveFraction}
+            max={50}
+            min={1}
+            value={embeddingSettings?.repulsiveFraction * 10}
+            onChange={({ target: { value } }) => embeddingSettingsChanged({
               settingName: EmbeddingSettingsTypes.REPULSIVE_FRACTION,
-              newValue: value,
+              newValue: value / 10,
             })}
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-          onChange={({ target: { value } }) => embeddingSettingsChanged({
-            settingName: EmbeddingSettingsTypes.HDB_SCAN_CLUSTERING,
-            newValue: value,
-          })}
-        checked={embeddingSettings?.hdbScanClustering}
-      />
     </>
   );
 };

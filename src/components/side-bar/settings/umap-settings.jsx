@@ -1,10 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, CheckBox, Spacer, Text } from '@oliasoft-open-source/react-ui-library';
-import InputRange from 'react-input-range';
+import { Field, Select, Spacer, Text, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
 import { umapSettingsChanged } from '../../../store/settings/umap-settings';
 import { UmapSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const UmapSettings = ({
@@ -34,11 +32,16 @@ const UmapSettings = ({
       </Field>
       <Field label='Dimesion Count'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={4}
-            minValue={2}
+          <Flex justifyContent="space-between">
+            <Text>{2}</Text>
+            <Text>{4}</Text>
+          </Flex>
+          <Slider
+            label={umapSettings?.dimensionCount}
+            max={4}
+            min={2}
             value={umapSettings?.dimensionCount}
-            onChange={(value) => umapSettingsChanged({
+            onChange={({ target: { value } }) => umapSettingsChanged({
               settingName: UmapSettingsTypes.DIMENSION_COUNT,
               newValue: value,
             })}
@@ -47,35 +50,40 @@ const UmapSettings = ({
       </Field>
       <Field label='Minimum Distance'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={0.99}
-            minValue={0}
-            value={umapSettings?.minimumDistance}
-            onChange={value => console.log(value)}
+          <Flex justifyContent="space-between">
+            <Text>{0}</Text>
+            <Text>{0.99}</Text>
+          </Flex>
+          <Slider
+            label={umapSettings?.minimumDistance}
+            max={99}
+            min={0}
+            value={umapSettings?.minimumDistance * 100}
+            onChange={({ target: { value } }) => umapSettingsChanged({
+              settingName: UmapSettingsTypes.MINIMUM_DISTANCE,
+              newValue: value / 100,
+            })}
           />
         </div>
       </Field>
       <Field label='Number of Neighbours'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={200}
-            minValue={2}
+          <Flex justifyContent="space-between">
+            <Text>{2}</Text>
+            <Text>{200}</Text>
+          </Flex>
+          <Slider
+            label={umapSettings?.numberOfNeighbours}
+            max={200}
+            min={2}
             value={umapSettings?.numberOfNeighbours}
-            onChange={(value) => umapSettingsChanged({
+            onChange={({ target: { value } }) => umapSettingsChanged({
               settingName: UmapSettingsTypes.NUMBER_OF_NEIGHBOURS,
               newValue: value,
             })}
           />
         </div>
       </Field>
-      <CheckBox
-        label='HDB Scan Clustering'
-        onChange={({ target: { checked } }) => umapSettingsChanged({
-          settingName: UmapSettingsTypes.HDB_SCAN_CLUSTERING,
-          newValue: checked,
-        })}
-        checked={umapSettings?.hdbScanClustering}
-      />
     </>
   );
 };
