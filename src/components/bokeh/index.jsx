@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
+import $ from 'jquery';
 import { Heading } from '@oliasoft-open-source/react-ui-library';
 import styles from './bokeh.module.scss';
-// import text from './sample.json';
 
 const Bokeh = ({ pcaGraph }) => {
   useEffect(() => {
     if (pcaGraph) {
+      $('.bk-Row').remove();
       window.Bokeh.embed.embed_item(JSON.parse(pcaGraph), 'myplot');
     }
   }, [pcaGraph])
