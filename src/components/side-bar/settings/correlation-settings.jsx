@@ -3,7 +3,6 @@ import {connect} from 'react-redux';
 import { Field, Select, CheckBox, Slider, Flex, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
 import { CorrelationSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const CorrelationSettings = ({

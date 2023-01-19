@@ -3,7 +3,6 @@ import { connect } from 'react-redux';
 import { Field, Select, Slider, Flex, Text } from '@oliasoft-open-source/react-ui-library';
 import { geneRegulationCoreSettingsChanged } from '../../../store/settings/gene-regulation-core-settings';
 import { GeneRegulationCoreSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const GeneRegulationSettings = ({

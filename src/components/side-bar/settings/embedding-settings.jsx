@@ -3,7 +3,6 @@ import { connect } from 'react-redux';
 import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
 import { embeddingSettingsChanged } from '../../../store/settings/embedding-settings';
 import { EmbeddingSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const EmbeddingSettings = ({

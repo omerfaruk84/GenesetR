@@ -3,7 +3,6 @@ import { connect } from 'react-redux';
 import { Field, Select, Slider, Flex, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { heatMapSettingsChanged } from '../../../store/settings/heatmap-settings';
 import { HeatMapSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const HeatMapSettings = ({

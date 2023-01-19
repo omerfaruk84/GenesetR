@@ -1,10 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
-import InputRange from 'react-input-range';
+import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
 import { tsneSettingsChanged } from '../../../store/settings/tsne-settings';
 import { TsneSettingsTypes } from './enums';
-import 'react-input-range/lib/css/index.css';
 import styles from './settings.module.scss';
 
 const TsneSettings = ({
@@ -34,11 +32,16 @@ const TsneSettings = ({
       </Field>
       <Field label='Perplexity'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={300}
-            minValue={1}
+          <Flex justifyContent="space-between">
+            <Text>{1}</Text>
+            <Text>{300}</Text>
+          </Flex>
+          <Slider
+            label={tsneSettings?.perplexity}
+            max={300}
+            min={1}
             value={tsneSettings?.perplexity}
-            onChange={(value) => tsneSettingsChanged({
+            onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.PERPLEXITY,
               newValue: value
             })}
@@ -47,11 +50,16 @@ const TsneSettings = ({
       </Field>
       <Field label='Learning Rate'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={1000}
-            minValue={10}
+          <Flex justifyContent="space-between">
+            <Text>{10}</Text>
+            <Text>{1000}</Text>
+          </Flex>
+          <Slider
+            label={tsneSettings?.learningRate}
+            max={1000}
+            min={10}
             value={tsneSettings?.learningRate}
-            onChange={(value) => tsneSettingsChanged({
+            onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.LEARNING_RATE,
               newValue: value
             })}
@@ -60,11 +68,16 @@ const TsneSettings = ({
       </Field>
       <Field label='Number Of Iterations'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={5000}
-            minValue={250}
+          <Flex justifyContent="space-between">
+            <Text>{250}</Text>
+            <Text>{5000}</Text>
+          </Flex>
+          <Slider
+            label={tsneSettings?.numberOfIterations}
+            max={5000}
+            min={250}
             value={tsneSettings?.numberOfIterations}
-            onChange={(value) => tsneSettingsChanged({
+            onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.NUMBER_OF_ITERATIONS,
               newValue: value
             })}
@@ -73,11 +86,16 @@ const TsneSettings = ({
       </Field>
       <Field label='Early Exaggeration %'>
         <div className={styles.inputRange}>
-          <InputRange
-            maxValue={25}
-            minValue={1}
+          <Flex justifyContent="space-between">
+            <Text>{1}</Text>
+            <Text>{25}</Text>
+          </Flex>
+          <Slider
+            label={tsneSettings?.earlyExaggeration}
+            max={25}
+            min={1}
             value={tsneSettings?.earlyExaggeration}
-            onChange={(value) => tsneSettingsChanged({
+            onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.EARLY_EXAGGERATION,
               newValue: value
             })}
