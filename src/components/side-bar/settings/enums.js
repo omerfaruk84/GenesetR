@@ -34,7 +34,6 @@ const CoreSettingsTypes = {
   DATA_TYPE: 'dataType',
   PETURBATION_LIST: 'peturbationList',
   GRAPH_TYPE: 'graphType',
-  HIGHLIGHT_GENES: 'highlightGenes',
 };
 
 const CorrelationSettingsTypes = {
@@ -77,14 +76,17 @@ const GeneRegulationCoreSettingsTypes = {
 };
 
 const HeatMapSettingsTypes = {
-  LINKAGE_METHOD: 'linkageMethod',
-  DISTANCE_METRIC: 'distanceMetric',
-  MAP_COLOR: 'mapColor',
-  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
-  STANDARDIZATION: 'standardization',
+  ROW_DISTANCE:'row_distance',
+  COLUMN_DISTANCE:'column_distance',
+  ROW_LINKAGE: 'row_linkage',
+  COLUMN_LINKAGE: 'column_linkage',
+  AXIS: 'axis',
+  MAP_COLOR: 'mapColor', 
+  NORMALIZE : 'normalize',
   COLORING_RANGE: 'coloringRange',
-  SIZE: 'size',
+  WRITE_ORGINAL : 'write_original',
   TARGET_GENE_LIST: 'targetGeneList',
+  FILTER: 'filter',
 };
 
 export {

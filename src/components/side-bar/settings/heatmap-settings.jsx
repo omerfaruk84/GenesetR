@@ -29,16 +29,24 @@ const HeatMapSettings = ({
       value: 'bwr',
     }
   ];
-  const zScoreNormalizationOptions = [
+  const normalizationOption = [
     {
-      label: 'None',
-      value: 'None',
+      label: 'True',
+      value: 'True',
+    },
+    {
+      label: 'False',
+      value: 'False',
     }
   ];
-  const standardizationOptions = [
+  const write_originalOptions = [
     {
-      label: 'None',
-      value: 'None',
+      label: 'True',
+      value: 'True',
+    },
+    {
+      label: 'False',
+      value: 'False',
     }
   ];
 
@@ -47,7 +55,7 @@ const HeatMapSettings = ({
       <Field label='Linkage Method'>
         <Select
           onChange={({ target: { value } }) => heatMapSettingsChanged({
-            settingName: HeatMapSettingsTypes.LINKAGE_METHOD,
+            settingName: HeatMapSettingsTypes.ROW_LINKAGE,
             newValue: value,
           })}
           options={linkageMethodOptions}
@@ -57,7 +65,7 @@ const HeatMapSettings = ({
       <Field label='Distance Metric'>
         <Select
           onChange={({ target: { value } }) => heatMapSettingsChanged({
-            settingName: HeatMapSettingsTypes.DISTANCE_METRIC,
+            settingName: HeatMapSettingsTypes.ROW_DISTANCE,
             newValue: value,
           })}
           options={distanceMetricOptions}
@@ -77,21 +85,21 @@ const HeatMapSettings = ({
       <Field label='Z Score Normalization'>
         <Select
           onChange={({ target: { value } }) => heatMapSettingsChanged({
-            settingName: HeatMapSettingsTypes.Z_SCORE_NORMALIZATION,
+            settingName: HeatMapSettingsTypes.NORMALIZE,
             newValue: value,
           })}
-          options={zScoreNormalizationOptions}
+          options={normalizationOption}
           value={heatMapSettings?.zScoreNormalization}
         />
       </Field>
-      <Field label='Standardization'>
+      <Field label='Keep Orginal'>
         <Select
           onChange={({ target: { value } }) => heatMapSettingsChanged({
-            settingName: HeatMapSettingsTypes.STANDARDIZATION,
+            settingName: HeatMapSettingsTypes.WRITE_ORGINAL,
             newValue: value,
           })}
-          options={standardizationOptions}
-          value={heatMapSettings?.standardization}
+          options={write_originalOptions}
+          value={heatMapSettings?.write_original}
         />
       </Field>
       <Field label='Coloring range'>

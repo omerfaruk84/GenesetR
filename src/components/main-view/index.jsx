@@ -7,7 +7,6 @@ import {
 import { ROUTES } from '../../common/routes';
 import { HeatMap } from '../heat-map';
 import { TopBar } from '../top-bar';
-import ExampleJson from '../heat-map/example.json';
 import styles from './main-view.module.scss';
 import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
@@ -22,7 +21,7 @@ const MainView = () => {
         <SideBar />
         <Spacer />
         <Routes>
-          <Route exact path={ROUTES.HEATMAP} element={<HeatMap data={ExampleJson} />} />
+          <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
           <Route exact path={ROUTES.PCA} element={<Bokeh />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

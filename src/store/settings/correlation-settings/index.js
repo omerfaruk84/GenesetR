@@ -6,8 +6,8 @@ const initialState = {
   linkageMethod: 'complete',
   distanceMetric: 'euclidean',
   mapColor: 'bwr',
-  zScoreNormalization: 'None',
-  standardization: 'None',
+  normalization: 'None',
+  write_original: 'None',
   coloringRange: {
     min: -0.50,
     max: 0.50,

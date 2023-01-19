@@ -1,11 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  linkageMethod: 'complete',
-  distanceMetric: 'euclidean',
+  row_linkage: 'single',
+  column_linkage: 'ward',
+  row_distance: 'euclidean',
+  column_distance: 'euclidean',
   mapColor: 'bwr',
-  zScoreNormalization: 'None',
-  standardization: 'None',
+  normalize: "True",
+  write_original: "True",  
   coloringRange: {
     min: -0.50,
     max: 0.50,
