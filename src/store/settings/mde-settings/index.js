@@ -7,11 +7,11 @@ const initialState = {
   repulsiveFraction: 0.5,
 };
 
-export const embeddingSettingsSlice = createSlice({
-  name: 'embedding',
+export const mdeSettingsSlice = createSlice({
+  name: 'mde',
   initialState,
   reducers: {
-    embeddingSettingsChanged: (state, action) => {
+    mdeSettingsChanged: (state, action) => {
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
     }
@@ -19,9 +19,9 @@ export const embeddingSettingsSlice = createSlice({
 });
 
 export const {
-  embeddingSettingsChanged,
-} = embeddingSettingsSlice.actions;
+  mdeSettingsChanged,
+} = mdeSettingsSlice.actions;
 
-const embeddingSettingsReducer = embeddingSettingsSlice.reducer;
+const mdeSettingsReducer = mdeSettingsSlice.reducer;
 
-export { embeddingSettingsReducer };
+export { mdeSettingsReducer };

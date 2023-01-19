@@ -3,7 +3,7 @@ const SettingsTypes = {
   CORRELATION_SETTINGS: 'Correlation Settings',
   PCA_SETTINGS: 'PCA Settings',
   CLUSTERING_SETTINGS: 'Clustering Settings',
-  EMBEDDING_SETTINGS: 'Embedding Settings',
+  MDE_SETTINGS: 'MDE Settings',
   UMAP_SETTINGS: 'UMAP Settings',
   TSNE_SETTINGS: 'tSNE Settings',
   BI_CLUSTERING_SETTINGS: 'biClustering Settings',
@@ -48,7 +48,7 @@ const CorrelationSettingsTypes = {
   SIZE: 'size',
 };
 
-const EmbeddingSettingsTypes = {
+const MdeSettingsTypes = {
   EMBEDDING_SOURCE: 'embedingSource',
   DIMENSION_COUNT: 'dimensionCount',
   MDE_CONTRSAINT: 'mdeContrsaint',
@@ -96,7 +96,7 @@ export {
   PcaSettingsTypes,
   CoreSettingsTypes,
   CorrelationSettingsTypes,
-  EmbeddingSettingsTypes,
+  MdeSettingsTypes,
   UmapSettingsTypes,
   TsneSettingsTypes,
   GeneRegulationCoreSettingsTypes,

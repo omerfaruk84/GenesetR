@@ -1,15 +1,15 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
-import { embeddingSettingsChanged } from '../../../store/settings/embedding-settings';
-import { EmbeddingSettingsTypes } from './enums';
+import { mdeSettingsChanged } from '../../../store/settings/mde-settings';
+import { MdeSettingsTypes } from './enums';
 import styles from './settings.module.scss';
 
-const EmbeddingSettings = ({
-  embeddingSettings,
-  embeddingSettingsChanged,
+const MdeSettings = ({
+  mdeSettings,
+  mdeSettingsChanged,
 }) => {
-  const embedingSourceOptions = [
+  const mdeSourceOptions = [
     {
       label: 'PCA Data',
       value: 'PCA Data',
@@ -26,12 +26,12 @@ const EmbeddingSettings = ({
     <>
       <Field label='Embeding Source'>
         <Select
-          onChange={({ target: { value } }) => embeddingSettingsChanged({
-            settingName: EmbeddingSettingsTypes.EMBEDDING_SOURCE,
+          onChange={({ target: { value } }) => mdeSettingsChanged({
+            settingName: MdeSettingsTypes.EMBEDDING_SOURCE,
             newValue: value,
           })}
-          options={embedingSourceOptions}
-          value={embeddingSettings?.embedingSource}
+          options={mdeSourceOptions}
+          value={mdeSettings?.mdeSource}
         />
         <Spacer height={10} />
         <Text>You need to first perform PCA to use it in embeding!</Text>
@@ -43,12 +43,12 @@ const EmbeddingSettings = ({
             <Text>{4}</Text>
           </Flex>
           <Slider
-            label={embeddingSettings?.dimensionCount}
+            label={mdeSettings?.dimensionCount}
             max={4}
             min={2}
-            value={embeddingSettings?.dimensionCount}
-            onChange={({ target: { value } }) => embeddingSettingsChanged({
-              settingName: EmbeddingSettingsTypes.DIMENSION_COUNT,
+            value={mdeSettings?.dimensionCount}
+            onChange={({ target: { value } }) => mdeSettingsChanged({
+              settingName: MdeSettingsTypes.DIMENSION_COUNT,
               newValue: value,
             })}
           />
@@ -56,12 +56,12 @@ const EmbeddingSettings = ({
       </Field>
       <Field label='MDE Constraint'>
         <Select
-          onChange={({ target: { value } }) => embeddingSettingsChanged({
-            settingName: EmbeddingSettingsTypes.MDE_CONTRSAINT,
+          onChange={({ target: { value } }) => mdeSettingsChanged({
+            settingName: MdeSettingsTypes.MDE_CONTRSAINT,
             newValue: value,
           })}
           options={mdeConstraintOptions}
-          value={embeddingSettings?.mdeContrsaint}
+          value={mdeSettings?.mdeContrsaint}
         />
       </Field>
       <Field label='Repulsive Fraction'>
@@ -71,12 +71,12 @@ const EmbeddingSettings = ({
             <Text>{5}</Text>
           </Flex>
           <Slider
-            label={embeddingSettings?.repulsiveFraction}
+            label={mdeSettings?.repulsiveFraction}
             max={50}
             min={1}
-            value={embeddingSettings?.repulsiveFraction * 10}
-            onChange={({ target: { value } }) => embeddingSettingsChanged({
-              settingName: EmbeddingSettingsTypes.REPULSIVE_FRACTION,
+            value={mdeSettings?.repulsiveFraction * 10}
+            onChange={({ target: { value } }) => mdeSettingsChanged({
+              settingName: MdeSettingsTypes.REPULSIVE_FRACTION,
               newValue: value / 10,
             })}
           />
@@ -87,13 +87,13 @@ const EmbeddingSettings = ({
 };
 
 const mapStateToProps = ({ settings }) => ({
-  embeddingSettings: settings?.embedding ?? {},
+  mdeSettings: settings?.embedding ?? {},
 });
 
 const mapDispatchToProps = {
-  embeddingSettingsChanged,
+  mdeSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(EmbeddingSettings);
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(MdeSettings);
 
-export { MainContainer as EmbeddingSettings };
+export { MainContainer as MdeSettings };

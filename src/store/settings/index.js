@@ -1,6 +1,6 @@
 import { combineReducers } from "@reduxjs/toolkit";
 import { coreSettingsReducer } from './core-settings';
-import { embeddingSettingsReducer } from './embedding-settings';
+import { mdeSettingsReducer } from './mde-settings';
 import { genesetEnrichmentSettingsReducer } from './geneset-enrichment-settings';
 import { umapSettingsReducer } from './umap-settings';
 import { tsneSettingsReducer } from './tsne-settings';
@@ -13,7 +13,7 @@ import { heatMapSettingsReducer } from './heatmap-settings';
 
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
-  embedding: embeddingSettingsReducer,
+  mde: mdeSettingsReducer,
   genesetEnrichment: genesetEnrichmentSettingsReducer,
   umap: umapSettingsReducer,
   tsne: tsneSettingsReducer,

@@ -6,7 +6,7 @@ import styles from './bokeh.module.scss';
 
 const Bokeh = ({ pcaGraph }) => {
   useEffect(() => {
-    if (pcaGraph) {
+    if (pcaGraph) {   
       window.Bokeh.embed.embed_item(JSON.parse(pcaGraph), 'myplot');
     }
   }, [pcaGraph])
