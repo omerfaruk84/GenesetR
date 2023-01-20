@@ -28,82 +28,133 @@ const getData = async(body) =>{
   return fetchData(task_id);
 }
 
-const runPcaGraphCalc = async (core, pca) => {
+const runPcaGraphCalc = async (core, pca, clustering) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
+    cellLine: core.cellLine,
+
     numcomponents: pca.numberOfComponents,
+
+    min_cluster_size:clustering.min_cluster_size,
+    clusteringMetric: clustering.clusteringMetric,
+    clusteringMethod:  clustering.clusteringMethod,
+    minimumSamples:  clustering.minimumSamples,
+    clusterSelectionEpsilon:  clustering.clusterSelectionEpsilon,
     retType: 0,
     request: 'PCAGraph'
   };
   return await getData(body);
 };
 
-const runMdeGraphCalc = async (core, pca) => {
+const runMdeGraphCalc = async (core, mde,clustering) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
-    numcomponents: pca.numberOfComponents,
+    cellLine: core.cellLine,
+
+    numcomponents:mde.numcomponents,
+    preprocessingMethod: mde.preprocessingMethod,
+    pyMdeConstraint: mde.pyMdeConstraint,
+    repulsiveFraction:mde.repulsiveFraction,
+
+    min_cluster_size:clustering.min_cluster_size,
+    clusteringMetric: clustering.clusteringMetric,
+    clusteringMethod:  clustering.clusteringMethod,
+    minimumSamples:  clustering.minimumSamples,
+    clusterSelectionEpsilon:  clustering.clusterSelectionEpsilon,
     retType: 0,
-    request: 'PCAGraph'
+    request: 'MDEGraph'
   };
   return await getData(body);
 };
 
-const runUMAPGraphCalc = async (core, pca) => {
+const runUMAPGraphCalc = async (core, umap,clustering) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
-    numcomponents: pca.numberOfComponents,
+    cellLine: core.cellLine,
+
+    numcomponents:umap.numcomponents,
+    n_neighbors: umap.n_neighbors,
+    min_dist: umap.min_dist,
+    metric:umap.metric,
+
+    min_cluster_size:clustering.min_cluster_size,
+    clusteringMetric: clustering.clusteringMetric,
+    clusteringMethod:  clustering.clusteringMethod,
+    minimumSamples:  clustering.minimumSamples,
+    clusterSelectionEpsilon:  clustering.clusterSelectionEpsilon,
     retType: 0,
-    request: 'PCAGraph'
+    request: 'UMAPGraph'
   };
   return await getData(body);
 };
 
-const runtSNEGraphCalc = async (core, pca) => {
+const runtSNEGraphCalc = async (core, tsne,clustering ) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
-    numcomponents: pca.numberOfComponents,
+    cellLine: core.cellLine,
+
+    numcomponents:tsne.numcomponents,
+    earlyExaggeration: tsne.earlyExaggeration,
+    perplexity: tsne.perplexity,
+    metric:tsne.metric,
+    learning_rate: tsne.learning_rate,
+    n_iter:tsne.n_iter,
+
+    min_cluster_size:clustering.min_cluster_size,
+    clusteringMetric: clustering.clusteringMetric,
+    clusteringMethod:  clustering.clusteringMethod,
+    minimumSamples:  clustering.minimumSamples,
+    clusterSelectionEpsilon:  clustering.clusterSelectionEpsilon,
     retType: 0,
-    request: 'PCAGraph'
+    request: 'tSNEGraph'
   };
   return await getData(body);
 };
 
-const runbiClusteringCalc = async (core, pca) => {
+const runbiClusteringCalc = async (core, biClustering) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
-    numcomponents: pca.numberOfComponents,
+    cellLine: core.cellLine,
+    
+    n_clusters: biClustering.n_clusters,  //Anyway to set this to default value is number of genes divided by 20
+    n_init:biClustering.n_init,
+
     retType: 0,
-    request: 'PCAGraph'
+    request: 'biClustering'
   };
   return await getData(body);
 };
 
-const runPathFinderCalc = async (core, pca) => {
+const runPathFinderCalc = async (core, pathfinder) => {
   const body = {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
-    filter: "",
-    numcomponents: pca.numberOfComponents,
+    cellLine: core.cellLine,
+    
+    upgeneList: pathfinder.upgeneList,
+    cutoff: pathfinder.cutoff,
+    depth: pathfinder.depth,
+    checkCorr: pathfinder.checkCorr,
+    corrCutOff: pathfinder.corrCutOff,
+    BioGridData: pathfinder.BioGridData,
+
     retType: 0,
-    request: 'PCAGraph'
+    request: 'findPath'
   };
   return await getData(body);
 };
 
 const runCorrCalc = async (core, corr) => {  
   const body = {
-    geneList: core.peturbationList?.replaceAll('\n', ';'),
+    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
+    cellLine: core.cellLine,
+
     filter: corr.filter,
     row_distance: corr.row_distance,
     column_distance: corr.column_distance,
@@ -112,27 +163,40 @@ const runCorrCalc = async (core, corr) => {
     axis:corr.axis,
     normalize: corr.normalize,
     write_original:corr.write_original, 
+    
+    retType: 0,  
     request: 'corrCluster'
   };
   return await getData(body);  
 };
 
-const runGeneRegulation = async (core, corr) => {  
+const runHeatMap = async (core, heatMap) => {  
   const body = {
-    geneList: core.peturbationList?.replaceAll('\n', ';'),
     dataType: core.dataType,
-    filter: corr.filter,
-    row_distance: corr.row_distance,
-    column_distance: corr.column_distance,
-    row_linkage: corr.row_linkage,
-    column_linkage: corr.column_linkage,
-    axis:corr.axis,
-    normalize: corr.normalize,
-    write_original:corr.write_original, 
-    request: 'corrCluster'
+    cellLine: core.cellLine,
+    
+    row_distance: heatMap.row_distance,
+    column_distance: heatMap.column_distance,
+    row_linkage: heatMap.row_linkage,
+    column_linkage: heatMap.column_linkage,
+    axis:heatMap.axis,
+    normalize: heatMap.normalize,
+    write_original:heatMap.write_original, 
+    request: 'heatMap'
   };
   return await getData(body);  
 };
 
+const runGeneRegulation = async (core, geneRegulationCore) => {  
+  const body = {
+    dataType: core.dataType,
+    cellLine: core.cellLine,
 
-export { runPcaGraphCalc, runMdeGraphCalc,runUMAPGraphCalc,runtSNEGraphCalc,runCorrCalc,runbiClusteringCalc,runPathFinderCalc, runGeneRegulation};
+    selectedGene: geneRegulationCore.selectedGene,
+    absoluteZScore: geneRegulationCore.absoluteZScore,
+
+    request: 'geneRegulation'
+  };
+  return await getData(body);  
+};
+export { runPcaGraphCalc, runMdeGraphCalc,runUMAPGraphCalc,runtSNEGraphCalc,runCorrCalc,runbiClusteringCalc,runPathFinderCalc, runGeneRegulation,runHeatMap};

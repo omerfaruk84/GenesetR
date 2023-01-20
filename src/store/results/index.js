@@ -1,6 +1,6 @@
 import { ROUTES } from '../../common/routes';
 import { createSlice } from '@reduxjs/toolkit';
-import { runPcaGraphCalc, runCorrCalc,runUMAPGraphCalc,runMdeGraphCalc, runtSNEGraphCalc,runbiClusteringCalc, runGeneRegulation,runPathFinderCalc   } from '../api';
+import { runHeatMap, runPcaGraphCalc, runCorrCalc,runUMAPGraphCalc,runMdeGraphCalc, runtSNEGraphCalc,runbiClusteringCalc, runGeneRegulation,runPathFinderCalc   } from '../api';
 
 const initialState = {
   pcaGraph: null,
@@ -11,6 +11,7 @@ const initialState = {
   geneRegulationGraph: null,
   pathFinderGraph: null,
   corrCluster: null,
+  heatmapGraph: null,
 };
 
 export const calculationResults = createSlice({
@@ -22,10 +23,6 @@ export const calculationResults = createSlice({
       //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
       document.getElementById("myplot").innerHTML= "";
       state.pcaGraph = result;       
-    },
-    corrClusterReceived: (state, action) => {
-      const { result8 } = action.payload;
-      state.corrCluster = result8;
     },
     mdeGraphReceived: (state, action) => {
       const { result2 } = action.payload;
@@ -50,6 +47,14 @@ export const calculationResults = createSlice({
     pathFinderGraphReceived: (state, action) => {
       const { result7 } = action.payload;
       state.pathFinderGraph = result7;
+    },    
+    HeatMapReceived: (state, action) => {
+      const { result8 } = action.payload;
+      state.heatmapGraph = result8;
+    },
+    corrClusterReceived: (state, action) => {
+      const { result9 } = action.payload;
+      state.corrCluster = result9;
     },
   },
 });
@@ -57,38 +62,41 @@ export const calculationResults = createSlice({
 const calculationResultsReducer = calculationResults.reducer;
 
 export const {
-  pcaGraphReceived,corrClusterReceived,mdeGraphReceived,pathFinderGraphReceived,tsneGraphReceived,umapGraphReceived,geneRegulationGraphReceived,biClusteringGraphReceived,
+  pcaGraphReceived,corrClusterReceived,mdeGraphReceived,pathFinderGraphReceived,tsneGraphReceived,umapGraphReceived,geneRegulationGraphReceived,biClusteringGraphReceived,HeatMapReceived,
 } = calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
-  const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation} = settings;
+  const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
   switch (module) {
     case ROUTES.PCA:      
-      const result = await runPcaGraphCalc(core, pca);      
+      const result = await runPcaGraphCalc(core, pca, clustering);      
       return dispatch(pcaGraphReceived({ result }));
     case ROUTES.MDE:      
-      const result2 = await runMdeGraphCalc(core, heatMap);
+      const result2 = await runMdeGraphCalc(core, mde, clustering);
       return dispatch(mdeGraphReceived({ result2 }));
     case ROUTES.UMAP:      
-      const result3 = await runUMAPGraphCalc(core, heatMap);
+      const result3 = await runUMAPGraphCalc(core, umap, clustering);
       return dispatch(umapGraphReceived({ result3 }));
     case ROUTES.TSNE:      
-      const result4 = await runtSNEGraphCalc(core, heatMap);
+      const result4 = await runtSNEGraphCalc(core, tsne, clustering);
       return dispatch(tsneGraphReceived({ result4 }));
     case ROUTES.BI_CLUSTERING:      
-      const result5 = await runbiClusteringCalc(core, heatMap);
+      const result5 = await runbiClusteringCalc(core, biClustering);
       return dispatch(biClusteringGraphReceived({ result5 }));
     case ROUTES.GENE_REGULATION:      
-      const result6 = await runGeneRegulation(core, heatMap);
+      const result6 = await runGeneRegulation(core, geneRegulationCore);
       return dispatch(geneRegulationGraphReceived({ result6 }));
     case ROUTES.PATHFINDER:      
-      const result7 = await runPathFinderCalc(core, heatMap);
+      const result7 = await runPathFinderCalc(core, pathfinder);
       return dispatch(pathFinderGraphReceived({ result7 }));
     case ROUTES.HEATMAP:      
-      const result8 = await runCorrCalc(core, heatMap);
-      return dispatch(corrClusterReceived({ result8 }));
-      
+      const result8 = await runHeatMap(core, heatMap);
+      return dispatch(HeatMapReceived({ result8 }));
+    case ROUTES.CORRELATION:      
+      const result9 = await runCorrCalc(core, correlation);
+      return dispatch(corrClusterReceived({ result9 }));
+        
     default:
       throw new Error('This module does not exists');
   }

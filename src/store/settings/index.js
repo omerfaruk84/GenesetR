@@ -10,6 +10,7 @@ import { pcaSettingsReducer } from './pca-settings';
 import { clusteringSettingsReducer } from './clustering-settings';
 import { correlationSettingsReducer } from './correlation-settings';
 import { heatMapSettingsReducer } from './heatmap-settings';
+import { pathfinderSettingsReducer } from './pathfinder-settings';
 
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
@@ -22,7 +23,8 @@ const settingsReducer = combineReducers({
   pca: pcaSettingsReducer,
   clustering: clusteringSettingsReducer,
   correlation: correlationSettingsReducer,
-  heatMap: heatMapSettingsReducer
+  heatMap: heatMapSettingsReducer,
+  pathfinder: pathfinderSettingsReducer
 });
 
 export { settingsReducer };

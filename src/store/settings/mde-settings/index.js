@@ -1,9 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  embedingSource: 'PCA Data',
-  dimensionCount: 2,
-  mdeContrsaint: 'Standardized',
+  numcomponents:3,
+  preprocessingMethod: 'preserve_neighbors',
+  pyMdeConstraint: 'Standardized',
   repulsiveFraction: 0.5,
 };
 
