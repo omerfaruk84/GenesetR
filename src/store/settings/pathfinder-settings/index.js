@@ -6,7 +6,7 @@ const initialState = {
   depth: 1,
   checkCorr: 'True',
   corrCutOff: 0.1,
-  BioGridData: 'True',
+  BioGridData:  'True',
 };
 
 export const pathfinderSettingsSlice = createSlice({

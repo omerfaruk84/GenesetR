@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Spacer, Text, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Slider } from '@oliasoft-open-source/react-ui-library';
 import { umapSettingsChanged } from '../../../store/settings/umap-settings';
 import { UmapSettingsTypes } from './enums';
 import styles from './settings.module.scss';
@@ -9,56 +9,54 @@ const UmapSettings = ({
   umapSettings,
   umapSettingsChanged,
 }) => {
-  const umapSourceOptions = [
+  const umapMetricOptions = [
     {
-      label: 'PCA Data',
-      value: 'PCA Data',
+      label: 'Euclidean',
+      value: 'euclidean',
+    },
+    {
+      label: 'Correlation',
+      value: 'correlation',
     }
   ];
 
   return (
-    <>
-      <Field label='UMAP Source'>
-        <Select
-          onChange={({ target: { value } }) => umapSettingsChanged({
-            settingName: UmapSettingsTypes.UMAP_SOURCE,
-            newValue: value,
-          })}
-          options={umapSourceOptions}
-          value={umapSettings?.umapSource}
-        />
-        <Spacer height={10} />
-        <Text>You need to first perform PCA to use it in embeding!</Text>
-      </Field>
+    <>     
       <Field label='Dimesion Count'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{2}</Text>
-            <Text>{4}</Text>
-          </Flex>
           <Slider
-            label={umapSettings?.dimensionCount}
-            max={4}
+            label={umapSettings?.numcomponents}
+            max={100}
             min={2}
-            value={umapSettings?.dimensionCount}
+            value={umapSettings?.numcomponents}
             onChange={({ target: { value } }) => umapSettingsChanged({
-              settingName: UmapSettingsTypes.DIMENSION_COUNT,
+              settingName: UmapSettingsTypes.NUMBER_OF_COMPONENTS,
               newValue: value,
             })}
           />
         </div>
       </Field>
+
+      <Field label='Distance Metric'>
+        <Select
+          onChange={({ target: { value } }) => umapSettingsChanged({
+            settingName: UmapSettingsTypes.METRIC,
+            newValue: value
+          })}
+          options={umapMetricOptions}
+          value={umapSettings?.metric}
+        />
+      </Field>
+
+
       <Field label='Minimum Distance'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{0}</Text>
-            <Text>{0.99}</Text>
-          </Flex>
+          
           <Slider
-            label={umapSettings?.minimumDistance}
+            label={umapSettings?.min_dist}
             max={99}
             min={0}
-            value={umapSettings?.minimumDistance * 100}
+            value={umapSettings?.min_dist * 100}
             onChange={({ target: { value } }) => umapSettingsChanged({
               settingName: UmapSettingsTypes.MINIMUM_DISTANCE,
               newValue: value / 100,
@@ -66,17 +64,15 @@ const UmapSettings = ({
           />
         </div>
       </Field>
+
       <Field label='Number of Neighbours'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{2}</Text>
-            <Text>{200}</Text>
-          </Flex>
+          
           <Slider
-            label={umapSettings?.numberOfNeighbours}
+            label={umapSettings?.n_neighbors}
             max={200}
             min={2}
-            value={umapSettings?.numberOfNeighbours}
+            value={umapSettings?.n_neighbors}
             onChange={({ target: { value } }) => umapSettingsChanged({
               settingName: UmapSettingsTypes.NUMBER_OF_NEIGHBOURS,
               newValue: value,
@@ -90,6 +86,7 @@ const UmapSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   umapSettings: settings?.umap ?? {},
+  
 });
 
 const mapDispatchToProps = {

@@ -8,25 +8,10 @@ const BiClusteringSettings = ({
   biClusteringSettings,
   biClusteringSettingsChanged,
 }) => {
-  const biClusteringSourceOptions = [
-    {
-      label: 'PCA Data',
-      value: 'PCA Data',
-    }
-  ];
+ 
 
   return (
     <>
-      <Field label='biClustering Source'>
-        <Select
-          onChange={({ target: { value } }) => biClusteringSettingsChanged({
-            settingName: BiClusteringSettingsTypes.BI_CLUSTERING_SOURCE,
-            newValue: value
-          })}
-          options={biClusteringSourceOptions}
-          value={biClusteringSettings?.biClusteringSource}
-        />
-      </Field>
       <Field label='Cluster Count'>
         <Input
           onChange={({ target: { value } }) => biClusteringSettingsChanged({ 
@@ -34,7 +19,19 @@ const BiClusteringSettings = ({
             newValue: value
            })}
           placeholder=""
-          value={biClusteringSettings?.clusterCount}
+          value={biClusteringSettings?.n_clusters}
+          type='number'
+        />
+      </Field>
+
+      <Field label='Random Initialization Count'>
+        <Input
+          onChange={({ target: { value } }) => biClusteringSettingsChanged({ 
+            settingName: BiClusteringSettingsTypes.INIT_COUNT,
+            newValue: value
+           })}
+          placeholder=""
+          value={biClusteringSettings?.n_init}
           type='number'
         />
       </Field>

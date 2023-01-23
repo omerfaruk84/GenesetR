@@ -30,13 +30,10 @@ const GeneRegulationSettings = ({
       </Field>
       <Field label='Absolute Z Score/Correlation r'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{0}</Text>
-            <Text>{1}</Text>
-          </Flex>
+         
           <Slider
             label={geneRegulationCoreSettings?.absoluteZScore}
-            max={10}
+            max={100}
             min={0}
             value={geneRegulationCoreSettings?.absoluteZScore * 10}
             onChange={({ target: { value } }) => geneRegulationCoreSettingsChanged({

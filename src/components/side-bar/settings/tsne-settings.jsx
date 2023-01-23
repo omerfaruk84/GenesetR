@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Slider } from '@oliasoft-open-source/react-ui-library';
 import { tsneSettingsChanged } from '../../../store/settings/tsne-settings';
 import { TsneSettingsTypes } from './enums';
 import styles from './settings.module.scss';
@@ -9,33 +9,47 @@ const TsneSettings = ({
   tsneSettings,
   tsneSettingsChanged,
 }) => {
-  const tsneSourceOptions = [
+  const tsneMetricOptions = [
     {
-      label: 'PCA Data',
-      value: 'PCA Data',
+      label: 'Euclidean',
+      value: 'euclidean',
+    },
+    {
+      label: 'Correlation',
+      value: 'correlation',
     }
   ];
 
   return (
     <>
-      <Field label='tSNE Source'>
-        <Select
-          onChange={({ target: { value } }) => tsneSettingsChanged({
-            settingName: TsneSettingsTypes.TSNE_SOURCE,
-            newValue: value,
-          })}
-          options={tsneSourceOptions}
-          value={tsneSettings?.tsneSource}
-        />
-        <Spacer height={10} />
-        <Text>You need to first perform PCA to use it in embeding!</Text>
-      </Field>
-      <Field label='Perplexity'>
+        <Field label='Dimesion Count'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{1}</Text>
-            <Text>{300}</Text>
-          </Flex>
+          <Slider
+            label={tsneSettings?.numcomponents}
+            max={100}
+            min={2}
+            value={tsneSettings?.numcomponents}
+            onChange={({ target: { value } }) =>tsneSettingsChanged({
+              settingName: TsneSettingsTypes.NUMBER_OF_COMPONENTS,
+              newValue: value,
+            })}
+          />
+        </div>
+      </Field>
+
+      <Field label='Distance Metric'>
+        <Select
+          onChange={({ target: { value } }) =>tsneSettingsChanged({
+            settingName: TsneSettingsTypes.METRIC,
+            newValue: value
+          })}
+          options={tsneMetricOptions}
+          value={tsneSettings?.metric}
+        />
+      </Field>
+
+      <Field label='Perplexity'>
+        <div className={styles.inputRange}>          
           <Slider
             label={tsneSettings?.perplexity}
             max={300}
@@ -48,17 +62,14 @@ const TsneSettings = ({
           />
         </div>
       </Field>
+
       <Field label='Learning Rate'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{10}</Text>
-            <Text>{1000}</Text>
-          </Flex>
+        <div className={styles.inputRange}>          
           <Slider
-            label={tsneSettings?.learningRate}
+            label={tsneSettings?.learning_rate}
             max={1000}
             min={10}
-            value={tsneSettings?.learningRate}
+            value={tsneSettings?.learning_rate}
             onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.LEARNING_RATE,
               newValue: value
@@ -66,17 +77,14 @@ const TsneSettings = ({
           />
         </div>
       </Field>
+
       <Field label='Number Of Iterations'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{250}</Text>
-            <Text>{5000}</Text>
-          </Flex>
+        <div className={styles.inputRange}>         
           <Slider
-            label={tsneSettings?.numberOfIterations}
+            label={tsneSettings?.n_iter}
             max={5000}
             min={250}
-            value={tsneSettings?.numberOfIterations}
+            value={tsneSettings?.n_iter}
             onChange={({ target: { value } }) => tsneSettingsChanged({
               settingName: TsneSettingsTypes.NUMBER_OF_ITERATIONS,
               newValue: value
@@ -86,10 +94,6 @@ const TsneSettings = ({
       </Field>
       <Field label='Early Exaggeration %'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{1}</Text>
-            <Text>{25}</Text>
-          </Flex>
           <Slider
             label={tsneSettings?.earlyExaggeration}
             max={25}

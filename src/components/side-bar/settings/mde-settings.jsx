@@ -9,50 +9,57 @@ const MdeSettings = ({
   mdeSettings,
   mdeSettingsChanged,
 }) => {
-  const mdeSourceOptions = [
+  const mdePreProcessingOptions = [
     {
-      label: 'PCA Data',
-      value: 'PCA Data',
+      label: 'Preserve Neighbours',
+      value: 'preserve_neighbors',
+    },
+    {
+      label: 'Preserve Distances',
+      value: 'preserve_distances',
     }
   ];
   const mdeConstraintOptions = [
     {
       label: 'Standardized',
       value: 'Standardized',
+    },
+    {
+      label: 'Centered',
+      value: 'Centered',
+    },
+    {
+      label: 'None',
+      value: 'None',
     }
   ];
 
   return (
     <>
-      <Field label='Embeding Source'>
-        <Select
-          onChange={({ target: { value } }) => mdeSettingsChanged({
-            settingName: MdeSettingsTypes.EMBEDDING_SOURCE,
-            newValue: value,
-          })}
-          options={mdeSourceOptions}
-          value={mdeSettings?.mdeSource}
-        />
-        <Spacer height={10} />
-        <Text>You need to first perform PCA to use it in embeding!</Text>
-      </Field>
+      
       <Field label='Dimension Count'>
         <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{2}</Text>
-            <Text>{4}</Text>
-          </Flex>
-          <Slider
-            label={mdeSettings?.dimensionCount}
-            max={4}
+            <Slider
+            label={mdeSettings?.numcomponents}
+            max={200}
             min={2}
-            value={mdeSettings?.dimensionCount}
+            value={mdeSettings?.numcomponents}
             onChange={({ target: { value } }) => mdeSettingsChanged({
-              settingName: MdeSettingsTypes.DIMENSION_COUNT,
+              settingName: MdeSettingsTypes.NUMBER_OF_COMPONENTS,
               newValue: value,
             })}
           />
         </div>
+      </Field>
+      <Field label='Preprocessing Method'>
+        <Select
+          onChange={({ target: { value } }) => mdeSettingsChanged({
+            settingName: MdeSettingsTypes.PREPROCESSING_METHOD,
+            newValue: value,
+          })}
+          options={mdePreProcessingOptions}
+          value={mdeSettings?.preprocessingMethod}
+        />
       </Field>
       <Field label='MDE Constraint'>
         <Select
@@ -61,23 +68,19 @@ const MdeSettings = ({
             newValue: value,
           })}
           options={mdeConstraintOptions}
-          value={mdeSettings?.mdeContrsaint}
+          value={mdeSettings?.pyMdeConstraint}
         />
       </Field>
       <Field label='Repulsive Fraction'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{0.1}</Text>
-            <Text>{5}</Text>
-          </Flex>
+        <div className={styles.inputRange}>         
           <Slider
             label={mdeSettings?.repulsiveFraction}
-            max={50}
-            min={1}
-            value={mdeSettings?.repulsiveFraction * 10}
+            max={20}
+            min={0}
+            value={mdeSettings?.repulsiveFraction * 20}
             onChange={({ target: { value } }) => mdeSettingsChanged({
               settingName: MdeSettingsTypes.REPULSIVE_FRACTION,
-              newValue: value / 10,
+              newValue: value / 20,
             })}
           />
         </div>
@@ -87,7 +90,7 @@ const MdeSettings = ({
 };
 
 const mapStateToProps = ({ settings }) => ({
-  mdeSettings: settings?.embedding ?? {},
+  mdeSettings: settings?.mde ?? {},
 });
 
 const mapDispatchToProps = {

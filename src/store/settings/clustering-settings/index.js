@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const initialState = {
-  showLegend: true,
+const initialState = {  
   minimumClusterSize: 10,
   clusteringMetric: 'euclidean',
   clusteringMethod: 'eom',

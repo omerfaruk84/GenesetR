@@ -6,7 +6,7 @@ const initialState = {
   column_linkage: 'ward',
   row_distance: 'euclidean',
   column_distance: 'euclidean',
-  axis: 'row',  
+  axis: 'both',  
   normalize: 'True',
   write_original: 'True',  
   
