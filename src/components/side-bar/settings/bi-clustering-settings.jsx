@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Input } from '@oliasoft-open-source/react-ui-library';
+import { Field, Input } from '@oliasoft-open-source/react-ui-library';
 import { BiClusteringSettingsTypes } from './enums';
 import { biClusteringSettingsChanged } from '../../../store/settings/bi-clustering-settings';
 

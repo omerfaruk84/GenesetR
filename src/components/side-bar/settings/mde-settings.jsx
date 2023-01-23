@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Text, Spacer, Slider, Flex } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select,  Slider } from '@oliasoft-open-source/react-ui-library';
 import { mdeSettingsChanged } from '../../../store/settings/mde-settings';
 import { MdeSettingsTypes } from './enums';
 import styles from './settings.module.scss';

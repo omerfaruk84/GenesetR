@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import { Field, Select } from '@oliasoft-open-source/react-ui-library';
 import { heatMapSettingsChanged } from '../../../store/settings/heatmap-settings';
 import { HeatMapSettingsTypes } from './enums';
-import styles from './settings.module.scss';
+
 
 const HeatMapSettings = ({
   heatMapSettings,
