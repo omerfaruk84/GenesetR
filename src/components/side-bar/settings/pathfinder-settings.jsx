@@ -15,17 +15,17 @@ const PathFinderSettings = ({
     <>
       <Field label='Upregulated Genes'>
         <TextArea
-          onChange={({ target: { value } }) => pathfinderSettingsChanged({ 
+          onChange={({ target: { value } }) => pathfinderSettingsChanged({
             settingName: PathFinderSettingsTypes.UPREGULATED_GENES,
             newValue: value
-           })}
+          })}
           placeholder=""
           value={pathfinderSettings?.upgeneList}
-          rows = {10}
+          rows={10}
         />
       </Field>
       <Field label='Z Score Cutoff'>
-        <div className={styles.inputRange}>         
+        <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.cutoff}
             max={40}
@@ -40,6 +40,7 @@ const PathFinderSettings = ({
       </Field>
 
       <Field label='Search Depth'>
+        <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.depth}
             max={3}
@@ -50,22 +51,23 @@ const PathFinderSettings = ({
               newValue: value,
             })}
           />
+         </div>
       </Field>
       
       <Field>
         <CheckBox
-          onChange={({ target: { checked } }) => pathfinderSettingsChanged({ 
+          onChange={({ target: { checked } }) => pathfinderSettingsChanged({
             settingName: PathFinderSettingsTypes.CHECK_CORR,
             newValue: checked,
            
-           })}
-           checked={pathfinderSettings?.checkCorr}
-           label=  'Check Correlation'
+          })}
+          checked={pathfinderSettings?.checkCorr}
+          label='Check Correlation'
         />
       </Field>
       
       <Field label='Correlation Cutoff'>
-        <div className={styles.inputRange}>         
+        <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.corrCutOff}
             max={10}
@@ -81,13 +83,13 @@ const PathFinderSettings = ({
 
       <Field>
         <CheckBox
-          onChange={({ target: { checked } }) => pathfinderSettingsChanged({ 
+          onChange={({ target: { checked } }) => pathfinderSettingsChanged({
             settingName: PathFinderSettingsTypes.CHECK_BIOGRID,
             newValue: checked,
             
-           })}
-           checked={pathfinderSettings?.BioGridData}
-           label= 'Check Biogrid'
+          })}
+          checked={pathfinderSettings?.BioGridData}
+          label='Check Biogrid'
         />
       </Field>
 
