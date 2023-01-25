@@ -58,8 +58,8 @@ const TopBar = () => {
     },
     {
       icon: () => <FcMindMap />,
-      name: TabNames.PATHWAY,
-      toLink: ROUTES.PATHWAY
+      name: TabNames.PATHFINDER,
+      toLink: ROUTES.PATHFINDER
     },
   ]
   return (

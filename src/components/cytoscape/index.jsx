@@ -2,18 +2,21 @@ import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Heading } from '@oliasoft-open-source/react-ui-library';
 import styles from './cytoscape.module.scss';
+import ReactDOM from 'react-dom';
+import CytoscapeComponent from 'react-cytoscapejs';
 // import text from './sample.json';
 
 const Cytoscape = ({ pathFinderGraph }) => {
   useEffect(() => {
     if (pathFinderGraph) {   
-      window.Bokeh.embed.embed_item(JSON.parse(pathFinderGraph), 'mypathfinder');
+      document.getElementById('mypathfinder').render(<CytoscapeComponent elements={pathFinderGraph} style={ { width: '600px', height: '600px' } } />);     
+      
     }
   }, [pathFinderGraph])
   return (
     <div className={styles.mainView}>
       <Heading>Path Finder</Heading>
-      <div id='mypathfinder' className={styles.bokehChart}>
+      <div id='mypathfinder'>
       </div>
     </div>
   );

@@ -126,7 +126,7 @@ const SettingsSelector = ({ pathname }) => {
         settings: <HeatMapSettings />
       },
     ],
-    [ROUTES.PATHWAY]: [
+    [ROUTES.PATHFINDER]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings />

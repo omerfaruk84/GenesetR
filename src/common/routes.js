@@ -8,7 +8,7 @@ const ROUTES = Object.freeze({
   BI_CLUSTERING: '/bi-clustering',
   GENE_REGULATION: '/gene-regulation',
   HEATMAP: '/heatmap',
-  PATHWAY: '/pathfinder',
+  PATHFINDER: '/pathfinder',
 });
 
 /**

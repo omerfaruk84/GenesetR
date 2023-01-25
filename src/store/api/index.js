@@ -132,7 +132,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
 
 const runPathFinderCalc = async (core, pathfinder) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
+    downgeneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
     cellLine: core.cellLine,
     

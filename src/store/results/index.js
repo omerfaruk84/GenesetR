@@ -27,6 +27,7 @@ export const calculationResults = createSlice({
     mdeGraphReceived: (state, action) => {
       const { result2 } = action.payload;
       state.mdeGraph = result2;
+      
     },
     tsneGraphReceived: (state, action) => {
       const { result4 } = action.payload;
@@ -68,11 +69,16 @@ export const {
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
   const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
+  console.log("Her is module");
+  console.log(settings);
+  console.log("Her is module");
+  console.log(module);
   switch (module) {
     case ROUTES.PCA:      
       const result = await runPcaGraphCalc(core, pca, clustering);      
       return dispatch(pcaGraphReceived({ result }));
-    case ROUTES.MDE:      
+    case ROUTES.MDE: 
+      console.log("Her is module two");     
       const result2 = await runMdeGraphCalc(core, mde, clustering);
       return dispatch(mdeGraphReceived({ result2 }));
     case ROUTES.UMAP:      
