@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Slider, Flex, Text } from '@oliasoft-open-source/react-ui-library';
+import { Field, Slider } from '@oliasoft-open-source/react-ui-library';
 import { pcaSettingsChanged } from '../../../store/settings/pca-settings';
 import { PcaSettingsTypes } from './enums';
 import styles from './settings.module.scss';
@@ -12,14 +12,10 @@ const PcaSettings = ({
   return (
     <>
       <Field label='Number of components'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{2}</Text>
-            <Text>{100}</Text>
-          </Flex>
+        <div className={styles.inputRange}>         
           <Slider
             label={pcaSettings?.numberOfComponents}
-            max={100}
+            max={200}
             min={2}
             value={pcaSettings?.numberOfComponents}
             onChange={({ target: { value } }) => pcaSettingsChanged({

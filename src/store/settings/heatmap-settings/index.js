@@ -1,14 +1,15 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const initialState = {
-  linkageMethod: 'complete',
-  distanceMetric: 'euclidean',
-  mapColor: 'bwr',
-  zScoreNormalization: 'None',
-  standardization: 'None',
-  coloringRange: [-0.50,0.50],
-  size: 5,
-  targetGeneList: '',
+const initialState = {  
+  
+  row_linkage: 'single',
+  column_linkage: 'ward',
+  row_distance: 'euclidean',
+  column_distance: 'euclidean',
+  axis: 'both',  
+  normalize: 'True',
+  write_original: 'True',  
+  
 };
 
 export const heatMapSettingsSlice = createSlice({

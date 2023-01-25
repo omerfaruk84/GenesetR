@@ -1,6 +1,6 @@
 import React from 'react';
 import {connect} from 'react-redux';
-import { Field, Select, CheckBox, Slider, Flex, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, CheckBox, Slider, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
 import { CorrelationSettingsTypes } from './enums';
 import styles from './settings.module.scss';
@@ -11,138 +11,142 @@ const CorrelationSettings = ({
 }) => {
   const linkageMethodOptions = [
     {
-      label: 'complete',
+      label: 'Single',
+      value: 'single',
+    },
+    {
+      label: 'Complete',
       value: 'complete',
+    },
+    {
+      label: 'Average',
+      value: 'average',
+    },
+    {
+      label: 'Centroid',
+      value: 'centroid',
+    },
+    {
+      label: 'Median',
+      value: 'median',
+    },
+    {
+      label: 'Ward',
+      value: 'ward',
     }
+
   ];
+  
   const distanceMetricOptions = [
     {
-      label: 'euclidean',
+      label: 'Euclidean',
       value: 'euclidean',
+    },
+    {
+      label: 'Correlation',
+      value: 'correlation',
+    },
+    {
+      label: 'Jaccard',
+      value: 'jaccard',
     }
   ];
-  const zScoreNormalizationOptions = [
+
+  const axisOptions = [
     {
-      label: 'None',
-      value: 'None',
-    }
-  ];
-  const standardizationOptions = [
+      label: 'Both',
+      value: 'both',
+    },
     {
-      label: 'None',
-      value: 'None',
+      label: 'Row',
+      value: 'row',
     }
   ];
 
   return (
     <>
-      <CheckBox
-        label="Remove low correlation"
-        onChange={({ target: { checked } }) => correlationSettingsChanged({
-          settingName: CorrelationSettingsTypes.REMOVE_LOW_CORRELATION,
-          newValue: checked
-        })}
-        checked={correlationSettings?.removeLowCorrelation}
-      />
-      <Field label='Min Correlation'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{0}</Text>
-            <Text>{0.99}</Text>
-          </Flex>
+      <Field label='Minimum Correlation'>
+        <div className={styles.inputRange}>         
           <Slider
-            label={correlationSettings?.minCorrelation}
+            label={correlationSettings?.filter}
             max={99}
-            min={0}
-            disabled={!correlationSettings?.removeLowCorrelation}
-            value={correlationSettings?.minCorrelation * 100}
+            min={0}            
+            value={correlationSettings?.filter * 100}
             onChange={({ target: { value } }) => correlationSettingsChanged({
-              settingName: CorrelationSettingsTypes.MIN_CORRELATION,
+              settingName: CorrelationSettingsTypes.FILTER,
               newValue: value / 100
             })}
           />
         </div>
       </Field>
-      <Field label='Linkage Method'>
+      <Field label='Cluster Axis'>
         <Select
           onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.LINKAGE_METHOD,
+            settingName: CorrelationSettingsTypes.AXIS,
             newValue: value
           })}
-          options={linkageMethodOptions}
-          value={correlationSettings?.linkageMethod}
+          options={axisOptions}
+          value={correlationSettings?.axis}
         />
-      </Field>
-      <Field label='Distance Metric'>
+      </Field> 
+      <Field label='Row Distance'>
         <Select
           onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.DISTANCE_METRIC,
+            settingName: CorrelationSettingsTypes.ROW_DISTANCE,
             newValue: value
           })}
           options={distanceMetricOptions}
-          value={correlationSettings?.distanceMetric}
+          value={correlationSettings?.row_distance}
         />
       </Field>
-      <Field label='Z Score Normalization'>
+      <Field label='Column Distance'>
         <Select
           onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.Z_SCORE_NORMALIZATION,
+            settingName: CorrelationSettingsTypes.COLUMN_DISTANCE,
             newValue: value
           })}
-          options={zScoreNormalizationOptions}
-          value={correlationSettings?.zScoreNormalization}
+          options={distanceMetricOptions}
+          value={correlationSettings?.column_distance}
         />
       </Field>
-      <Field label='Standardization'>
+      <Field label='Row Linkage Method'>
         <Select
           onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.STANDARDIZATION,
+            settingName: CorrelationSettingsTypes.ROW_LINKAGE,
             newValue: value
           })}
-          options={standardizationOptions}
-          value={correlationSettings?.standardization}
+          options={linkageMethodOptions}
+          value={correlationSettings?.row_linkage}
         />
       </Field>
-      <Field label='Coloring range'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{-0.88}</Text>
-            <Text>{0.88}</Text>
-          </Flex>
-          <Slider
-            max={88}
-            min={-88}
-            range
-            value={correlationSettings?.coloringRange?.map(value => value * 100)}
-            onChange={({ target: { value } }) => correlationSettingsChanged({
-              settingName: CorrelationSettingsTypes.COLORING_RANGE,
-              newValue: value?.map(value => value / 100)
-            })}
-          />
-          <Flex justifyContent="space-between">
-            <Text>{correlationSettings?.coloringRange[0]}</Text>
-            <Text>{correlationSettings?.coloringRange[1]}</Text>
-          </Flex>
-        </div>
-      </Field>
-      <Field label='Size'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{1}</Text>
-            <Text>{20}</Text>
-          </Flex>
-          <Slider
-            label={correlationSettings?.size}
-            max={20}
-            min={1}
-            value={correlationSettings?.size}
-            onChange={({ target: { value } }) => correlationSettingsChanged({
-              settingName: CorrelationSettingsTypes.SIZE,
-              newValue: value
-            })}
-          />
-        </div>
-      </Field>
+      <Field label='Column Linkage Method'>
+        <Select
+          onChange={({ target: { value } }) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.COLUMN_LINKAGE,
+            newValue: value
+          })}
+          options={linkageMethodOptions}
+          value={correlationSettings?.column_linkage}
+        />
+      </Field>       
+      <Field>             
+      <CheckBox
+        label="Normalization"
+        onChange={({ target: { checked } }) => correlationSettingsChanged({
+          settingName: CorrelationSettingsTypes.NORMALIZE,
+          newValue: checked
+        })}
+        checked={correlationSettings?.normalize}/>
+      </Field>   
+      <Field>             
+      <CheckBox
+        label="Keep Orginal"
+        onChange={({ target: { checked } }) => correlationSettingsChanged({
+          settingName: CorrelationSettingsTypes.WRITE_ORGINAL,
+          newValue: checked
+        })}
+        checked={correlationSettings?.write_original}/>
+      </Field>  
       <Spacer height={50} />
     </>
   );

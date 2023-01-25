@@ -1,15 +1,14 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const initialState = {
-  removeLowCorrelation: false,
-  minCorrelation: 0.3,
-  linkageMethod: 'complete',
-  distanceMetric: 'euclidean',
-  mapColor: 'bwr',
-  zScoreNormalization: 'None',
-  standardization: 'None',
-  coloringRange: [-0.50, 0.50],
-  size: 5,
+const initialState = {  
+  filter: 0.3,
+  row_linkage: 'single',
+  column_linkage: 'ward',
+  row_distance: 'euclidean',
+  column_distance: 'euclidean',
+  axis: 'row',  
+  normalize: 'True',
+  write_original: 'True',
 };
 
 export const correlationSettingsSlice = createSlice({

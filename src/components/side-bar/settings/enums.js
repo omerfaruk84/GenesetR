@@ -3,18 +3,19 @@ const SettingsTypes = {
   CORRELATION_SETTINGS: 'Correlation Settings',
   PCA_SETTINGS: 'PCA Settings',
   CLUSTERING_SETTINGS: 'Clustering Settings',
-  EMBEDDING_SETTINGS: 'Embedding Settings',
+  MDE_SETTINGS: 'MDE Settings',
   UMAP_SETTINGS: 'UMAP Settings',
   TSNE_SETTINGS: 'tSNE Settings',
   BI_CLUSTERING_SETTINGS: 'biClustering Settings',
   GENE_REGULATION_SETTINGS: '',
   HEAT_MAP: 'HeatMap Settings',
-  HEAT_MAP_TARGET_GENE_LIST: 'Target Gene List'
+  HEAT_MAP_TARGET_GENE_LIST: 'Target Gene List',
+  PATH_FINDER_SETTINGS: 'PathFinder Settings',
 };
 
 const BiClusteringSettingsTypes = {
-  BI_CLUSTERING_SOURCE: 'biClusteringSource',
-  CLUSTER_COUNT: 'clusterCount',
+  CLUSTER_COUNT: 'n_clusters',
+  INIT_COUNT: 'n_init',
 };
 
 const ClusteringSettingsTypes = {
@@ -34,41 +35,40 @@ const CoreSettingsTypes = {
   DATA_TYPE: 'dataType',
   PETURBATION_LIST: 'peturbationList',
   GRAPH_TYPE: 'graphType',
-  HIGHLIGHT_GENES: 'highlightGenes',
 };
 
-const CorrelationSettingsTypes = {
-  REMOVE_LOW_CORRELATION: 'removeLowCorrelation',
-  MIN_CORRELATION: 'minCorrelation',
-  LINKAGE_METHOD: 'linkageMethod',
-  DISTANCE_METRIC: 'distanceMetric',
-  MAP_COLOR: 'mapColor',
-  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
-  STANDARDIZATION: 'standardization',
-  COLORING_RANGE: 'coloringRange',
-  SIZE: 'size',
+const CorrelationSettingsTypes = {  
+  FILTER: 'filter',
+  ROW_DISTANCE:'row_distance',
+  COLUMN_DISTANCE:'column_distance',
+  ROW_LINKAGE: 'row_linkage',
+  COLUMN_LINKAGE: 'column_linkage',
+  AXIS: 'axis', 
+  NORMALIZE : 'normalize',
+  WRITE_ORGINAL : 'write_original',
 };
 
-const EmbeddingSettingsTypes = {
-  EMBEDDING_SOURCE: 'embedingSource',
-  DIMENSION_COUNT: 'dimensionCount',
-  MDE_CONTRSAINT: 'mdeContrsaint',
+const MdeSettingsTypes = {
+  NUMBER_OF_COMPONENTS: 'numcomponents',
+  PREPROCESSING_METHOD: 'preprocessingMethod',
+  MDE_CONTRSAINT: 'pyMdeConstraint',
   REPULSIVE_FRACTION: 'repulsiveFraction',
 };
 
 const UmapSettingsTypes = {
-  UMAP_SOURCE: 'umapSource',
-  DIMENSION_COUNT: 'dimensionCount',
-  MINIMUM_DISTANCE: 'minimumDistance',
-  NUMBER_OF_NEIGHBOURS: 'numberOfNeighbours',
+  NUMBER_OF_COMPONENTS: 'numcomponents',
+  MINIMUM_DISTANCE: 'min_dist',
+  NUMBER_OF_NEIGHBOURS: 'n_neighbors',
+  METRIC: 'metric',
 };
 
 const TsneSettingsTypes = {
-  TSNE_SOURCE: 'tsneSource',
+  NUMBER_OF_COMPONENTS: 'numcomponents',
+  METRIC: 'metric',
   PERPLEXITY: 'perplexity',
-  LEARNING_RATE: 'learningRate',
-  NUMBER_OF_ITERATIONS: 'numberOfIterations',
   EARLY_EXAGGERATION: 'earlyExaggeration',
+  LEARNING_RATE: 'learning_rate',
+  NUMBER_OF_ITERATIONS: 'n_iter', 
 };
 
 const GeneRegulationCoreSettingsTypes = {
@@ -77,14 +77,22 @@ const GeneRegulationCoreSettingsTypes = {
 };
 
 const HeatMapSettingsTypes = {
-  LINKAGE_METHOD: 'linkageMethod',
-  DISTANCE_METRIC: 'distanceMetric',
-  MAP_COLOR: 'mapColor',
-  Z_SCORE_NORMALIZATION: 'zScoreNormalization',
-  STANDARDIZATION: 'standardization',
-  COLORING_RANGE: 'coloringRange',
-  SIZE: 'size',
-  TARGET_GENE_LIST: 'targetGeneList',
+  ROW_DISTANCE:'row_distance',
+  COLUMN_DISTANCE:'column_distance',
+  ROW_LINKAGE: 'row_linkage',
+  COLUMN_LINKAGE: 'column_linkage',
+  AXIS: 'axis',
+  NORMALIZE : 'normalize',
+  WRITE_ORGINAL : 'write_original',
+};
+
+const PathFinderSettingsTypes = {
+  UPREGULATED_GENES:'upgeneList',
+  CUTOFF:'cutoff',
+  DEPTH: 'depth',
+  CHECK_CORR: 'checkCorr',
+  CORR_CUTOFF: 'corrCutOff',
+  CHECK_BIOGRID : 'BioGridData',
 };
 
 export {
@@ -94,9 +102,10 @@ export {
   PcaSettingsTypes,
   CoreSettingsTypes,
   CorrelationSettingsTypes,
-  EmbeddingSettingsTypes,
+  MdeSettingsTypes,
   UmapSettingsTypes,
   TsneSettingsTypes,
   GeneRegulationCoreSettingsTypes,
   HeatMapSettingsTypes,
+  PathFinderSettingsTypes,
 };

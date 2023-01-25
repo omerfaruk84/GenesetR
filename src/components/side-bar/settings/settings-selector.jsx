@@ -10,8 +10,9 @@ import { CorrelationSettings } from './correlation-settings';
 import { ClusteringSettings } from './clustering-settings';
 import { PcaSettings } from './pca-settings';
 import { UmapSettings } from './umap-settings';
-import { EmbeddingSettings } from './embedding-settings';
+import { MdeSettings } from './mde-settings';
 import { HeatMapSettings } from './heatmap-settings';
+import { PathFinderSettings } from './pathfinder-settings';
 import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
@@ -53,8 +54,8 @@ const SettingsSelector = ({ pathname }) => {
         settings: <CoreSettings />
       },
       {
-        settingsName: SettingsTypes.EMBEDDING_SETTINGS,
-        settings: <EmbeddingSettings />
+        settingsName: SettingsTypes.MDE_SETTINGS,
+        settings: <MdeSettings />
       },
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
@@ -123,6 +124,16 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.HEAT_MAP,
         settings: <HeatMapSettings />
+      },
+    ],
+    [ROUTES.PATHWAY]: [
+      {
+        settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: <CoreSettings />
+      },      
+      {
+        settingsName: SettingsTypes.PATH_FINDER_SETTINGS,
+        settings: <PathFinderSettings />
       },
     ],
   };

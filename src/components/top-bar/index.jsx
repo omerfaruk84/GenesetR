@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation, } from 'react-router-dom';
 import { TopBar as TopBarCmp } from '@oliasoft-open-source/react-ui-library';
-import { FaRegCopy, FaHome } from 'react-icons/fa';
+import { FaHome } from 'react-icons/fa';
+import { FcMindMap, FcScatterPlot, FcGrid, FcGenealogy, FcLineChart, FcSerialTasks } from "react-icons/fc";
 import { ROUTES, isActiveTab } from '../../common/routes';
 import { TabNames } from './enums';
 
@@ -15,45 +16,50 @@ const TopBar = () => {
       name: TabNames.HOME,
       toLink: ROUTES.HOME
     },
-    {
-      icon: () => <FaRegCopy />,
+    { 
+      icon: () => <FcLineChart />,     
       name: TabNames.CORRELATION,
       toLink: ROUTES.CORRELATION
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () => <FcScatterPlot />,   
       name: TabNames.PCA,
       toLink: ROUTES.PCA
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () => <FcScatterPlot />,  
       name: TabNames.MDE,
       toLink: ROUTES.MDE
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () => <FcScatterPlot />,  
       name: TabNames.UMAP,
       toLink: ROUTES.UMAP
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () => <FcScatterPlot /> ,   
       name: TabNames.TSNE,
       toLink: ROUTES.TSNE
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () => <FcGenealogy />,
       name: TabNames.BI_CLUSTERING,
       toLink: ROUTES.BI_CLUSTERING
     },
-    {
-      icon: () => '🐙',
+    { 
+      icon: () =><FcSerialTasks /> ,   
       name: TabNames.GENE_REGULATION,
       toLink: ROUTES.GENE_REGULATION
     },
-    {
-      icon: () => '🗺️',
+    {  
+      icon: () =><FcGrid />,
       name: TabNames.HEATMAP,
       toLink: ROUTES.HEATMAP
+    },
+    {
+      icon: () => <FcMindMap />,
+      name: TabNames.PATHWAY,
+      toLink: ROUTES.PATHWAY
     },
   ]
   return (
@@ -70,7 +76,7 @@ const TopBar = () => {
       title={{
         label: 'Perturb-Seq Analyzer',
         onClick: () => navigate(ROUTES.HOME),
-        version: 'V0.1.0'
+        version: 'V0.1.1'
       }}
     />
   );

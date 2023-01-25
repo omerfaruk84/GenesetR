@@ -6,10 +6,7 @@ const Application = () => {
   return (
     <div className='application'>
       <MainView />
-   
-      
-      
-    </div>
+   </div>
     
   );
 };

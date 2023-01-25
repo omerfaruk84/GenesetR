@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
-import PropTypes from 'prop-types';
+//import PropTypes from 'prop-types';
 import $ from 'jquery';
 import InCHlib from 'biojs-vis-inchlib';
 import styles from './heat-map.module.scss';
+import { connect } from 'react-redux';
 
-const HeatMap = ({ data }) => {
+
+const HeatMap = ({ corrCluster }) => {
   useEffect(() => {
-    if (data) {
+    if (corrCluster) {
       // Should inject heat map into div with id=inchlib
       $(function () {
         window.inchlib = new InCHlib({
@@ -18,11 +20,11 @@ const HeatMap = ({ data }) => {
           heatmap_colors: "Greens",
           metadata_colors: "Reds",
         });
-        window.inchlib.read_data(JSON.parse(data));
+        window.inchlib.read_data(JSON.parse(corrCluster));
         window.inchlib.draw();
       });
     }
-  }, [data]);
+  }, [corrCluster]);
 
   return (
     <div className={styles.mainView}>
@@ -31,8 +33,21 @@ const HeatMap = ({ data }) => {
   );
 };
 
-HeatMap.propTypes = {
-  data: PropTypes.string.isRequired,
-};
+const mapStateToProps = ({ calcResults }) => ({
+  corrCluster: calcResults?.corrCluster ?? null,
+})
 
-export { HeatMap };
+const MainContainer = connect(mapStateToProps)(HeatMap);
+
+//HeatMap.propTypes = {
+//  corrCluster: PropTypes.string.isRequired,
+//};
+
+export {  MainContainer as HeatMap };
+
+
+
+
+
+
+

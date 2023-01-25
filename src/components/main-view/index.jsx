@@ -7,12 +7,12 @@ import {
 import { ROUTES } from '../../common/routes';
 import { HeatMap } from '../heat-map';
 import { TopBar } from '../top-bar';
-import ExampleJson from '../heat-map/example.json';
 import styles from './main-view.module.scss';
 import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
 import { Bokeh } from '../bokeh';
+import { Cytoscape } from '../cytoscape';
 
 const MainView = () => {
   return (
@@ -22,8 +22,15 @@ const MainView = () => {
         <SideBar />
         <Spacer />
         <Routes>
-          <Route exact path={ROUTES.HEATMAP} element={<HeatMap data={ExampleJson} />} />
+          <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
           <Route exact path={ROUTES.PCA} element={<Bokeh />} />
+          <Route exact path={ROUTES.MDE} element={<Bokeh />} />
+          <Route exact path={ROUTES.UMAP} element={<Bokeh />} />
+          <Route exact path={ROUTES.TSNE} element={<Bokeh />} />
+          <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
+          <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
+          <Route exact path={ROUTES.PATHWAY} element={<Cytoscape />} />
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>

@@ -1,8 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const initialState = {
-  biClusteringSource: 'PCA Data',
-  clusterCount: 10,
+const initialState = {  
+  n_clusters: 10,  //Anyway to set this to default value is number of genes divided by 20
+  n_init:10,
 };
 
 export const biClusteringSettingsSlice = createSlice({

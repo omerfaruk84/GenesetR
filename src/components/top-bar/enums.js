@@ -8,6 +8,7 @@ const TabNames = {
   BI_CLUSTERING: 'Bi-Clustering',
   GENE_REGULATION: 'Gene-Regulation',
   HEATMAP: 'HeatMap',
+  PATHWAY: 'PathFinder',
 }
 
 export { TabNames };
