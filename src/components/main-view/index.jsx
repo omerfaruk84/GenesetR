@@ -29,7 +29,7 @@ const MainView = () => {
           <Route exact path={ROUTES.TSNE} element={<Bokeh />} />
           <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
           <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
-          <Route exact path={ROUTES.PATHWAY} element={<Cytoscape />} />
+          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
