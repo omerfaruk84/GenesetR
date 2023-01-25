@@ -122,7 +122,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
     cellLine: core.cellLine,
     
     n_clusters: biClustering.n_clusters,  //Anyway to set this to default value is number of genes divided by 20
-    n_init:biClustering.n_init,
+    n_init: biClustering.n_init,
 
     retType: 0,
     request: 'biClustering'
@@ -199,4 +199,14 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
   };
   return await getData(body);  
 };
-export { runPcaGraphCalc, runMdeGraphCalc,runUMAPGraphCalc,runtSNEGraphCalc,runCorrCalc,runbiClusteringCalc,runPathFinderCalc, runGeneRegulation,runHeatMap};
+export {
+  runPcaGraphCalc,
+  runMdeGraphCalc,
+  runUMAPGraphCalc,
+  runtSNEGraphCalc,
+  runCorrCalc,
+  runbiClusteringCalc,
+  runPathFinderCalc,
+  runGeneRegulation,
+  runHeatMap,
+};

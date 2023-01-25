@@ -76,7 +76,7 @@ const TopBar = () => {
       title={{
         label: 'Perturb-Seq Analyzer',
         onClick: () => navigate(ROUTES.HOME),
-        version: 'V0.0.2'
+        version: 'V0.1.1'
       }}
     />
   );

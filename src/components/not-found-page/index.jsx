@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '@oliasoft-open-source/react-ui-library';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../common/routes';
 import styles from './not-found-page.module.scss';
@@ -13,7 +14,12 @@ const NotFoundPage = () => {
         <div className={styles.contant_box_404}>
           <h3 className="h2">Look like you're lost</h3>
           <p>the page you are looking for not avaible!</p>
-          <Link to={ROUTES.HOME} className={styles.link_404}>Go to Home</Link>
+          <Link to={ROUTES.HOME}>
+            <Button
+              colored
+              label="Go to Home"
+            />
+          </Link>
         </div>
       </div>
     </div>

@@ -143,7 +143,7 @@ const SettingsSelector = ({ pathname }) => {
       {settingsMap?.[pathname]?.map(({ settingsName, settings, isAccordion = true }, key) => (
         <Settings
           key={key}
-          expended={key === 0 ? true : false}
+          expended
           settingsName={settingsName}
           settings={settings}
           isAccordion={isAccordion}
