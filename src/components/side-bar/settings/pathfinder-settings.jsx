@@ -54,7 +54,7 @@ const PathFinderSettings = ({
          </div>
       </Field>
       
-      <Field>
+      {/* <Field>
         <CheckBox
           onChange={({ target: { checked } }) => pathfinderSettingsChanged({
             settingName: PathFinderSettingsTypes.CHECK_CORR,
@@ -64,7 +64,7 @@ const PathFinderSettings = ({
           checked={pathfinderSettings?.checkCorr}
           label='Check Correlation'
         />
-      </Field>
+        </Field>*/}
       
       <Field label='Correlation Cutoff'>
         <div className={styles.inputRange}>
@@ -81,17 +81,20 @@ const PathFinderSettings = ({
         </div>
       </Field>
 
+{/*
       <Field>
         <CheckBox
           onChange={({ target: { checked } }) => pathfinderSettingsChanged({
             settingName: PathFinderSettingsTypes.CHECK_BIOGRID,
-            newValue: checked,
+            newValue: checked
             
           })}
           checked={pathfinderSettings?.BioGridData}
           label='Check Biogrid'
         />
       </Field>
+        */}
+     
 
     </>
   );

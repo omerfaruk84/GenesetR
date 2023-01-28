@@ -12,6 +12,8 @@
     "biojs-vis-inchlib": "^1.1.2",
     "classnames": "^2.3.2",
     "cytoscape": "^3.23.0",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "echarts-for-react": "^3.0.2",
     "jquery": "^3.6.1",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",

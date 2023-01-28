@@ -13,6 +13,7 @@ import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
 import { Bokeh } from '../bokeh';
 import { Cytoscape } from '../cytoscape';
+import { GraphMap } from '../graphMap';
 
 const MainView = () => {
   return (
@@ -29,7 +30,7 @@ const MainView = () => {
           <Route exact path={ROUTES.TSNE} element={<Bokeh />} />
           <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
           <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
-          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />} />
+          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />}  />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -1,7 +1,7 @@
 import { ROUTES } from '../../common/routes';
 import { createSlice } from '@reduxjs/toolkit';
 import { runHeatMap, runPcaGraphCalc, runCorrCalc,runUMAPGraphCalc,runMdeGraphCalc, runtSNEGraphCalc,runbiClusteringCalc, runGeneRegulation,runPathFinderCalc   } from '../api';
-
+import CytoscapeComponent from 'react-cytoscapejs';
 const initialState = {
   pcaGraph: null,
   mdeGraph: null,
@@ -9,9 +9,10 @@ const initialState = {
   tsneGraph: null,
   biClusteringGraph: null,
   geneRegulationGraph: null,
-  pathFinderGraph: null,
+  pathFinderGraph: [],
   corrCluster: null,
   heatmapGraph: null,
+  currentGraph: null,
 };
 
 export const calculationResults = createSlice({
@@ -22,40 +23,51 @@ export const calculationResults = createSlice({
       const { result } = action.payload;      
       //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
       document.getElementById("myplot").innerHTML= "";
-      state.pcaGraph = result;       
+      state.pcaGraph = result;
+      state.currentGraph= "pcaGraph";
+      console.log( state.currentGraph)
     },
     mdeGraphReceived: (state, action) => {
       const { result2 } = action.payload;
       state.mdeGraph = result2;
+      state.currentGraph= "mdeGraph";
       
     },
     tsneGraphReceived: (state, action) => {
       const { result4 } = action.payload;
       state.tsneGraph = result4;
+      state.currentGraph= "tsneGraph";
     },
     umapGraphReceived: (state, action) => {
       const { result3 } = action.payload;
       state.umapGraph = result3;
+      state.currentGraph= "umapGraph";
     },
     biClusteringGraphReceived: (state, action) => {
       const { result5 } = action.payload;
       state.biClusteringGraph = result5;
+      state.currentGraph= "biClusteringGraph";
     },
     geneRegulationGraphReceived: (state, action) => {
       const { result6 } = action.payload;
       state.geneRegulationGraph = result6;
+      state.currentGraph= "geneRegulationGraph";
     },
     pathFinderGraphReceived: (state, action) => {
       const { result7 } = action.payload;
-      state.pathFinderGraph = result7;
+      //state.pathFinderGraph = CytoscapeComponent.normalizeElements(JSON.parse(result7));
+      state.pathFinderGraph = JSON.parse(result7);
+      state.currentGraph= "pathFinderGraph";
     },    
     HeatMapReceived: (state, action) => {
       const { result8 } = action.payload;
       state.heatmapGraph = result8;
+      state.currentGraph= "heatmapGraph";
     },
     corrClusterReceived: (state, action) => {
       const { result9 } = action.payload;
       state.corrCluster = result9;
+      state.currentGraph= "corrCluster";
     },
   },
 });
@@ -69,10 +81,7 @@ export const {
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
   const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
-  console.log("Her is module");
-  console.log(settings);
-  console.log("Her is module");
-  console.log(module);
+
   switch (module) {
     case ROUTES.PCA:      
       const result = await runPcaGraphCalc(core, pca, clustering);      
