@@ -25,7 +25,7 @@ const Bokeh = ({ currentGraph, pcaGraph,mdeGraph,umapGraph,tsneGraph }) => {
       window.Bokeh.embed.embed_item(JSON.parse(tsneGraph), 'myplot');
     }
 
-  }, [mdeGraph, tsneGraph, umapGraph, currentGraph])
+  }, [pcaGraph, mdeGraph, tsneGraph, umapGraph, currentGraph])
   return (
     <div className={styles.mainView}>      
       <div id='myplot' className={styles.bokehChart}>

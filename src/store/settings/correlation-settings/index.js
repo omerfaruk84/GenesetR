@@ -2,11 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {  
   filter: 0.3,
-  row_linkage: 'single',
-  column_linkage: 'ward',
+  row_linkage: 'complete',
+  column_linkage: 'complete',
   row_distance: 'euclidean',
   column_distance: 'euclidean',
-  axis: 'row',  
+  axis: 'both',  
   normalize: 'True',
   write_original: 'True',
 };

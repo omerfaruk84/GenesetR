@@ -3,11 +3,13 @@ import { connect } from 'react-redux';
 import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { coreSettingsChanged } from '../../../store/settings/core-settings';
 import { CoreSettingsTypes } from './enums';
+import { useLocation } from 'react-router-dom';
 
 const CoreSettings = ({
   coreSettings,
-  coreSettingsChanged,
+  coreSettingsChanged,module,SettingsSelector,
 }) => {
+ 
   const cellLineOptions = [
     {
       label: 'K562-Whole Genome',
@@ -51,6 +53,9 @@ const CoreSettings = ({
     }
   ];
 
+  var currGraph = useLocation().pathname;
+
+
   const numberOfGenesEntered = coreSettings?.peturbationList
     ?.replaceAll(/\s+|,\s+|,/g, ';')
     ?.split(';')
@@ -93,6 +98,8 @@ const CoreSettings = ({
         <Spacer height={10} />
         <Text>{numberOfGenesEntered} genes</Text>
       </Field>
+      {console.log(currGraph)}
+      { currGraph != "/heatmap" ?
       <Field label='Graph Type'>
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
@@ -102,14 +109,15 @@ const CoreSettings = ({
           options={graphTypeOptions}
           value={coreSettings?.graphType}
         />
-      </Field>
-    
+      </Field>: null      
+    }
     </>
   );
 };
 
-const mapStateToProps = ({ settings }) => ({
+const mapStateToProps = ({ settings, calcResults }) => ({
   coreSettings: settings?.core ?? {},
+  currentGraph: calcResults?.currentGraph ?? null,
 });
 
 const mapDispatchToProps = {

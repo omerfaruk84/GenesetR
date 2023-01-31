@@ -12,6 +12,7 @@ import {
   // SVGRenderer,
 } from 'echarts/renderers';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
+import { data } from 'jquery';
 // import text from './sample.json';
 
 echarts.use(
@@ -22,25 +23,35 @@ const Cytoscape = ({ pathFinderGraph }) => {
 
     //Import json file. Used in {options}.
  
-  const [options, setOptions] = useState({});
-  {console.log(pathFinderGraph)}
+  const [options, setOptions] = useState({}); 
   useEffect(() => {
-    if(sample){
-      {console.log("Here it is")}
+    if(pathFinderGraph && pathFinderGraph.nodes &&pathFinderGraph.nodes.length >0){
+
 
     const nodes = pathFinderGraph.nodes.map(node => ({      
       id: node.id,
       name: node.id, 
-      symbolSize: 15,   
+      symbolSize: 20,   
       direction:node.direction,
   }));
   const edges = pathFinderGraph.edges.map(edge => ({
       source: edge.source,
       target: edge.target,
+      lineStyle: {opacity:Math.min(0.4118*Math.abs(edge.value) + 0.1765,1), color:
+        edge.id.includes("+cor+")?'rgb(25, 25, 250)':(edge.value < -0.3  ? 'rgb(25, 206, 17)': (edge.value > 0.3  ? 'rgb(255, 1, 1)':'rgb(123, 123, 123)')),
+        type: edge.id.includes("+cor+")? 'dotted': (edge.id.includes("+int+")  ? 'dashed':'solid'),
+        curveness: edge.id.includes("+cor+")? 0.3: (edge.id.includes("+int+")  ? 0.5:0.4),
+      },
+      
+      tooltip: {
+        formatter: edge.id.includes("+cor+")? 'Correlation R: '+  edge.value: (edge.id.includes("+int+")  ? 'Protein-Protein Intereation: ':'Effect: '+  edge.value),
+        
+      },
+
+      
       //value: edge.value,
   }));
-
-  {console.log(edges)}
+  
 
   setOptions({
     tooltip: {},
@@ -52,6 +63,7 @@ const Cytoscape = ({ pathFinderGraph }) => {
     //    })
     //  }
     //],
+    
     series: [
       {
         type: 'graph',
@@ -65,19 +77,24 @@ const Cytoscape = ({ pathFinderGraph }) => {
         },
 
         label: {
-          show: false,
+          show: true,
           position: 'inside',
           formatter: function (params) {
             return params.data.name;
           },
-          fontSize: 14,
-          fontWeight: 'bold',
-          color: 'red'
+          fontSize: 10,
+         // fontWeight: 'bold',
+          color: 'white'
+        },
+        emphasis: {
+          focus: 'adjacency',
+          lineStyle: {
+            width: 10
+          }
         },
         
         itemStyle:{
-          color: function (params) {
-            console.log(params);
+          color: function (params) {            
             if (params.data.direction == "down") {
                 return 'green';
             } else {
@@ -88,14 +105,13 @@ const Cytoscape = ({ pathFinderGraph }) => {
 
         },
         lineStyle: {
-          opacity: 0.9,
-          width: 2,
-          curveness: 0.3          
+          curveness: 0.3 ,
+          width: 5,
         },
        // categories: sample.categories,
         roam: true,        
         force: {
-          repulsion: 100
+          repulsion: 200
         }
       }
     ]

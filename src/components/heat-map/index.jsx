@@ -17,8 +17,9 @@ const HeatMap = ({ corrCluster }) => {
           column_metadata: true,
           max_height: 1000,
           width: 800,
-          heatmap_colors: "Greens",
+          heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
+          draw_row_ids:true,
         });
         window.inchlib.read_data(JSON.parse(corrCluster));
         window.inchlib.draw();
