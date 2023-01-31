@@ -15,11 +15,13 @@ const HeatMap = ({ corrCluster }) => {
           target: "inchlib",
           metadata: true,
           column_metadata: true,
-          max_height: 1000,
-          width: 800,
+          max_height: 1500,
+          width: 1000,
           heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
           draw_row_ids:true,
+          dendogram:true,
+          fixed_row_id_size:6,         
         });
         window.inchlib.read_data(JSON.parse(corrCluster));
         window.inchlib.draw();

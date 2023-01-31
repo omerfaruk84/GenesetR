@@ -98,8 +98,8 @@ const CoreSettings = ({
         <Spacer height={10} />
         <Text>{numberOfGenesEntered} genes</Text>
       </Field>
-      {console.log(currGraph)}
-      { currGraph != "/heatmap" ?
+    
+      { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?
       <Field label='Graph Type'>
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
