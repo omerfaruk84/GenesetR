@@ -81,8 +81,9 @@ export const {
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
   const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
-
+  console.log(module);
   switch (module) {
+    
     case ROUTES.PCA:      
       const result = await runPcaGraphCalc(core, pca, clustering);      
       return dispatch(pcaGraphReceived({ result }));
@@ -105,8 +106,10 @@ const runCalculation = (module) => async (dispatch, getState) => {
     case ROUTES.PATHFINDER:      
       const result7 = await runPathFinderCalc(core, pathfinder);
       return dispatch(pathFinderGraphReceived({ result7 }));
-    case ROUTES.HEATMAP:      
+    case ROUTES.HEATMAP:  
+      console.log("Here we go in run heatmap");    
       const result8 = await runHeatMap(core, heatMap);
+      
       return dispatch(HeatMapReceived({ result8 }));
     case ROUTES.CORRELATION:      
       const result9 = await runCorrCalc(core, correlation);

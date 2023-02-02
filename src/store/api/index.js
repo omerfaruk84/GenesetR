@@ -174,7 +174,10 @@ const runHeatMap = async (core, heatMap) => {
   const body = {
     dataType: core.dataType,
     cellLine: core.cellLine,
-    
+    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
+    targetList: core.targetGeneList?.replaceAll(/\s+|,\s+|,/g, ';'),
+
+
     row_distance: heatMap.row_distance,
     column_distance: heatMap.column_distance,
     row_linkage: heatMap.row_linkage,
@@ -184,6 +187,7 @@ const runHeatMap = async (core, heatMap) => {
     write_original:heatMap.write_original, 
     request: 'heatMap'
   };
+  console.log("Here we  go");
   return await getData(body);  
 };
 

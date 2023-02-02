@@ -11,6 +11,7 @@ import { clusteringSettingsReducer } from './clustering-settings';
 import { correlationSettingsReducer } from './correlation-settings';
 import { heatMapSettingsReducer } from './heatmap-settings';
 import { pathfinderSettingsReducer } from './pathfinder-settings';
+import { graphmapSettingsReducer } from './graphmap-settings';
 
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
@@ -24,7 +25,8 @@ const settingsReducer = combineReducers({
   clustering: clusteringSettingsReducer,
   correlation: correlationSettingsReducer,
   heatMap: heatMapSettingsReducer,
-  pathfinder: pathfinderSettingsReducer
+  pathfinder: pathfinderSettingsReducer,
+  graphmap: graphmapSettingsReducer,
 });
 
 export { settingsReducer };

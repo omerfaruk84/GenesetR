@@ -8,11 +8,11 @@ const initialState = {
   graphType: '2D',
 };
 
-export const coreSettingsSlice = createSlice({
-  name: 'core',
+export const graphmapSettingsSlice = createSlice({
+  name: 'graphmap',
   initialState,
   reducers: {
-    coreSettingsChanged: (state, action) => {
+    graphmapSettingsChanged: (state, action) => {
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
     },
@@ -20,9 +20,9 @@ export const coreSettingsSlice = createSlice({
 });
 
 export const {
-  coreSettingsChanged
-} = coreSettingsSlice.actions;
+  graphmapSettingsChanged
+} = graphmapSettingsSlice.actions;
 
-const coreSettingsReducer = coreSettingsSlice.reducer;
+const graphmapSettingsReducer = graphmapSettingsSlice.reducer;
 
-export { coreSettingsReducer };
+export { graphmapSettingsReducer };

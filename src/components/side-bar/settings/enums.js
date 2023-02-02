@@ -11,6 +11,7 @@ const SettingsTypes = {
   HEAT_MAP: 'HeatMap Settings',
   HEAT_MAP_TARGET_GENE_LIST: 'Target Gene List',
   PATH_FINDER_SETTINGS: 'PathFinder Settings',
+  GRAPHMAP_SETTINGS:'GraphMap Settings',
 };
 
 const BiClusteringSettingsTypes = {
@@ -34,6 +35,15 @@ const CoreSettingsTypes = {
   CELL_LINE: 'cellLine',
   DATA_TYPE: 'dataType',
   PETURBATION_LIST: 'peturbationList',
+  TARGET_LIST: 'targetGeneList',
+  GRAPH_TYPE: 'graphType',
+};
+
+const GraphmapSettingsTypes = {
+  CELL_LINE: 'cellLine',
+  DATA_TYPE: 'dataType',
+  PETURBATION_LIST: 'peturbationList',
+  TARGET_LIST: 'targetGeneList',
   GRAPH_TYPE: 'graphType',
 };
 
@@ -108,4 +118,5 @@ export {
   GeneRegulationCoreSettingsTypes,
   HeatMapSettingsTypes,
   PathFinderSettingsTypes,
+  GraphmapSettingsTypes,
 };

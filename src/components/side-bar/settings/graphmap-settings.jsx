@@ -1,13 +1,15 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
-import { coreSettingsChanged } from '../../../store/settings/core-settings';
-import { CoreSettingsTypes } from './enums';
+import { graphmapSettingsChanged } from '../../../store/settings/graphmap-settings';
+
+
+import { GraphmapSettingsTypes } from './enums';
 import { useLocation } from 'react-router-dom';
 
-const CoreSettings = ({
-  coreSettings,
-  coreSettingsChanged,module,SettingsSelector,
+const GraphMapSettings = ({
+  graphmapSettings,
+  graphmapSettingsChanged,module,SettingsSelector,
 }) => {
  
   const cellLineOptions = [
@@ -56,12 +58,12 @@ const CoreSettings = ({
   var currGraph = useLocation().pathname;
 
 
-  const numberOfGenesEntered = coreSettings?.peturbationList
+  const numberOfGenesEntered = graphmapSettings?.peturbationList
     ?.replaceAll(/\s+|,\s+|,/g, ';')
     ?.split(';')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
 
-  const numberOfTargetsEntered = coreSettings?.targetGeneList
+  const numberOfTargetsEntered = graphmapSettings?.targetGeneList
     ?.replaceAll(/\s+|,\s+|,/g, ';')
     ?.split(';')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
@@ -70,22 +72,22 @@ const CoreSettings = ({
     <>
       <Field label='Cell Line'>
         <Select
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.CELL_LINE,
+          onChange={({ target: { value } }) => graphmapSettingsChanged({
+            settingName: GraphmapSettingsTypes.CELL_LINE,
             newValue: value
           })}
           options={cellLineOptions}
-          value={coreSettings?.cellLine}
+          value={graphmapSettings?.cellLine}
         />
       </Field>
       <Field label='Data Type'>
         <Select
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.DATA_TYPE,
+          onChange={({ target: { value } }) => graphmapSettingsChanged({
+            settingName: GraphmapSettingsTypes.DATA_TYPE,
             newValue: value
           })}
           options={dataTypeOptions}
-          value={coreSettings?.dataType}
+          value={graphmapSettings?.dataType}
         />
       </Field>
       <Field label='Perturbation list'>
@@ -94,9 +96,9 @@ const CoreSettings = ({
           tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
           rows={10}
           resize='vertical'
-          value={coreSettings?.peturbationList}
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.PETURBATION_LIST,
+          value={graphmapSettings?.peturbationList}
+          onChange={({ target: { value } }) => graphmapSettingsChanged({
+            settingName: GraphmapSettingsTypes.PETURBATION_LIST,
             newValue: value
           })}
         />
@@ -108,10 +110,10 @@ const CoreSettings = ({
 
       <TextArea
         placeholder="Please enter gene list seperated by comma, new line, space, or semicolon!"
-        value={coreSettings?.targetGeneList}
+        value={graphmapSettings?.targetGeneList}
         rows={10}
-        onChange={({ target: { value } }) => coreSettingsChanged({
-          settingName: CoreSettingsTypes.TARGET_LIST,
+        onChange={({ target: { value } }) => graphmapSettingsChanged({
+          settingName: GraphmapSettingsTypes.TARGET_LIST,
           newValue: value
         })}
       />
@@ -122,12 +124,12 @@ const CoreSettings = ({
       { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?
       <Field label='Graph Type'>
         <Select
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.GRAPH_TYPE,
+          onChange={({ target: { value } }) => graphmapSettingsChanged({
+            settingName: GraphmapSettingsTypes.GRAPH_TYPE,
             newValue: value
           })}
           options={graphTypeOptions}
-          value={coreSettings?.graphType}
+          value={graphmapSettings?.graphType}
         />
       </Field>: null      
     }
@@ -136,14 +138,14 @@ const CoreSettings = ({
 };
 
 const mapStateToProps = ({ settings, calcResults }) => ({
-  coreSettings: settings?.core ?? {},
+  graphmapSettings: settings?.graphmap ?? {},
   currentGraph: calcResults?.currentGraph ?? null,
 });
 
 const mapDispatchToProps = {
-  coreSettingsChanged,
+  graphmapSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(CoreSettings);
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GraphMapSettings);
 
-export { MainContainer as CoreSettings };
+export { MainContainer as GraphMapSettings };

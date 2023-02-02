@@ -2,6 +2,7 @@ import React from 'react';
 import { ROUTES } from '../../../common/routes';
 import { Settings } from './settings';
 import { CoreSettings } from './core-settings';
+import { GraphMapSettings } from './graphmap-settings';
 import { TsneSettings } from './tsne-settings';
 import { BiClusteringSettings } from './bi-clustering-settings';
 import { GeneRegulationSettings } from './gene-regulation-core-settings';
@@ -117,11 +118,6 @@ const SettingsSelector = ({ pathname }) => {
         settings: <CoreSettings />
       },
       {
-        settingsName: SettingsTypes.HEAT_MAP_TARGET_GENE_LIST,
-        settings: <HeatmapTargetGeneListSettings />,
-        isAccordion: false,
-      },
-      {
         settingsName: SettingsTypes.HEAT_MAP,
         settings: <HeatMapSettings />
       },
@@ -134,6 +130,10 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.PATH_FINDER_SETTINGS,
         settings: <PathFinderSettings />
+      },
+      {
+        settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
+        settings: <GraphMapSettings />
       },
     ],
   };
