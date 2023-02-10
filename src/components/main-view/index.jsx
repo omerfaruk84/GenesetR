@@ -11,7 +11,6 @@ import styles from './main-view.module.scss';
 import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
-import { Bokeh } from '../bokeh';
 import { Cytoscape } from '../cytoscape';
 import { ScatterPlot } from '../scatterPlot';
 
@@ -25,9 +24,9 @@ const MainView = () => {
         <Routes>
           <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
           <Route exact path={ROUTES.PCA} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.MDE} element={<Bokeh />} />
-          <Route exact path={ROUTES.UMAP} element={<Bokeh />} />
-          <Route exact path={ROUTES.TSNE} element={<Bokeh />} />
+          <Route exact path={ROUTES.MDE} element={<ScatterPlot />} />
+          <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} />
+          <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} />
           <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
           <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
           <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />}  />
