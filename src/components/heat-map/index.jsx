@@ -23,7 +23,7 @@ const HeatMap = ({ graphData }) => {
           // dendrogram:false,
           //fixed_row_id_size:12,
         });
-        window.inchlib.read_data(JSON.parse(graphData));
+        window.inchlib.read_data(graphData);
         window.inchlib.draw();
       });
     }
