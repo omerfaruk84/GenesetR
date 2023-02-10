@@ -2,7 +2,7 @@ import React, { useEffect, useRef,useState  } from 'react';
 import { connect } from 'react-redux';
 import { Spacer, Select, Row} from '@oliasoft-open-source/react-ui-library';
 import DataTable from 'react-data-table-component';
-//import TableWithSortAndFilter from '../enrichment/';
+import {TableWithSortAndFilter} from '../enrichment/';
 import * as echarts from 'echarts/core';
 import { registerTransform } from "echarts/core";
 //import GraphChart from 'echarts/charts';
@@ -94,8 +94,8 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
   {console.log(pcaGraph)}
   
   if(pcaGraph["clusterCount"]>0){
-    for (var i = -1; i < pcaGraph["clusterCount"]; i++) {
-      if(i ==-1){
+    for (let i = -1; i < pcaGraph["clusterCount"]; i++) {
+      if(i ===-1){
         pieces.push({
           value: i,
           label: 'Unclustered ',
@@ -294,7 +294,9 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
     <Spacer width="16px" /> <Select native width="150%" options= {clusters}/>    
     </Row>
     <Row spacing={0} width="100%" height="30%">    
-     <DataTable columns={tcolumns}  data={tdata} width="100%"/>
+    <div style={{ width: '100%', height: '100%'}}>   
+     <TableWithSortAndFilter/>
+     </div>
     </Row>
     
     </div>
