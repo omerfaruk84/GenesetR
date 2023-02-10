@@ -13,6 +13,7 @@
     "classnames": "^2.3.2",
     "cytoscape": "^3.23.0",
     "cytoscape-cose-bilkent": "^4.1.0",
+    "echarts": "^5.4.1",
     "echarts-for-react": "^3.0.2",
     "echarts-stat": "^1.2.0",
     "jquery": "^3.6.1",
@@ -29,8 +30,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "GENERATE_SOURCEMAP=false react-scripts start",
-    "startwin": "set \"GENERATE_SOURCEMAP=false\" && react-scripts start",
+    "start": "set \"GENERATE_SOURCEMAP=false\" && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

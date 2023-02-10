@@ -37,6 +37,7 @@ const SideBar = ({
           onClick={() => runCalculation(pathname)}
         />
       </Flex>
+      <Spacer />
       <SettingsSelector pathname={pathname} />
     </Drawer>
   );
