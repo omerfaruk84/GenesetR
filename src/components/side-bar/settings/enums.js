@@ -12,6 +12,7 @@ const SettingsTypes = {
   HEAT_MAP_TARGET_GENE_LIST: 'Target Gene List',
   PATH_FINDER_SETTINGS: 'PathFinder Settings',
   GRAPHMAP_SETTINGS:'GraphMap Settings',
+  SCATTERPLOT_SETTINGS:'Scatter Plot Settings',
 };
 
 const BiClusteringSettingsTypes = {
@@ -40,9 +41,9 @@ const CoreSettingsTypes = {
 };
 
 const GraphmapSettingsTypes = {
-  CELL_LINE: 'cellLine',
-  DATA_TYPE: 'dataType',
-  PETURBATION_LIST: 'peturbationList',
+  REPULSION: 'repulsion',
+  LAYOUT: 'layout',
+  ISOLATED_NODES: 'isolatednodes',
   TARGET_LIST: 'targetGeneList',
   GRAPH_TYPE: 'graphType',
 };
@@ -105,6 +106,15 @@ const PathFinderSettingsTypes = {
   CHECK_BIOGRID : 'BioGridData',
 };
 
+const ScatterPlotSettingsTypes = {
+  UPREGULATED_GENES:'upgeneList',
+  CUTOFF:'cutoff',
+  DEPTH: 'depth',
+  CHECK_CORR: 'checkCorr',
+  CORR_CUTOFF: 'corrCutOff',
+  CHECK_BIOGRID : 'BioGridData',
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -119,4 +129,5 @@ export {
   HeatMapSettingsTypes,
   PathFinderSettingsTypes,
   GraphmapSettingsTypes,
+  ScatterPlotSettingsTypes,
 };

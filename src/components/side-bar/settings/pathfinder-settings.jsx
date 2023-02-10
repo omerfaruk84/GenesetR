@@ -12,19 +12,8 @@ const PathFinderSettings = ({
  
 
   return (
-    <>
-      <Field label='Upregulated Genes'>
-        <TextArea
-          onChange={({ target: { value } }) => pathfinderSettingsChanged({
-            settingName: PathFinderSettingsTypes.UPREGULATED_GENES,
-            newValue: value
-          })}
-          placeholder=""
-          value={pathfinderSettings?.upgeneList}
-          rows={10}
-        />
-      </Field>
-      <Field label='Z Score Cutoff'>
+    <>      
+      <Field label='Z Score Cutoff' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.cutoff}
@@ -39,7 +28,7 @@ const PathFinderSettings = ({
         </div>
       </Field>
 
-      <Field label='Search Depth'>
+      <Field label='Search Depth' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.depth}
@@ -66,7 +55,7 @@ const PathFinderSettings = ({
         />
         </Field>*/}
       
-      <Field label='Correlation Cutoff'>
+      <Field label='Correlation Cutoff' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <div className={styles.inputRange}>
           <Slider
             label={pathfinderSettings?.corrCutOff}

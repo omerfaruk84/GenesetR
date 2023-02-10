@@ -12,6 +12,7 @@ import { correlationSettingsReducer } from './correlation-settings';
 import { heatMapSettingsReducer } from './heatmap-settings';
 import { pathfinderSettingsReducer } from './pathfinder-settings';
 import { graphmapSettingsReducer } from './graphmap-settings';
+import { scatterplotSettingsReducer } from './scatterplot-settings';
 
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
@@ -27,6 +28,7 @@ const settingsReducer = combineReducers({
   heatMap: heatMapSettingsReducer,
   pathfinder: pathfinderSettingsReducer,
   graphmap: graphmapSettingsReducer,
+  scatterplot: scatterplotSettingsReducer,
 });
 
 export { settingsReducer };

@@ -1,7 +1,5 @@
 import React, { useEffect, useRef,useState  } from 'react';
 import { connect } from 'react-redux';
-import COSEBilkent from 'cytoscape-cose-bilkent';
-import EchartsReact  from 'echarts-for-react';
 import * as echarts from 'echarts/core';
 //import GraphChart from 'echarts/charts';
 import sample from './les-miserables.json';
@@ -19,7 +17,7 @@ echarts.use(
   [TitleComponent, TooltipComponent, GridComponent, GraphChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
 );
 
-const Cytoscape = ({ pathFinderGraph }) => {
+const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) => {
 
     //Import json file. Used in {options}.
  
@@ -37,6 +35,8 @@ const Cytoscape = ({ pathFinderGraph }) => {
   const edges = pathFinderGraph.edges.map(edge => ({
       source: edge.source,
       target: edge.target,
+      id: edge.id,
+      value: edge.value,
       lineStyle: {opacity:Math.min(0.4118*Math.abs(edge.value) + 0.1765,1), color:
         edge.id.includes("+cor+")?'rgb(25, 25, 250)':(edge.value < -0.3  ? 'rgb(25, 206, 17)': (edge.value > 0.3  ? 'rgb(255, 1, 1)':'rgb(123, 123, 123)')),
         type: edge.id.includes("+cor+")? 'dotted': (edge.id.includes("+int+")  ? 'dashed':'solid'),
@@ -45,12 +45,46 @@ const Cytoscape = ({ pathFinderGraph }) => {
       
       tooltip: {
         formatter: edge.id.includes("+cor+")? 'Correlation R: '+  edge.value: (edge.id.includes("+int+")  ? 'Protein-Protein Intereation: ':'Effect: '+  edge.value),
-        
-      },
-
-      
+      },      
       //value: edge.value,
   }));
+
+  let edgesFinal = []; 
+
+  for(let edge in edges){     
+    if(edges[edge].id.includes("+cor+"))
+    {
+      if(pathfinderSettings.checkCorr == false) continue;
+      {console.log(pathfinderSettings.corrCutOff)}
+      if(Math.abs(edges[edge].value) < pathfinderSettings.corrCutOff) continue;
+    } else if(edges[edge].id.includes("+int+") && pathfinderSettings.BioGridData == false){
+      continue;      
+    }else 
+    {     
+      if(Math.abs(edges[edge].value) < pathfinderSettings.cutoff) continue;
+    }
+    edgesFinal.push(edges[edge])
+  } 
+
+
+
+
+  let nodesFinal = nodes;  
+  if(!graphmapSettings.isolatednodes){
+    let nodeNamesWithEdges = edgesFinal.map(function (edge) {
+      if(edge.source != edge.target)
+      return edge.source;
+    }).concat(edgesFinal.map(function (edge) {
+      if(edge.source != edge.target)      
+      return edge.target;
+    }));
+    let uniqueNodeNamesWithEdges = [...new Set(nodeNamesWithEdges)];    
+    let filteredData = nodes.filter(function (node) {
+      return uniqueNodeNamesWithEdges.includes(node.id);
+    });
+    nodesFinal = filteredData;    
+  }
+  
   
 
   setOptions({
@@ -67,9 +101,9 @@ const Cytoscape = ({ pathFinderGraph }) => {
     series: [
       {
         type: 'graph',
-        layout: 'force',        
-        data: nodes,
-        links: edges,
+        layout:  graphmapSettings.layout,       
+        data: nodesFinal,
+        links: edgesFinal,
         edgeSymbol: ['circle', 'arrow'],
         edgeSymbolSize: [4, 10],
         edgeLabel: {
@@ -111,7 +145,7 @@ const Cytoscape = ({ pathFinderGraph }) => {
        // categories: sample.categories,
         roam: true,        
         force: {
-          repulsion: 200
+          repulsion: graphmapSettings.repulsion,
         }
       }
     ]
@@ -119,7 +153,7 @@ const Cytoscape = ({ pathFinderGraph }) => {
 
 }
 
-  }, [pathFinderGraph]);
+  }, [pathFinderGraph, graphmapSettings, pathfinderSettings]);
 
   return (
     /*<EchartsReact
@@ -141,8 +175,10 @@ const Cytoscape = ({ pathFinderGraph }) => {
 
 
 
-const mapStateToProps = ({ calcResults }) => ({
+const mapStateToProps = ({  settings,calcResults }) => ({
   pathFinderGraph: calcResults?.pathFinderGraph ?? null,
+  graphmapSettings: settings?.graphmap ?? {},
+  pathfinderSettings: settings?.pathfinder ?? {},
 })
 
 const MainContainer = connect(mapStateToProps)(Cytoscape);

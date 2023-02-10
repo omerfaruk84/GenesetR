@@ -8,11 +8,11 @@ const initialState = {
   layout: 'force',
 };
 
-export const graphmapSettingsSlice = createSlice({
-  name: 'graphmap',
+export const scatterplotSettingsSlice = createSlice({
+  name: 'scatterplot',
   initialState,
   reducers: {
-    graphmapSettingsChanged: (state, action) => {
+    scatterplotSettingsChanged: (state, action) => {
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
     },
@@ -20,9 +20,9 @@ export const graphmapSettingsSlice = createSlice({
 });
 
 export const {
-  graphmapSettingsChanged
-} = graphmapSettingsSlice.actions;
+  scatterplotSettingsChanged
+} = scatterplotSettingsSlice.actions;
 
-const graphmapSettingsReducer = graphmapSettingsSlice.reducer;
+const scatterplotSettingsReducer = scatterplotSettingsSlice.reducer;
 
-export { graphmapSettingsReducer };
+export { scatterplotSettingsReducer };

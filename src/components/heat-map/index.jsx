@@ -23,11 +23,11 @@ const HeatMap = ({ corrCluster , heatmapGraph, currentGraph}) => {
           heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
           draw_row_ids:true,
-          heatmap_part_width:0.7,
+          //heatmap_part_width:0.7,
           
-          column_dendrogram:false,
-          dendrogram:false,
-          fixed_row_id_size:10,         
+         // column_dendrogram:false,
+         // dendrogram:false,
+          //fixed_row_id_size:12,         
         });
         if (currentGraph == "heatmapGraph" && heatmapGraph) {
         window.inchlib.read_data(JSON.parse(heatmapGraph));

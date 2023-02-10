@@ -2,10 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   upgeneList: '',
-  cutoff: 0.1,
+  repulsion: 100,
+  cutoff: 0.4,
   depth: 1,
   checkCorr: 'True',
-  corrCutOff: 0.1,
+  corrCutOff: 0.3,
   BioGridData:  'True',
 };
 

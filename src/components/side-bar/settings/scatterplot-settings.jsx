@@ -1,16 +1,16 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, TextArea, Text, Spacer, Slider , Toggle} from '@oliasoft-open-source/react-ui-library';
-import { graphmapSettingsChanged } from '../../../store/settings/graphmap-settings';
+import { scatterplotSettingsChanged } from '../../../store/settings/scatterplot-settings';
 import styles from './settings.module.scss';
 
 
-import { GraphmapSettingsTypes } from './enums';
+import { ScatterplotSettingsTypes } from './enums';
 import { useLocation } from 'react-router-dom';
 
-const GraphMapSettings = ({
-  graphmapSettings,
-  graphmapSettingsChanged,module,SettingsSelector,
+const ScatterPlotSettings = ({
+  scatterplotSettings,
+  scatterplotSettingsChanged,module,SettingsSelector,
 }) => {
  
   const layoutOption = [
@@ -59,12 +59,12 @@ const GraphMapSettings = ({
     <Field label='Repulsion' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <div className={styles.inputRange}>         
           <Slider
-            label={graphmapSettings?.repulsion}
+            label={scatterplotSettings?.repulsion}
             max={1000}
             min={50}
-            value={graphmapSettings?.repulsion}
-            onChange={({ target: { value } }) => graphmapSettingsChanged({
-              settingName: GraphmapSettingsTypes.REPULSION,
+            value={scatterplotSettings?.repulsion}
+            onChange={({ target: { value } }) => scatterplotSettingsChanged({
+              settingName: ScatterplotSettingsTypes.REPULSION,
               newValue: value
             })}
           />
@@ -73,12 +73,12 @@ const GraphMapSettings = ({
 
       <Field label='Layout' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <Select
-          onChange={({ target: { value } }) => graphmapSettingsChanged({
-            settingName: GraphmapSettingsTypes.LAYOUT,
+          onChange={({ target: { value } }) => scatterplotSettingsChanged({
+            settingName: ScatterplotSettingsTypes.LAYOUT,
             newValue: value
           })}
           options={layoutOption}
-          value={graphmapSettings?.layout}
+          value={scatterplotSettings?.layout}
         />
       </Field>
 
@@ -87,22 +87,22 @@ const GraphMapSettings = ({
       <Field label='Isolated nodes' labelLeft labelWidth="130px" helpText="Repulsion is what">
       <Toggle
       label = "Show"
-       onChange={({ target: { checked } }) => graphmapSettingsChanged({
-        settingName: GraphmapSettingsTypes.ISOLATED_NODES,
+       onChange={({ target: { checked } }) => scatterplotSettingsChanged({
+        settingName: ScatterplotSettingsTypes.ISOLATED_NODES,
         newValue: checked
       })}
-      checked={graphmapSettings?.isolatednodes}
+      checked={scatterplotSettings?.isolatednodes}
     />
      </Field>
       
       <Field label='Data Type' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <Select
-          onChange={({ target: { value } }) => graphmapSettingsChanged({
-            settingName: GraphmapSettingsTypes.DATA_TYPE,
+          onChange={({ target: { value } }) => scatterplotSettingsChanged({
+            settingName: ScatterplotSettingsTypes.DATA_TYPE,
             newValue: value
           })}
           options={dataTypeOptions}
-          value={graphmapSettings?.dataType}
+          value={scatterplotSettings?.dataType}
         />
       </Field>
    
@@ -112,14 +112,14 @@ const GraphMapSettings = ({
 };
 
 const mapStateToProps = ({ settings, calcResults }) => ({
-  graphmapSettings: settings?.graphmap ?? {},
+  scatterplotSettings: settings?.scatterplot ?? {},
   currentGraph: calcResults?.currentGraph ?? null,
 });
 
 const mapDispatchToProps = {
-  graphmapSettingsChanged,
+  scatterplotSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GraphMapSettings);
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(ScatterPlotSettings);
 
-export { MainContainer as GraphMapSettings };
+export { MainContainer as ScatterPlotSettings };

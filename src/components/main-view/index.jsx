@@ -13,7 +13,7 @@ import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
 import { Bokeh } from '../bokeh';
 import { Cytoscape } from '../cytoscape';
-import { GraphMap } from '../graphMap';
+import { ScatterPlot } from '../scatterPlot';
 
 const MainView = () => {
   return (
@@ -24,7 +24,7 @@ const MainView = () => {
         <Spacer />
         <Routes>
           <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
-          <Route exact path={ROUTES.PCA} element={<Bokeh />} />
+          <Route exact path={ROUTES.PCA} element={<ScatterPlot />} />
           <Route exact path={ROUTES.MDE} element={<Bokeh />} />
           <Route exact path={ROUTES.UMAP} element={<Bokeh />} />
           <Route exact path={ROUTES.TSNE} element={<Bokeh />} />

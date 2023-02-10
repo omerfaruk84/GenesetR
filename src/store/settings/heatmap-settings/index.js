@@ -2,8 +2,8 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {  
   
-  row_linkage: 'complete',
-  column_linkage: 'complete',
+  row_linkage: 'average',
+  column_linkage: 'average',
   row_distance: 'euclidean',
   column_distance: 'euclidean',
   axis: 'both',  

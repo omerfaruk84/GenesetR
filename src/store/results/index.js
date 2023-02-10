@@ -22,8 +22,8 @@ export const calculationResults = createSlice({
     pcaGraphReceived: (state, action) => {      
       const { result } = action.payload;      
       //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
-      document.getElementById("myplot").innerHTML= "";
-      state.pcaGraph = result;
+      //document.getElementById("myplot").innerHTML= "";
+      state.pcaGraph = JSON.parse(result);;
       state.currentGraph= "pcaGraph";
       console.log( state.currentGraph)
     },

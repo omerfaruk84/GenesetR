@@ -68,7 +68,7 @@ const CoreSettings = ({
 
   return (
     <>
-      <Field label='Cell Line'>
+      <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.CELL_LINE,
@@ -78,7 +78,7 @@ const CoreSettings = ({
           value={coreSettings?.cellLine}
         />
       </Field>
-      <Field label='Data Type'>
+      <Field label='Data Type' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.DATA_TYPE,
@@ -120,7 +120,7 @@ const CoreSettings = ({
       </Field>
     
       { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?
-      <Field label='Graph Type'>
+      <Field label='Graph Type' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.GRAPH_TYPE,
