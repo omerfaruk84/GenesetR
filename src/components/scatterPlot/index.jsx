@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { Spacer, Select, Row} from '@oliasoft-open-source/react-ui-library';
 import DataTable from 'react-data-table-component';
 import {TableWithSortAndFilter} from '../enrichment/';
+import 'echarts-gl';
 import * as echarts from 'echarts/core';
 import { registerTransform } from "echarts/core";
 //import GraphChart from 'echarts/charts';
@@ -23,40 +24,16 @@ echarts.use(
 registerTransform(transform.clustering);
 
 
-const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
+const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSettings}) => {
   {console.log("Check 10")}
-    //Import json file. Used in {options}.
-    const tcolumns = [
-      {
-          name: 'Title',
-          selector: row => row.title,
-      },
-      {
-          name: 'Year',
-          selector: row => row.year,
-      },
-    ];
+
     
-    const tdata = [
-      {
-          id: 1,
-          title: 'Beetlejuice',
-          year: '1988',
-      },
-      {
-          id: 2,
-          title: 'Ghostbusters',
-          year: '1984',
-      },
-    ];
+
   const [options, setOptions] = useState({}); 
 
-  const data = [];
+  const data = [["PC1","PC2","PC3","GeneSymbol","Cluster","ClusterProb" ]];
   var pieces = [];
   const clusterData = [];
-  const clusters = [{ label: 'Unclustered', value: -1}];
-
-
 
   if(pcaGraph){ 
   if(pcaGraph["clusterCount"]>0)
@@ -89,32 +66,31 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
   ];
  
 
-  {console.log(tdata)}
-
-  {console.log(pcaGraph)}
+  console.log(pcaGraph)
   
   if(pcaGraph["clusterCount"]>0){
     for (let i = -1; i < pcaGraph["clusterCount"]; i++) {
       if(i ===-1){
         pieces.push({
           value: i,
-          label: 'Unclustered ',
-          color: COLOR_ALL[0]
+          label: 'Unclustered',
+          color: COLOR_ALL[0],
+          symbolSize: 8,
+          symbol: 'circle',
         });
         continue;
-      }
+      }      
       
-      clusters.push({ label: 'Cluster ' + + (i+1), value: i});
       pieces.push({
         value: i,
         label: 'Cluster ' + (i+1),
-        color: COLOR_ALL[i+1]
+        color: COLOR_ALL[i+1],
+        symbolSize: 10,
+        symbol: 'circle',
       });
-
-      if(i == -1) continue;
+       
       
-      if(pcaGraph["x" + i].length>0 & pcaGraph["y" + i].length>0)      {
-        
+      if(pcaGraph["x" + i].length>0 & pcaGraph["y" + i].length>0){        
         var clusterCurveData =[];
         for (var j = 0; j < pcaGraph["x" + i].length; j++) {
           clusterCurveData.push([pcaGraph["x" + i][j],pcaGraph["y" + i][j]]);
@@ -123,12 +99,19 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
       }
     }
   }
+  else //if there is no cluster we will have all of them same color
+  {
+    pieces.push({
+      value: -1,
+      label: 'Unclustered',
+      color: COLOR_ALL[1]
+    });
+  }
 
 }
   {console.log("Check 11")}
   useEffect(() => {
   {console.log("Check 12")}
- 
 
   function renderItem(params, api) {
     {console.log("Rendering clusters")}
@@ -149,8 +132,8 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
             points: echarts.graphic.clipPointsByRect(points, {
               x: params.coordSys.x,
               y: params.coordSys.y,
-                width: params.coordSys.width,
-                height: params.coordSys.height
+                width: params.coordSys.width*1.1,
+                height: params.coordSys.height*1.1
             })
         },        
         style: api.style({
@@ -160,7 +143,9 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
     };
 }
 
-
+if(coreSettings.graphType === "2D")
+{
+//2D chart
   setOptions({
     dataset: [
       {
@@ -172,48 +157,40 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
     ],
 
     tooltip: {
+
       position: 'top',
       extraCssText: 'width:auto; white-space:pre-wrap;',
       confine: true,
-       backgroundColor : "#000000",
+      backgroundColor : "#000000",
       textStyle: {
         fontSize:13,
         color:"#FFFFFF",
-
         width:100,
         overflow:'break'
       } ,
       formatter: function (params, ticket, callback) {
         var res = localStorage.getItem(params.data[3]); 
-        if (res !== null) {
-          {console.log("From localStorage");}
+        if (res !== null) {          
           return localStorage.getItem(params.data[3]);
         }
 
         $.get('https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/' + params.data[3], function (content) {
           res = '<span style="color: #e28743";> <b>' +  params.data[3] + ': </b></span>'  + content.description ;
-          localStorage.setItem( params.data[3], res);  
-        
-          callback(ticket, res);
-            
+          localStorage.setItem( params.data[3], res); 
+          callback(ticket, res);            
         });
         return 'Loading';
     }  
     },
     visualMap: {
       type: 'piecewise',
-      top: 'middle',
-      min: 0,
-      max: 10,
-      left: 10,
-      splitNumber: 10,
+      top: 'bottom',
+      left: 'center',      
       dimension: 4,
-      pieces: pieces
-    },
-    
-    grid: {
-      left: 120
-    },
+      pieces: pieces,
+      orient:'horizontal'
+    },    
+    grid: {left: 120},
     xAxis: {},
     yAxis: {},
     toolbox: {
@@ -235,7 +212,8 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
     series: [
       {        
         type: 'scatter',
-        symbolSize: 12,        
+        symbolSize: 12,
+        itemGroupId: 4,        
         datasetIndex: 0,       
         emphasis: {
           focus: 'self'
@@ -268,10 +246,97 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
       }
     ]
 });
+}else{
+//3D chart
+console.log("3D plit")
+console.log(data)
+setOptions({
+  grid3D: {
+    viewControl: {
+      autoRotate: true
+      // projection: 'orthographic'
+    }
 
+  },
+  xAxis3D: {name: "Component 1"},
+  yAxis3D: {name: "Component 2" },
+  zAxis3D: {name: "Component 3" },
+  visualMap: {
+    type: 'piecewise',
+    top: 'bottom',
+    left: 'center',      
+    dimension: 4,
+    pieces: pieces,
+    orient:'horizontal'
+  },
+  label:{
+    formatter: '{GeneSymbol}: {c}'
+
+  },
+  tooltip: {
+    extraCssText: 'width:auto; white-space:pre-wrap;',
+      confine: true,
+      backgroundColor : "#000000",
+      textStyle: {
+        fontSize:13,
+        color:"#FFFFFF",
+        width:100,
+        overflow:'break'
+      } ,
+    formatter: function (params, ticket, callback) {
+      var res = localStorage.getItem(params.data[3]); 
+      if (res !== null) {          
+        return localStorage.getItem(params.data[3]);
+      }
+
+      $.get('https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/' + params.data[3], function (content) {
+        res = '<span style="color: #e28743";> <b>' +  params.data[3] + ': </b></span>'  + content.description ;
+        localStorage.setItem( params.data[3], res); 
+        callback(ticket, res);            
+      });
+      return 'Loading';
+  } 
+  },
+  dataset: {   
+    dimensions: [
+      'PC1',
+      'PC2',
+      'PC3', 
+      "GeneSymbol",      
+      { name: 'Cluster', type: 'ordinal' },
+      "ClusterProb"     
+    ],
+    source: data
+  },
+  series: [
+    {
+      symbol:'circle',
+      type: 'scatter3D',
+      symbolSize: 10,  
+      encode: {
+        x: 'PC1',
+        y: 'PC2',
+        z: 'PC3',
+        tooltip: [0,1,2,3,4]
+      } ,
+      label: {
+        show:true,
+        formatter: function (params) {
+          return params.data[3]},
+      } ,
+      emphasis: {
+        itemStyle: {
+          color: 'red',
+        }
+      }
+      
+    }
+  ]
+});
+}
 //}
 
-  }, [pcaGraph, graphmapSettings, scatterplotSettings]);
+  }, [coreSettings, pcaGraph, graphmapSettings, scatterplotSettings]);
 
   return (
     /*<EchartsReact
@@ -290,16 +355,7 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings}) => {
     lazyUpdate={true}    
     />
     </Row>
-    <Row spacing={0} width="100%" height="50px">
-    <Spacer width="16px" /> <Select native width="150%" options= {clusters}/>    
-    </Row>
-    <Row spacing={0} width="100%" height="30%">    
-    <div style={{ width: '100%', height: '100%'}}>   
-     <TableWithSortAndFilter/>
-     </div>
-    </Row>
-    
-    </div>
+  </div>
     </>
 );  
 
@@ -312,6 +368,7 @@ const mapStateToProps = ({  settings,calcResults }) => ({
   pathFinderGraph: calcResults?.pathFinderGraph ?? null,
   graphmapSettings: settings?.graphmap ?? {},
   pathfinderSettings: settings?.pathfinder ?? {},
+  coreSettings: settings?.core ?? {},
 })
 
 const MainContainer = connect(mapStateToProps)(ScatterPlot);
