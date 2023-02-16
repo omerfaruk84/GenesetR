@@ -1,123 +1,139 @@
-import { ROUTES } from '../../common/routes';
-import { createSlice } from '@reduxjs/toolkit';
-import { runHeatMap, runPcaGraphCalc, runCorrCalc,runUMAPGraphCalc,runMdeGraphCalc, runtSNEGraphCalc,runbiClusteringCalc, runGeneRegulation,runPathFinderCalc   } from '../api';
-import CytoscapeComponent from 'react-cytoscapejs';
+import { ROUTES } from "../../common/routes";
+import { createSlice } from "@reduxjs/toolkit";
+import { toast } from '@oliasoft-open-source/react-ui-library';
+import {
+  runHeatMap,
+  runPcaGraphCalc,
+  runCorrCalc,
+  runUMAPGraphCalc,
+  runMdeGraphCalc,
+  runtSNEGraphCalc,
+  runbiClusteringCalc,
+  runGeneRegulation,
+  runPathFinderCalc,
+} from "../api";
+import { ModulePathNames } from "./enums";
+
+const resultState = {
+  result: null,
+  running: false,
+};
+
 const initialState = {
-  pcaGraph: null,
-  mdeGraph: null,
-  umapGraph: null,
-  tsneGraph: null,
-  biClusteringGraph: null,
-  geneRegulationGraph: null,
-  pathFinderGraph: [],
-  corrCluster: null,
-  heatmapGraph: null,
-  currentGraph: null,
+  pcaGraph: resultState,
+  mdeGraph: resultState,
+  umapGraph: resultState,
+  tsneGraph: resultState,
+  biClusteringGraph: resultState,
+  geneRegulationGraph: resultState,
+  pathFinderGraph: {
+    ...resultState,
+    reuslt: [],
+  },
+  corrCluster: resultState,
+  heatmapGraph: resultState,
 };
 
 export const calculationResults = createSlice({
-  name: 'calcResults',
+  name: "calcResults",
   initialState,
   reducers: {
-    pcaGraphReceived: (state, action) => {      
-      const { result } = action.payload;      
-      //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
-      //document.getElementById("myplot").innerHTML= "";
-      state.pcaGraph = JSON.parse(result);;
-      state.currentGraph= "pcaGraph";
-      console.log( state.currentGraph)
+    resultReceived: (state, action) => {
+      const { result, module } = action.payload;
+      state[module].result = JSON.parse(result);
+      state[module].running = false;
     },
-    mdeGraphReceived: (state, action) => {
-      const { result2 } = action.payload;
-      state.mdeGraph = result2;
-      state.currentGraph= "mdeGraph";
-      
-    },
-    tsneGraphReceived: (state, action) => {
-      const { result4 } = action.payload;
-      state.tsneGraph = result4;
-      state.currentGraph= "tsneGraph";
-    },
-    umapGraphReceived: (state, action) => {
-      const { result3 } = action.payload;
-      state.umapGraph = result3;
-      state.currentGraph= "umapGraph";
-    },
-    biClusteringGraphReceived: (state, action) => {
-      const { result5 } = action.payload;
-      state.biClusteringGraph = result5;
-      state.currentGraph= "biClusteringGraph";
-    },
-    geneRegulationGraphReceived: (state, action) => {
-      const { result6 } = action.payload;
-      state.geneRegulationGraph = result6;
-      state.currentGraph= "geneRegulationGraph";
-    },
-    pathFinderGraphReceived: (state, action) => {
-      const { result7 } = action.payload;
-      //state.pathFinderGraph = CytoscapeComponent.normalizeElements(JSON.parse(result7));
-      state.pathFinderGraph = JSON.parse(result7);
-      state.currentGraph= "pathFinderGraph";
-    },    
-    HeatMapReceived: (state, action) => {
-      const { result8 } = action.payload;
-      state.heatmapGraph = result8;
-      state.currentGraph= "heatmapGraph";
-    },
-    corrClusterReceived: (state, action) => {
-      const { result9 } = action.payload;
-      state.corrCluster = result9;
-      state.currentGraph= "corrCluster";
+    calcRunningChanged: (state, action) => {
+      const { module, status } = action.payload;
+      state[module].running = status;
     },
   },
 });
 
 const calculationResultsReducer = calculationResults.reducer;
 
-export const {
-  pcaGraphReceived,corrClusterReceived,mdeGraphReceived,pathFinderGraphReceived,tsneGraphReceived,umapGraphReceived,geneRegulationGraphReceived,biClusteringGraphReceived,HeatMapReceived,
-} = calculationResults.actions;
+export const { resultReceived, calcRunningChanged } = calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
-  const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
-  console.log(module);
-  switch (module) {
-    
-    case ROUTES.PCA:      
-      const result = await runPcaGraphCalc(core, pca, clustering);      
-      return dispatch(pcaGraphReceived({ result }));
-    case ROUTES.MDE: 
-      console.log("Her is module two");     
-      const result2 = await runMdeGraphCalc(core, mde, clustering);
-      return dispatch(mdeGraphReceived({ result2 }));
-    case ROUTES.UMAP:      
-      const result3 = await runUMAPGraphCalc(core, umap, clustering);
-      return dispatch(umapGraphReceived({ result3 }));
-    case ROUTES.TSNE:      
-      const result4 = await runtSNEGraphCalc(core, tsne, clustering);
-      return dispatch(tsneGraphReceived({ result4 }));
-    case ROUTES.BI_CLUSTERING:      
-      const result5 = await runbiClusteringCalc(core, biClustering);
-      return dispatch(biClusteringGraphReceived({ result5 }));
-    case ROUTES.GENE_REGULATION:      
-      const result6 = await runGeneRegulation(core, geneRegulationCore);
-      return dispatch(geneRegulationGraphReceived({ result6 }));
-    case ROUTES.PATHFINDER:      
-      const result7 = await runPathFinderCalc(core, pathfinder);
-      return dispatch(pathFinderGraphReceived({ result7 }));
-    case ROUTES.HEATMAP:  
-      console.log("Here we go in run heatmap");    
-      const result8 = await runHeatMap(core, heatMap);
-      
-      return dispatch(HeatMapReceived({ result8 }));
-    case ROUTES.CORRELATION:      
-      const result9 = await runCorrCalc(core, correlation);
-      return dispatch(corrClusterReceived({ result9 }));
-        
-    default:
-      throw new Error('This module does not exists');
+  const {
+    core,
+    pca,
+    heatMap,
+    umap,
+    mde,
+    tsne,
+    biClustering,
+    geneRegulationCore,
+    clustering,
+    genesetEnrichment,
+    correlation,
+    pathfinder,
+  } = settings;
+
+  /**
+   * Will change the status of the running simulation for a specific module
+   * and if the calc is already running will disable the run calc button
+   */
+  dispatch(calcRunningChanged({ module: ModulePathNames[module], status: true }));
+
+  /**
+   * Wrapping all the switch block in a trycatch, to be able to catch any http error
+   * that might occur and to reset the running stats for the specifc module
+   */
+  try {
+    switch (module) {
+      case ROUTES.PCA: {
+        const result = await runPcaGraphCalc(core, pca, clustering);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.MDE: {
+        const result = await runMdeGraphCalc(core, mde, clustering);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.UMAP: {
+        const result = await runUMAPGraphCalc(core, umap, clustering);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.TSNE: {
+        const result = await runtSNEGraphCalc(core, tsne, clustering);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.BI_CLUSTERING: {
+        const result = await runbiClusteringCalc(core, biClustering);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.GENE_REGULATION: {
+        const result = await runGeneRegulation(core, geneRegulationCore);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.PATHFINDER: {
+        const result = await runPathFinderCalc(core, pathfinder);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.HEATMAP: {
+        const result = await runHeatMap(core, heatMap);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.CORRELATION: {
+        const result = await runCorrCalc(core, correlation);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      default: {
+        dispatch(calcRunningChanged(({ module: ModulePathNames[module], status: false })));
+      }
+    }
+  } catch (error) {
+    dispatch(calcRunningChanged({ module: ModulePathNames[module], status: false }));
+    toast({
+      message: {
+        type: 'Error',
+        icon: true,
+        content: 'Calculation failed',
+        details: error.message,
+      }
+    });
   }
-}
+};
 
 export { calculationResultsReducer, runCalculation };

@@ -6,7 +6,6 @@ import { GraphMapSettings } from './graphmap-settings';
 import { TsneSettings } from './tsne-settings';
 import { BiClusteringSettings } from './bi-clustering-settings';
 import { GeneRegulationSettings } from './gene-regulation-core-settings';
-import { GeneRegulationExtraSettings } from './gene-regulation-extra-settings';
 import { CorrelationSettings } from './correlation-settings';
 import { ClusteringSettings } from './clustering-settings';
 import { PcaSettings } from './pca-settings';
@@ -14,7 +13,6 @@ import { UmapSettings } from './umap-settings';
 import { MdeSettings } from './mde-settings';
 import { HeatMapSettings } from './heatmap-settings';
 import { PathFinderSettings } from './pathfinder-settings';
-import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
 const SettingsSelector = ({ pathname }) => {
@@ -105,11 +103,6 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <GeneRegulationSettings />
-      },
-      {
-        settingsName: SettingsTypes.GENE_REGULATION_SETTINGS,
-        settings: <GeneRegulationExtraSettings />,
-        isAccordion: false,
       },
     ],
     [ROUTES.HEATMAP]: [
