@@ -12,6 +12,7 @@ const SettingsTypes = {
   PATH_FINDER_SETTINGS: 'PathFinder Settings',
   GRAPHMAP_SETTINGS:'GraphMap Settings',
   SCATTERPLOT_SETTINGS:'Scatter Plot Settings',
+  GENESETENRICHMENT_SETTINGS:'GeneSet Enrichment Settings',
 };
 
 const BiClusteringSettingsTypes = {
@@ -106,12 +107,22 @@ const PathFinderSettingsTypes = {
 };
 
 const ScatterPlotSettingsTypes = {
-  UPREGULATED_GENES:'upgeneList',
-  CUTOFF:'cutoff',
-  DEPTH: 'depth',
-  CHECK_CORR: 'checkCorr',
-  CORR_CUTOFF: 'corrCutOff',
-  CHECK_BIOGRID : 'BioGridData',
+  GENES_TO_LABEL:'genesTolabel',
+
+  HIGHLIGHT_CLUSTERS:'highlightClusters',
+  SYMBOL_SIZE:'symbolSize',  
+  CLUSTER_PROB:'clusterProb',
+  LABEL_LOC: 'labelLoc',
+  LABEL_SIZE: 'labelSize',
+  SHOW_LABELS: 'showLabels',
+  AUTOROTATE : 'autorotate',
+  ROTATION_SPEED:'rotationSpeed',
+  PROJECTION:'projection',
+};
+
+const GeneSetEnrichmentSettingsTypes = {
+  DATASETS : 'gseaDatasets',
+  GENELIST : 'genes',
 };
 
 export {
@@ -129,4 +140,5 @@ export {
   PathFinderSettingsTypes,
   GraphmapSettingsTypes,
   ScatterPlotSettingsTypes,
+  GeneSetEnrichmentSettingsTypes,
 };

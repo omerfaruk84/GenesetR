@@ -13,6 +13,7 @@ import { UmapSettings } from './umap-settings';
 import { MdeSettings } from './mde-settings';
 import { HeatMapSettings } from './heatmap-settings';
 import { PathFinderSettings } from './pathfinder-settings';
+import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
 const SettingsSelector = ({ pathname }) => {
@@ -46,6 +47,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
         settings: <ClusteringSettings />
       },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />
+      },
     ],
     [ROUTES.MDE]: [
       {
@@ -59,6 +64,10 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
         settings: <ClusteringSettings />
+      },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />
       },
     ],
     [ROUTES.UMAP]: [
@@ -74,6 +83,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
         settings: <ClusteringSettings />
       },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />
+      },
     ],
     [ROUTES.TSNE]: [
       {
@@ -87,6 +100,10 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
         settings: <ClusteringSettings />
+      },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />
       },
     ],
     [ROUTES.BI_CLUSTERING]: [

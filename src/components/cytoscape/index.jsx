@@ -29,9 +29,17 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
     const nodes = pathFinderGraph.nodes.map(node => ({      
       id: node.id,
       name: node.id, 
-      symbolSize: 20,   
+      symbolSize: 35,   
       direction:node.direction,
+      kd:node.kd,
+      lineStyle: {opacity: node.kd? Math.min(0.4118*node.kd + 1.0235,1):0.5}
+      
+
   }));
+
+  
+
+
   const edges = pathFinderGraph.edges.map(edge => ({
       source: edge.source,
       target: edge.target,
@@ -54,8 +62,8 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
   for(let edge in edges){     
     if(edges[edge].id.includes("+cor+"))
     {
-      if(pathfinderSettings.checkCorr == false) continue;
-      {console.log(pathfinderSettings.corrCutOff)}
+      if(pathfinderSettings.checkCorr === false) continue;
+    
       if(Math.abs(edges[edge].value) < pathfinderSettings.corrCutOff) continue;
     } else if(edges[edge].id.includes("+int+") && pathfinderSettings.BioGridData == false){
       continue;      
@@ -88,7 +96,14 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
   
 
   setOptions({
-    tooltip: {},
+    tooltip: {
+      formatter: function (params) {        
+        let kd = '';
+        if(params.data.kd)
+        kd = "Knockdown: " + params.data.kd;
+        return params.data.name + "<br>" + kd ;
+      },
+    },
     //legend: [
     //  {
         // selectedMode: 'single',
@@ -103,9 +118,9 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
         type: 'graph',
         layout:  graphmapSettings.layout,       
         data: nodesFinal,
-        links: edgesFinal,
+        links: edgesFinal,       
         edgeSymbol: ['circle', 'arrow'],
-        edgeSymbolSize: [4, 10],
+        edgeSymbolSize: [4, 20],
         edgeLabel: {
           fontSize: 20
         },
@@ -116,31 +131,33 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
           formatter: function (params) {
             return params.data.name;
           },
-          fontSize: 10,
-         // fontWeight: 'bold',
+          fontSize: 8,
+          fontWeight: 'bold',
           color: 'white'
         },
         emphasis: {
           focus: 'adjacency',
           lineStyle: {
-            width: 10
+            width: 6
           }
         },
         
         itemStyle:{
           color: function (params) {            
-            if (params.data.direction == "down") {
-                return 'green';
-            } else {
-              
+            if (params.data.direction === "down") {
+                return '#1e81b0';
+            } else {              
                return 'red';
             }
-          }
+          },
+          //opacity: 0.9,          
+          borderColor : 'black',
+          borderWidth :3
 
         },
         lineStyle: {
           curveness: 0.3 ,
-          width: 5,
+          width: 4,
         },
        // categories: sample.categories,
         roam: true,        

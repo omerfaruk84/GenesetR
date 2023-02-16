@@ -1,11 +1,16 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  repulsion: 100,
-  dataType: 1,
-  isolatednodes: false,
-  targetList: '',
-  layout: 'force',
+  genesTolabel:'',
+  highlightClusters:true,
+  symbolSize:10,  
+  clusterProb:true,
+  labelLoc: 'left',
+  labelSize: 14,
+  showLabels: false,
+  autorotate : true,
+  rotationSpeed:10,
+  projection:false,
 };
 
 export const scatterplotSettingsSlice = createSlice({

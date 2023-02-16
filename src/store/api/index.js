@@ -1,7 +1,8 @@
 import Axios from 'axios';
 
+
 const getData = async(body) =>{  
-  const { task_id } = await Axios.post("https://6c26-2001-700-4a01-10-00-40.eu.ngrok.io/getData", {
+  const { task_id } = await Axios.post("https://43a1-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", {
     body: JSON.stringify(body),
   })
     .then(response => response.data);
@@ -10,7 +11,7 @@ const getData = async(body) =>{
   const fetchData = async () => {
     let times = 1;
     do {
-      const { data: { task_result } }  = await Axios.get("https://6c26-2001-700-4a01-10-00-40.eu.ngrok.io/tasks/" + task_id, {
+      const { data: { task_result } }  = await Axios.get("https://43a1-2001-700-100-400a-00-f-f95c.eu.ngrok.io/tasks/" + task_id, {
         headers: {
           'ngrok-skip-browser-warning': '69420',
         },
@@ -54,7 +55,7 @@ const runMdeGraphCalc = async (core, mde,clustering) => {
     cellLine: core.cellLine,
 
     numcomponents:mde.numcomponents,
-    preprocessingMethod: mde.preprocessingMethod,
+    PreprocessingMethod: mde.preprocessingMethod,
     pyMdeConstraint: mde.pyMdeConstraint,
     repulsiveFraction:mde.repulsiveFraction,
 
@@ -203,6 +204,31 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
   };
   return await getData(body);  
 };
+
+const runEnrichr = async (genes, datasets) => {  
+  const body = {
+    genes: genes,
+    gseaDatasets: datasets, 
+    request: 'geneRegulation'
+  };
+  
+  let genes_str = genes.replace(",","\n");
+  let description = 'Example gene list';
+  let payload = {
+      'list':  genes_str,
+      'description': description
+  };
+
+
+  
+  const list_id  = await Axios.post("https://maayanlab.cloud/Enrichr/addList", {
+    body: JSON.stringify(payload),
+  })
+    .then(response => response.text); 
+    console.log(list_id);
+    return list_id;
+};
+
 export {
   runPcaGraphCalc,
   runMdeGraphCalc,
@@ -213,4 +239,5 @@ export {
   runPathFinderCalc,
   runGeneRegulation,
   runHeatMap,
+  runEnrichr,
 };

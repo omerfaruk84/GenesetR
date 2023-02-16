@@ -37,12 +37,8 @@ const ClusteringSettings = ({
   return (
     <>
       <Spacer height={10} />
-      <Field label='Minimum Cluster Size'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{3}</Text>
-            <Text>{200}</Text>
-          </Flex>
+      <Field labelLeft labelWidth="130px" label='Minimum Cluster Size'>
+        <div className={styles.inputRange}>          
           <Slider
             label={clusteringSettings?.minimumClusterSize}
             max={200}
@@ -55,7 +51,7 @@ const ClusteringSettings = ({
           />
         </div>
       </Field>
-      <Field label='Clustering Metric'>
+      <Field labelLeft  labelWidth="130px" label='Clustering Metric'>
         <Select
           onChange={({ target: { value } }) => clusteringSettingsChanged({
             settingName: ClusteringSettingsTypes.CLUSTERING_METRIC,
@@ -65,7 +61,7 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMetric}
         />
       </Field>
-      <Field label='Clustering Method'>
+      <Field labelLeft labelWidth="130px" label='Clustering Method'>
         <Select
           onChange={({ target: { value } }) => clusteringSettingsChanged({
             settingName: ClusteringSettingsTypes.CLUSTERING_METHOD,
@@ -75,12 +71,8 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMethod}
         />
       </Field>
-      <Field label='Minimum Samples'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{3}</Text>
-            <Text>{100}</Text>
-          </Flex>
+      <Field labelLeft labelWidth="130px" label='Minimum Samples'>
+        <div className={styles.inputRange}>        
           <Slider
             label={clusteringSettings?.minimumSamples}
             max={100}
@@ -94,12 +86,8 @@ const ClusteringSettings = ({
  
         </div>
       </Field>
-      <Field label='Cluster Selection Epsilon'>
-        <div className={styles.inputRange}>
-          <Flex justifyContent="space-between">
-            <Text>{3}</Text>
-            <Text>{100}</Text>
-          </Flex>
+      <Field labelLeft labelWidth="130px" label='Cluster Selection Epsilon'>
+        <div className={styles.inputRange}>          
           <Slider
             label={clusteringSettings?.clusterSelectionEpsilon}
             max={100}
