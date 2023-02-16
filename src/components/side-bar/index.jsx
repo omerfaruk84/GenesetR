@@ -7,7 +7,7 @@ import { runCalculation } from '../../store/results/index';
 import { ModulePathNames } from '../../store/results/enums';
 
 const SideBar = ({ runCalculation, calcResults }) => {
-  const [sideBarWith, setSideBarWith] = useState(420);
+  const [sideBarWith, setSideBarWith] = useState(350);
   const handleSideBarResize = (size) => {
     if (size > 500 || size < 250) {
       return;

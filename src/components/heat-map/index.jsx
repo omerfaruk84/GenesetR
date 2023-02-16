@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-//import PropTypes from 'prop-types';
 import $ from 'jquery';
 import InCHlib from 'biojs-vis-inchlib';
 import styles from './heat-map.module.scss';
