@@ -12,16 +12,14 @@ const CorrelationPage = ({ path, corrResults }) => {
       {corrResults ? (
         <HeatMap graphData={corrResults} />
       ) : (
-        <>
-          <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>
-              Correlation is a measure of the linear relationship between quantitative variables.
-              Two variables are computed against each other and return the correlation coefficient "r"
-              that indicates the strength and direction of association in a range from -1 to 1.
-            </p>
-            <img alt='correlation' src='/images/correlation.png' />
-          </div>
-        </>
+        <div className={styles.infoSection}>
+          <p className={styles.moduleTextInfos}>
+            Correlation is a measure of the linear relationship between quantitative variables.
+            Two variables are computed against each other and return the correlation coefficient "r"
+            that indicates the strength and direction of association in a range from -1 to 1.
+          </p>
+          <img alt='correlation' src='/images/correlation.png' />
+        </div>
       )}
     </div>
   );
