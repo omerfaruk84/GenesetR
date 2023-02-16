@@ -7,7 +7,6 @@ const SettingsTypes = {
   UMAP_SETTINGS: 'UMAP Settings',
   TSNE_SETTINGS: 'tSNE Settings',
   BI_CLUSTERING_SETTINGS: 'biClustering Settings',
-  GENE_REGULATION_SETTINGS: '',
   HEAT_MAP: 'HeatMap Settings',
   HEAT_MAP_TARGET_GENE_LIST: 'Target Gene List',
   PATH_FINDER_SETTINGS: 'PathFinder Settings',
