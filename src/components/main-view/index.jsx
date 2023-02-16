@@ -12,6 +12,7 @@ import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
 import { Cytoscape } from '../cytoscape';
+import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
 import { ScatterPlot } from '../scatterPlot';
 
 const MainView = () => {
@@ -33,6 +34,7 @@ const MainView = () => {
             element={<CorrelationPage path={ROUTES.CORRELATION} />}
           />
           {/* <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} /> */}
+          <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage />} />
           <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />} />
 
           <Route path="*" element={<NotFoundPage />} />

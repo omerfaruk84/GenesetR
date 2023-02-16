@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Heading } from "@oliasoft-open-source/react-ui-library";
+import { Heading, Spacer } from "@oliasoft-open-source/react-ui-library";
 import { HeatMap } from '../../components/heat-map';
 import styles from './correlation-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
@@ -9,6 +9,7 @@ const CorrelationPage = ({ path, corrResults }) => {
   return (
     <div className={styles.mainView}>
       <Heading>Correlation</Heading>
+      <Spacer />
       {corrResults ? (
         <HeatMap graphData={corrResults} />
       ) : (
