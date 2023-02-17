@@ -31,7 +31,9 @@ const ScatterPlot = ({currentGraph, pcaGraph,mdeGraph,umapGraph,tsneGraph, graph
 
   const [options, setOptions] = useState({});
 
-  const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
+  const data = [["PC1","PC2","PC3","GeneSymbol","Cluster","ClusterProb" ]];
+  const genes =scatterplotSettings.genesTolabel.replaceAll(/\s+|,\s+|,/g, ';')?.split(';');
+  const genesTolabel =new Set(genes)
   var pieces = [];
   const clusterData = [];
   const commonProps = {"Cluster 1": 'AKT1,AKT2,AKT3,MTOR,SLC39A10',"Cluster 2": 'AKT1,MTOR,SLC39A10'}; 
@@ -71,16 +73,31 @@ const ScatterPlot = ({currentGraph, pcaGraph,mdeGraph,umapGraph,tsneGraph, graph
 
     
     }
+  }
+  
+
+
 
     var COLOR_ALL = [
-      "#9b9b9b",
-      "#37A2DA",
-      "#e06343",
-      "#37a354",
-      "#b55dba",
-      "#b5bd48",
-      "#8378EA",
-      "#96BFFF",
+    '#9b9b9b',
+    '#37A2DA',
+    '#e06343',
+    '#37a354',
+    '#b55dba',
+    '#b5bd48',
+    '#8378EA',
+    '#96BFFF',
+    '#1f77b4', 
+    '#ff7f0e', 
+    '#2ca02c', 
+    '#d62728', 
+    '#9467bd', 
+    '#8c564b', 
+    '#e377c2', 
+    '#7f7f7f', 
+    '#bcbd22',
+    '#17becf'
+
     ];
 
     console.log(pcaGraph);
@@ -389,10 +406,19 @@ setOptions({
             lazyUpdate={true}
           />
         </Row>
+    <Row spacing={-100} width="100%" height="90%">
+    
+    <TableWithSortAndFilter clusters={commonProps}/>
+    </Row>
+
+
       </div>
     </>
   );
-};
+
+}
+
+
 
 const mapStateToProps = ({  settings,calcResults }) => ({
   currentGraph: calcResults?.currentGraph ?? null,
@@ -406,4 +432,4 @@ const mapStateToProps = ({  settings,calcResults }) => ({
 
 const MainContainer = connect(mapStateToProps)(ScatterPlot);
 
-export { MainContainer as ScatterPlot };;
+export { MainContainer as ScatterPlot };
