@@ -4,7 +4,7 @@ import { Field, Select, TextArea, Text, Spacer, Slider , Toggle} from '@oliasoft
 import { scatterplotSettingsChanged } from '../../../store/settings/scatterplot-settings';
 import styles from './settings.module.scss';
 
-import { ScatterplotSettingsTypes } from "./enums";
+import { ScatterPlotSettingsTypes } from "./enums";
 import { useLocation } from "react-router-dom";
 
 const ScatterPlotSettings = ({
@@ -65,7 +65,7 @@ const ScatterPlotSettings = ({
             min={50}
             value={scatterplotSettings?.repulsion}
             onChange={({ target: { value } }) => scatterplotSettingsChanged({
-              settingName: ScatterplotSettingsTypes.REPULSION,
+              settingName: ScatterPlotSettingsTypes.REPULSION,
               newValue: value
             })}
           />
@@ -76,7 +76,7 @@ const ScatterPlotSettings = ({
         <Select
           onChange={({ target: { value } }) =>
             scatterplotSettingsChanged({
-              settingName: ScatterplotSettingsTypes.LAYOUT,
+              settingName: ScatterPlotSettingsTypes.LAYOUT,
               newValue: value,
             })
           }
@@ -91,7 +91,7 @@ const ScatterPlotSettings = ({
       <Toggle
       label = "Show"
        onChange={({ target: { checked } }) => scatterplotSettingsChanged({
-        settingName: ScatterplotSettingsTypes.ISOLATED_NODES,
+        settingName: ScatterPlotSettingsTypes.ISOLATED_NODES,
         newValue: checked
       })}
       checked={scatterplotSettings?.isolatednodes}
@@ -101,7 +101,7 @@ const ScatterPlotSettings = ({
       <Field label='Data Type' labelLeft labelWidth="130px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => scatterplotSettingsChanged({
-            settingName: ScatterplotSettingsTypes.DATA_TYPE,
+            settingName: ScatterPlotSettingsTypes.DATA_TYPE,
             newValue: value
           })}
           options={dataTypeOptions}

@@ -2,7 +2,7 @@ import Axios from 'axios';
 
 
 const getData = async(body) =>{  
-  const { task_id } = await Axios.post("https://43a1-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", {
+  const { task_id } = await Axios.post("https://a825-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", {
     body: JSON.stringify(body),
   })
     .then(response => response.data);
@@ -11,7 +11,7 @@ const getData = async(body) =>{
   const fetchData = async () => {
     let times = 1;
     do {
-      const { data: { task_result } }  = await Axios.get("https://43a1-2001-700-100-400a-00-f-f95c.eu.ngrok.io/tasks/" + task_id, {
+      const { data: { task_result } }  = await Axios.get("https://a825-2001-700-100-400a-00-f-f95c.eu.ngrok.io/tasks/" + task_id, {
         headers: {
           'ngrok-skip-browser-warning': '69420',
         },

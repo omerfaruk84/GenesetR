@@ -1,62 +1,47 @@
-import { ROUTES } from "../../common/routes";
-import { createSlice } from "@reduxjs/toolkit";
-import { toast } from '@oliasoft-open-source/react-ui-library';
-import {
-  runHeatMap,
-  runPcaGraphCalc,
-  runCorrCalc,
-  runUMAPGraphCalc,
-  runMdeGraphCalc,
-  runtSNEGraphCalc,
-  runbiClusteringCalc,
-  runGeneRegulation,
-  runPathFinderCalc,
-} from "../api";
-import { ModulePathNames } from "./enums";
-
-const resultState = {
-  result: null,
-  running: false,
-};
-
+import { ROUTES } from '../../common/routes';
+import { createSlice } from '@reduxjs/toolkit';
+import { runHeatMap,runEnrichr, runPcaGraphCalc, runCorrCalc,runUMAPGraphCalc,runMdeGraphCalc, runtSNEGraphCalc,runbiClusteringCalc, runGeneRegulation,runPathFinderCalc   } from '../api';
+//import CytoscapeComponent from 'react-cytoscapejs';
 const initialState = {
-  pcaGraph: resultState,
-  mdeGraph: resultState,
-  umapGraph: resultState,
-  tsneGraph: resultState,
-  biClusteringGraph: resultState,
-  geneRegulationGraph: resultState,
-  pathFinderGraph: {
-    ...resultState,
-    reuslt: [],
-  },
-  corrCluster: resultState,
-  heatmapGraph: resultState,
+  pcaGraph: null,
+  mdeGraph: null,
+  umapGraph: null,
+  tsneGraph: null,
+  biClusteringGraph: null,
+  geneRegulationGraph: null,
+  pathFinderGraph: [],
+  corrCluster: null,
+  heatmapGraph: null,
+  currentGraph: null,
+  enrichmentResults:null,
 };
 
 export const calculationResults = createSlice({
-  name: "calcResults",
+  name: 'calcResults',
   initialState,
   reducers: {
-    resultReceived: (state, action) => {
-      const { result, module } = action.payload;
-      state[module].result = JSON.parse(result);
-      state[module].running = false;
+    pcaGraphReceived: (state, action) => {      
+      const { result } = action.payload;      
+      //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
+      //document.getElementById("myplot").innerHTML= "";
+      state.pcaGraph = JSON.parse(result);;
+      state.currentGraph= "pcaGraph";
+      console.log( state.currentGraph)
     },
     mdeGraphReceived: (state, action) => {
       const { result2 } = action.payload;
-      state.mdeGraph = result2;
+      state.mdeGraph = JSON.parse(result2);
       state.currentGraph= "mdeGraph";
       
     },
     tsneGraphReceived: (state, action) => {
       const { result4 } = action.payload;
-      state.tsneGraph = result4;
+      state.tsneGraph = JSON.parse(result4);
       state.currentGraph= "tsneGraph";
     },
     umapGraphReceived: (state, action) => {
       const { result3 } = action.payload;
-      state.umapGraph = result3;
+      state.umapGraph = JSON.parse(result3);
       state.currentGraph= "umapGraph";
     },
     biClusteringGraphReceived: (state, action) => {
@@ -85,21 +70,24 @@ export const calculationResults = createSlice({
       state.corrCluster = result9;
       state.currentGraph= "corrCluster";
     },
+    enrichmentResultsReceived: (state, action) => {
+      const { result10 } = action.payload;
+      state.enrichmentResults = result10;      
+    },
   },
 });
 
 const calculationResultsReducer = calculationResults.reducer;
 
 export const {
-  pcaGraphReceived,corrClusterReceived,mdeGraphReceived,pathFinderGraphReceived,tsneGraphReceived,umapGraphReceived,geneRegulationGraphReceived,biClusteringGraphReceived,HeatMapReceived,
+  enrichmentResultsReceived, pcaGraphReceived,corrClusterReceived,mdeGraphReceived,pathFinderGraphReceived,tsneGraphReceived,umapGraphReceived,geneRegulationGraphReceived,biClusteringGraphReceived,HeatMapReceived,
 } = calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
   const { settings } = getState();
-  const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, genesetEnrichment, correlation, pathfinder} = settings;
+  const { core, pca, heatMap, umap,mde,tsne,biClustering, geneRegulationCore, clustering, correlation, pathfinder} = settings;
   console.log(module);
-  switch (module) {
-    
+  switch (module) {    
     case ROUTES.PCA:      
       const result = await runPcaGraphCalc(core, pca, clustering);      
       return dispatch(pcaGraphReceived({ result }));
@@ -136,4 +124,11 @@ const runCalculation = (module) => async (dispatch, getState) => {
   }
 }
 
-export { calculationResultsReducer, runCalculation };
+const runEnrichment = (genes) => async (dispatch, getState) => {
+  const { settings } = getState();
+  const { genesetEnrichment} = settings;  
+  const result = await runEnrichr(genes);
+  return dispatch(enrichmentResultsReceived({result}));        
+  
+}
+export { calculationResultsReducer, runCalculation , runEnrichment};

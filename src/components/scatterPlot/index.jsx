@@ -1,58 +1,31 @@
-import React, { useEffect, useRef, useState } from "react";
-import { connect } from "react-redux";
-import { Spacer, Select, Row } from "@oliasoft-open-source/react-ui-library";
-import DataTable from "react-data-table-component";
-import { TableWithSortAndFilter } from "../enrichment/";
+import React, { useEffect, useRef,useState  } from 'react';
+import { connect } from 'react-redux';
+import { Spacer, Select, Row} from '@oliasoft-open-source/react-ui-library';
+import DataTable from 'react-data-table-component';
+import {TableWithSortAndFilter} from '../enrichment/';
 import 'echarts-gl';
-import * as echarts from "echarts/core";
+import * as echarts from 'echarts/core';
 import { registerTransform } from "echarts/core";
 //import GraphChart from 'echarts/charts';
-import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
-import { transform } from "echarts-stat";
-import {
-  GridComponent,
-  BrushComponent,
-  LegendPlainComponent,
-  LegendScrollComponent,
-  VisualMapComponent,
-  TransformComponent,
-  TooltipComponent,
-  TitleComponent,
-  DataZoomComponent,
-  DatasetComponent,
-  ToolboxComponent,
-} from "echarts/components";
-import {
-  CanvasRenderer,
+import {ScatterChart, EffectScatterChart, CustomChart} from 'echarts/charts';
+import {transform} from 'echarts-stat'; 
+import {GridComponent,BrushComponent, LegendPlainComponent, LegendScrollComponent, VisualMapComponent,TransformComponent, TooltipComponent,TitleComponent, DataZoomComponent,DatasetComponent,ToolboxComponent} from 'echarts/components';
+import {CanvasRenderer,
   // SVGRenderer,
 } from 'echarts/renderers';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
-import $ from "jquery";
+import $, { param } from "jquery";
+import { string } from 'prop-types';
 // import text from './sample.json';
 
-echarts.use([
-  TitleComponent,
-  EffectScatterChart,
-  LegendPlainComponent,
-  LegendScrollComponent,
-  CustomChart,
-  BrushComponent,
-  VisualMapComponent,
-  TransformComponent,
-  TooltipComponent,
-  GridComponent,
-  ScatterChart,
-  CanvasRenderer,
-  DataZoomComponent,
-  DatasetComponent,
-  ToolboxComponent,
-]);
+echarts.use(
+  [TitleComponent,EffectScatterChart,  LegendPlainComponent, LegendScrollComponent, CustomChart, BrushComponent, VisualMapComponent, TransformComponent,TooltipComponent, GridComponent, ScatterChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
+);
 
 registerTransform(transform.clustering);
 
 
-const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSettings}) => {
-  {console.log("Check 10")}
+const ScatterPlot = ({currentGraph, pcaGraph,mdeGraph,umapGraph,tsneGraph, graphmapSettings, scatterplotSettings, coreSettings}) => {
 
     
 
@@ -63,9 +36,28 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
   const genesTolabel =new Set(genes)
   var pieces = [];
   const clusterData = [];
+  const commonProps = {"Cluster 1": 'AKT1,AKT2,AKT3,MTOR,SLC39A10',"Cluster 2": 'AKT1,MTOR,SLC39A10'}; 
 
-  if(pcaGraph){ 
-  if(pcaGraph["clusterCount"]>0)
+  var maindata;
+
+    if (currentGraph === "pcaGraph" && pcaGraph) {   
+    maindata = pcaGraph
+  }
+  if (currentGraph === "mdeGraph" && mdeGraph) {
+    maindata = mdeGraph
+  }
+  if (currentGraph === "umapGraph" && umapGraph) {
+    maindata = umapGraph
+  }
+  if (currentGraph === "tsneGraph" && tsneGraph) {
+    maindata = tsneGraph
+  }
+
+  {console.log("Check 10")}
+  {console.log(maindata)}
+  if(maindata && maindata["PC1"] && maindata["PC2"] && maindata["GeneSymbols"] ){
+  console.log(maindata);  
+  if(maindata["clusterCount"]>0)
   {
     for (var i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) 
     {
@@ -109,7 +101,7 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
   ];
  
 
-  console.log(pcaGraph)
+  //console.log(maindata)
   
   if(maindata["clusterCount"]>0){
     for (let i = -1; i < maindata["clusterCount"]; i++) {
@@ -118,30 +110,33 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
           value: i,
           label: 'Unclustered',
           color: COLOR_ALL[0],
-          symbolSize: 8,
+          symbolSize: scatterplotSettings.symbolSize,
           symbol: 'circle',
         });
         continue;
-      }
+      }      
       
-      clusters.push({ label: 'Cluster ' + + (i+1), value: i});
       pieces.push({
         value: i,
         label: 'Cluster ' + (i+1),
-        color: COLOR_ALL[i+1],
-        symbolSize: 10,
+        color: COLOR_ALL[(i+1)%18],
+        symbolSize: scatterplotSettings.symbolSize,
         symbol: 'circle',
       });
        
       
-      if(pcaGraph["x" + i].length>0 & pcaGraph["y" + i].length>0){        
-        var clusterCurveData =[];
-        for (var j = 0; j < pcaGraph["x" + i].length; j++) {
-          clusterCurveData.push([pcaGraph["x" + i][j],pcaGraph["y" + i][j]]);
-        }
-        clusterData.push([i]);        
+      if(maindata["x" + i] && maindata["x" + i].length>0 && maindata["y" + i] && maindata["y" + i].length>0){       
+        clusterData.push([i/10000]);        
       }
     }
+  }
+  else //if there is no cluster we will have all of them same color
+  {
+    pieces.push({
+      value: -1,
+      label: 'Unclustered',
+      color: COLOR_ALL[1]
+    });
   }
 
 }
@@ -151,36 +146,42 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
   {console.log("Check 12")}
 
   function renderItem(params, api) {
-    {console.log("Rendering clusters")}
-    {console.log(params)}
-    var curIndex = api.value(0);    
+ 
+    
+    var curIndex = api.value(0)*10000;    
        
     
     const points = [];
-    for (var i = 0; i < pcaGraph["x" + curIndex].length; i++ ) {
-        points.push(api.coord([pcaGraph["x" + curIndex][i], pcaGraph["y" + curIndex][i]]));    
-      }
+    if( maindata["x" + curIndex]){
+    for (var i = 0; i < maindata["x" + curIndex].length; i++ ) {
+        points.push(api.coord([maindata["x" + curIndex][i], maindata["y" + curIndex][i]]));    
+    }
+  }
     
-    var color = COLOR_ALL[curIndex+1];
+    var color = COLOR_ALL[(curIndex+1)%18];
 
-      return {
-        type: "polygon",
+    return {
+        type: 'polygon',
         shape: {
             points: echarts.graphic.clipPointsByRect(points, {
               x: params.coordSys.x,
               y: params.coordSys.y,
-                width: params.coordSys.width*1.1,
-                height: params.coordSys.height*1.1
-            })
+              width: params.coordSys.width,
+              height: params.coordSys.height,
+          }),
+          smooth: 1
+            
         },        
         style: api.style({
-          fill: color,
-          stroke: echarts.color.lift(color),
-        }),
-      };
-    }
+            fill: color,
+            stroke: echarts.color.lift(color)
+        })
+    };
+}
 
-
+if(coreSettings.graphType === "2D")
+{
+//2D chart
   setOptions({
     dataset: [
       {
@@ -192,21 +193,20 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
     ],
 
     tooltip: {
+
       position: 'top',
       extraCssText: 'width:auto; white-space:pre-wrap;',
       confine: true,
-       backgroundColor : "#000000",
+      backgroundColor : "#000000",
       textStyle: {
         fontSize:13,
         color:"#FFFFFF",
-
         width:100,
         overflow:'break'
       } ,
       formatter: function (params, ticket, callback) {
         var res = localStorage.getItem(params.data[3]); 
-        if (res !== null) {
-          {console.log("From localStorage");}
+        if (res !== null) {          
           return localStorage.getItem(params.data[3]);
         }
 
@@ -248,8 +248,8 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
     brush:{},
      
 
-    series: [
-      {        
+    series: [      
+      {
         type: 'custom',        
         renderItem: renderItem,
         itemStyle: {
@@ -267,7 +267,8 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
       },
       {        
         type: 'scatter',
-        symbolSize: 12,
+        gridIndex: 0,
+        symbolSize: scatterplotSettings.symbolSize,
         itemGroupId: 4,        
         datasetIndex: 0,       
         emphasis: {
@@ -292,19 +293,18 @@ const ScatterPlot = ({ pcaGraph , graphmapSettings, scatterplotSettings, coreSet
 });
 }else{
 //3D chart
-console.log("3D plit")
-console.log(data)
 setOptions({
   grid3D: {
     viewControl: {
-      autoRotate: true
-      // projection: 'orthographic'
+      autoRotate: scatterplotSettings.autorotate,
+      autoRotateSpeed:  scatterplotSettings.rotationSpeed,
+      projection: scatterplotSettings.projection ===false?'perspective':'orthographic', 
     }
 
   },
   xAxis3D: {name: "Component 1"},
-  yAxis3D: {name: "Component 2" },
-  zAxis3D: {name: "Component 3" },
+  yAxis3D: {name: "Component 2"},
+  zAxis3D: {name: "Component 3"},
   visualMap: {
     type: 'piecewise',
     top: 'bottom',
@@ -314,8 +314,7 @@ setOptions({
     orient:'horizontal'
   },
   label:{
-    formatter: '{GeneSymbol}: {c}'
-
+    formatter: '{GeneSymbol}'
   },
   tooltip: {
     extraCssText: 'width:auto; white-space:pre-wrap;',
@@ -356,7 +355,7 @@ setOptions({
     {
       symbol:'circle',
       type: 'scatter3D',
-      symbolSize: 10,  
+      symbolSize: scatterplotSettings.symbolSize,  
       encode: {
         x: 'PC1',
         y: 'PC2',
@@ -364,9 +363,15 @@ setOptions({
         tooltip: [0,1,2,3,4]
       } ,
       label: {
-        show:true,
-        formatter: function (params) {
-          return params.data[3]},
+        show: true, 
+        fontSize: scatterplotSettings.labelSize,
+        position: scatterplotSettings.labelLoc,
+        formatter:  function (params) {
+          if (scatterplotSettings.showLabels === true || genesTolabel.has(params.data[3])){
+            return params.data[3];
+          }
+            else return ' ' ;   
+        },
       } ,
       emphasis: {
         itemStyle: {
@@ -380,7 +385,7 @@ setOptions({
 }
 //}
 
-  }, [coreSettings, pcaGraph, graphmapSettings, scatterplotSettings]);
+  }, [coreSettings, pcaGraph,mdeGraph ,umapGraph, graphmapSettings,tsneGraph, scatterplotSettings]);
 
   return (
     /*<EchartsReact
@@ -414,13 +419,15 @@ setOptions({
 
 
 const mapStateToProps = ({  settings,calcResults }) => ({
-  pcaGraph: calcResults?.pcaGraph ?? null,
-  pathFinderGraph: calcResults?.pathFinderGraph ?? null,
-  graphmapSettings: settings?.graphmap ?? {},
-  pathfinderSettings: settings?.pathfinder ?? {},
+  currentGraph: calcResults?.currentGraph ?? null,
+  scatterplotSettings: settings?.scatterplot ?? {},
   coreSettings: settings?.core ?? {},
+  pcaGraph: calcResults?.pcaGraph ?? null,
+  mdeGraph: calcResults?.mdeGraph ?? null,
+  umapGraph: calcResults?.umapGraph ?? null,
+  tsneGraph: calcResults?.tsneGraph ?? null,   
 })
 
 const MainContainer = connect(mapStateToProps)(ScatterPlot);
 
-export { MainContainer as ScatterPlot };
+export { MainContainer as ScatterPlot };;

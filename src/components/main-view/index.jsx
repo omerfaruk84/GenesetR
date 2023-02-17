@@ -12,6 +12,7 @@ import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
 import { Cytoscape } from '../cytoscape';
+import { HeatMap } from '../heat-map';
 import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
 import { ScatterPlot } from '../scatterPlot';
 import { connect } from 'react-redux';
@@ -29,9 +30,9 @@ const MainView = () => {
         <Routes>
           <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
           <Route exact path={ROUTES.PCA} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.MDE} element={<Bokeh />} />
-          <Route exact path={ROUTES.UMAP} element={<Bokeh />} />
-          <Route exact path={ROUTES.TSNE} element={<Bokeh />} />
+          <Route exact path={ROUTES.MDE} element={<ScatterPlot />} />
+          <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} />
+          <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} />
           <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
           <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
           <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />}  />
