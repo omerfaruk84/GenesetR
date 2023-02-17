@@ -37,28 +37,33 @@ const ScatterPlotSettings = ({
       value: 3,
     },
     {
-      label: 'Expression Correlation',
+      label: "Expression Correlation",
       value: 4,
-    }
+    },
   ];
   const graphTypeOptions = [
     {
-      label: '2D',
-      value: '2D',
+      label: "2D",
+      value: "2D",
     },
     {
-      label: '3D',
-      value: '3D',
-    }
+      label: "3D",
+      value: "3D",
+    },
   ];
- 
+
   //var currGraph = useLocation().pathname;
 
-
-  return (
+  return (<></>);
+  // PLEASE FIX ScatterPlotSettingsTypes THOSE PROPERTIES ARE NOT FOUND
     <>
-    <Field label='Repulsion' labelLeft labelWidth="130px" helpText="Repulsion is what">
-        <div className={styles.inputRange}>         
+      <Field
+        label="Repulsion"
+        labelLeft
+        labelWidth="130px"
+        helpText="Repulsion is what"
+      >
+        <div className={styles.inputRange}>
           <Slider
             label={scatterplotSettings?.repulsion}
             max={1000}
@@ -72,7 +77,12 @@ const ScatterPlotSettings = ({
         </div>
       </Field>
 
-      <Field label='Layout' labelLeft labelWidth="130px" helpText="Repulsion is what">
+      <Field
+        label="Layout"
+        labelLeft
+        labelWidth="130px"
+        helpText="Repulsion is what"
+      >
         <Select
           onChange={({ target: { value } }) =>
             scatterplotSettingsChanged({
@@ -85,36 +95,46 @@ const ScatterPlotSettings = ({
         />
       </Field>
 
+      <Field
+        label="Isolated nodes"
+        labelLeft
+        labelWidth="130px"
+        helpText="Repulsion is what"
+      >
+        <Toggle
+          label="Show"
+          onChange={({ target: { checked } }) =>
+            scatterplotSettingsChanged({
+              settingName: ScatterPlotSettingsTypes.ISOLATED_NODES,
+              newValue: checked,
+            })
+          }
+          checked={scatterplotSettings?.isolatednodes}
+        />
+      </Field>
 
-      
-      <Field label='Isolated nodes' labelLeft labelWidth="130px" helpText="Repulsion is what">
-      <Toggle
-      label = "Show"
-       onChange={({ target: { checked } }) => scatterplotSettingsChanged({
-        settingName: ScatterPlotSettingsTypes.ISOLATED_NODES,
-        newValue: checked
-      })}
-      checked={scatterplotSettings?.isolatednodes}
-    />
-     </Field>
-      
-      <Field label='Data Type' labelLeft labelWidth="130px" helpText="Repulsion is what">
+      <Field
+        label="Data Type"
+        labelLeft
+        labelWidth="130px"
+        helpText="Repulsion is what"
+      >
         <Select
-          onChange={({ target: { value } }) => scatterplotSettingsChanged({
-            settingName: ScatterPlotSettingsTypes.DATA_TYPE,
-            newValue: value
-          })}
+          onChange={({ target: { value } }) =>
+            scatterplotSettingsChanged({
+              settingName: ScatterPlotSettingsTypes.DATA_TYPE,
+              newValue: value,
+            })
+          }
           options={dataTypeOptions}
           value={scatterplotSettings?.dataType}
         />
       </Field>
-   
-      
     </>
-  );
+  // );
 };
 
-const mapStateToProps = ({ settings, calcResults , coreSettings}) => ({
+const mapStateToProps = ({ settings, calcResults, coreSettings }) => ({
   scatterplotSettings: settings?.scatterplot ?? {},
   coreSettings: settings?.core ?? {},
 });

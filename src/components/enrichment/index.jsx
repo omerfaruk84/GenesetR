@@ -15,7 +15,7 @@ import DropdownTreeSelect from 'react-dropdown-tree-select'
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
 import data from "./enrichrDatasets.json";
-import { runEnrichr } from '../../store/api/index';
+import { runEnrichr } from '../../store/api';
 import { genesetEnrichmentSettingsChanged } from '../../store/settings/geneset-enrichment-settings';
 import { GeneSetEnrichmentSettingsTypes} from '../../components/side-bar/settings/enums.js';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
@@ -76,7 +76,7 @@ Container component manages state and configuration of table
 
 const TableWithSortAndFilter = ( 
   {
-    runEnrichment, 
+    runEnrichr, 
     clusters,
     genesetEnrichmentSettingsChanged,
     genesetEnrichmentSettings, 
@@ -255,7 +255,7 @@ const TableWithSortAndFilter = (
               settingName: GeneSetEnrichmentSettingsTypes.GENES,
               newValue: props.clusters[value]
             });
-            runEnrichment(props.clusters[value]);
+            runEnrichr(props.clusters[value]);
           }}*/
 
           options={Object.keys(clusters)}
@@ -300,7 +300,8 @@ const mapStateToProps = ({ settings, calcResults }) => ({
 });
 
 const mapDispatchToProps = {
-  genesetEnrichmentSettingsChanged
+  genesetEnrichmentSettingsChanged,
+  runEnrichr
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(TableWithSortAndFilter);

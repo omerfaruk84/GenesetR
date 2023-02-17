@@ -14,7 +14,6 @@ import { MdeSettings } from './mde-settings';
 import { HeatMapSettings } from './heatmap-settings';
 import { PathFinderSettings } from './pathfinder-settings';
 import { ScatterPlotSettings } from './scatterplot-settings';
-import { HeatmapTargetGeneListSettings } from './heatmap-target-gene-list-settings';
 import { SettingsTypes } from './enums';
 
 const SettingsSelector = ({ pathname }) => {

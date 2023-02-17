@@ -15,12 +15,8 @@ import { Cytoscape } from '../cytoscape';
 import { HeatMap } from '../heat-map';
 import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
 import { ScatterPlot } from '../scatterPlot';
-import { connect } from 'react-redux';
-import { useEffect } from 'react';
-
 
 const MainView = () => {
- 
   return (
     <div className={styles.mainView}>
       <Router>
@@ -28,14 +24,19 @@ const MainView = () => {
         <SideBar />
         <Spacer />
         <Routes>
-          <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} />
+          {/* <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} /> */}
           <Route exact path={ROUTES.PCA} element={<ScatterPlot />} />
           <Route exact path={ROUTES.MDE} element={<ScatterPlot />} />
           <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} />
           <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.CORRELATION} element={<HeatMap />} />
-          <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} />
-          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />}  />
+          <Route
+            exact
+            path={ROUTES.CORRELATION}
+            element={<CorrelationPage path={ROUTES.CORRELATION} />}
+          />
+          {/* <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} /> */}
+          <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage />} />
+          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -44,6 +45,4 @@ const MainView = () => {
   );
 };
 
-
-
-export {MainView };
+export { MainView };
