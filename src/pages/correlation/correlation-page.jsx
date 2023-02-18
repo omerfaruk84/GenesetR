@@ -5,7 +5,7 @@ import { HeatMap } from '../../components/heat-map';
 import styles from './correlation-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
 
-const CorrelationPage = ({ _path, corrResults }) => {
+const CorrelationPage = ({ corrResults }) => {
   return (
     <div className={styles.mainView}>
       <Heading>Correlation</Heading>

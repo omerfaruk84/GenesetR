@@ -52,12 +52,7 @@ echarts.use([
 registerTransform(transform.clustering);
 
 const ScatterPlot = ({
-  currentGraph,
-  pcaGraph,
-  mdeGraph,
-  umapGraph,
-  tsneGraph,
-  graphmapSettings,
+  graphData,
   scatterplotSettings,
   coreSettings,
 }) => {
@@ -75,21 +70,7 @@ const ScatterPlot = ({
     "Cluster 2": "AKT1,MTOR,SLC39A10",
   };
 
-  var maindata;
-
-  if (currentGraph === "pcaGraph" && pcaGraph) {
-    maindata = pcaGraph;
-  }
-  if (currentGraph === "mdeGraph" && mdeGraph) {
-    maindata = mdeGraph;
-  }
-  if (currentGraph === "umapGraph" && umapGraph) {
-    maindata = umapGraph;
-  }
-  if (currentGraph === "tsneGraph" && tsneGraph) {
-    maindata = tsneGraph;
-  }
-
+  let maindata = graphData;
   {
     console.log("Check 10");
   }
@@ -148,7 +129,7 @@ const ScatterPlot = ({
       "#17becf",
     ];
 
-    console.log(pcaGraph);
+    console.log(graphData);
 
     //console.log(maindata)
 
@@ -198,9 +179,6 @@ const ScatterPlot = ({
     console.log(scatterplotSettings);
   }
   useEffect(() => {
-    {
-      console.log("Check 12");
-    }
 
     function renderItem(params, api) {
       var curIndex = api.value(0) * 10000;
@@ -268,7 +246,7 @@ const ScatterPlot = ({
 
             $.get(
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3],
+              params.data[3],
               function (content) {
                 res =
                   '<span style="color: #e28743";> <b>' +
@@ -400,7 +378,7 @@ const ScatterPlot = ({
 
             $.get(
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3],
+              params.data[3],
               function (content) {
                 res =
                   '<span style="color: #e28743";> <b>' +
@@ -459,15 +437,7 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [
-    coreSettings,
-    pcaGraph,
-    mdeGraph,
-    umapGraph,
-    graphmapSettings,
-    tsneGraph,
-    scatterplotSettings,
-  ]);
+  }, [coreSettings, scatterplotSettings]);
 
   return (
     /*<EchartsReact
