@@ -6,30 +6,57 @@ import {
   Row,
   Popover,
   Button,
-  Card
+  Card,
 } from "@oliasoft-open-source/react-ui-library";
-import React, { useEffect, useRef, useState, } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { FiDatabase } from 'react-icons/fi';
-import DropdownTreeSelect from 'react-dropdown-tree-select'
+import { FiDatabase } from "react-icons/fi";
+import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
 import data from "./enrichrDatasets.json";
-import { runEnrichr } from '../../store/api';
-import { genesetEnrichmentSettingsChanged } from '../../store/settings/geneset-enrichment-settings';
-import { GeneSetEnrichmentSettingsTypes} from '../../components/side-bar/settings/enums.js';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
-import * as echarts from 'echarts/core';
-import {ScatterChart, EffectScatterChart, CustomChart} from 'echarts/charts';
+import { runEnrichr } from "../../store/api";
+import { genesetEnrichmentSettingsChanged } from "../../store/settings/geneset-enrichment-settings";
+import { GeneSetEnrichmentSettingsTypes } from "../../components/side-bar/settings/enums.js";
+import ReactEChartsCore from "echarts-for-react/lib/core";
+import * as echarts from "echarts/core";
+import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 
-import {GridComponent,BrushComponent, LegendPlainComponent, LegendScrollComponent, VisualMapComponent,TransformComponent, TooltipComponent,TitleComponent, DataZoomComponent,DatasetComponent,ToolboxComponent} from 'echarts/components';
-import {CanvasRenderer,
+import {
+  GridComponent,
+  BrushComponent,
+  LegendPlainComponent,
+  LegendScrollComponent,
+  VisualMapComponent,
+  TransformComponent,
+  TooltipComponent,
+  TitleComponent,
+  DataZoomComponent,
+  DatasetComponent,
+  ToolboxComponent,
+} from "echarts/components";
+import {
+  CanvasRenderer,
   // SVGRenderer,
-} from 'echarts/renderers';
+} from "echarts/renderers";
 
-echarts.use(
-  [TitleComponent,EffectScatterChart,  LegendPlainComponent, LegendScrollComponent, CustomChart, BrushComponent, VisualMapComponent, TransformComponent,TooltipComponent, GridComponent, ScatterChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
-);
+echarts.use([
+  TitleComponent,
+  EffectScatterChart,
+  LegendPlainComponent,
+  LegendScrollComponent,
+  CustomChart,
+  BrushComponent,
+  VisualMapComponent,
+  TransformComponent,
+  TooltipComponent,
+  GridComponent,
+  ScatterChart,
+  CanvasRenderer,
+  DataZoomComponent,
+  DatasetComponent,
+  ToolboxComponent,
+]);
 
 /*
       Mock table data store (real apps should use Redux or similar)
@@ -42,7 +69,7 @@ let keyedData = [...Array(175).keys()].map((_c, i) => ({
 }));
 
 const assignObjectPaths = (obj, stack) => {
-  Object.keys(obj).forEach(k => {
+  Object.keys(obj).forEach((k) => {
     const node = obj[k];
     if (typeof node === "object") {
       node.path = stack ? `${stack}.${k}` : k;
@@ -51,37 +78,35 @@ const assignObjectPaths = (obj, stack) => {
   });
 };
 
-var checkNode = function(obj, path, value){  
-  for (var i=0, path=path.split('.'), len=path.length; i<len; i++){
-      obj = obj[path[i]];
-  };
+var checkNode = function (obj, path, value) {
+  for (var i = 0, path = path.split("."), len = path.length; i < len; i++) {
+    obj = obj[path[i]];
+  }
   obj.checked = value;
 };
 console.log(data);
 
 const onChange = (currentNode, selectedNodes) => {
-  console.log('onChange::', currentNode, selectedNodes)
-  console.log("Before change: ",data);
-  checkNode(data,currentNode.path,currentNode.checked)
+  console.log("onChange::", currentNode, selectedNodes);
   console.log("Before change: ", data);
-}
+  checkNode(data, currentNode.path, currentNode.checked);
+  console.log("Before change: ", data);
+};
 const onAction = (node, action) => {
-  console.log('onAction::', action, node)
-}
-
+  console.log("onAction::", action, node);
+};
 
 /*
 Container component manages state and configuration of table
         */
 
-const TableWithSortAndFilter = ( 
-  {
-    runEnrichr, 
-    clusters,
-    genesetEnrichmentSettingsChanged,
-    genesetEnrichmentSettings, 
-    clusteringSettingsChanged}) => {
-
+const TableWithSortAndFilter = ({
+  runEnrichr,
+  clusters,
+  genesetEnrichmentSettingsChanged,
+  genesetEnrichmentSettings,
+  clusteringSettingsChanged,
+}) => {
   assignObjectPaths(data);
 
   const rowsPerPageOptions = [
@@ -92,17 +117,14 @@ const TableWithSortAndFilter = (
     { label: "Show all", value: 0 },
   ];
 
-  console.log("We are in tables"); 
-  const clusterNames = Object.keys(clusters)
+  console.log("We are in tables");
+  const clusterNames = Object.keys(clusters);
   console.log(clusterNames);
-
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedPage, setSelectedPage] = useState(1);
   const [filters, setFilters] = useState({});
   const [sorts, setSorts] = useState({});
-
-  
 
   useEffect(() => {
     setSelectedPage(1);
@@ -219,16 +241,16 @@ const TableWithSortAndFilter = (
     },
   };
   return (
-  <>
-  <div style={{ width: '100%', height: '100%'}}>
-  <Row spacing={0} width="100%" height="10%">
-  <Field labelLeft labelWidth="130px" label='Select Cluster'>       
-      <Select          
-          onChange = {({ target: { value } }) =>{
-            runEnrichr(clusters[value], "GO_Molecular_Function_2021")
-          console.log(value) 
-          }}
-          /*
+    <>
+      <div style={{ width: "100%", height: "100%" }}>
+        <Row spacing={0} width="100%" height="10%">
+          <Field labelLeft labelWidth="130px" label="Select Cluster">
+            <Select
+              onChange={({ target: { value } }) => {
+                runEnrichr(clusters[value], "GO_Molecular_Function_2021");
+                console.log(value);
+              }}
+              /*
           onChange={({ target: { value } }) => genesetEnrichmentSettingsChanged({
             settingName: GeneSetEnrichmentSettingsTypes.DATASETS,
             newValue: value
@@ -258,53 +280,55 @@ const TableWithSortAndFilter = (
             runEnrichr(props.clusters[value]);
           }}*/
 
-          options={Object.keys(clusters)}
-          width = {"250px"}
-                         
-        />
-    </Field>
-    <Spacer width="16px" />
-    <div style={{ marginTop: '5px'}}>
-    <Popover    
-  content={
-  
-  <DropdownTreeSelect
-        data={data}  onChange={onChange} onAction={onAction} 
-        showDropdown="always"  
-        className="mdl-demo"
-        //keepChildrenOnSearch={true} 
-        //keepOpenOnSelect ={true}    
-    />
-   
-  }  
-    >
-  <Button label="Datasets" colored  margin-top={20} icon={<FiDatabase />}/>
-  
-</Popover>
-</div>
-  </Row>
+              options={Object.keys(clusters)}
+              width={"250px"}
+            />
+          </Field>
+          <Spacer width="16px" />
+          <div style={{ marginTop: "5px" }}>
+            <Popover
+              content={
+                <DropdownTreeSelect
+                  data={data}
+                  onChange={onChange}
+                  onAction={onAction}
+                  showDropdown="always"
+                  className="mdl-demo"
+                  //keepChildrenOnSearch={true}
+                  //keepOpenOnSelect ={true}
+                />
+              }
+            >
+              <Button
+                label="Datasets"
+                colored
+                margin-top={20}
+                icon={<FiDatabase />}
+              />
+            </Popover>
+          </div>
+        </Row>
 
-  
-  <Row spacing={0} width="100%" height="50%">
-    <Table width={"100%"} table={table} />;    
-  </Row>
-</div>
-  </>
-  )
-  
-  
+        <Row spacing={0} width="100%" height="50%">
+          <Table width={"100%"} table={table} />;
+        </Row>
+      </div>
+    </>
+  );
 };
 
-const mapStateToProps = ({ settings, calcResults }) => ({    
+const mapStateToProps = ({ settings, calcResults }) => ({
   genesetEnrichmentSettings: settings?.genesetEnrichment ?? {},
 });
 
 const mapDispatchToProps = {
   genesetEnrichmentSettingsChanged,
-  runEnrichr
+  runEnrichr,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(TableWithSortAndFilter);
+const MainContainer = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(TableWithSortAndFilter);
 
 export { MainContainer as TableWithSortAndFilter };
-
