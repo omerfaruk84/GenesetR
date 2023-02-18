@@ -20,16 +20,16 @@ const resultState = {
 };
 
 const initialState = {
-  pcaGraph: null,
-  mdeGraph: null,
-  umapGraph: null,
-  tsneGraph: null,
-  biClusteringGraph: null,
-  geneRegulationGraph: null,
+  pcaGraph: resultState,
+  mdeGraph: resultState,
+  umapGraph: resultState,
+  tsneGraph: resultState,
+  biClusteringGraph: resultState,
+  geneRegulationGraph: resultState,
   pathFinderGraph: [],
-  corrCluster: null,
-  heatmapGraph: null,
-  enrichmentResults:null,
+  corrCluster: resultState,
+  heatmapGraph: resultState,
+  enrichmentResults:resultState,
 };
 
 export const calculationResults = createSlice({
