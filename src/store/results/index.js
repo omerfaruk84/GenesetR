@@ -29,7 +29,6 @@ const initialState = {
   pathFinderGraph: [],
   corrCluster: null,
   heatmapGraph: null,
-  currentGraph: null,
   enrichmentResults:null,
 };
 
@@ -41,9 +40,8 @@ export const calculationResults = createSlice({
       const { result } = action.payload;      
       //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
       //document.getElementById("myplot").innerHTML= "";
-      state.pcaGraph = JSON.parse(result);;
-      state.currentGraph= "pcaGraph";
-      console.log( state.currentGraph)
+      state.pcaGraph = JSON.parse(result);;    
+      
     },
     calcRunningChanged: (state, action) => {
       const { module, status } = action.payload;
