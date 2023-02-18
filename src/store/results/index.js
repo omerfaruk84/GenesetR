@@ -36,12 +36,10 @@ export const calculationResults = createSlice({
   name: 'calcResults',
   initialState,
   reducers: {
-    pcaGraphReceived: (state, action) => {      
-      const { result } = action.payload;      
-      //$('#myplot').animate({'opacity': 0}, 400).empty().animate({'opacity': 1}, 400);      
-      //document.getElementById("myplot").innerHTML= "";
-      state.pcaGraph = JSON.parse(result);;    
-      
+    resultReceived: (state, action) => {
+      const { result, module } = action.payload;
+      state[module].result = JSON.parse(result);
+      state[module].running = false;
     },
     calcRunningChanged: (state, action) => {
       const { module, status } = action.payload;
@@ -125,6 +123,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
     }
   } catch (error) {
     dispatch(calcRunningChanged({ module: ModulePathNames[module], status: false }));
+    console.error(error);
     toast({
       message: {
         type: 'Error',
