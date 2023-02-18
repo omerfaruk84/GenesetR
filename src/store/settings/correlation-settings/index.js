@@ -7,8 +7,8 @@ const initialState = {
   row_distance: 'euclidean',
   column_distance: 'euclidean',
   axis: 'both',  
-  normalize: 'True',
-  write_original: 'True',
+  normalize: true,
+  write_original: true,
 };
 
 export const correlationSettingsSlice = createSlice({
