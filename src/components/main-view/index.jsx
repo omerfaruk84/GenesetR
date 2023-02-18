@@ -14,7 +14,8 @@ import { SideBar } from '../side-bar';
 import { Cytoscape } from '../cytoscape';
 import { HeatMap } from '../heat-map';
 import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
-import { ScatterPlot } from '../scatterPlot';
+import { PcaPage } from '../../pages/pca/pca-page';
+import { MdePage } from '../../pages/mde/mde-page';
 
 const MainView = () => {
   return (
@@ -25,10 +26,18 @@ const MainView = () => {
         <Spacer />
         <Routes>
           {/* <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} /> */}
-          <Route exact path={ROUTES.PCA} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.MDE} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} />
-          <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} />
+          <Route
+            exact
+            path={ROUTES.PCA}
+            element={<PcaPage path={ROUTES.PCA} />}
+          />
+          <Route
+            exact
+            path={ROUTES.MDE}
+            element={<MdePage path={ROUTES.MDE} />}
+          />
+          {/* <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} /> */}
+          {/* <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} /> */}
           <Route
             exact
             path={ROUTES.CORRELATION}
