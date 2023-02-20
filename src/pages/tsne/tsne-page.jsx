@@ -3,16 +3,16 @@ import { connect } from 'react-redux';
 import { ScatterPlot } from '../../components/scatterPlot';
 import { ModulePathNames } from '../../store/results/enums';
 import { Heading, Spacer } from "@oliasoft-open-source/react-ui-library";
-import styles from './mde-page.module.scss';
+import styles from './tsne-page.module.scss';
 
-const MdePage = ({ mdeResults }) => {
+const TsnePage = ({ tsneResults }) => {
 
   return (
     <div className={styles.mainView}>
-      <Heading>MDE</Heading>
+      <Heading>TSNE</Heading>
         <Spacer />
-      {mdeResults ? (
-        <ScatterPlot graphData={mdeResults} /> 
+      {tsneResults ? (
+        <ScatterPlot graphData={tsneResults} /> 
       ): (
         <div className={styles.infoSection}>
           <p className={styles.moduleTextInfos}>
@@ -28,8 +28,8 @@ const MdePage = ({ mdeResults }) => {
 };
 
 const mapStateToProps = ({ calcResults }, { path }) => ({
-  mdeResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  tsneResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
 });
 
-const MainContainer = connect(mapStateToProps)(MdePage);
-export { MainContainer as MdePage };
+const MainContainer = connect(mapStateToProps)(TsnePage);
+export { MainContainer as TsnePage };

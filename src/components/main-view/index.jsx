@@ -16,7 +16,8 @@ import { HeatMap } from '../heat-map';
 import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
 import { PcaPage } from '../../pages/pca/pca-page';
 import { MdePage } from '../../pages/mde/mde-page';
-
+import { UmapPage } from '../../pages/umap/umap-page';
+import { TsnePage } from '../../pages/tsne/tsne-page';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
@@ -36,8 +37,16 @@ const MainView = () => {
             path={ROUTES.MDE}
             element={<MdePage path={ROUTES.MDE} />}
           />
-          {/* <Route exact path={ROUTES.UMAP} element={<ScatterPlot />} /> */}
-          {/* <Route exact path={ROUTES.TSNE} element={<ScatterPlot />} /> */}
+           <Route
+            exact
+            path={ROUTES.UMAP}
+            element={<UmapPage path={ROUTES.UMAP} />}
+          />
+           <Route
+            exact
+            path={ROUTES.TSNE}
+            element={<TsnePage path={ROUTES.TSNE} />}
+          />       
           <Route
             exact
             path={ROUTES.CORRELATION}

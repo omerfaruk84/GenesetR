@@ -1,0 +1,15 @@
+.mainView {
+  padding: 25px;
+  width: 100%;
+  overflow: auto;
+}
+
+.infoSection {
+  display: flex;
+  justify-content: space-between;
+  max-width: 1200px;
+}
+
+.moduleTextInfos {
+  width: 50%;
+}
