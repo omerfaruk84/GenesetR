@@ -4,6 +4,8 @@ import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/rea
 import { coreSettingsChanged } from '../../../store/settings/core-settings';
 import { CoreSettingsTypes } from './enums';
 import { useLocation } from 'react-router-dom';
+import Genelist  from '../../genelist/index';
+
 
 const CoreSettings = ({
   coreSettings,
@@ -68,6 +70,8 @@ const CoreSettings = ({
 
   return (
     <>
+
+      <Genelist genes = {["ATF4","ATF2"]}/>
       <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
