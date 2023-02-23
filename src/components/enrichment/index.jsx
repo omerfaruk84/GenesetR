@@ -7,6 +7,7 @@ import {
   Popover,
   Button,
   Card,
+  toast,
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
@@ -15,12 +16,13 @@ import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
 import data from "./enrichrDatasets.json";
-import { runEnrichr } from "../../store/api";
+//import { runEnrichr } from "../../store/api";
 import { genesetEnrichmentSettingsChanged } from "../../store/settings/geneset-enrichment-settings";
 import { GeneSetEnrichmentSettingsTypes } from "../../components/side-bar/settings/enums.js";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
+import { performEnrichment} from "./enrichrAPI";
 
 import {
   GridComponent,
@@ -61,12 +63,9 @@ echarts.use([
 /*
       Mock table data store (real apps should use Redux or similar)
     */
-const headings = ["Section", "Width", "Height"];
-let keyedData = [...Array(175).keys()].map((_c, i) => ({
-  Section: i,
-  Width: i * 2,
-  Height: i * 2,
-}));
+
+
+
 
 const assignObjectPaths = (obj, stack) => {
   Object.keys(obj).forEach((k) => {
@@ -87,10 +86,7 @@ var checkNode = function (obj, path, value) {
 console.log(data);
 
 const onChange = (currentNode, selectedNodes) => {
-  console.log("onChange::", currentNode, selectedNodes);
-  console.log("Before change: ", data);
-  checkNode(data, currentNode.path, currentNode.checked);
-  console.log("Before change: ", data);
+ checkNode(data, currentNode.path, currentNode.checked);
 };
 const onAction = (node, action) => {
   console.log("onAction::", action, node);
@@ -108,7 +104,47 @@ const TableWithSortAndFilter = ({
   clusteringSettingsChanged,
 }) => {
   assignObjectPaths(data);
+  const [keyedData, setkeyedData] = useState([]);
+  const [selectedCluster, setselectedCluster] = useState("");
+ 
+  //Rank, Term name, P-value, Z-score, Combined score, Overlapping genes, Adjusted p-value, Old p-value, Old adjusted p-value
+const headings = ["Dataset", "Rank", "Term name", "P-value",  "Z-score", "Combined score","Adjusted p-value", "GC"  ];
 
+
+let temp =[{}]
+
+const performEnrichmentNow = function (genes) {
+  let selectedDatasets = data.filter(function (node){return node.checked===true;}).map(node => (node.label)).join()
+  performEnrichment(genes, selectedDatasets).then((results)=>{
+    console.log("keyedData", temp, results)
+    for(let i in results){
+      for(let j in results[i].data){
+        temp.push({
+          "Dataset":results[i].name.replaceAll("_"," "),
+          "Rank":results[i].data[j][0],
+          "Term name": results[i].data[j][1].charAt(0).toUpperCase() + results[i].data[j][1].slice(1).split("(")[0],        
+          "P-value":results[i].data[j][2]>0.001?results[i].data[j][2].toFixed(5):results[i].data[j][2].toExponential(2),  
+          "Z-score":results[i].data[j][3].toFixed(1), 
+          "Combined score":results[i].data[j][4].toFixed(1), 
+          "Adjusted p-value":results[i].data[j][6]>0.001?results[i].data[j][6].toFixed(5):results[i].data[j][6].toExponential(2),  
+          "GC":results[i].data[j][5]}      
+          )    
+      }
+    }
+    console.log(temp)
+    setkeyedData(temp)
+  }).catch(error => {
+    toast({
+      message: { "type":  "Error",
+      "icon": true,
+      "heading": "Enrichr",
+      "content": "Sorry. Enrichr servers are not responding." + error},
+      autoClose:2000
+    })
+  });
+  
+}
+  
   const rowsPerPageOptions = [
     { label: "10 / page", value: 10 },
     { label: "20 / page", value: 20 },
@@ -202,13 +238,26 @@ const TableWithSortAndFilter = ({
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
       .map((dataRow) => {
-        const rowsCells = Object.entries(dataRow).map(([key, value]) => ({
+        
+        const rowsCells = Object.entries(dataRow).map(([key, value]) => (
+          key==="GC"?
+          {
+          key:"GC",
+          value: value.length,
+          "tooltip": value.join(),
+          //type: "Input",
+          //disabled: false,
+        }:{
           key,
           value,
-          type: "Input",
-          disabled: true,
-        }));
-        return {
+          //type: "Input",
+          //disabled: true,
+        }
+        
+        
+        ));
+        console.log(rowsCells)
+        return {          
           cells: rowsCells,
         };
       }),
@@ -247,45 +296,17 @@ const TableWithSortAndFilter = ({
           <Field labelLeft labelWidth="130px" label="Select Cluster">
             <Select
               onChange={({ target: { value } }) => {
-                runEnrichr(clusters[value], "GO_Molecular_Function_2021");
-                console.log(value);
-              }}
-              /*
-          onChange={({ target: { value } }) => genesetEnrichmentSettingsChanged({
-            settingName: GeneSetEnrichmentSettingsTypes.DATASETS,
-            newValue: value
-          })}
-          width="auto"
-          
-           onChange={({ target: { value } }) => clusteringSettingsChanged({
-            settingName: ClusteringSettingsTypes.CLUSTERING_METHOD,
-            newValue: value
-          })}
-          options={clusteringMethodOptions}
-          value={clusteringSettings?.clusteringMethod}
-
-
-          onChange={({ target:{ value }}) => {
-
-            console.log("Checking ", value, props.clusters[value]);
-            genesetEnrichmentSettingsChanged({
-              settingName: GeneSetEnrichmentSettingsTypes.DATASETS,
-              newValue: "GO_Molecular_Function_2021"
-            });
-
-            genesetEnrichmentSettingsChanged({
-              settingName: GeneSetEnrichmentSettingsTypes.GENES,
-              newValue: props.clusters[value]
-            });
-            runEnrichr(props.clusters[value]);
-          }}*/
-
+                setselectedCluster(value);
+                console.log("selectedCluster",selectedCluster, value);
+                performEnrichmentNow(clusters[value])                
+              }}              
               options={Object.keys(clusters)}
               width={"250px"}
+              value= {selectedCluster}
             />
           </Field>
           <Spacer width="16px" />
-          <div style={{ marginTop: "5px" }}>
+          <div>
             <Popover
               content={
                 <DropdownTreeSelect
@@ -322,8 +343,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
 });
 
 const mapDispatchToProps = {
-  genesetEnrichmentSettingsChanged,
-  runEnrichr,
+  genesetEnrichmentSettingsChanged, performEnrichment
 };
 
 const MainContainer = connect(

@@ -216,6 +216,5 @@ export {
   runbiClusteringCalc,
   runPathFinderCalc,
   runGeneRegulation,
-  runHeatMap,
-  runEnrichr,
+  runHeatMap, 
 };
