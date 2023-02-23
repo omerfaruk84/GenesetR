@@ -90,53 +90,7 @@ const Genelist = (props) => {
         });
     };
     
-    function addOrReplaceGenelist(genelist) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['genelists'], 'readwrite');
-        const objectStore = transaction.objectStore('genelists');
-        genelist.timestamp = Date.now(); // Add a timestamp to the genelist object
-        console.log(genelist)
-        const request = objectStore.get(genelist.label);
     
-        request.onsuccess = event => {
-          const existingGenelist = request.result;
-          if (existingGenelist) {
-            // A genelist with this ID already exists, so update it
-            const updateRequest = objectStore.put(genelist);
-            updateRequest.onsuccess = () => {
-              toast({
-                message: { "type":  "Success",
-                "icon": true,
-                "heading": "Genelist",
-                "content": "Genelist updated successfully"},
-                autoClose:2000
-              })
-              resolve(updateRequest.result)           
-            };
-            updateRequest.onerror = () => reject(updateRequest.error);           
-          } else {
-            // This is a new genelist, so add it
-            const addRequest = objectStore.add(genelist);
-            addRequest.onsuccess = () => {
-              toast({
-                message: { "type":  "Success",
-                "icon": true,
-                "heading": "Genelist",
-                "content": "Genelist saved successfully"},
-                autoClose:2000
-              });
-              resolve(addRequest.result);
-            }
-            addRequest.onerror = () => reject(addRequest.error);
-          }
-          refreshList();
-        };
-    
-        request.onerror = event => {
-          reject(request.error);
-        };
-      });
-    }
 
 
 
@@ -161,7 +115,9 @@ const Genelist = (props) => {
       request.onerror = () => reject();
     });
   };
-  
+
+
+
   // Remove a genelist from the database based on ID
   const removeGenelistById = (id) => {
     return new Promise((resolve, reject) => {

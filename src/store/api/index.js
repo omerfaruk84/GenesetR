@@ -205,29 +205,7 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
   return await getData(body);  
 };
 
-const runEnrichr = async (genes, datasets) => {  
-  const body = {
-    genes: genes,
-    gseaDatasets: datasets, 
-    request: 'geneRegulation'
-  };
-  
-  let genes_str = genes.replace(",","\n");
-  let description = 'Example gene list';
-  let payload = {
-      'list':  genes_str,
-      'description': description
-  };
 
-
-  
-  const list_id  = await Axios.post("https://maayanlab.cloud/Enrichr/addList", {
-    body: JSON.stringify(payload),
-  })
-    .then(response => response.text); 
-    console.log(list_id);
-    return list_id;
-};
 
 export {
   runPcaGraphCalc,
