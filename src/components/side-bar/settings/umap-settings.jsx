@@ -27,7 +27,7 @@ const UmapSettings = ({
           <Slider
             label={umapSettings?.numcomponents}
             max={100}
-            min={2}
+            min={3}
             value={umapSettings?.numcomponents}
             onChange={({ target: { value } }) => umapSettingsChanged({
               settingName: UmapSettingsTypes.NUMBER_OF_COMPONENTS,

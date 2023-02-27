@@ -26,7 +26,7 @@ const initialState = {
   tsneGraph: resultState,
   biClusteringGraph: resultState,
   geneRegulationGraph: resultState,
-  pathFinderGraph: [],
+  pathFinderGraph: resultState,
   corrCluster: resultState,
   heatmapGraph: resultState,
   enrichmentResults:resultState,

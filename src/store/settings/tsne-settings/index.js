@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {  
-  numcomponents: 2, 
+  numcomponents: 3, 
   metric:'euclidean',
   perplexity: 30,
   earlyExaggeration: 12,

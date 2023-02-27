@@ -68,10 +68,22 @@ const CoreSettings = ({
     ?.split(';')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
 
+   function setPerturbationList(value) {
+    coreSettingsChanged({
+      settingName: CoreSettingsTypes.PETURBATION_LIST,
+      newValue: value
+    })};
+
+    function setGeneList(value) {
+      coreSettingsChanged({
+        settingName:CoreSettingsTypes.TARGET_LIST,
+        newValue: value
+      })};
+
   return (
     <>
 
-      <Genelist genes = {["ATF4","ATF2"]}/>
+      
       <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
@@ -91,37 +103,11 @@ const CoreSettings = ({
           options={dataTypeOptions}
           value={coreSettings?.dataType}
         />
-      </Field>
-      <Field label='Perturbation list'>
-        <TextArea
-          placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
-          tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
-          rows={10}
-          resize='vertical'
-          value={coreSettings?.peturbationList}
-          onChange={({ target: { value } }) => coreSettingsChanged({
-            settingName: CoreSettingsTypes.PETURBATION_LIST,
-            newValue: value
-          })}
-        />
-        <Spacer height={10} />
-        <Text>{numberOfGenesEntered} sgRNAs</Text>
-      </Field>
+      </Field>   
 
-      <Field label='Perturbation list'>
+      <Genelist setPerturbationList = {setPerturbationList}/>
+      <Genelist setPerturbationList = {setGeneList}/>
 
-      <TextArea
-        placeholder="Please enter gene list seperated by comma, new line, space, or semicolon!"
-        value={coreSettings?.targetGeneList}
-        rows={10}
-        onChange={({ target: { value } }) => coreSettingsChanged({
-          settingName: CoreSettingsTypes.TARGET_LIST,
-          newValue: value
-        })}
-      />
-       <Spacer height={10} />
-        <Text>{numberOfTargetsEntered} genes</Text>
-      </Field>
     
       { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?
       <Field label='Graph Type' labelLeft labelWidth="80px" helpText="Repulsion is what">

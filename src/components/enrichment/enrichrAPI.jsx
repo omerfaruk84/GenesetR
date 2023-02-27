@@ -119,15 +119,16 @@ function hashGeneList(geneList) {
 
 
       const runEnrichr = (genes) => {  
-      
-        let genes_str = genes.replace(",","\n");
+        console.log("genes",genes.split(",").length)
+        let genes_str = genes.replaceAll(",","\n");
         let description = 'Example gene list';
        
         const formData = new FormData();
       
         formData.append('list', genes_str);
         formData.append('description', description);
-      
+        console.log("genes_str",genes_str.split("\n").length, genes_str)
+        
       
         return new Promise((resolve, reject) => {
           fetch('https://maayanlab.cloud/Enrichr/addList', {

@@ -65,11 +65,12 @@ const ScatterPlot = ({
   const genesTolabel = new Set(genes);
   var pieces = [];
   const clusterData = [];
-  const commonProps = {
-    "Cluster 1": "AKT1,AKT2,AKT3,MTOR,SLC39A10",
-    "Cluster 2": "AKT1,MTOR,SLC39A10",
-  };
 
+  //const [clusters, setClusters] = useState();
+
+  const clusters = {};
+
+  
   let maindata = graphData;
   {
     console.log("Check 10");
@@ -85,7 +86,16 @@ const ScatterPlot = ({
   ) {
     console.log(maindata);
     if (maindata["clusterCount"] > 0) {
+      
+      let arrayOfArrays = Array.from(Array(maindata["clusterCount"]), () => []);
+      console.log("arrayOfArrays empty", arrayOfArrays)
       for (var i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) {
+        //collect the clusters
+        if(maindata["clusterLabels"][i]> -1) {
+          arrayOfArrays[maindata["clusterLabels"][i]].push( maindata["GeneSymbols"][i])
+          //console.log(i, arrayOfArrays)
+        }
+
         data.push([
           maindata["PC1"][i],
           maindata["PC2"][i],
@@ -95,8 +105,19 @@ const ScatterPlot = ({
           maindata["clusterProb"][i],
         ]);
       }
+      
+      //clusters = {}
+      console.log("arrayOfArrays",arrayOfArrays)
+      for(let i =0;i<arrayOfArrays.length;i++){
+        clusters["Cluster" + (i+1)] = arrayOfArrays[i].join();
+      }
+
+      console.log("clusters",clusters)
+
+
+
     } else {
-      for (var i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) {
+      for (let i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) {
         data.push([
           maindata["PC1"][i] ?? 0,
           maindata["PC2"][i] ?? 0,
@@ -457,7 +478,7 @@ const ScatterPlot = ({
           />
         </Row>
         <Row spacing={-100} width="100%" height="90%">
-          <TableWithSortAndFilter clusters={commonProps} />
+          <TableWithSortAndFilter clusters={clusters} />
         </Row>
       </div>
     </>

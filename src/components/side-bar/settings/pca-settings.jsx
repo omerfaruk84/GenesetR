@@ -16,7 +16,7 @@ const PcaSettings = ({
           <Slider
             label={pcaSettings?.numberOfComponents}
             max={200}
-            min={2}
+            min={3}
             value={pcaSettings?.numberOfComponents}
             onChange={({ target: { value } }) => pcaSettingsChanged({
               settingName: PcaSettingsTypes.NUMBER_OF_COMPONENTS,

@@ -23,8 +23,8 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
  
   const [options, setOptions] = useState({}); 
   useEffect(() => {
-    if(pathFinderGraph && pathFinderGraph.nodes &&pathFinderGraph.nodes.length >0){
 
+    if(pathFinderGraph && pathFinderGraph.nodes &&pathFinderGraph.nodes.length >0){
 
     const nodes = pathFinderGraph.nodes.map(node => ({      
       id: node.id,
@@ -193,7 +193,7 @@ const Cytoscape = ({ pathFinderGraph , graphmapSettings, pathfinderSettings}) =>
 
 
 const mapStateToProps = ({  settings,calcResults }) => ({
-  pathFinderGraph: calcResults?.pathFinderGraph ?? null,
+  pathFinderGraph: calcResults?.pathFinderGraph?.result ?? null,
   graphmapSettings: settings?.graphmap ?? {},
   pathfinderSettings: settings?.pathfinder ?? {},
 })

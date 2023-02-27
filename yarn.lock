@@ -3175,12 +3175,12 @@ babel-preset-react-app@^10.0.1:
 
 backbone-events-standalone@^0.2.2:
   version "0.2.7"
-  resolved "https://registry.npmjs.org/backbone-events-standalone/-/backbone-events-standalone-0.2.7.tgz"
+  resolved "https://registry.yarnpkg.com/backbone-events-standalone/-/backbone-events-standalone-0.2.7.tgz#32437d9d11c5cef041034a59c49473b86f0ce196"
   integrity sha512-8RgZDihR30W2nXuEAb5+6cH8UwU5FSGxUuQYOcMXf7GsIFKTFmWuAvNn3LYkmACzgl+4kiEDxqFoRg7a50MCZw==
 
 backbone@1.1.2:
   version "1.1.2"
-  resolved "https://registry.npmjs.org/backbone/-/backbone-1.1.2.tgz"
+  resolved "https://registry.yarnpkg.com/backbone/-/backbone-1.1.2.tgz#c2c04c66bf87268fb82c177acebeff7d37ba6f2d"
   integrity sha512-bdiYFVF+mXQ3712Urje2uvYClLPXOd2jsvp8AHlPyMKqpHRPCmCxZf099kCRadhA2sMxp761XB2aZ0/HYF4fDg==
   dependencies:
     underscore ">=1.5.0"
@@ -3224,14 +3224,14 @@ binary-extensions@^2.0.0:
 
 biojs-events@0.0.4:
   version "0.0.4"
-  resolved "https://registry.npmjs.org/biojs-events/-/biojs-events-0.0.4.tgz"
+  resolved "https://registry.yarnpkg.com/biojs-events/-/biojs-events-0.0.4.tgz#ee4a3deb5e2ab3d7f0857686630129cb217ec7e8"
   integrity sha512-urAwyYF8RgvVlnXEw/7wU4LDK1D/qIJlnz3XEDnPEgeJxbK5XNboxVhKTuULmkWse7/HEkHbDmWVKnB+J7RxdQ==
   dependencies:
     backbone-events-standalone "^0.2.2"
 
 biojs-vis-inchlib@^1.1.2:
   version "1.1.2"
-  resolved "https://registry.npmjs.org/biojs-vis-inchlib/-/biojs-vis-inchlib-1.1.2.tgz"
+  resolved "https://registry.yarnpkg.com/biojs-vis-inchlib/-/biojs-vis-inchlib-1.1.2.tgz#013f6e8b1a1bea1e5ec7973a9de3a45103a6a48b"
   integrity sha512-JxXC7yK04CSE7DcfYddv8EnkOmOzkUCTPCgd3X98W4LWjqkMDVUFNnPVkO4X4BR+6utvRxOJ0kz7BLgkBhNV7Q==
   dependencies:
     backbone "1.1.2"
@@ -6685,7 +6685,7 @@ jest@^27.4.3:
 
 jquery@2.1.1:
   version "2.1.1"
-  resolved "https://registry.npmjs.org/jquery/-/jquery-2.1.1.tgz"
+  resolved "https://registry.yarnpkg.com/jquery/-/jquery-2.1.1.tgz#828fc60f50f7ee5983363ef4eb01c5f70af4bd5b"
   integrity sha512-y+iOyLV9My82vtN1cc96DLlklSv15h5Jjug52TK+vXmgtN/dE89WvmP1W/g7lL+RWFzdsTmBwJgX/yf4RY9mPA==
 
 jquery@^3.6.1:
@@ -10064,7 +10064,7 @@ unbox-primitive@^1.0.2:
 
 underscore@>=1.5.0:
   version "1.13.6"
-  resolved "https://registry.npmjs.org/underscore/-/underscore-1.13.6.tgz"
+  resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.13.6.tgz#04786a1f589dc6c09f761fc5f45b89e935136441"
   integrity sha512-+A5Sja4HP1M08MaXya7p5LvjuM7K6q/2EaC0+iovj/wOcMsTzMvDFbasi/oSapiwOlt252IqsKqPjCl7huKS0A==
 
 unicode-canonical-property-names-ecmascript@^2.0.0:

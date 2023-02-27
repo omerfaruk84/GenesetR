@@ -42,7 +42,7 @@ const MdeSettings = ({
             <Slider
             label={mdeSettings?.numcomponents}
             max={200}
-            min={2}
+            min={3}
             value={mdeSettings?.numcomponents}
             onChange={({ target: { value } }) => mdeSettingsChanged({
               settingName: MdeSettingsTypes.NUMBER_OF_COMPONENTS,

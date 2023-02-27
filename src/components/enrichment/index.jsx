@@ -83,7 +83,7 @@ var checkNode = function (obj, path, value) {
   }
   obj.checked = value;
 };
-console.log(data);
+//console.log(data);
 
 const onChange = (currentNode, selectedNodes) => {
  checkNode(data, currentNode.path, currentNode.checked);
@@ -116,7 +116,7 @@ let temp =[{}]
 const performEnrichmentNow = function (genes) {
   let selectedDatasets = data.filter(function (node){return node.checked===true;}).map(node => (node.label)).join()
   performEnrichment(genes, selectedDatasets).then((results)=>{
-    console.log("keyedData", temp, results)
+    //console.log("keyedData", temp, results)
     for(let i in results){
       for(let j in results[i].data){
         temp.push({
@@ -131,7 +131,7 @@ const performEnrichmentNow = function (genes) {
           )    
       }
     }
-    console.log(temp)
+   // console.log(temp)
     setkeyedData(temp)
   }).catch(error => {
     toast({
@@ -155,7 +155,7 @@ const performEnrichmentNow = function (genes) {
 
   console.log("We are in tables");
   const clusterNames = Object.keys(clusters);
-  console.log(clusterNames);
+  //console.log(clusterNames);
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedPage, setSelectedPage] = useState(1);
@@ -256,7 +256,7 @@ const performEnrichmentNow = function (genes) {
         
         
         ));
-        console.log(rowsCells)
+        //console.log(rowsCells)
         return {          
           cells: rowsCells,
         };
@@ -289,6 +289,126 @@ const performEnrichmentNow = function (genes) {
       },
     },
   };
+
+  const [options, setOptions] = useState({});
+
+  useEffect(() => {
+
+    /*
+        "Dataset":results[i].name.replaceAll("_"," "),
+          "Rank":results[i].data[j][0],
+          "Term name": results[i].data[j][1].charAt(0).toUpperCase() + results[i].data[j][1].slice(1).split("(")[0],        
+          "P-value":results[i].data[j][2]>0.001?results[i].data[j][2].toFixed(5):results[i].data[j][2].toExponential(2),  
+          "Z-score":results[i].data[j][3].toFixed(1), 
+          "Combined score":results[i].data[j][4].toFixed(1), 
+          "Adjusted p-value":results[i].data[j][6]>0.001?results[i].data[j][6].toFixed(5):results[i].data[j][6].toExponential(2),  
+          "GC":results[i].data[j][5]}    
+    */
+ 
+      //3D chart
+      const bubbleGraphData = [];
+
+      for( let data in keyedData){
+        const objClone = {
+          'Adjusted p-value': -Math.log10(keyedData[data]['Adjusted p-value']),
+          'p-value': -Math.log10(keyedData[data]['P-value']),
+          'Combined score':keyedData[data]['Combined score'],
+          'Z-score':keyedData[data]['Z-score'],
+          'Term name':keyedData[data]['Term name'],
+          'Genes':keyedData[data]['GC'],
+          'Dataset':keyedData[data]['Dataset'],
+        }
+        
+        bubbleGraphData.push(objClone)
+  
+      }
+      console.log("bubbleGraphData", bubbleGraphData)
+      setOptions(
+        {    
+          dataset: {
+            dimensions: ['Combined score', 'Adjusted p-value', 'Z-score', 'Term name'],
+            source: bubbleGraphData,           
+        },
+         /* legend: {
+              right: 10,
+              data: ['1990', '2015']
+          },*/
+          xAxis: {
+              splitLine: {
+                  lineStyle: {
+                      type: 'dashed'
+                  }
+              },              
+              nameLocation : "center",
+              nameTextStyle:{
+                fontWeight:'bold',
+                fontSize : '14'
+
+              },
+
+              name: "Combined Score",           
+              nameGap: 25
+          },
+          yAxis: {
+              splitLine: {
+                  lineStyle: {
+                      type: 'dashed'
+                  }
+              },
+              nameRotate: 90,
+              scale: true,
+              name: "-log 10 (Adjusted p Value)",
+              nameLocation : "center",
+              nameGap: 35,
+              nameTextStyle:{
+                fontWeight:'bold',
+                fontSize : '14',
+                verticalAlign : 'center',
+              },
+          },
+          series: [{
+              //name: '1990',              
+              type: 'scatter',
+              symbolSize: function (data) {                 
+                  return Math.sqrt(data["Z-score"]);
+              },
+              emphasis: {
+                  label: {
+                      show: true,
+                      formatter: function (param) {
+                          return param.data['Term name'];
+                      },
+                      position: 'top'
+                  }
+              },
+              itemStyle: {
+                  shadowBlur: 10,
+                  shadowColor: 'rgba(120, 36, 50, 0.5)',
+                  shadowOffsetY: 5,
+                  color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
+                      offset: 0,
+                      color: 'rgb(200, 60, 60)'
+                  }, {
+                      offset: 1,
+                      color: 'rgb(0, 0, 0)'
+                  }])
+              }
+          } 
+          ]
+      }
+      );
+    
+  }, [keyedData]);
+
+  //In the first run set the selected cluter to cluster 0
+  useEffect(() => {
+    if(Object.keys(clusters).length>0)
+    setselectedCluster(Object.keys(clusters)[0]);  
+    console.log("Checking Clusters ", clusters[Object.keys(clusters)[0]])  
+    performEnrichmentNow(clusters[Object.keys(clusters)[0]]);   
+  }, []);
+
+
   return (
     <>
       <div style={{ width: "100%", height: "100%" }}>
@@ -330,9 +450,24 @@ const performEnrichmentNow = function (genes) {
           </div>
         </Row>
 
+        
+
+        <div style={{ width: "100%", height: "100%" }}>
+        <Row spacing={0} width="100%" height="70%">
+          <ReactEChartsCore
+            echarts={echarts}
+            option={options}
+            style={{ height: "100%", width: "100%" }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </Row>        
+        </div>
+
         <Row spacing={0} width="100%" height="50%">
           <Table width={"100%"} table={table} />;
         </Row>
+
       </div>
     </>
   );

@@ -27,7 +27,7 @@ const TsneSettings = ({
           <Slider
             label={tsneSettings?.numcomponents}
             max={100}
-            min={2}
+            min={3}
             value={tsneSettings?.numcomponents}
             onChange={({ target: { value } }) =>tsneSettingsChanged({
               settingName: TsneSettingsTypes.NUMBER_OF_COMPONENTS,

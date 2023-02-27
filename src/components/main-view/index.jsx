@@ -18,6 +18,7 @@ import { PcaPage } from '../../pages/pca/pca-page';
 import { MdePage } from '../../pages/mde/mde-page';
 import { UmapPage } from '../../pages/umap/umap-page';
 import { TsnePage } from '../../pages/tsne/tsne-page';
+import { PathFinderPage } from '../../pages/pathfinder/pathfinder';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
@@ -52,9 +53,14 @@ const MainView = () => {
             path={ROUTES.CORRELATION}
             element={<CorrelationPage path={ROUTES.CORRELATION} />}
           />
+           <Route
+            exact
+            path={ROUTES.PATHFINDER}
+            element={<PathFinderPage path={ROUTES.PATHFINDER} />}
+          />
           {/* <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} /> */}
           <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage />} />
-          <Route exact path={ROUTES.PATHFINDER} element={<Cytoscape />} />
+         
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
