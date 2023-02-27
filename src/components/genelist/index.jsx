@@ -3,20 +3,21 @@ import React from 'react';
 import { Heading,Card,Field,toast, Flex, Text, Popover, Input, InputGroup, Spacer, Select, TextArea, Button, Modal, Row,  } from "@oliasoft-open-source/react-ui-library";
 import styles from './main-view.module.scss';
 import { FaTrash, FaSave, FaWindowClose} from 'react-icons/fa';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const Genelist = (props) => {
+let isLoaded = false;
+var db;
+const dbPromise = window.indexedDB.open('GeneListDB', 1);
+
+const Genelist = ({setPerturbationList}) => {
     //Connect to indexdb and get genelists
 
-    var db;
-    const dbPromise = window.indexedDB.open('GeneListDB', 1);
     const [currentGenes, setGenes] = useState(""); //sets the current genes in textarea
     const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
     const [selectedGeneList, setSelectedGeneList] = useState();//sets the currently selected gene list in the select box
     const [newGeneListName, setNewGeneListName] = useState();
+
    
-
-
     const numberOfGenesEntered = currentGenes?.trim()?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n')
     ?.split('\n')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
@@ -36,7 +37,11 @@ const Genelist = (props) => {
     
     dbPromise.onsuccess = (event) => {
         console.log("DBOpen suceeded")
-     db = event.target.result;    
+     db = event.target.result;  
+     if (!isLoaded) {
+      refreshList();
+      isLoaded = true;
+    }  
      };
     
     // Create the object store and indexes when the database is first created
@@ -53,7 +58,7 @@ const Genelist = (props) => {
       .then(genelists => {   
         console.log("refreshList",genelists )     
         setGeneLists(genelists);    
-        console.log("Reset list", genelists)        
+        console.log("Reset list", genelists)          
       })
       .catch(error => {
         toast({
@@ -157,13 +162,7 @@ const Genelist = (props) => {
     });
   };
 
-  
-  const genelist = {
-    label: 'My First Gene List',
-    value: "ABC"
-  };
 
-  
   
 
 
@@ -178,7 +177,9 @@ const Genelist = (props) => {
   });
   */
 
-    
+  useEffect(() => {
+    setPerturbationList(currentGenes);
+  },[setPerturbationList,currentGenes]);
     
 
   return (
@@ -261,6 +262,8 @@ const Genelist = (props) => {
             })}
           }       
         /> 
+
+       
 
         <Popover disabled = {numberOfGenesEntered===0} content={<InputGroup>
             <Input value={newGeneListName??"New Gene List"} width="150px"  onChange={({ target: { value } }) => setNewGeneListName(value)}/>
