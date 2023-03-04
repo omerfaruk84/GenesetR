@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { Spacer, Select, Row } from "@oliasoft-open-source/react-ui-library";
+import { Spacer, Select, Row , Card, Heading} from "@oliasoft-open-source/react-ui-library";
 import DataTable from "react-data-table-component";
 import { TableWithSortAndFilter } from "../enrichment/";
 import "echarts-gl";
@@ -71,38 +71,32 @@ const ScatterPlot = ({
   const clusters = {};
 
   
-  let maindata = graphData;
-  {
-    console.log("Check 10");
-  }
-  {
-    console.log(maindata);
-  }
+  let graphdata = graphData; 
   if (
-    maindata &&
-    maindata["PC1"] &&
-    maindata["PC2"] &&
-    maindata["GeneSymbols"]
+    graphdata &&
+    graphdata["PC1"] &&
+    graphdata["PC2"] &&
+    graphdata["GeneSymbols"]
   ) {
-    console.log(maindata);
-    if (maindata["clusterCount"] > 0) {
+    console.log(graphdata);
+    if (graphdata["clusterCount"] > 0) {
       
-      let arrayOfArrays = Array.from(Array(maindata["clusterCount"]), () => []);
+      let arrayOfArrays = Array.from(Array(graphdata["clusterCount"]), () => []);
       console.log("arrayOfArrays empty", arrayOfArrays)
-      for (var i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) {
+      for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
         //collect the clusters
-        if(maindata["clusterLabels"][i]> -1) {
-          arrayOfArrays[maindata["clusterLabels"][i]].push( maindata["GeneSymbols"][i])
+        if(graphdata["clusterLabels"][i]> -1) {
+          arrayOfArrays[graphdata["clusterLabels"][i]].push( graphdata["GeneSymbols"][i])
           //console.log(i, arrayOfArrays)
         }
 
         data.push([
-          maindata["PC1"][i],
-          maindata["PC2"][i],
-          maindata["PC3"][i],
-          maindata["GeneSymbols"][i],
-          maindata["clusterLabels"][i],
-          maindata["clusterProb"][i],
+          graphdata["PC1"][i],
+          graphdata["PC2"][i],
+          graphdata["PC3"][i],
+          graphdata["GeneSymbols"][i],
+          graphdata["clusterLabels"][i],
+          graphdata["clusterProb"][i],
         ]);
       }
       
@@ -117,12 +111,12 @@ const ScatterPlot = ({
 
 
     } else {
-      for (let i = 0; i < Object.keys(maindata["GeneSymbols"]).length; i++) {
+      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
         data.push([
-          maindata["PC1"][i] ?? 0,
-          maindata["PC2"][i] ?? 0,
-          maindata["PC3"][i] ?? 0,
-          maindata["GeneSymbols"][i] ?? 0,
+          graphdata["PC1"][i] ?? 0,
+          graphdata["PC2"][i] ?? 0,
+          graphdata["PC3"][i] ?? 0,
+          graphdata["GeneSymbols"][i] ?? 0,
           -1,
           1,
         ]);
@@ -150,12 +144,9 @@ const ScatterPlot = ({
       "#17becf",
     ];
 
-    console.log(graphData);
 
-    //console.log(maindata)
-
-    if (maindata["clusterCount"] > 0) {
-      for (let i = -1; i < maindata["clusterCount"]; i++) {
+    if (graphdata["clusterCount"] > 0) {
+      for (let i = -1; i < graphdata["clusterCount"]; i++) {
         if (i === -1) {
           pieces.push({
             value: i,
@@ -176,10 +167,10 @@ const ScatterPlot = ({
         });
 
         if (
-          maindata["x" + i] &&
-          maindata["x" + i].length > 0 &&
-          maindata["y" + i] &&
-          maindata["y" + i].length > 0
+          graphdata["x" + i] &&
+          graphdata["x" + i].length > 0 &&
+          graphdata["y" + i] &&
+          graphdata["y" + i].length > 0
         ) {
           clusterData.push([i / 10000]);
         }
@@ -192,25 +183,19 @@ const ScatterPlot = ({
         color: COLOR_ALL[1],
       });
     }
-  }
-  {
-    console.log("Check 11");
-  }
-  {
-    console.log(scatterplotSettings);
-  }
+  } 
   useEffect(() => {
 
     function renderItem(params, api) {
       var curIndex = api.value(0) * 10000;
 
       const points = [];
-      if (maindata["x" + curIndex]) {
-        for (var i = 0; i < maindata["x" + curIndex].length; i++) {
+      if (graphdata["x" + curIndex]) {
+        for (var i = 0; i < graphdata["x" + curIndex].length; i++) {
           points.push(
             api.coord([
-              maindata["x" + curIndex][i],
-              maindata["y" + curIndex][i],
+              graphdata["x" + curIndex][i],
+              graphdata["y" + curIndex][i],
             ])
           );
         }
@@ -260,8 +245,10 @@ const ScatterPlot = ({
             overflow: "break",
           },
           formatter: function (params, ticket, callback) {
+            //console.log("Check", params)          
             var res = localStorage.getItem(params.data[3]);
             if (res !== null) {
+              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
               return localStorage.getItem(params.data[3]);
             }
 
@@ -273,26 +260,56 @@ const ScatterPlot = ({
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
                   ": </b></span>" +
-                  content.description;
+                  JSON.parse(content).description;
+                console.log("Get results:", content)  
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
               }
             );
             return "Loading";
           },
-        },
+        },       
         visualMap: {
           type: "piecewise",
-          top: "bottom",
-          left: "center",
+          top: "top",
+          left: "right",
           dimension: 4,
           pieces: pieces,
-          orient: "horizontal",
+          orient: "vertical",
+          show:true,         
+          padding:[60,5,5,5],
+          inverse:true,
+          itemGap:5,
+          align:'left'
         },
-        grid: { left: 120 },
-        xAxis: { name: "Component 1" },
+        grid: { 
+          right:'13%' 
+        
+        },
+        xAxis: {         
+          nameLocation : "center",
+              nameTextStyle:{
+                fontWeight:'bold',
+                fontSize : '14'
+              },
+              name: "Component 1",           
+              nameGap: 25   
+      },
 
-        yAxis: { name: "Component 2" },
+        yAxis: {
+           
+           nameRotate: 90,
+           scale: true,
+           name: "Component 2",
+           nameLocation : "center",
+           nameGap: 35,
+           nameTextStyle:{
+             fontWeight:'bold',
+             fontSize : '14',
+             verticalAlign : 'center',
+           },
+          
+          },
         toolbox: {
           show: true,
           feature: {
@@ -300,7 +317,6 @@ const ScatterPlot = ({
             dataView: { show: true, readOnly: false },
             restore: { show: true },
             saveAsImage: { show: true, pixelRatio: 3 },
-
             dataZoom: {},
             brush: {
               type: ["rect", "polygon", "keep", "clear"],
@@ -393,7 +409,9 @@ const ScatterPlot = ({
           },
           formatter: function (params, ticket, callback) {
             var res = localStorage.getItem(params.data[3]);
+            //console.log("Check", params)
             if (res !== null) {
+              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
               return localStorage.getItem(params.data[3]);
             }
 
@@ -405,7 +423,7 @@ const ScatterPlot = ({
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
                   ": </b></span>" +
-                  content.description;
+                  JSON.parse(content).description;
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
               }
@@ -458,7 +476,7 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings, scatterplotSettings]);
+  }, [coreSettings, scatterplotSettings, graphdata]);
 
   return (
     /*<EchartsReact
@@ -468,7 +486,7 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
-        <Row spacing={0} width="100%" height="70%">
+        <Row spacing={0} width="100%" height="85%">
           <ReactEChartsCore
             echarts={echarts}
             option={options}
@@ -477,9 +495,14 @@ const ScatterPlot = ({
             lazyUpdate={true}
           />
         </Row>
+        <Spacer height="2em" />
+        {Object.keys(clusters).length>0 && (
+        
         <Row spacing={-100} width="100%" height="90%">
+
           <TableWithSortAndFilter clusters={clusters} />
-        </Row>
+        </Row>)
+        }
       </div>
     </>
   );

@@ -21,6 +21,10 @@ const GraphMapSettings = ({
     {
       label: 'Circular',
       value: 'circular',
+    },
+    {
+      label: 'Dagre',
+      value: 'none',
     }
   ];
   const dataTypeOptions = [

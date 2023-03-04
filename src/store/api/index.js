@@ -2,7 +2,7 @@ import Axios from 'axios';
 
 
 const getData = async(body) =>{  
-  const { task_id } = await Axios.post("https://11f0-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", {
+  const { task_id } = await Axios.post("https://318d-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", {
     body: JSON.stringify(body),
   })
     .then(response => response.data);
@@ -11,14 +11,18 @@ const getData = async(body) =>{
   const fetchData = async () => {
     let times = 1;
     do {
-      const { data: { task_result } }  = await Axios.get("https://11f0-2001-700-100-400a-00-f-f95c.eu.ngrok.io/tasks/" + task_id, {
+      const { data: { task_result, task_status } }  = await Axios.get("https://318d-2001-700-100-400a-00-f-f95c.eu.ngrok.io/tasks/" + task_id, {
         headers: {
           'ngrok-skip-browser-warning': '69420',
         },
       });
       console.log("Checking task")
+      if(task_status ==="FAILURE")
+      {
+        throw new Error(task_result)
+       };
       if (task_result !== null) {
-        console.log(task_result)
+       // console.log(task_result)
         return task_result;
       };
 
@@ -196,14 +200,14 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
   const body = {
     dataType: core.dataType,
     cellLine: core.cellLine,
-
-    selectedGene: geneRegulationCore.selectedGene,
+    gene: geneRegulationCore.selectedGene,
     absoluteZScore: geneRegulationCore.absoluteZScore,
 
-    request: 'geneRegulation'
+    request: 'expandGene'
   };
   return await getData(body);  
 };
+
 
 
 

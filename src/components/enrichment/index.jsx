@@ -8,6 +8,9 @@ import {
   Button,
   Card,
   toast,
+  Heading,
+  
+  
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
@@ -18,7 +21,6 @@ import "./treeview.css";
 import data from "./enrichrDatasets.json";
 //import { runEnrichr } from "../../store/api";
 import { genesetEnrichmentSettingsChanged } from "../../store/settings/geneset-enrichment-settings";
-import { GeneSetEnrichmentSettingsTypes } from "../../components/side-bar/settings/enums.js";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
@@ -321,18 +323,88 @@ const performEnrichmentNow = function (genes) {
         
         bubbleGraphData.push(objClone)
   
-      }
+      }    
       console.log("bubbleGraphData", bubbleGraphData)
       setOptions(
         {    
           dataset: {
-            dimensions: ['Combined score', 'Adjusted p-value', 'Z-score', 'Term name'],
+            dimensions: ['Z-score', 'Adjusted p-value', 'Combined score', 'Term name'],
             source: bubbleGraphData,           
+        },
+        grid:{
+          right: '15%',
         },
          /* legend: {
               right: 10,
               data: ['1990', '2015']
           },*/
+          toolbox: {
+            show: true,
+            feature: {
+              dataZoom: {},  
+              mark: { show: true },             
+              saveAsImage: { show: true, pixelRatio: 3 },
+                          
+            },
+          },
+          visualMap: [
+            {
+              left: 'right',
+              top: '10%',
+              dimension: 1,
+              min: 0,
+              max: 20,
+              itemWidth: 30,
+              itemHeight: 120,
+              calculable: true,
+              precision: 0.1,
+              text: ['P Value'],
+              textGap: 10,
+              inRange: {
+                symbolSize: [10, 70]
+              },
+              outOfRange: {
+                symbolSize: [10, 0],
+                color: ['rgba(255,255,255,0.4)']
+              },
+              controller: {
+                inRange: {
+                  color: ['#c23531']
+                },
+                outOfRange: {
+                  color: ['#999']
+                }
+              }
+            },
+            {
+              left: 'right',
+              bottom: '10%',
+              dimension: 0,
+              min: 100,
+              max: 1000,
+              itemWidth: 30,
+              itemHeight: 120,
+              calculable: true,
+              precision: 0.1,
+              text: ['Combined\nScore'],
+              textGap: 10,
+              inRange: {
+                colorLightness: [0.9, 0.3]
+              },
+              outOfRange: {                
+                color: ['rgba(255,255,255,0.4)']
+              },
+              controller: {
+                inRange: {
+                  color: ['#c23531']
+                },
+                outOfRange: {
+                  color: ['#999']
+                }
+              }
+            }
+          ], 
+                  
           xAxis: {
               splitLine: {
                   lineStyle: {
@@ -343,10 +415,8 @@ const performEnrichmentNow = function (genes) {
               nameTextStyle:{
                 fontWeight:'bold',
                 fontSize : '14'
-
               },
-
-              name: "Combined Score",           
+              name: "Z Score",           
               nameGap: 25
           },
           yAxis: {
@@ -370,28 +440,36 @@ const performEnrichmentNow = function (genes) {
               //name: '1990',              
               type: 'scatter',
               symbolSize: function (data) {                 
-                  return Math.sqrt(data["Z-score"]);
+                  return Math.sqrt(data["Combined Score"]);
               },
               emphasis: {
                   label: {
                       show: true,
+                      backgroundColor:'black',
+                      color:'white',
                       formatter: function (param) {
                           return param.data['Term name'];
                       },
-                      position: 'top'
+                      position: 'top',
+                      fontSize:'14',
+                      borderColor:'black',
+                      borderWidth:3,
                   }
               },
               itemStyle: {
-                  shadowBlur: 10,
-                  shadowColor: 'rgba(120, 36, 50, 0.5)',
-                  shadowOffsetY: 5,
-                  color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
+                  //shadowBlur: 10,
+                  //shadowColor: 'rgba(120, 36, 50, 0.5)',
+                  //shadowOffsetY: 5,
+                  color: 'red', 
+                  borderWidth: 1,
+                  borderColor: 'gray',
+                  /*color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
                       offset: 0,
-                      color: 'rgb(200, 60, 60)'
+                      color: 'rgb(170, 120, 60)'
                   }, {
                       offset: 1,
                       color: 'rgb(0, 0, 0)'
-                  }])
+                  }])*/
               }
           } 
           ]
@@ -403,7 +481,7 @@ const performEnrichmentNow = function (genes) {
   //In the first run set the selected cluter to cluster 0
   useEffect(() => {
     if(Object.keys(clusters).length>0)
-    setselectedCluster(Object.keys(clusters)[0]);  
+    setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");  
     console.log("Checking Clusters ", clusters[Object.keys(clusters)[0]])  
     performEnrichmentNow(clusters[Object.keys(clusters)[0]]);   
   }, []);
@@ -411,19 +489,22 @@ const performEnrichmentNow = function (genes) {
 
   return (
     <>
-      <div style={{ width: "100%", height: "100%" }}>
+       <Card heading={<Heading>Enrichment</Heading>}>
+
         <Row spacing={0} width="100%" height="10%">
           <Field labelLeft labelWidth="130px" label="Select Cluster">
             <Select
               onChange={({ target: { value } }) => {
                 setselectedCluster(value);
                 console.log("selectedCluster",selectedCluster, value);
-                performEnrichmentNow(clusters[value])                
+                performEnrichmentNow(clusters[value.split(" (")[0]])                
               }}              
-              options={Object.keys(clusters)}
+              options={Object.keys(clusters).map(x=> x + " ("+ clusters[x].trim(',').split(',').length + " genes)")}
               width={"250px"}
               value= {selectedCluster}
             />
+
+
           </Field>
           <Spacer width="16px" />
           <div>
@@ -450,25 +531,25 @@ const performEnrichmentNow = function (genes) {
           </div>
         </Row>
 
-        
 
-        <div style={{ width: "100%", height: "100%" }}>
         <Row spacing={0} width="100%" height="70%">
+        <div style={{ width: "100%", height: "100%" }}>
           <ReactEChartsCore
             echarts={echarts}
             option={options}
-            style={{ height: "100%", width: "100%" }}
+            style={{ height: "60VH", width: "100%" }}
             notMerge={true}
             lazyUpdate={true}
           />
+           </div>
         </Row>        
-        </div>
 
         <Row spacing={0} width="100%" height="50%">
           <Table width={"100%"} table={table} />;
         </Row>
+        </Card>
 
-      </div>
+     
     </>
   );
 };

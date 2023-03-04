@@ -120,6 +120,14 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <GeneRegulationSettings />
+      },     
+      {
+        settingsName: SettingsTypes.PATH_FINDER_SETTINGS,
+        settings: <PathFinderSettings />
+      },
+      {
+        settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
+        settings: <GraphMapSettings />
       },
     ],
     [ROUTES.HEATMAP]: [

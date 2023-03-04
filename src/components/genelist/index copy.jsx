@@ -4,7 +4,6 @@ import { Heading,Card,Field,toast, Flex, Text, Popover, Input, InputGroup, Space
 import styles from './main-view.module.scss';
 import { FaTrash, FaSave, FaWindowClose} from 'react-icons/fa';
 import { useState, useEffect } from "react";
-import { get, set, del, update } from 'idb-keyval';
 
 let isLoaded = false;
 var db;
@@ -18,33 +17,48 @@ const Genelist = ({setPerturbationList}) => {
     const [selectedGeneList, setSelectedGeneList] = useState();//sets the currently selected gene list in the select box
     const [newGeneListName, setNewGeneListName] = useState();
 
-    let geneListNames = new Set();
-    get("geneListNames").then((val) => {  
-     if(val) geneListNames = val;
-     else geneListNames = new Set(); 
-    })
-
-    useEffect(() => {
-      refreshList();
-      console.log("currentGeneLists", currentGeneLists)
-    },[]);
-
+   
     const numberOfGenesEntered = currentGenes?.trim()?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n')
     ?.split('\n')
     ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
 
-    const saveGeneListNames = ()=> {
-      set("geneListNames",geneListNames)       
-   }
     
 
+    dbPromise.onerror = (event) => {
+      toast({
+        message: { "type":  "Error",
+        "icon": true,
+        "heading": "Local DB Creation",
+        "content": "It seems that there is a problem with saving data to IndexDB.\n Be sure to use an up-to-date browser.\nAnd check whther you have enough space on your disk."},
+        autoClose:3000
+      })
+    };
+
+    
+    dbPromise.onsuccess = (event) => {
+        console.log("DBOpen suceeded")
+     db = event.target.result;  
+     if (!isLoaded) {
+      refreshList();
+      isLoaded = true;
+    }  
+     };
+    
+    // Create the object store and indexes when the database is first created
+    dbPromise.onupgradeneeded = event => {
+    var db = event.target.result;
+    const genelistStore = db.createObjectStore('genelists', { keyPath: "label" });
+    genelistStore.createIndex('label', 'label', { unique: true });
+    genelistStore.createIndex('timestamp', 'timestamp', { unique: false });
+    refreshList();
+    };
+
     const refreshList = ()=> {
-      return new Promise((resolve, reject) => {    
       getAllGenelists()
       .then(genelists => {   
         console.log("refreshList",genelists )     
-        setGeneLists([...genelists]); //converts sets to array  
-        resolve()          
+        setGeneLists(genelists);    
+        console.log("Reset list", genelists)          
       })
       .catch(error => {
         toast({
@@ -54,110 +68,114 @@ const Genelist = ({setPerturbationList}) => {
           "content": "Failed to get genelists."},
           autoClose:2000
         })
-        reject()
       })   
-   })}
+   }
 
     // Insert a new genelist into the database
-    const addGenelist = (genelistID, geneList) => {
-      console.log("We are in addgenelist", genelistID, geneList)    
-      if(genelistID && geneList)
-        get("genelist_" + genelistID).then(
-          (val) => { 
-            if(val)
-            { 
-              console.log("We are updating genelist", genelistID, geneList)   
-              set("genelist_" + genelistID,geneList).then(()=> 
-              {
-              toast({
-                  message: { "type":  "Success",
-                  "icon": true,
-                  "heading": "Genelist",
-                  "content": "Genelist updated successfully"},
-                  autoClose:2000
-                }) 
-                refreshList().then(()=> 
-                {
-                setSelectedGeneList(genelistID)
-                setGenes(geneList.genes)
-                })
-              })
-            }
-            else
-            {
-              console.log("We are creating genelist", genelistID, geneList) 
-              set("genelist_" + genelistID, geneList).then(()=>
-              {
-                geneListNames.add(genelistID); 
-                saveGeneListNames()               
-                toast({
-                message: { "type":  "Success",
-                "icon": true,
-                "heading": "Genelist",
-                "content": "Genelist saved successfully"},
-                autoClose:2000
-                })
-                refreshList().then(()=> 
-                {
-                setSelectedGeneList(genelistID)
-                setGenes(geneList.genes)
-                })
-              })
-            }
-          }
-        )
-    }
+    const addGenelist = (genelist) => {       
+    return new Promise((resolve, reject) => {        
+      const transaction = db.transaction('genelists', 'readwrite');
+      const genelistStore = transaction.objectStore('genelists');
+      genelist.timestamp = Date.now(); // Add a timestamp to the genelist object
+      console.log("Adding:" , genelist, genelistStore)
+      const request = genelistStore.put(genelist);
+      request.onsuccess = () => {
+        console.log("Adding succeeded:" , genelistStore, db)
+        toast({
+          message: { "type":  "Success",
+          "icon": true,
+          "heading": "Genelist",
+          "content": "Genelist saved successfully"},
+          autoClose:2000
+        })
+        refreshList();
+        resolve()    
+    };
+      request.onerror = () => reject();
+        });
+    };
     
+    
+
+
+
   // Get all available genelists from the database
   const getAllGenelists = () => {
-    return  get("geneListNames")
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('genelists', 'readonly');
+      const genelistStore = transaction.objectStore('genelists');
+      const index = genelistStore.index('timestamp');
+      const maxAge = Date.now() - (30 * 24 * 60 * 60 * 1000); // 30 days ago
+      const request = index.openCursor(IDBKeyRange.lowerBound(maxAge));
+      const genelists = [];
+      request.onsuccess = event => {
+        const cursor = event.target.result;      
+        if (cursor) {
+          genelists.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(genelists);
+        }
+      };
+      request.onerror = () => reject();
+    });
   };
 
 
 
   // Remove a genelist from the database based on ID
   const removeGenelistById = (id) => {
-    console.log("id", id)
-    del("genelist_" + id).then(()=> {
-      toast({
-        message: { "type":  "Warning",
-        "icon": true,
-        "heading": "Genelist",
-        "content": "Genelist deleted successfully"},
-        autoClose:2000
-      }) 
-      geneListNames.delete(id); 
-      saveGeneListNames();
-      refreshList().then(()=> 
-      {
-      if(currentGeneLists.length>0){            
-        setSelectedGeneList(currentGeneLists[0])         
-        getGenelistById(currentGeneLists[0]).then(result => {
-          console.log(result)
-           setGenes(result.genes); 
-        })
-        .catch(error => {
-          console.error(error);
-        });         
-      }
-      else
-      {
-        setSelectedGeneList([])
-        setGenes("")        
-      }
-      })
-
-  });      
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('genelists', 'readwrite');
+      const genelistStore = transaction.objectStore('genelists');
+      const request = genelistStore.delete(id);
+      request.onsuccess = () => {
+        toast({
+          message: { "type":  "Warning",
+          "icon": true,
+          "heading": "Genelist",
+          "content": "Genelist deleted successfully"},
+          autoClose:2000
+        }) 
+        refreshList();       
+        resolve()    
+      
+      };
+      request.onerror = () => reject();
+    });
   };
 
 
    // Get a genelist from the database based on ID
    const getGenelistById = (id) => {
-    return  get("genelist_" + id)
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('genelists', 'readonly');
+      const genelistStore = transaction.objectStore('genelists');
+      console.log("ID",id)
+      const request = genelistStore.get(id);
+      request.onsuccess = event => {        
+        resolve(event.target.result)   
+      };
+      request.onerror = event => {
+        reject(request.error);
+      };
+    });
   };
 
 
+  
 
+
+  /*
+  const genelistId = 1;
+  removeGenelistById(genelistId)
+  .then(() => {
+    console.log(`Genelist with ID ${genelistId} was successfully removed from the database`);
+  })
+  .catch(error => {
+    console.error(error);
+  });
+  */
 
   useEffect(() => {
     setPerturbationList(currentGenes);
@@ -227,7 +245,21 @@ const Genelist = ({setPerturbationList}) => {
         label="DELETE" 
         onClick={() => {
           console.log("Deleting",selectedGeneList)          
-          removeGenelistById(selectedGeneList)}
+          removeGenelistById(selectedGeneList).then(result =>
+          //set selected genelist to firtsone
+          {if(currentGeneLists.length>0){
+            setSelectedGeneList(currentGeneLists[0])           
+            setGenes(currentGeneLists[0].genes)  
+          }
+            else
+            {
+              setSelectedGeneList(undefined)
+              setGenes("")        
+            }
+          }
+          ).catch(error => {console.error(error)
+
+            })}
           }       
         /> 
 
@@ -237,7 +269,10 @@ const Genelist = ({setPerturbationList}) => {
             <Input value={newGeneListName??"New Gene List"} width="150px"  onChange={({ target: { value } }) => setNewGeneListName(value)}/>
             <Button colored="success" label="Save"  icon={<FaSave />} disabled = {false} 
             onClick={() =>{ 
-              addGenelist(newGeneListName,{label: newGeneListName,timestamp : Date.now(), value:newGeneListName, genes :currentGenes})
+              addGenelist({label: newGeneListName, value:newGeneListName, genes :currentGenes}).then(result => {
+                setSelectedGeneList(newGeneListName)
+                setGenes(currentGenes)}
+              )
               //set genelist to current one
                        
 

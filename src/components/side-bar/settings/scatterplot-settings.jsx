@@ -3,14 +3,11 @@ import { connect } from 'react-redux';
 import { Popover, Button,Field, Select, Divider,TextArea, Slider , Toggle} from '@oliasoft-open-source/react-ui-library';
 import { scatterplotSettingsChanged } from '../../../store/settings/scatterplot-settings';
 import styles from './settings.module.scss';
-
-
 import { ScatterPlotSettingsTypes } from './enums';
-import { useLocation } from 'react-router-dom';
-import { CoreSettings } from './core-settings';
+
 
 const ScatterPlotSettings = ({scatterplotSettings,
-  scatterplotSettingsChanged,module,SettingsSelector, coreSettings}) => {
+  scatterplotSettingsChanged,module}) => {
  
   const labelLocation = [
     {

@@ -3996,6 +3996,22 @@ cytoscape@^3.23.0:
     heap "^0.2.6"
     lodash "^4.17.21"
 
+dagre@^0.7.4:
+  version "0.7.4"
+  resolved "https://registry.yarnpkg.com/dagre/-/dagre-0.7.4.tgz#de72f0e74a550ce11ce638f0a136fed712398022"
+  integrity sha512-XvkbOx1bjJABBaE2WKSAB29rOT96M3fpq1C1n/hBLSNzwrPi06LelkU4OFA+s25Ua5yhsQvhp7+JgDdC//pM8A==
+  dependencies:
+    graphlib "^1.0.5"
+    lodash "^3.10.0"
+
+dagre@^0.8.5:
+  version "0.8.5"
+  resolved "https://registry.yarnpkg.com/dagre/-/dagre-0.8.5.tgz#ba30b0055dac12b6c1fcc247817442777d06afee"
+  integrity sha512-/aTqmnRta7x7MCCpExk7HQL2O4owCT2h8NT//9I1OQ9vt29Pa0BzSAkR5lwFUcQ7491yVi/3CXU9jQ5o0Mn2Sw==
+  dependencies:
+    graphlib "^2.1.8"
+    lodash "^4.17.15"
+
 damerau-levenshtein@^1.0.8:
   version "1.0.8"
   resolved "https://registry.npmjs.org/damerau-levenshtein/-/damerau-levenshtein-1.0.8.tgz"
@@ -4365,6 +4381,17 @@ duplexer@^0.1.2:
   resolved "https://registry.npmjs.org/duplexer/-/duplexer-0.1.2.tgz"
   integrity sha512-jtD6YG370ZCIi/9GTaJKQxWTZD045+4R4hTk/x1UyoqadyJ9x9CgSi1RlVDQF8U2sxLLSnFkCaMihqljHIWgMg==
 
+echarts-dagre@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/echarts-dagre/-/echarts-dagre-0.1.0.tgz#281a1a4879c086d3a558cdace0368a0d03c48a4c"
+  integrity sha512-5UbmHrfCNtlGmt6i6+dlJhDv0tdflFeHD2zzjUxN/wDOb5dqikjoqyrrmf698RL5F1S2xE1pdyudwe4ZAW7oGg==
+  dependencies:
+    dagre "^0.7.4"
+    echarts "^3.1.10"
+    graphlib "1.0.x"
+    lodash "3.10.x"
+    zrender "3.1.x"
+
 echarts-for-react@^3.0.2:
   version "3.0.2"
   resolved "https://registry.npmjs.org/echarts-for-react/-/echarts-for-react-3.0.2.tgz"
@@ -4385,6 +4412,13 @@ echarts-stat@^1.2.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/echarts-stat/-/echarts-stat-1.2.0.tgz"
   integrity sha512-zLd7Kgs+tuTSeaK0VQEMNmnMivEkhvHIk1gpBtLzpRerfcIQ+Bd5XudOMmtwpaTc1WDZbA7d1V//iiBccR46Qg==
+
+echarts@^3.1.10:
+  version "3.8.5"
+  resolved "https://registry.yarnpkg.com/echarts/-/echarts-3.8.5.tgz#58e4a51d2743c6fb75257b0dc0a9cf9f5378ac0e"
+  integrity sha512-E+nnROMfCeiLeoT/fZyX8SE8mKzwkTjyemyoBF543oqjRtjTSKQAVDEihMXy4oC6pJS0tYGdMqCA2ATk8onyRg==
+  dependencies:
+    zrender "3.7.4"
 
 echarts@^5.4.1:
   version "5.4.1"
@@ -5464,6 +5498,20 @@ grapheme-splitter@^1.0.4:
   version "1.0.4"
   resolved "https://registry.npmjs.org/grapheme-splitter/-/grapheme-splitter-1.0.4.tgz"
   integrity sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==
+
+graphlib@1.0.x, graphlib@^1.0.5:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/graphlib/-/graphlib-1.0.7.tgz#0cab2df0ffe6abe070b2625bfa1edb6ec967b8b1"
+  integrity sha512-jNb7RbqTIRyZRmcVCxGefOlGWjNdbjcT2tFj36zhnRa8yhAlOvydh9nBixfLQIqSU+DwCx47tg3ysw8NIYhpsA==
+  dependencies:
+    lodash "^3.10.0"
+
+graphlib@^2.1.8:
+  version "2.1.8"
+  resolved "https://registry.yarnpkg.com/graphlib/-/graphlib-2.1.8.tgz#5761d414737870084c92ec7b5dbcb0592c9d35da"
+  integrity sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==
+  dependencies:
+    lodash "^4.17.15"
 
 gzip-size@^6.0.0:
   version "6.0.0"
@@ -6992,6 +7040,11 @@ lodash.uniq@^4.5.0:
   version "4.5.0"
   resolved "https://registry.npmjs.org/lodash.uniq/-/lodash.uniq-4.5.0.tgz"
   integrity sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==
+
+lodash@3.10.x, lodash@^3.10.0:
+  version "3.10.1"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-3.10.1.tgz#5bf45e8e49ba4189e17d482789dfd15bd140b7b6"
+  integrity sha512-9mDDwqVIma6OZX79ZlDACZl8sBm0TEnkf99zV3iMA4GzkIT/9hiqP5mY0HoT1iNLCrKc/R1HByV+yJfRWVJryQ==
 
 lodash@^4.17.11, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.20, lodash@^4.17.21, lodash@^4.7.0:
   version "4.17.21"
@@ -10822,6 +10875,16 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
+
+zrender@3.1.x:
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/zrender/-/zrender-3.1.3.tgz#445897e40a431a4224ef0e71357c61e2d7497c8c"
+  integrity sha512-a8t3N4OA02lhqpFMgcpDA59fEukApTW3URD/1Y5f4A6UC8HPzfayKU0YlYxMv5KRfaZ8zYr/KAwEAS+x6ylLkw==
+
+zrender@3.7.4:
+  version "3.7.4"
+  resolved "https://registry.yarnpkg.com/zrender/-/zrender-3.7.4.tgz#f847d53948481ef6d42906d1ea9aeec7acbefdf2"
+  integrity sha512-5Nz7+L1wIoL0+Pp/iOP56jD6eD017qC9VRSgUBheXBiAHgOBJZ4uh4/g6e83acIwa8RKSyZf/FlceKu5ntUuxQ==
 
 zrender@5.4.1, zrender@^5.1.1:
   version "5.4.1"
