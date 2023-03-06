@@ -13,6 +13,7 @@ const SettingsTypes = {
   GRAPHMAP_SETTINGS: "GraphMap Settings",
   SCATTERPLOT_SETTINGS: "Scatter Plot Settings",
   GENESETENRICHMENT_SETTINGS: "GeneSet Enrichment Settings",
+  
 };
 
 const BiClusteringSettingsTypes = {
@@ -85,6 +86,20 @@ const TsneSettingsTypes = {
 const GeneRegulationCoreSettingsTypes = {
   SELECTED_GENE: "selectedGene",
   ABSOLUTE_Z_SCORE: "absoluteZScore",
+  CORR_CUTOFF: "corr_cutoff",
+  INCLUDE_CORR: "include_corr",
+  INCLUDE_EXP: "include_exp",
+  AMONG_DPR:"among_dpr",
+  AMONG_UPR:"among_upr",
+  UNR_DNR:"unr_dnr",
+  UNR_DPR:"unr_dpr",
+  UPR_DNR:"upr_dnr",
+  UPR_DPR:"upr_dpr",
+  UPR:"upr",
+  DPR:"dpr",
+  UNR:"unr",
+  DNR:"dnr",
+
 };
 
 const HeatMapSettingsTypes = {
