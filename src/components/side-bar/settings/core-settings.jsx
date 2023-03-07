@@ -5,7 +5,7 @@ import { coreSettingsChanged } from '../../../store/settings/core-settings';
 import { CoreSettingsTypes } from './enums';
 import { useLocation } from 'react-router-dom';
 import Genelist  from '../../genelist/index';
-
+import {DatasetSelector} from '../../dataset-selector';
 
 const CoreSettings = ({
   coreSettings,
@@ -82,7 +82,7 @@ const CoreSettings = ({
 
   return (
     <>
-
+      <DatasetSelector> </DatasetSelector>
       
       <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
@@ -94,6 +94,8 @@ const CoreSettings = ({
           value={coreSettings?.cellLine}
         />
       </Field>
+
+
       <Field label='Data Type' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
@@ -104,6 +106,7 @@ const CoreSettings = ({
           value={coreSettings?.dataType}
         />
       </Field>   
+
 
       <Genelist setPerturbationList = {setPerturbationList}/>
       <Genelist setPerturbationList = {setGeneList}/>
