@@ -16,11 +16,13 @@ const PcaPage = ({ pcaResults }) => {
       ): (
         <div className={styles.infoSection}>
           <p className={styles.moduleTextInfos}>
-            Correlation is a measure of the linear relationship between quantitative variables.
-            Two variables are computed against each other and return the correlation coefficient "r"
-            that indicates the strength and direction of association in a range from -1 to 1.
+
+          Principal Component Analysis (PCA) aids visualization and interpretation of rich datasets by reducing their dimensionality with minimal information loss. Given a dataset with an N-dimensional space, where N represents the number of variables under investigation, PCA summarizes the data by making a linear transformation of vectors into a new coordinate system with fewer, uncorrelated variables - the Principal Components. These variables successively maximize variance from the original matrix and graphically simplify the identification of trends, clusters, and correlation among the subjects to analysis.
+          
+          <a href="https://en.wikipedia.org/wiki/Principal_component_analysis">Read More</a>
+
           </p>
-          <img alt='PCA' src='/images/correlation.png' />
+          <img alt='PCA' src='/images/PCA.png' />
         </div>
       )}
     </div>
