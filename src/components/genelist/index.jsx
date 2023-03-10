@@ -5,6 +5,9 @@ import styles from './main-view.module.scss';
 import { FaTrash, FaSave, FaWindowClose} from 'react-icons/fa';
 import { useState, useEffect } from "react";
 import { get, set, del, update } from 'idb-keyval';
+import  GeneSymbolValidatorMessage, {GeneSymbolValidatorMessageProps} from '../GeneSelectionBox/GeneSymbolValidatorMessage.tsx';
+
+
 
 let isLoaded = false;
 var db;
@@ -18,6 +21,17 @@ const Genelist = ({setPerturbationList}) => {
     const [selectedGeneList, setSelectedGeneList] = useState();//sets the currently selected gene list in the select box
     const [newGeneListName, setNewGeneListName] = useState();
 
+
+    function replaceGene(oldSymbol, newSymbol) {
+      console.log("In replace Gene");
+      setGenes(
+      currentGenes.toUpperCase().replace(
+          new RegExp(`\\b${oldSymbol.toUpperCase()}\\b`, 'g'),
+                  () => newSymbol.trim()
+                  .replace(/^\s+|\s+$/g, '')
+                  .replace(/[ \+]+/g, ' ').toUpperCase()
+      ))
+  }
     let geneListNames = new Set();
     get("geneListNames").then((val) => {  
      if(val) geneListNames = val;
@@ -162,7 +176,67 @@ const Genelist = ({setPerturbationList}) => {
   useEffect(() => {
     setPerturbationList(currentGenes);
   },[setPerturbationList,currentGenes]);
+  const dictionary = new Set("AKT1", "AKT2", "AKT3")
+
+
+const props = { 
+    oql: {
+      query: [{ gene: 'AAA', alterations: false }, { gene: 'BBB', alterations: false }],
+  },
+  validatingGenes: false, 
+  replaceGene: replaceGene,
+  wrapTheContent: false,
+  genes: {
+    found: [],
+            suggestions: [
+                {
+                    alias: 'AAA',
+                    genes: [
+                        {
+                            entrezGeneId: 351,
+                            hugoGeneSymbol: 'APP',
+                            type: 'protein-coding',
+                        },
+                    ],
+                },{
+                  alias: 'BBB',
+                  genes: [
+                      {
+                          geneticEntityId: 296,
+                          entrezGeneId: 351,
+                          hugoGeneSymbol: 'APaP',
+                          type: 'protein-coding',
+                      },
+                  ],
+              },
+            ],
     
+}
+};
+
+
+
+  const handleInputChange = (event) => {
+    /*
+    console.log("inputText",event)
+    const inputText = event.target.value; 
+  
+    
+    const geneSymbols = inputText.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n').split('\n');
+      
+      let formattedText = "";
+
+      geneSymbols.forEach((symbol) => {
+    alert(symbol);  
+    if (!dictionary.has(symbol)) {
+      formattedText += "<span style={{ color: \"red\" }}>" + symbol + "</span>";
+    } else {
+      formattedText += symbol;
+    }
+    });
+    setGenes(formattedText);
+    */
+  };
 
   return (
     <div className={styles.mainView}> 
@@ -194,16 +268,11 @@ const Genelist = ({setPerturbationList}) => {
     </Row> 
   
     <Row spacing={0} width="100%" height="70%">  
-    <div className={styles.subItems}>  
-        <TextArea
-            width="100%" 
-            placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
-            tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
-            rows={8}
-            resize='vertical'
-            value={currentGenes}
-            onChange={({ target: { value } }) => setGenes(value?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n')) }
-        />
+    <div className={styles.subItems}>       
+
+           <textarea value={currentGenes} onChange={handleInputChange} rows="10" cols="35" />
+           <Spacer height={30} />
+           <GeneSymbolValidatorMessage {...props} />
         <Spacer height={3} />
         <Text>{numberOfGenesEntered}</Text>
     </div>
@@ -216,8 +285,7 @@ const Genelist = ({setPerturbationList}) => {
     <Flex  alignItems="center"
     justifyContent="space-between"
     //className={styles.mainView}
-    //  style={{width: "100%"}}
-    
+    //  style={{width: "100%"}}    
     >
  
         <Button 
@@ -231,17 +299,12 @@ const Genelist = ({setPerturbationList}) => {
           }       
         /> 
 
-       
-
         <Popover disabled = {numberOfGenesEntered===0} content={<InputGroup>
             <Input value={newGeneListName??"New Gene List"} width="150px"  onChange={({ target: { value } }) => setNewGeneListName(value)}/>
             <Button colored="success" label="Save"  icon={<FaSave />} disabled = {false} 
             onClick={() =>{ 
               addGenelist(newGeneListName,{label: newGeneListName,timestamp : Date.now(), value:newGeneListName, genes :currentGenes})
-              //set genelist to current one
-                       
-
-
+              //set genelist to current one                     
             }}/>
             <Button label="Cancel" icon={<FaWindowClose />}  onClick={function Tl(){}}/></InputGroup>}>
             <Button colored label="SAVE LIST"  icon={<FaSave />} disabled= {numberOfGenesEntered===0}/>
