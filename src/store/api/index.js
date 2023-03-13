@@ -38,9 +38,8 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     dataType: core.dataType,
     cellLine: core.cellLine,
-
+    parentDataset: core.dataType,
     numcomponents: pca.numberOfComponents,
-
     min_cluster_size:clustering.min_cluster_size,
     clusteringMetric: clustering.clusteringMetric,
     clusteringMethod:  clustering.clusteringMethod,

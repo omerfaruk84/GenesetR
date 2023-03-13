@@ -17,7 +17,7 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import Dropdown from "react-bootstrap/Dropdown";
 
 const RenderSuggestion = function (props) {
-  console.log("props", props);
+  //console.log("props", props);
   if (props.genes.length == 0) {
     let title =
       "Could not find gene symbol. Click to remove it from the gene list.";
@@ -98,7 +98,7 @@ const GeneSymbolValidatorMessageChild = (props) => {
     );
   }
 
-  if (props.oql.query.length === 0) {
+  if (props.oql === undefined || props.oql.query.length === 0) {
     return null;
   }
 

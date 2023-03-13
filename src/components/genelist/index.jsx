@@ -24,6 +24,7 @@ import { get, set, del, update } from "idb-keyval";
 import GeneSymbolValidatorMessage, {
   GeneSymbolValidatorMessageProps,
 } from "../GeneSelectionBox/GeneSymbolValidatorMessage";
+import { debounce } from "lodash";
 
 let isLoaded = false;
 var db;
@@ -36,6 +37,8 @@ const Genelist = ({ setPerturbationList }) => {
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
   const [selectedGeneList, setSelectedGeneList] = useState(); //sets the currently selected gene list in the select box
   const [newGeneListName, setNewGeneListName] = useState();
+  const [props, setProps] = useState({});
+
 
   function replaceGene(oldSymbol, newSymbol) {
     console.log("In replace Gene");
@@ -60,6 +63,10 @@ const Genelist = ({ setPerturbationList }) => {
   useEffect(() => {
     refreshList();
     console.log("currentGeneLists", currentGeneLists);
+
+    
+
+
   }, []);
 
   const numberOfGenesEntered = currentGenes
@@ -190,11 +197,28 @@ const Genelist = ({ setPerturbationList }) => {
   }, [setPerturbationList, currentGenes]);
   const dictionary = new Set("AKT1", "AKT2", "AKT3");
 
-  const props = {
+
+ 
+function genesChanged(value) {    
+    setGenes(value?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n')) 
+    console.log("Here we are in genesChangedsd")    
+}
+
+useEffect(() => {
+  updateQueryToBeValidateDebounce();
+}, [currentGenes]);
+
+const updateQueryToBeValidateDebounce = debounce(() => {
+  
+  //this.queryToBeValidated = this.currentTextAreaValue;
+ // this.skipGenesValidation = false;
+  console.log("Here we are in Debounce")
+  setProps ({
     oql: {
       query: [
         { gene: "AAA", alterations: false },
         { gene: "BBB", alterations: false },
+    
       ],
     },
     validatingGenes: false,
@@ -226,30 +250,26 @@ const Genelist = ({ setPerturbationList }) => {
         },
       ],
     },
-  };
+  });
 
-  const handleInputChange = (event) => {
-    /*
-    console.log("inputText",event)
-    const inputText = event.target.value; 
-  
-    
-    const geneSymbols = inputText.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n').split('\n');
+
+  // When the text is empty, it will be skipped from oql and further no validation will be done.
+  // Need to set the geneQuery here
+  if (currentGenes === '') {
       
-      let formattedText = "";
-
-      geneSymbols.forEach((symbol) => {
-    alert(symbol);  
-    if (!dictionary.has(symbol)) {
-      formattedText += "<span style={{ color: \"red\" }}>" + symbol + "</span>";
-    } else {
-      formattedText += symbol;
-    }
-    });
-    setGenes(formattedText);
+    /*this.geneQuery = '';
+      if (this.props.callback) {
+          this.props.callback(
+              getOQL(''),
+              getEmptyGeneValidationResult(),
+              this.geneQuery
+          );
+      }
     */
   };
+}, 500);
 
+ 
   return (
     <div className={styles.mainView}>
       <Card heading={<Heading>Genelist</Heading>}>
@@ -284,13 +304,20 @@ const Genelist = ({ setPerturbationList }) => {
         </Row>
 
         <Row spacing={0} width="100%" height="70%">
-          <div className={styles.subItems}>
-            <textarea
-              value={currentGenes}
-              onChange={handleInputChange}
-              rows="10"
-              cols="35"
-            />
+        <div className={styles.subItems}>  
+        <TextArea
+            width="100%" 
+            placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
+            tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
+            rows={8}
+            resize='vertical'
+            value={currentGenes}
+            onChange={({ target: { value } }) =>genesChanged(value)}
+        />
+          <Spacer height={3} />
+          <Text>{numberOfGenesEntered}</Text>
+      
+
             <Spacer height={30} />
             <GeneSymbolValidatorMessage {...props} />
             <Spacer height={3} />
