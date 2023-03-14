@@ -1,5 +1,7 @@
 import React from "react";
+import { connect } from 'react-redux';
 //import { connect } from 'react-redux';
+import Axios from  'axios';
 import {
   Heading,
   Card,
@@ -19,28 +21,59 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import styles from "./main-view.module.scss";
 import { FaTrash, FaSave, FaWindowClose } from "react-icons/fa";
-import { useState, useEffect } from "react";
-import { get, set, del, update } from "idb-keyval";
-import GeneSymbolValidatorMessage, {
-  GeneSymbolValidatorMessageProps,
-} from "../GeneSelectionBox/GeneSymbolValidatorMessage";
+import { useState, useEffect, useCallback } from "react";
+import { get, set, del} from "idb-keyval";
+import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorMessage";
 import { debounce } from "lodash";
+import { coreSettingsChanged } from '../../store/settings/core-settings'
+import { CoreSettingsTypes } from '../side-bar/settings/enums';
+import {getAliasesForGeneList} from './helper'
 
+/*
 let isLoaded = false;
 var db;
 const dbPromise = window.indexedDB.open("GeneListDB", 1);
+*/
 
-const Genelist = ({ setPerturbationList }) => {
+const Genelist = ({ setPerturbationList, coreSettings }) => {
+  
+  useEffect(() => {
+    //When page loaded refresh genelist
+    refreshList();
+    console.log("currentGeneLists", currentGeneLists);
+    
+    //When page loaded check whether  all gene list exists if not download the all gene list
+    get("allHugoGenes").then((val) => {
+      //console.log("val", val) 
+      if (!val || val.size===0)
+      {
+        Axios.post("https://318d-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
+        {
+          body: JSON.stringify({            
+            request: 'getHugoGenes'
+          }),
+        })
+          .then(response => 
+            {            
+            if(response && response.data) { 
+              console.log(response.data)          
+              set("allHugoGenes", new Set(response.data.result));              
+            }
+            });      
+    }});      
+  }, []);
+
+
   //Connect to indexdb and get genelists
-
   const [currentGenes, setGenes] = useState(""); //sets the current genes in textarea
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
   const [selectedGeneList, setSelectedGeneList] = useState(); //sets the currently selected gene list in the select box
   const [newGeneListName, setNewGeneListName] = useState();
   const [props, setProps] = useState({});
 
+  
 
-  function replaceGene(oldSymbol, newSymbol) {
+  const replaceGene = useCallback((oldSymbol, newSymbol) => {
     console.log("In replace Gene");
     setGenes(
       currentGenes
@@ -53,21 +86,14 @@ const Genelist = ({ setPerturbationList }) => {
             .toUpperCase()
         )
     );
-  }
+  }, [currentGenes, setGenes]);
+
   let geneListNames = new Set();
   get("geneListNames").then((val) => {
     if (val) geneListNames = val;
     else geneListNames = new Set();
   });
 
-  useEffect(() => {
-    refreshList();
-    console.log("currentGeneLists", currentGeneLists);
-
-    
-
-
-  }, []);
 
   const numberOfGenesEntered = currentGenes
     ?.trim()
@@ -85,8 +111,15 @@ const Genelist = ({ setPerturbationList }) => {
       getAllGenelists()
         .then((genelists) => {
           console.log("refreshList", genelists);
-          setGeneLists([...genelists]); //converts sets to array
-          resolve();
+          if(genelists){
+              setGeneLists([...genelists]); //converts sets to array
+              resolve();
+            }else
+            {
+              return;
+              //reject("No saved genelists were found!");
+              //throw new Error("No saved genelists were found!")
+            }          
         })
         .catch((error) => {
           toast({
@@ -98,7 +131,7 @@ const Genelist = ({ setPerturbationList }) => {
             },
             autoClose: 2000,
           });
-          reject();
+          reject(error);
         });
     });
   };
@@ -149,7 +182,7 @@ const Genelist = ({ setPerturbationList }) => {
   };
 
   // Get all available genelists from the database
-  const getAllGenelists = () => {
+  const getAllGenelists = () => {    
     return get("geneListNames");
   };
 
@@ -194,63 +227,150 @@ const Genelist = ({ setPerturbationList }) => {
 
   useEffect(() => {
     setPerturbationList(currentGenes);
-  }, [setPerturbationList, currentGenes]);
-  const dictionary = new Set("AKT1", "AKT2", "AKT3");
-
-
+  }, [currentGenes]);
+  
  
-function genesChanged(value) {    
+function genesChanged(value) { 
+  setProps ({
+    oql: {
+      query: { gene: "", alterations: false },
+    },
+    validatingGenes: true,
+    replaceGene: replaceGene,
+    wrapTheContent: false,
+    genes: {
+      found: [],
+      suggestions: [],
+    },
+  });   
     setGenes(value?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n')) 
-    console.log("Here we are in genesChangedsd")    
+    //console.log("Here we are in genesChangedsd") 
+    //updateQueryToBeValidateDebounce();   
 }
+
 
 useEffect(() => {
   updateQueryToBeValidateDebounce();
 }, [currentGenes]);
 
+
+/*
+function myFunction() {
+  console.log('Function executed');
+}
+
+const debouncedFunction = debounce(myFunction, 1000);
+console.log('Waht about this');
+// Call the debounced function
+debouncedFunction();
+
+// Call the debounced function again within the 1 second delay
+debouncedFunction();
+
+// Wait for 1 second and then call the debounced function again
+setTimeout(() => {
+  debouncedFunction();
+}, 1000);
+
+*/
+
 const updateQueryToBeValidateDebounce = debounce(() => {
   
-  //this.queryToBeValidated = this.currentTextAreaValue;
- // this.skipGenesValidation = false;
-  console.log("Here we are in Debounce")
-  setProps ({
-    oql: {
-      query: [
-        { gene: "AAA", alterations: false },
-        { gene: "BBB", alterations: false },
-    
-      ],
-    },
-    validatingGenes: false,
-    replaceGene: replaceGene,
-    wrapTheContent: false,
-    genes: {
-      found: [],
-      suggestions: [
+   //When a new gene is inserted check it exists in perturbation list or among gene list
+  //If it exists no need to worry.
+  //Otherwise we need to check whether it exists among all genes
+  //if it exists than it means PerturbSeq data doesnt have it [notInPerturbSeq]
+  //Otherwise check alllias
+  //If allias exists in PerturbSeq suggest the allias otherwise ignore it
+  let notFound = [];
+  let notExist = [];
+  let notInPerturbSeq = [];
+  let found = []
+  let suggestions =[]
+  let query = []
+
+  
+
+  get("geneList_" + coreSettings?.cellLine + "_perturb")
+  .then((perturbDict) => {  
+    console.log("perturbDict", perturbDict)
+    if (perturbDict && perturbDict.size > 0) {
+      //console.log("currentGenes", currentGenes)
+      let genes = currentGenes.trim("\n").split("\n").filter(gene => gene.trim().length>0);
+      //console.log("genes", genes)
+      notFound = genes.filter(gene => !perturbDict.has(gene));
+      found = genes.filter(gene => perturbDict.has(gene));
+      console.log("notFound", notFound)
+      return get("allHugoGenes")
+    } else {
+      console.log("Upps where is the list for genes?")
+    }
+  })
+  .then((allGenes) => {
+    if (allGenes && allGenes.size > 0) {       
+      notExist = notFound.filter(gene => !allGenes.has(gene));
+      console.log("notExist", notExist)
+      notInPerturbSeq = notFound.filter(gene => allGenes.has(gene));
+      console.log("notInPerturbSeq", notInPerturbSeq)
+    } else {
+      notExist = notFound;
+    }   
+    return getAliasesForGeneList(notExist)
+  })
+  .then((aliases) => {
+    console.log("aliases", aliases);
+    console.log("found", found);
+    console.log("notExistControl", notExist);
+
+    for(let genex in notExist ){
+      if(aliases.has(notExist[genex]))
+        continue;
+      suggestions.push(
         {
-          alias: "AAA",
+          alias: notExist[genex],
+          genes: [],
+        }
+      )
+      query.push({ gene: notExist[genex], alterations: false })
+    }
+    console.log("suggestions", suggestions);
+    for (let [key, value] of aliases) { 
+      suggestions.push(
+        {
+          alias: key,
           genes: [
-            {
-              entrezGeneId: 351,
-              hugoGeneSymbol: "APP",
-              type: "protein-coding",
+            {              
+              hugoGeneSymbol: value           
             },
           ],
-        },
-        {
-          alias: "BBB",
-          genes: [
-            {
-              geneticEntityId: 296,
-              entrezGeneId: 351,
-              hugoGeneSymbol: "APaP",
-              type: "protein-coding",
-            },
-          ],
-        },
-      ],
-    },
+        }
+      )
+      
+      query.push({ gene: key, alterations: false })
+
+    }
+
+
+    setProps ({
+      oql: {
+        query: query,
+      },
+      validatingGenes: false,
+      replaceGene: replaceGene,
+      wrapTheContent: false,
+      genes: {
+        found: found,
+        suggestions: suggestions,
+      },
+    });
+
+  })
+  .catch((error) => {
+    console.error(error);
   });
+
+
+ 
 
 
   // When the text is empty, it will be skipped from oql and further no validation will be done.
@@ -267,7 +387,7 @@ const updateQueryToBeValidateDebounce = debounce(() => {
       }
     */
   };
-}, 500);
+}, 2000);
 
  
   return (
@@ -315,10 +435,7 @@ const updateQueryToBeValidateDebounce = debounce(() => {
             onChange={({ target: { value } }) =>genesChanged(value)}
         />
           <Spacer height={3} />
-          <Text>{numberOfGenesEntered}</Text>
-      
-
-            <Spacer height={30} />
+          
             <GeneSymbolValidatorMessage {...props} />
             <Spacer height={3} />
             <Text>{numberOfGenesEntered}</Text>
@@ -396,4 +513,17 @@ const updateQueryToBeValidateDebounce = debounce(() => {
   );
 };
 
-export default Genelist;
+const mapStateToProps = ({ settings}) => ({
+  coreSettings: settings?.core ?? {}, 
+});
+
+const mapDispatchToProps = {
+  coreSettingsChanged,
+};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(Genelist);
+
+export { MainContainer as Genelist };
+
+
+
