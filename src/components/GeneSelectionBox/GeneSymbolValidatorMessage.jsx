@@ -18,7 +18,19 @@ import Dropdown from "react-bootstrap/Dropdown";
 
 const RenderSuggestion = function (props) {
   //console.log("props", props);
-  if (props.genes.length == 0) {
+  if (props.genes.length > 0 && props.alias && props.alias.startsWith("Not among")) {  
+    console.log(props);
+    let title = props.genes[0].hugoGeneSymbol.length + (props.alias === "Not among targets"? " perturbations ":" genes ") + "were not found in the perturbseq data \n" + props.genes[0].hugoGeneSymbol.toString();
+    let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, "");
+    return (
+      <div className={styles.warningBubble} title={title} onClick={onClick}>
+        <FaTimesCircle className={styles.icon} />
+        <span className={styles.noChoiceLabel}>{props.alias}</span>
+      </div>
+    );
+  }
+
+  if (props.genes.length === 0) {
     let title =
       "Could not find gene symbol. Click to remove it from the gene list.";
     let onClick = () => props.replaceGene(props.alias, "");
@@ -30,7 +42,7 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if (props.genes.length == 1) {
+  if (props.genes.length === 1) {
     let { hugoGeneSymbol } = props.genes[0];
     let title = `'${props.alias}' is a synonym for '${hugoGeneSymbol}'. Click here to replace it with the official symbol.`;
     let onClick = () => props.replaceGene(props.alias, hugoGeneSymbol);
@@ -78,6 +90,7 @@ const RenderSuggestion = function (props) {
 };
 
 const GeneSymbolValidatorMessageChild = (props) => {
+  console.log("props in ge",props)
   if (props.oql instanceof Error) {
     return (
       <div className={styles.GeneSymbolValidator}>
@@ -133,12 +146,15 @@ const GeneSymbolValidatorMessageChild = (props) => {
           <span>Invalid gene symbols.</span>
         </div>
 
+        
+
         {props.genes.suggestions.map((suggestion, index) => (
+          
           <RenderSuggestion
             key={index}
             genes={suggestion.genes}
             alias={suggestion.alias}
-            replaceGene={props.replaceGene}
+            replaceGene={props.replaceGene}           
           />
         ))}
       </div>

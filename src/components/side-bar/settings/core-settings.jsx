@@ -145,8 +145,8 @@ const CoreSettings = ({
       </Field>   
 
 
-      <Genelist setPerturbationList = {setPerturbationList}/>
-      <Genelist setPerturbationList = {setGeneList}/>
+      <Genelist setPerturbationList = {setPerturbationList} isPerturbationList =  {true}/>
+      <Genelist setPerturbationList = {setGeneList} isPerturbationList = {false} />
 
     
       { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?

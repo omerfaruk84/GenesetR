@@ -27,7 +27,7 @@ import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorM
 import { debounce } from "lodash";
 import { coreSettingsChanged } from '../../store/settings/core-settings'
 import { CoreSettingsTypes } from '../side-bar/settings/enums';
-import {getAliasesForGeneList} from './helper'
+import {getAliasesForGeneList, checkGenes} from './helper'
 
 /*
 let isLoaded = false;
@@ -35,7 +35,7 @@ var db;
 const dbPromise = window.indexedDB.open("GeneListDB", 1);
 */
 
-const Genelist = ({ setPerturbationList, coreSettings }) => {
+const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList}) => {
   
   useEffect(() => {
     //When page loaded refresh genelist
@@ -73,19 +73,33 @@ const Genelist = ({ setPerturbationList, coreSettings }) => {
 
   
 
-  const replaceGene = useCallback((oldSymbol, newSymbol) => {
-    console.log("In replace Gene");
-    setGenes(
-      currentGenes
+  const replaceGene = useCallback((oldSymbols, newSymbol) => {
+    console.log("In replace Gene",oldSymbols);
+    let result = currentGenes.toUpperCase();
+    if (oldSymbols instanceof Array){   
+      oldSymbols.forEach((oldSymbol) => {
+        result = result.replace(new RegExp(`\\b${oldSymbol.toUpperCase()}\\b`, "g"), () =>
+        newSymbol
+        .trim()
+        .replace(/^\s+|\s+$/g, "")
+        .replace(/[ \+]+/g, " ")
         .toUpperCase()
-        .replace(new RegExp(`\\b${oldSymbol.toUpperCase()}\\b`, "g"), () =>
+        );
+      });
+
+    }else{
+      result= result
+        .toUpperCase()
+        .replace(new RegExp(`\\b${oldSymbols.toUpperCase()}\\b`, "g"), () =>
           newSymbol
             .trim()
             .replace(/^\s+|\s+$/g, "")
             .replace(/[ \+]+/g, " ")
-            .toUpperCase()
-        )
-    );
+            .toUpperCase());
+    }
+
+    setGenes(result)
+   
   }, [currentGenes, setGenes]);
 
   let geneListNames = new Set();
@@ -275,7 +289,16 @@ setTimeout(() => {
 */
 
 const updateQueryToBeValidateDebounce = debounce(() => {
-  
+
+  checkGenes(currentGenes, isPerturbationList , coreSettings?.cellLine).then(
+    (prop) => {
+      console.log(prop)
+      prop.replaceGene= replaceGene;
+      setProps(prop);
+    }
+  )
+
+  /*
    //When a new gene is inserted check it exists in perturbation list or among gene list
   //If it exists no need to worry.
   //Otherwise we need to check whether it exists among all genes
@@ -289,9 +312,10 @@ const updateQueryToBeValidateDebounce = debounce(() => {
   let suggestions =[]
   let query = []
 
-  
-
-  get("geneList_" + coreSettings?.cellLine + "_perturb")
+  let extension =  "_perturb";
+  if(!isPerturbationList) 
+    extension = "_genes"
+  get("geneList_" + coreSettings?.cellLine + extension)
   .then((perturbDict) => {  
     console.log("perturbDict", perturbDict)
     if (perturbDict && perturbDict.size > 0) {
@@ -369,13 +393,13 @@ const updateQueryToBeValidateDebounce = debounce(() => {
     console.error(error);
   });
 
-
+ */
  
 
 
   // When the text is empty, it will be skipped from oql and further no validation will be done.
   // Need to set the geneQuery here
-  if (currentGenes === '') {
+  //if (currentGenes === '') {
       
     /*this.geneQuery = '';
       if (this.props.callback) {
@@ -386,7 +410,7 @@ const updateQueryToBeValidateDebounce = debounce(() => {
           );
       }
     */
-  };
+  //};
 }, 2000);
 
  

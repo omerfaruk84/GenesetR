@@ -92,6 +92,21 @@
     background: rgb(207, 60, 7); // $redError;
     white-space: nowrap;
   }
+  div.warningBubble {
+    background: rgb(230, 233, 48); // $redError;
+    white-space: nowrap;
+    border-radius: 15px;
+    padding-right:8px;
+    
+    .icon {
+      color: rgb(0, 0, 0);
+      line-height: 15px;
+      text-align: center;
+      margin-top: 5px;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+  }
   div.validBubble {
     background: green; // $greenSuccess;
     white-space: nowrap;
@@ -127,4 +142,7 @@
       float: left;
     }
   }
+ 
 }
+
+
