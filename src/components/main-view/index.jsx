@@ -20,6 +20,7 @@ import { UmapPage } from '../../pages/umap/umap-page';
 import { TsnePage } from '../../pages/tsne/tsne-page';
 import { PathFinderPage } from '../../pages/pathfinder/pathfinder';
 import { GeneSignaturePage } from '../../pages/genesignature/gene-signature-page';
+import { HeatMapPage } from '../../pages/heatmap/heatmap-page';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
@@ -63,6 +64,12 @@ const MainView = () => {
             exact
             path={ROUTES.GENESIGNATURE}
             element={<GeneSignaturePage path={ROUTES.GENESIGNATURE} />}
+          />
+
+            <Route
+            exact
+            path={ROUTES.HEATMAP}
+            element={<HeatMapPage path={ROUTES.HEATMAP} />}
           />
           {/* <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} /> */}
           <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage />} />
