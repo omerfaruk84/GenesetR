@@ -1,20 +1,80 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, Slider, Divider, Toggle } from '@oliasoft-open-source/react-ui-library';
 import { geneRegulationCoreSettingsChanged } from '../../../store/settings/gene-regulation-core-settings';
 import { GeneRegulationCoreSettingsTypes } from './enums';
 import styles from './settings.module.scss';
+import { set, get } from 'idb-keyval';
+import Axios from 'axios';
+
 
 const GeneRegulationSettings = ({
   geneRegulationCoreSettings,
   geneRegulationCoreSettingsChanged,
 }) => {
-  const geneOptions = [
-    {
-      label: 'SLC39A10',
-      value: 'SLC39A10',
+
+ 
+  const [geneOptions, setGeneOptions] = useState([]);
+
+  useEffect(populateGeneOptions,[])
+
+  function populateGeneOptions(){
+
+    let temp = [];
+    let check = new Set()
+
+    get("geneList_1_perturb").then((val) => {
+      if (val && val.size>0) 
+        val.forEach((val)=> {
+          if(!check.has(val))          
+          temp.push({label: val, value: val})
+      })   
+    }).then(() => {  
+    
+    get("geneList_1_genes").then((val) => {
+          if (val && val.size>0) 
+            val.forEach((val)=> {
+              if(!check.has(val))          
+              temp.push({label: val, value: val})
+          })  
+    })
+    
+      
+     if(temp.length===0)
+      {
+        Axios.post("https://29d3-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
+        {
+          body: JSON.stringify({
+            dataset: 1,
+            request: 'getAllGenes'
+          }),
+        })
+          .then(response => 
+            {
+            if(response && response.data) {
+              //console.log(response.data.result.columns) 
+              response.data.result.rows.forEach((val)=> {
+                if(!check.has(val))          
+                temp.push({label: val, value: val})
+            })
+              response.data.result.columns.forEach((val)=> {
+                if(!check.has(val))          
+                temp.push({label: val, value: val})
+            })
+              setGeneOptions(temp)
+              set("geneList_1_perturb", new Set(response.data.result.rows));
+              set("geneList_1_genes", new Set(response.data.result.columns));
+            }
+            });      
+      }else{
+        setGeneOptions(temp)
+      }
     }
-  ];
+    
+    )
+      
+  }
+   
 
   return (
     <>

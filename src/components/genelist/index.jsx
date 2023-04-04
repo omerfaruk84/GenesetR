@@ -47,7 +47,7 @@ const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList}) => {
       //console.log("val", val) 
       if (!val || val.size===0)
       {
-        Axios.post("https://318d-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
+        Axios.post("https://29d3-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
         {
           body: JSON.stringify({            
             request: 'getHugoGenes'
@@ -60,7 +60,21 @@ const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList}) => {
               set("allHugoGenes", new Set(response.data.result));              
             }
             });      
-    }});      
+    }});
+
+//if perturbation list was nt downloaded before, download it.
+    get("geneList_" + coreSettings?.cellLine + "_genes").then((val) => {
+      //console.log("val", val) 
+      if (!val || val.size===0){
+
+        coreSettingsChanged({
+          settingName: CoreSettingsTypes.CELL_LINE,
+          newValue:  coreSettings?.cellLine
+        })
+      }
+    
+    });
+
   }, []);
 
 
@@ -97,6 +111,8 @@ const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList}) => {
             .replace(/[ \+]+/g, " ")
             .toUpperCase());
     }
+
+    result = result.replace(/[\n]{2,}/g, "\n").trim("\n");
 
     setGenes(result)
    

@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import * as echarts from 'echarts/core';
 //import GraphChart from 'echarts/charts';
 import {GraphChart} from 'echarts/charts';
-import SortableFilterableTable from '../../components/sortable-filterable-table';
+import EnrichmentTable from '../../components/enrichment-table';
 import { GridComponent, TooltipComponent,TitleComponent, DataZoomComponent,DatasetComponent,ToolboxComponent} from 'echarts/components';
 import {
   CanvasRenderer,
@@ -28,7 +28,7 @@ echarts.use(
   [TitleComponent, TooltipComponent, GridComponent, GraphChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
 );
 
-const ChartTableResultsGene = ({
+const GeneRegulation = ({
   geneRegulationCoreSettings, geneRegulationGraph,graphmapSettings,
 }) => {
   const [selectedView, setSelectedView] = useState(1);
@@ -272,7 +272,7 @@ setOptions({
       />
       <Spacer />
       {keyedData && selectedView === 1 && (
-        <SortableFilterableTable keyedData={keyedData} headings = {headings} helps= {helps} />
+        <EnrichmentTable keyedData={keyedData} headings = {headings} helps= {helps} />
       )}
       {selectedView === 0 && (
         <>
@@ -298,8 +298,8 @@ const mapStateToProps = ({  settings,calcResults }) => ({
   geneRegulationCoreSettings: settings?.geneRegulationCore ?? {},
 })
 
-const MainContainer = connect(mapStateToProps)(ChartTableResultsGene);
+const MainContainer = connect(mapStateToProps)(GeneRegulation);
 
-export { MainContainer as ChartTableResultsGene };;
+export { MainContainer as GeneRegulation };;
 
 

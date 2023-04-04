@@ -9,12 +9,14 @@ import {
   Card,
   toast,
   Heading,
-  
+  Text,
+  TextArea,
   
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { FiDatabase } from "react-icons/fi";
+import { FiCopy, FiDatabase, FiDownload } from "react-icons/fi";
+import { FaCopy, FaDatabase,FaDownload } from "react-icons/fa";
 import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
@@ -25,7 +27,7 @@ import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { performEnrichment} from "./enrichrAPI";
-
+import { saveAs } from 'file-saver';
 import {
   GridComponent,
   BrushComponent,
@@ -43,6 +45,7 @@ import {
   CanvasRenderer,
   // SVGRenderer,
 } from "echarts/renderers";
+
 
 echarts.use([
   TitleComponent,
@@ -65,6 +68,7 @@ echarts.use([
 /*
       Mock table data store (real apps should use Redux or similar)
     */
+
 
 
 
@@ -98,20 +102,20 @@ const onAction = (node, action) => {
 Container component manages state and configuration of table
         */
 
-const TableWithSortAndFilter = ({
-  runEnrichr,
-  clusters,
-  genesetEnrichmentSettingsChanged,
-  genesetEnrichmentSettings,
-  clusteringSettingsChanged,
+const GeneSetEnrichmentTable = ({
+  //runEnrichr,
+    genesets,
+  //genesetEnrichmentSettingsChanged,
+  //genesetEnrichmentSettings,
+  //clusteringSettingsChanged,
 }) => {
   assignObjectPaths(data);
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
- 
+  const [genelistOptions, setGeneListOptions] = useState([]);
+
   //Rank, Term name, P-value, Z-score, Combined score, Overlapping genes, Adjusted p-value, Old p-value, Old adjusted p-value
 const headings = ["Dataset", "Rank", "Term name", "P-value",  "Z-score", "Combined score","Adjusted p-value", "GC"  ];
-
 
 let temp =[{}]
 
@@ -154,10 +158,6 @@ const performEnrichmentNow = function (genes) {
     { label: "100 / page", value: 100 },
     { label: "Show all", value: 0 },
   ];
-
-  console.log("We are in tables");
-  const clusterNames = Object.keys(clusters);
-  //console.log(clusterNames);
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedPage, setSelectedPage] = useState(1);
@@ -236,17 +236,39 @@ const performEnrichmentNow = function (genes) {
     filters,
     sorts
   );
+
+  const ClusterInfoForm = ({ title, value, value2 }) => (
+    <>
+    <div style={{ width: "400px", height: "100%" }}>
+
+    <Card heading={<Heading top> {title} </Heading>}>
+ 
+      <Field label="Enriched Genes">
+        <TextArea value={value} cols={100} rows={5} />
+      </Field>
+      <Field label="Missing Genes">
+        <TextArea value={value2} cols={100} rows={5} />
+      </Field> 
+      </Card>  
+      </div>
+    </>
+  );
+  //let allGenes = selectedCluster?clusters[selectedCluster?.split(" (")[0]]?.split(","):[]
+  let allGenes = selectedCluster?genelistOptions.find(item => item.value === selectedCluster).genes?.split(","):[]
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
-      .map((dataRow) => {
-        
+      .map((dataRow) => { 
+        //console.log("dataRow", dataRow)
+        const datasetName = dataRow["Dataset"];
         const rowsCells = Object.entries(dataRow).map(([key, value]) => (
           key==="GC"?
           {
           key:"GC",
           value: value.length,
-          "tooltip": value.join(),
+          "tooltip": value.join(", "),
+          type: 'Popover',          
+          content: <ClusterInfoForm title = {datasetName}  value={value.join(", ")} value2={allGenes.filter(x => !value.includes(x)).join(", ")} />,
           //type: "Input",
           //disabled: false,
         }:{
@@ -254,13 +276,16 @@ const performEnrichmentNow = function (genes) {
           value,
           //type: "Input",
           //disabled: true,
-        }
-        
-        
-        ));
-        //console.log(rowsCells)
+        }));        
+       
+    
+       
         return {          
           cells: rowsCells,
+          
+          //onRowMouseEnter: () => setDisplayText('Genes ' + identified + "\nMissing: " + distinctValues),
+          //onRowMouseLeave: () => setDisplayText(''),
+          
         };
       }),
   ];
@@ -275,6 +300,22 @@ const performEnrichmentNow = function (genes) {
     ],
     rows: dataRows,
     footer: {
+      actions: [
+          {
+            icon: <FaDownload />,
+            label: 'Download',
+            disabled: keyedData=== undefined,
+            onClick: () =>{                
+              const csvData = (headings.join('\t')) + '\n' + ( keyedData.map(item => Object.values(item).join('\t')).join('\n'));
+              ;
+              // Create a blob with the data
+              const blob = new Blob([csvData], { type: 'text/plain;charset=utf-8' });
+            
+              // Save the blob as a file using FileSaver.js
+              saveAs(blob, 'data.tsv'); }
+
+          }
+        ],
       pagination: {
         rowCount: filteredAndSortedData.length,
         selectedPage,
@@ -480,11 +521,25 @@ const performEnrichmentNow = function (genes) {
 
   //In the first run set the selected cluter to cluster 0
   useEffect(() => {
-    if(Object.keys(clusters).length>0)
-    setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");  
-    console.log("Checking Clusters ", clusters[Object.keys(clusters)[0]])  
-    performEnrichmentNow(clusters[Object.keys(clusters)[0]]);   
-  }, []);
+    console.log("KEYS", Object.keys(genesets))
+    if(Object.keys(genesets).length>0){
+      let tempx = []
+      Object.keys(genesets).forEach((gl) => {
+      
+      tempx.push({label:gl + " ("+ genesets[gl].trim(',').split(',').length + " genes)", value: gl, genes: genesets[gl]})
+      
+      })
+      console.log("KEYSX", tempx)
+      setGeneListOptions(tempx);
+      setselectedCluster(Object.keys(genesets)[0]);     
+      performEnrichmentNow(genesets[Object.keys(genesets)[0]]);  
+    }
+
+
+   // setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");  
+   // console.log("Checking Clusters ", clusters[Object.keys(clusters)[0]])  
+   // performEnrichmentNow(clusters[Object.keys(clusters)[0]]);   
+  }, [genesets]);
 
 
   return (
@@ -492,14 +547,16 @@ const performEnrichmentNow = function (genes) {
        <Card heading={<Heading>Enrichment</Heading>}>
 
         <Row spacing={0} width="100%" height="10%">
-          <Field labelLeft labelWidth="130px" label="Select Cluster">
+          <Field labelLeft labelWidth="130px" label="Select Gene List">
             <Select
-              onChange={({ target: { value } }) => {
+              onChange={({ target: { value} }) => {
                 setselectedCluster(value);
                 console.log("selectedCluster",selectedCluster, value);
-                performEnrichmentNow(clusters[value.split(" (")[0]])                
+                //performEnrichmentNow(clusters[value.split(" (")[0]]) 
+                performEnrichmentNow(genelistOptions.find(item => item.value === value).genes)               
               }}              
-              options={Object.keys(clusters).map(x=> x + " ("+ clusters[x].trim(',').split(',').length + " genes)")}
+              // options={Object.keys(clusters).map(x=> x + " ("+ clusters[x].trim(',').split(',').length + " genes)")}
+              options = {genelistOptions}
               width={"250px"}
               value= {selectedCluster}
             />
@@ -522,13 +579,29 @@ const performEnrichmentNow = function (genes) {
               }
             >
               <Button
-                label="Datasets"
+                label="Set Datasets"
                 colored
                 margin-top={20}
-                icon={<FiDatabase />}
+                icon={<FaDatabase />}
               />
             </Popover>
+            
+
+
           </div>
+          <div>
+          <Spacer width="16px" />
+              <Button
+                label="Copy Genes"
+                colored="success"                                
+                margin-top={20}
+                icon={<FaCopy/>}
+                onClick =  {() =>{
+                  if(selectedCluster)
+                  navigator.clipboard.writeText(genelistOptions.find(item => item.value === selectedCluster).genes.replaceAll(",", "\n"))
+                }}
+              />
+              </div>
         </Row>
 
 
@@ -547,6 +620,9 @@ const performEnrichmentNow = function (genes) {
         <Row spacing={0} width="100%" height="50%">
           <Table width={"100%"} table={table} />;
         </Row>
+
+      
+
         </Card>
 
      
@@ -565,6 +641,6 @@ const mapDispatchToProps = {
 const MainContainer = connect(
   mapStateToProps,
   mapDispatchToProps
-)(TableWithSortAndFilter);
+)(GeneSetEnrichmentTable);
 
-export { MainContainer as TableWithSortAndFilter };
+export { MainContainer as GeneSetEnrichmentTable };

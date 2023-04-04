@@ -1,11 +1,11 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Row, Column, Spacer, Heading } from '@oliasoft-open-source/react-ui-library';
-import { GeneRegulation } from './generegulation';
-import styles from './gene-regulation-page.module.scss';
+import { GeneSignature } from '../../components/genesignature/genesignature';
+import styles from './gene-signature-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
 
-const GeneRegulationPage = () => {
+const GeneSignaturePage = (geneRegulationResults) => {
   
 
   return (
@@ -14,7 +14,7 @@ const GeneRegulationPage = () => {
       <Spacer />
       <Row wrap width="100%" height="100%">
         <Column width="100%" height="100%"  widthTablet="100%">
-          <GeneRegulation/>
+          <GeneSignature data = {geneRegulationResults}/>
         </Column>       
       </Row>
     </div>
@@ -27,5 +27,5 @@ const mapStateToProps = ({ calcResults }, { path }) => ({
 });
 const mapDispatchToProps = {};
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneRegulationPage);
-export { MainContainer as GeneRegulationPage };
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneSignaturePage);
+export { MainContainer as GeneSignaturePage };
