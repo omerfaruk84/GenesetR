@@ -26,7 +26,7 @@ const UmapSettings = ({
         <div className={styles.inputRange}>
           <Slider
             label={umapSettings?.numcomponents}
-            max={100}
+            max={200}
             min={3}
             value={umapSettings?.numcomponents}
             onChange={({ target: { value } }) => umapSettingsChanged({

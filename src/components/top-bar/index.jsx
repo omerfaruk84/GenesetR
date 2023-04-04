@@ -61,6 +61,11 @@ const TopBar = () => {
       name: TabNames.PATHFINDER,
       toLink: ROUTES.PATHFINDER
     },
+    {
+      icon: () => <FcMindMap />,
+      name: TabNames.GENESIGNATURE,
+      toLink: ROUTES.GENESIGNATURE
+    },
   ]
   return (
     <TopBarCmp

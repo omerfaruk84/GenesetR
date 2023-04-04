@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {  
-  minimumClusterSize: 10,
+  minimumClusterSize: 5,
   clusteringMetric: 'euclidean',
   clusteringMethod: 'eom',
-  minimumSamples: 10,
+  minimumSamples: 0,
   clusterSelectionEpsilon: 0.00,
 };
 

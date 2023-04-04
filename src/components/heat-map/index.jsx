@@ -35,16 +35,21 @@ const HeatMap = ({ graphData }) => {
         /*
       window.inchlib.events.heatmap_onmouseout = function(evt){
         console.log("heatmap_onmouseout", evt)
-      };*/
+      };
       
       window.inchlib.events.row_onclick = function(ids, evt){
         console.log("row_onmouseover",ids,evt)
       };
-
+*/
+      //define function for dendrogram_node_onclick event
+      window.inchlib.events.dendrogram_node_onclick = function(object_ids, node_id, evt){
+        console.log("dendrogram_node_onclick",object_ids, node_id, evt)
+      };
+      /*
       window.inchlib.events.dendrogram_node_highlight = function(object_ids, evt){
         console.log("dendrogram_node_highlight",object_ids,evt)
           //var i;
-          /*
+          
           $.ajax({
               type: 'GET',
               dataType: "json",
@@ -68,8 +73,11 @@ const HeatMap = ({ graphData }) => {
               }
           }
           dendrogram.highlight_rows([]);
-          */
+          
       }
+
+
+      /*
 
       window.inchlib.events.dendrogram_node_unhighlight = function(){
           // scaffolds_element.hide();
@@ -77,12 +85,13 @@ const HeatMap = ({ graphData }) => {
       }
 
       window.inchlib.events.empty_space_onclick = function(){
-          /*
+          
           hide_molecule();
           dendrogram.highlight_rows([]);
-          bind_dendrogram_events();*/
+          bind_dendrogram_events();
           console.log("dendrogram_node_unhighlight")
       }
+  */
   
 
         

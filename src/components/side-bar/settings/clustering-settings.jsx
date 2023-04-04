@@ -37,7 +37,28 @@ const ClusteringSettings = ({
   return (
     <>
       <Spacer height={10} />
-      <Field labelLeft labelWidth="130px" label='Minimum Cluster Size'>
+      <Field labelLeft labelWidth="130px" label='Minimum Number Of Samples' helpText="The minimum number of neighbours to a core point. The higher this value is, the more points are going to be discarded as noise/outliers. So increasing this value will increase the size of the clusters, but it does so by discarding small clusters as outliers. If the value is set to 0, HDBScan will try to detect the optimal value, automatically.">
+        <div className={styles.inputRange}>        
+          <Slider
+            label={clusteringSettings?.minimumSamples}
+            max={100}
+            min={0}
+            value={clusteringSettings?.minimumSamples}
+            onChange={({ target: { value } }) => clusteringSettingsChanged({
+              settingName: ClusteringSettingsTypes.MINIMUM_SAMPLES,
+              newValue: value
+            })}
+          />
+ 
+        </div>
+      </Field>
+      <Field labelLeft style={{ "white-space": "pre-wrap"}} labelWidth="130px" label='Minimum Cluster Size' 
+      helpText="The minimum size a final cluster can be. The higher this is, the bigger your clusters
+      will be. Increasing this value will merge any smaller clusters with their most similar 
+      neighbour until all clusters are above this value. This should be greater than or equal to minimum sample size.
+      * If you want many highly specific clusters, use a small min_samples and a small min_cluster_size.
+      * If you want more generalized clusters but still want to keep most detail, use a small min_samples and a large min_cluster_size
+      * If you want very very general clusters and to discard a lot of noise in the clusters, use a large min_samples and a large min_cluster_size.">
         <div className={styles.inputRange}>          
           <Slider
             label={clusteringSettings?.minimumClusterSize}
@@ -51,6 +72,7 @@ const ClusteringSettings = ({
           />
         </div>
       </Field>
+      
       <Field labelLeft  labelWidth="130px" label='Clustering Metric'>
         <Select
           onChange={({ target: { value } }) => clusteringSettingsChanged({
@@ -71,21 +93,7 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMethod}
         />
       </Field>
-      <Field labelLeft labelWidth="130px" label='Minimum Samples'>
-        <div className={styles.inputRange}>        
-          <Slider
-            label={clusteringSettings?.minimumSamples}
-            max={100}
-            min={3}
-            value={clusteringSettings?.minimumSamples}
-            onChange={({ target: { value } }) => clusteringSettingsChanged({
-              settingName: ClusteringSettingsTypes.MINIMUM_SAMPLES,
-              newValue: value
-            })}
-          />
- 
-        </div>
-      </Field>
+      
       <Field labelLeft labelWidth="130px" label='Cluster Selection Epsilon'>
         <div className={styles.inputRange}>          
           <Slider

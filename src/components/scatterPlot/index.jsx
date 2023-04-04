@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { Spacer, Select, Row , Card, Heading} from "@oliasoft-open-source/react-ui-library";
+import { Spacer, Select, Row , Card, Heading, Button} from "@oliasoft-open-source/react-ui-library";
 import DataTable from "react-data-table-component";
-import { TableWithSortAndFilter } from "../enrichment/";
+import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
 import * as echarts from "echarts/core";
 import { registerTransform } from "echarts/core";
 //import GraphChart from 'echarts/charts';
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { transform } from "echarts-stat";
+import { coreSettingsChanged } from '../../store/settings/core-settings';
+import { CoreSettingsTypes } from '../side-bar/settings/enums';
+import { FaTrash } from "react-icons/fa";
 import {
   GridComponent,
   BrushComponent,
@@ -55,6 +58,7 @@ const ScatterPlot = ({
   graphData,
   scatterplotSettings,
   coreSettings,
+  coreSettingsChanged,
 }) => {
   const [options, setOptions] = useState({});
 
@@ -65,6 +69,9 @@ const ScatterPlot = ({
   const genesTolabel = new Set(genes);
   var pieces = [];
   const clusterData = [];
+  const minandmax = [0,0,0,0];
+
+  
 
   //const [clusters, setClusters] = useState();
 
@@ -79,6 +86,34 @@ const ScatterPlot = ({
     graphdata["GeneSymbols"]
   ) {
     console.log(graphdata);
+     // There's no real number bigger than plus Infinity
+    var lowest = Number.POSITIVE_INFINITY;
+    var highest = Number.NEGATIVE_INFINITY;
+    var tmp;
+    for (let i=graphdata["PC1"].length-1; i>=0; i--) {
+        tmp = graphdata["PC1"][i];
+        if (tmp < lowest) lowest = tmp;
+        if (tmp > highest) highest = tmp;
+    }
+    console.log(highest, lowest);
+    minandmax[0] = lowest
+    minandmax[1] = highest
+
+    lowest = Number.POSITIVE_INFINITY;
+    highest = Number.NEGATIVE_INFINITY;
+    for (let i=graphdata["PC2"].length-1; i>=0; i--) {
+        tmp = graphdata["PC2"][i];
+        if (tmp < lowest) lowest = tmp;
+        if (tmp > highest) highest = tmp;
+    }
+    minandmax[2] = lowest
+    minandmax[3] = highest
+    console.log("minandmax", minandmax);
+
+
+
+
+
     if (graphdata["clusterCount"] > 0) {
       
       let arrayOfArrays = Array.from(Array(graphdata["clusterCount"]), () => []);
@@ -111,8 +146,8 @@ const ScatterPlot = ({
 
 
     } else {
-      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
-        data.push([
+      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {  
+          data.push([
           graphdata["PC1"][i] ?? 0,
           graphdata["PC2"][i] ?? 0,
           graphdata["PC3"][i] ?? 0,
@@ -261,7 +296,7 @@ const ScatterPlot = ({
                   params.data[3] +
                   ": </b></span>" +
                   JSON.parse(content).description;
-                console.log("Get results:", content)  
+                //console.log("Get results:", content)  
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
               }
@@ -286,28 +321,46 @@ const ScatterPlot = ({
           right:'13%' 
         
         },
-        xAxis: {         
+        xAxis: {    
+          axisLabel: {
+            formatter: function (value) {
+              return value.toFixed(2);
+            },
+            color: 'black',
+          },     
           nameLocation : "center",
               nameTextStyle:{
                 fontWeight:'bold',
-                fontSize : '14'
+                fontSize : '15',
+                color: 'black',
               },
               name: "Component 1",           
-              nameGap: 25   
+              nameGap: 25,
+              min:  minandmax[0] - (minandmax[1] - minandmax[0])*0.1,
+              max:  minandmax[1] + (minandmax[1] - minandmax[0])*0.1,
+
       },
 
         yAxis: {
-           
+          axisLabel: {
+            formatter: function (value) {
+              return value.toFixed(2);
+            },
+            color: 'black',
+          },
            nameRotate: 90,
            scale: true,
            name: "Component 2",
            nameLocation : "center",
-           nameGap: 35,
+           nameGap: 50,
            nameTextStyle:{
              fontWeight:'bold',
-             fontSize : '14',
+             fontSize : '15',
              verticalAlign : 'center',
+             color: 'black',
            },
+           min:  minandmax[2] - (minandmax[3] - minandmax[2])*0.1,
+           max:  minandmax[3] + (minandmax[3] - minandmax[2])*0.1,
           
           },
         toolbox: {
@@ -478,6 +531,81 @@ const ScatterPlot = ({
     //}
   }, [coreSettings, scatterplotSettings, graphdata]);
 
+  const saveDataset =() => {
+    
+    //Create item and insert to the list
+    //First check if exists delete it
+    console.log("coreSettings2", coreSettings)
+   //deleteItemAndChildren(graphData.taskID);
+
+   let arr =  [...coreSettings?.datasetList];
+   let exists = arr.some(item => item.id.toString() === graphData.taskID.toString());
+   if (exists) return;
+
+   var newItem = {      
+    droppable: false,
+    id: graphData.taskID,
+    name: graphData.taskName?? "Control",
+    parent: graphData.dataset,
+    onClick: () => coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: graphData.taskID.toString()}),
+    actions: [
+      {
+        icon: <FaTrash />,
+        label: 'Delete',
+        onClick: () => deleteItemAndChildren(graphData.taskID.toString()),
+      }
+    ],
+  }
+
+  arr.push(newItem) 
+  //Save the settings
+  coreSettingsChanged({settingName: CoreSettingsTypes.DATASETLIST, newValue: arr})
+  }
+
+  const deleteItemAndChildren =(id) => { 
+    
+    let parent = 1;
+
+    coreSettings?.datasetList.forEach((item, index) => {
+      if (item.id.toString() === id) {
+        parent = item.parent
+      }
+    });
+
+    let arr = deleteItemAndChildrenHelper(id)
+    
+
+    coreSettingsChanged({
+      settingName: CoreSettingsTypes.DATASETLIST,
+      newValue: arr
+    })
+
+    coreSettingsChanged({
+      settingName: CoreSettingsTypes.CELL_LINE,
+      newValue: parent
+    })
+  
+  }
+
+  function deleteItemAndChildrenHelper (id, ds = coreSettings?.datasetList) {  
+    let arr =  [...ds];
+    console.log("id and arr", id)
+    console.log("id and arr2", arr)    
+  
+    arr.forEach((item, index) => {
+      if (item.id.toString() === id) {
+        
+        console.log("FOUND")
+        arr.splice(index, 1); // remove the item
+        // recursively delete its children
+        arr.filter(child => child.parent.toString() === id).forEach(child => deleteItemAndChildrenHelper(child.id.toString(), arr));
+      }
+    });
+     return arr;  
+  }
+  
+
+
   return (
     /*<EchartsReact
         option={options}
@@ -486,6 +614,12 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
+      <Button colored="success" 
+      label="ADD THIS TO DATASETS" 
+      onClick={saveDataset}
+      small
+      
+      />
         <Row spacing={0} width="100%" height="85%">
           <ReactEChartsCore
             echarts={echarts}
@@ -500,7 +634,7 @@ const ScatterPlot = ({
         
         <Row spacing={-100} width="100%" height="90%">
 
-          <TableWithSortAndFilter clusters={clusters} />
+          <GeneSetEnrichmentTable genesets={clusters} />
         </Row>)
         }
       </div>
@@ -512,7 +646,10 @@ const mapStateToProps = ({ settings }) => ({
   scatterplotSettings: settings?.scatterplot ?? {},
   coreSettings: settings?.core ?? {},
 });
+const mapDispatchToProps = {
+  coreSettingsChanged,
+};
 
-const MainContainer = connect(mapStateToProps)(ScatterPlot);
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(ScatterPlot);
 
 export { MainContainer as ScatterPlot };

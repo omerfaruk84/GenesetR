@@ -150,6 +150,12 @@ const SettingsSelector = ({ pathname }) => {
         settings: <GraphMapSettings />
       },
     ],
+    [ROUTES.GENESIGNATURE]: [
+      {
+        settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: <CoreSettings />
+      }
+    ],
   };
 
   return (

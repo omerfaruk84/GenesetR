@@ -39,6 +39,7 @@ const CoreSettingsTypes = {
   PETURBATION_LIST: "peturbationList",
   TARGET_LIST: "targetGeneList",
   GRAPH_TYPE: "graphType",
+  DATASETLIST: "datasetList",
 };
 
 const GraphmapSettingsTypes = {

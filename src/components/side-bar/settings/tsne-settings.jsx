@@ -26,7 +26,7 @@ const TsneSettings = ({
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.numcomponents}
-            max={100}
+            max={200}
             min={3}
             value={tsneSettings?.numcomponents}
             onChange={({ target: { value } }) =>tsneSettingsChanged({

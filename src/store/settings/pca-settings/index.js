@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  numberOfComponents: 10,
+  numberOfComponents: 85,
 };
 
 export const pcaSettingsSlice = createSlice({

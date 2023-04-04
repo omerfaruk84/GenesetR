@@ -1,0 +1,39 @@
+.accordion-menu {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+  }
+  
+  .menu-item {
+    position: relative;
+  }
+  
+  .menu-item-button {
+    display: block;
+    padding: 10px;
+    cursor: pointer;
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+  }
+  
+  .menu-item.active .menu-item-button {
+    background-color: rgb(196, 176, 60);
+  }
+  
+  .menu-item-children {
+    margin-left: 20px;
+  }
+  
+  .depth-0 .menu-item-button {
+    margin-top: 10px;
+  }
+  
+  .depth-1 .menu-item-button {
+    margin-top: 5px;
+  }
+  
+  .depth-2 .menu-item-button {
+    margin-top: 2px;
+  }

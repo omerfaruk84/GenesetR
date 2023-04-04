@@ -10,6 +10,7 @@ const ModulePathNames = {
   [ROUTES.PATHFINDER]: 'pathFinderGraph',
   [ROUTES.CORRELATION]: 'corrCluster',
   [ROUTES.HEATMAP]: 'heatmapGraph',
+  [ROUTES.GENESIGNATURE]: 'genesignatureGraph',
 };
 
 export { ModulePathNames };

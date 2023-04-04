@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import { connect } from 'react-redux';
 import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { coreSettingsChanged } from '../../../store/settings/core-settings';
@@ -8,12 +8,12 @@ import {Genelist}  from '../../genelist/index';
 import {DatasetSelector} from '../../dataset-selector';
 import Axios from 'axios';
 import { get, set, del} from "idb-keyval";
-
 const CoreSettings = ({
   coreSettings,
   coreSettingsChanged,module,SettingsSelector,
 }) => {
- 
+
+
   const cellLineOptions = [
     {
       label: 'K562-Whole Genome',
@@ -92,7 +92,7 @@ const CoreSettings = ({
           return;
         else
         {
-          Axios.post("https://318d-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
+          Axios.post("https://29d3-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
           {
             body: JSON.stringify({
               dataset: dataType,
@@ -107,13 +107,16 @@ const CoreSettings = ({
                 set("geneList_" + dataType + "_genes", new Set(response.data.result.columns));
               }
               });      
-        }});      
+        }}); 
+
+   
+   
            
     }
 
   return (
     <>
-      <DatasetSelector> </DatasetSelector>
+      <DatasetSelector items={coreSettings?.datasetList}> </DatasetSelector>
       
       <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
         <Select

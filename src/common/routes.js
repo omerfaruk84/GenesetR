@@ -9,6 +9,7 @@ const ROUTES = Object.freeze({
   GENE_REGULATION: '/gene-regulation',
   HEATMAP: '/heatmap',
   PATHFINDER: '/pathfinder',
+  GENESIGNATURE: '/genesignature',
 });
 
 /**

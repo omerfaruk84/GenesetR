@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-
+import { CoreSettingsTypes } from '../../../components/side-bar/settings/enums';
 const defaultGeneList = `TAF1C
   ACTR5
   UTP6
@@ -91,6 +91,26 @@ const initialState = {
   peturbationList: defaultGeneList,
   targetList: '',
   graphType: '2D',
+  datasetList: [{
+    droppable: true,
+    id: 1,
+    name: 'K562 Whole Genome',
+    onClick: () => coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: 1}),    
+    parent: 0
+  }, {
+    droppable: true,
+    id: 2,
+    name: 'K562 Essential',
+    details: 'Main',
+    onClick: () => coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: 2}),
+    parent: 0
+  },{
+    droppable: true,
+    id: 3,
+    name: 'RPE1 Essential',
+    onClick: () => coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: 3}),
+    parent: 0
+  }]
 };
 
 export const coreSettingsSlice = createSlice({

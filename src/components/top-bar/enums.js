@@ -9,6 +9,7 @@ const TabNames = {
   GENE_REGULATION: 'Gene-Regulation',
   HEATMAP: 'HeatMap',
   PATHFINDER: 'PathFinder',
+  GENESIGNATURE: 'GeneSignature',
 }
 
 export { TabNames };

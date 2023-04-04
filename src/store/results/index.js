@@ -11,6 +11,7 @@ import {
   runbiClusteringCalc,
   runGeneRegulation,
   runPathFinderCalc,
+  runGeneSignature,
 } from "../api";
 import { ModulePathNames } from "./enums";
 
@@ -30,6 +31,7 @@ const initialState = {
   corrCluster: resultState,
   heatmapGraph: resultState,
   enrichmentResults:resultState,
+  genesignatureGraph:resultState,
 };
 
 export const calculationResults = createSlice({
@@ -38,6 +40,7 @@ export const calculationResults = createSlice({
   reducers: {
     resultReceived: (state, action) => {
       const { result, module } = action.payload;
+      console.log(result)
       state[module].result = JSON.parse(result);
       state[module].running = false;
     },
@@ -67,6 +70,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
     genesetEnrichment,
     correlation,
     pathfinder,
+    genesignature,
   } = settings;
 
   /**
@@ -82,7 +86,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
   try {
     switch (module) {
       case ROUTES.PCA: {
-        const result = await runPcaGraphCalc(core, pca, clustering);
+        const result = await runPcaGraphCalc(core, pca, clustering);        
         return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
       }
       case ROUTES.MDE: {
@@ -115,6 +119,10 @@ const runCalculation = (module) => async (dispatch, getState) => {
       }
       case ROUTES.CORRELATION: {
         const result = await runCorrCalc(core, correlation);
+        return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+      }
+      case ROUTES.GENESIGNATURE: {
+        const result = await runGeneSignature(core);
         return dispatch(resultReceived({ result, module: ModulePathNames[module] }));
       }
       default: {

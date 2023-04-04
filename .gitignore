@@ -24,3 +24,15 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 yarn.lock
+.vscode/launch.json
+src/components/GeneSelectionBox/Gene.js
+src/components/GeneSelectionBox/GeneSelectionBox.spec.tsx
+src/components/GeneSelectionBox/GeneSelectionBoxUtils.spec.ts
+src/components/GeneSelectionBox/GeneSelectionBoxUtils.ts
+src/components/GeneSelectionBox/GeneSymbolValidator.spec.tsx
+src/components/GeneSelectionBox/GeneSymbolValidator.tsx
+src/components/GeneSelectionBox/OQLTextArea.tsx
+src/components/GeneSelectionBox/QueryStore.ts
+src/store/extra/firstRun.js
+package.json
+yarn.lock
