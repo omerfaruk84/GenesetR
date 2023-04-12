@@ -598,7 +598,7 @@ const performEnrichmentNow = function (genes) {
                 icon={<FaCopy/>}
                 onClick =  {() =>{
                   if(selectedCluster)
-                  navigator.clipboard.writeText(genelistOptions.find(item => item.value === selectedCluster).genes.replaceAll(",", "\n"))
+                  navigator.clipboard.writeText(genelistOptions.find(item => item.value === selectedCluster).genes.replaceAll("_2", "").replaceAll(",", "\n"))
                 }}
               />
               </div>

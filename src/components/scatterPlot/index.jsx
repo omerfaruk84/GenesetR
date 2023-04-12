@@ -69,7 +69,7 @@ const ScatterPlot = ({
   const genesTolabel = new Set(genes);
   var pieces = [];
   const clusterData = [];
-  const minandmax = [0,0,0,0];
+  const minandmax = [0,0,0,0,0,0];
 
   
 
@@ -85,7 +85,7 @@ const ScatterPlot = ({
     graphdata["PC2"] &&
     graphdata["GeneSymbols"]
   ) {
-    console.log(graphdata);
+    
      // There's no real number bigger than plus Infinity
     var lowest = Number.POSITIVE_INFINITY;
     var highest = Number.NEGATIVE_INFINITY;
@@ -95,7 +95,7 @@ const ScatterPlot = ({
         if (tmp < lowest) lowest = tmp;
         if (tmp > highest) highest = tmp;
     }
-    console.log(highest, lowest);
+   
     minandmax[0] = lowest
     minandmax[1] = highest
 
@@ -108,10 +108,18 @@ const ScatterPlot = ({
     }
     minandmax[2] = lowest
     minandmax[3] = highest
-    console.log("minandmax", minandmax);
-
-
-
+    
+    
+    lowest = Number.POSITIVE_INFINITY;
+    highest = Number.NEGATIVE_INFINITY;
+    for (let i=graphdata["PC3"].length-1; i>=0; i--) {
+        tmp = graphdata["PC3"][i];
+        if (tmp < lowest) lowest = tmp;
+        if (tmp > highest) highest = tmp;
+    }
+    minandmax[4] = lowest
+    minandmax[5] = highest
+ 
 
 
     if (graphdata["clusterCount"] > 0) {
@@ -436,9 +444,65 @@ const ScatterPlot = ({
                 : "orthographic",
           },
         },
-        xAxis3D: { name: "Component 1" },
-        yAxis3D: { name: "Component 2" },
-        zAxis3D: { name: "Component 3" },
+        
+      xAxis3D: {    
+          axisLabel: {
+            formatter: function (value) {
+              return value.toFixed(2);
+            },
+            color: 'black',
+          },              
+              nameTextStyle:{
+                fontWeight:'bold',
+                fontSize : '15',
+                color: 'black',
+              },
+              name: "Component 1",           
+              nameGap: 25,
+              min:  minandmax[0] - (minandmax[1] - minandmax[0])*0.1,
+              max:  minandmax[1] + (minandmax[1] - minandmax[0])*0.1,
+      },
+      yAxis3D: {
+        axisLabel: {
+          formatter: function (value) {
+            return value.toFixed(2);
+          },
+          color: 'black',
+        },        
+         scale: true,
+         name: "Component 2",       
+         
+         nameTextStyle:{
+           fontWeight:'bold',
+           fontSize : '15',
+           verticalAlign : 'center',
+           color: 'black',
+         },
+         min:  minandmax[2] - (minandmax[3] - minandmax[2])*0.1,
+         max:  minandmax[3] + (minandmax[3] - minandmax[2])*0.1,
+        
+        },
+        zAxis3D: {
+          axisLabel: {
+            formatter: function (value) {
+              return value.toFixed(2);
+            },
+            color: 'black',
+          },          
+           scale: true,
+           name: "Component 3",          
+           
+           nameTextStyle:{
+             fontWeight:'bold',
+             fontSize : '15',
+             verticalAlign : 'center',
+             color: 'black',
+           },
+           min:  minandmax[4] - (minandmax[5] - minandmax[4])*0.1,
+           max:  minandmax[5] + (minandmax[5] - minandmax[4])*0.1,
+          
+          },
+       
         visualMap: {
           type: "piecewise",
           top: "bottom",

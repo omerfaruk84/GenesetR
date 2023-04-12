@@ -94,30 +94,59 @@ const GeneSignature = ({coreSettings, data}) => {
   }
 
 
+  function trimmedMean(arr, trimPercentage) {
+    // Sort the array in ascending order
+    arr = arr.slice().sort(function(a, b) {
+      return a - b;
+    });
+  
+    // Determine the number of elements to trim
+    var trimCount = Math.floor(arr.length * (trimPercentage / 100));
+  
+    // Remove the specified number of elements from both ends
+    var trimmedArr = arr.slice(trimCount, arr.length - trimCount);
+  
+    // Calculate the mean of the remaining elements
+    const mean = trimmedArr.reduce((a, b) => a + b) / trimmedArr.length;
+    const std = Math.sqrt(trimmedArr.reduce((a, b) => a + (b - mean) ** 2, 0) / (trimmedArr.length - 1));
+
+
+  
+    return {'mean':mean, 'std':std};
+  }
+   
+  
+  
+  
+  
+
+
   useEffect(() => {
+
+    let highlightList = new Set(coreSettings.targetGeneList.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n').split('\n'))
    
     if(data.geneRegulationResults && data.geneRegulationResults.x && data.geneRegulationResults.x.length>0)
     {
    
     
       //const chart = echarts.init(chartRef.current);
-      const xValues = data.geneRegulationResults.results;
+      let xValues = data.geneRegulationResults.results;
       const labels = data.geneRegulationResults.genes;
       const distX = data.geneRegulationResults.x;
       const distY = data.geneRegulationResults.y;      
       let tableInfo = []
       const pointData = []   
 
-      const mean = xValues.reduce((a, b) => a + b) / xValues.length;
-      const std = Math.sqrt(xValues.reduce((a, b) => a + (b - mean) ** 2, 0) / (xValues.length - 1));
-      
+      var results = trimmedMean(xValues,0.2)  
+      if(results.mean === undefined) results.mean =0
+      if(results.std === undefined) results.std =1
         // Calculate the Z-scores for each data point
-      const zScores = xValues.map((value) => (value - mean) / std);
+      const zScores = xValues.map((value) => (value - results.mean) / results.std);
       
-      
+      console.log("highlightList", highlightList,coreSettings )
       
       for (let i = 0; i<xValues.length;i++){
-        pointData.push([xValues[i], findNearestIndex(distX,distY, xValues[i]),labels[i], zScores[i] ])
+        pointData.push([xValues[i], findNearestIndex(distX,distY, xValues[i]),labels[i], zScores[i], highlightList.has(labels[i]) ])
         tableInfo.push({'Gene':labels[i] , 'Effect':zScores[i]>2?"UP":zScores[i]<-2?"DOWN":"NO CHANGE"  , 'Score':xValues[i],'Z-Score':zScores[i] })
       }
 
@@ -153,7 +182,7 @@ const GeneSignature = ({coreSettings, data}) => {
       setPointData(pointData)
     
   }
-  }, [data]);
+  }, [data, coreSettings.targetGeneList]);
 
   useEffect(() => {
 
@@ -186,15 +215,18 @@ const GeneSignature = ({coreSettings, data}) => {
       data: pointData,
       itemStyle: {
         color: function(params) { 
+          console.log(params.data)
           if (params.data[2].startsWith("non-targeting"))
-            return 'yellow';
+            return 'rgba(216, 245, 39, 0.5)'; //yellow
+          else if (params.data[4] === true) {
+              return 'rgba(39, 96, 245, 0.7)';} //blue highlight
           else if (params.data[3] > 2) {
-            return 'green';
+            return 'rgba(39, 245, 55, 0.7)'; //green
           } else if (params.data[3] < -2) {
-            return 'red';
+            return 'rgba(245, 55, 39, 0.7)'; //red
           } else {
             //if( params.data[3]> -2 &&params.data[3]<2 )
-              return 'rgba(200, 200, 200,' + String((Math.abs(params.data[3])+0.1)*0.15+0.685) + ')' ;
+              return 'rgba(200, 200, 200,' + String((Math.abs(params.data[3])+0.1)*0.15+0.185) + ')' ;
           }
         }},
         label: {
@@ -203,8 +235,9 @@ const GeneSignature = ({coreSettings, data}) => {
           position:'top',
           fontSize:14,
           formatter: function (params) {
-            
-            if (params.data[3] > 2 || params.data[3] < -2) {
+            if (params.data[4] === true) {
+              return params.data[2];
+            } else if (params.data[3] > 2 || params.data[3] < -2) {
               return params.data[2];
             } else {
               return '';

@@ -89,7 +89,7 @@ const initialState = {
   cellLine: 1,
   dataType: 1,
   peturbationList: defaultGeneList,
-  targetList: '',
+  targetGeneList: '',
   graphType: '2D',
   datasetList: [{
     droppable: true,

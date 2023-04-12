@@ -21,6 +21,7 @@ import { TsnePage } from '../../pages/tsne/tsne-page';
 import { PathFinderPage } from '../../pages/pathfinder/pathfinder';
 import { GeneSignaturePage } from '../../pages/genesignature/gene-signature-page';
 import { HeatMapPage } from '../../pages/heatmap/heatmap-page';
+import { DimReductionPage } from '../../pages/dim-reduction-page/dim-reduction-page';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
@@ -33,7 +34,8 @@ const MainView = () => {
           <Route
             exact
             path={ROUTES.PCA}
-            element={<PcaPage path={ROUTES.PCA} />}
+            //element={<PcaPage path={ROUTES.PCA} />}
+            element={<DimReductionPage/>}
           />
           <Route
             exact
