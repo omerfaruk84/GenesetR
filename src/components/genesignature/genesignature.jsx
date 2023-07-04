@@ -9,8 +9,8 @@ import * as echarts from 'echarts/core';
 import {ScatterChart} from 'echarts/charts';
 import EnrichmentTable from '../enrichment-table';
 import { GeneSetEnrichmentTable } from "../enrichment/";
-
-import { GridComponent, TooltipComponent,TitleComponent, DataZoomComponent,DatasetComponent,ToolboxComponent} from 'echarts/components';
+import {getBlackList} from "../../store/api"
+import { GridComponent, TooltipComponent,TitleComponent,DataZoomSliderComponent, DataZoomComponent,DatasetComponent,ToolboxComponent} from 'echarts/components';
 import {
   CanvasRenderer,
   // SVGRenderer,
@@ -18,7 +18,7 @@ import {
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 
 echarts.use(
-  [TitleComponent, TooltipComponent, GridComponent, ScatterChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
+  [TitleComponent,DataZoomSliderComponent, TooltipComponent, GridComponent, ScatterChart, CanvasRenderer, DataZoomComponent,DatasetComponent,ToolboxComponent]
 );
 const headings  = ['Gene', 'Effect', 'Score' , 'Z-Score']
 const helps = {'Gene':'sgRNAs that mediate effect',
@@ -27,13 +27,15 @@ const helps = {'Gene':'sgRNAs that mediate effect',
                'Z-Score':'Z Score based on the distribution'
               }
 
-const GeneSignature = ({coreSettings, data}) => {
+const GeneSignature = ({coreSettings, genesignatureSettings,  data}) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({}); 
   const [pointData, setPointData] = useState([]);   
   const [keyedData, setkeyedData] = useState([{}]); 
   const [selectedTab, setSelectedTab] = useState({label: 'Geneset Enrichment', value: 'gsea'});
   const [genelists, setGeneLists] = useState([]); 
+  const [blackListDown, setblackListDown] = useState({});
+  const [blackListUp, setblackListUp] = useState({});
   //For tabs under the table
   const tabOptions = [
     {
@@ -117,7 +119,25 @@ const GeneSignature = ({coreSettings, data}) => {
    
   
   
+useEffect(()=> {
+    
+    getBlackList().then((result)=> {
+      const genesUp = {};
+      const genesDown= {};
   
+      for (const gene in result.blacklist.ZS) {      
+        if (result.blacklist.ZS[gene] > 0) {
+          genesUp[gene] = result.blacklist.ZS[gene];
+        } else{
+          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+        }        
+     }
+      console.log("setblackListDown",genesDown )
+      console.log("setblackListUp",genesUp )  
+      setblackListDown(genesDown);
+      setblackListUp(genesUp);
+    })
+  },[] )
   
 
 
@@ -146,11 +166,13 @@ const GeneSignature = ({coreSettings, data}) => {
       console.log("highlightList", highlightList,coreSettings )
       
       for (let i = 0; i<xValues.length;i++){
+        if(genesignatureSettings.filter && xValues[i]<0 && blackListDown[labels[i]] !== undefined && blackListDown[labels[i]]>genesignatureSettings.filterBlackListed) continue;
+        else if( genesignatureSettings.filter && xValues[i]>0 && blackListUp[labels[i]] !== undefined && blackListUp[labels[i]]>genesignatureSettings.filterBlackListed) continue;
         pointData.push([xValues[i], findNearestIndex(distX,distY, xValues[i]),labels[i], zScores[i], highlightList.has(labels[i]) ])
         tableInfo.push({'Gene':labels[i] , 'Effect':zScores[i]>2?"UP":zScores[i]<-2?"DOWN":"NO CHANGE"  , 'Score':xValues[i],'Z-Score':zScores[i] })
       }
 
-      const sortedtableInfo = tableInfo.sort((geneA, geneB) => geneB.expression - geneA.expression)
+      const sortedtableInfo = tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"])
   
   
       
@@ -182,9 +204,11 @@ const GeneSignature = ({coreSettings, data}) => {
       setPointData(pointData)
     
   }
-  }, [data, coreSettings.targetGeneList]);
+  }, [data, coreSettings.targetGeneList, genesignatureSettings]);
 
   useEffect(() => {
+    if (!data.geneRegulationResults)
+     return 
 
   setOptions({
     legend: {},
@@ -194,28 +218,45 @@ const GeneSignature = ({coreSettings, data}) => {
         return params.data[2] + '\n' + params.data[0];
       }
     },
-    xAxis: {},
+    xAxis: [ {
+      type: 'value',
+      min:data.geneRegulationResults.x[0] - 0.1,
+      max:data.geneRegulationResults.x[data.geneRegulationResults.x.length-1] + 0.1        
+       
+    },
+    {
+      type: 'value',    
+      //show: false,  
+      min:data.geneRegulationResults.x[0] - 0.1,
+      max:data.geneRegulationResults.x[data.geneRegulationResults.x.length-1] + 0.1 
+      
+    }],
     yAxis: {},
     dataZoom: [
       {
+        type :'slider',
         show: true,
         realtime: true,
-      },
-      {
-        type: 'inside',
-        realtime: true,
-        start: 65,
-        end: 85
+        xAxisIndex:[1,0],                
       }
     ],
+    toolbox: {
+      feature: {
+        dataZoom: {
+          yAxisIndex: 'none'
+        },
+        restore: {},
+        saveAsImage: {}
+      }
+    },    
     legend: [
       
     ],
     series: [{
+      roam: true, 
       data: pointData,
       itemStyle: {
-        color: function(params) { 
-          console.log(params.data)
+        color: function(params) {         
           if (params.data[2].startsWith("non-targeting"))
             return 'rgba(216, 245, 39, 0.5)'; //yellow
           else if (params.data[4] === true) {
@@ -253,7 +294,26 @@ const GeneSignature = ({coreSettings, data}) => {
          return Math.round(Math.abs(params[3])*2.5+3); 
       },
       type: 'scatter',          
-    }]
+    },
+    {
+      name: 'Series 2',
+      type: 'line',
+      roam: true, 
+      symbol: 'none',
+      lineStyle: {        
+        width:0
+      }, 
+          
+      xAxisIndex: 1, // use the second x-axis for this series
+      yAxisIndex: 0, // use the second y-axis for this series
+      data: data.geneRegulationResults.x.map(function (value, index) {
+        return [value, data.geneRegulationResults.y[index]];
+      })   
+      
+      
+      
+    },  
+  ]
   })},[pointData])
 
 
@@ -318,25 +378,29 @@ const GeneSignature = ({coreSettings, data}) => {
         </>
       )}      
       <Spacer height={5} />
+      
+      {genelists && (
+       <> 
       <Tabs name="tabs" value={selectedTab} options={tabOptions}
           onChange={(evt) => {const { value, label } = evt.target;
           setSelectedTab({ value, label });
           }}
         />
 
-      {genelists && selectedTab.value === "gsea" && (
-      <> 
-        <GeneSetEnrichmentTable genesets={genelists}/>        
-      </>
+         <GeneSetEnrichmentTable genesets={genelists}/>        
+         </>
       )}
+      
 
 
     </>
   );
 };
 
-const mapStateToProps = ({  settings,calcResults }) => ({
+const mapStateToProps = ({  settings }) => ({
   coreSettings: settings?.core ?? {},  
+  genesignatureSettings: settings?.genesignature ?? {}
+
 })
 
 const MainContainer = connect(mapStateToProps)(GeneSignature);

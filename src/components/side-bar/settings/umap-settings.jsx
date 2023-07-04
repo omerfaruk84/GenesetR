@@ -6,7 +6,7 @@ import { UmapSettingsTypes } from './enums';
 import styles from './settings.module.scss';
 
 const UmapSettings = ({
-  umapSettings,
+  umapSettings,coreSettings,
   umapSettingsChanged,
 }) => {
   const umapMetricOptions = [
@@ -26,7 +26,7 @@ const UmapSettings = ({
         <div className={styles.inputRange}>
           <Slider
             label={umapSettings?.numcomponents}
-            max={200}
+            max={Math.min(200, coreSettings.cellLine[1]?.split(" ")[1])}
             min={3}
             value={umapSettings?.numcomponents}
             onChange={({ target: { value } }) => umapSettingsChanged({
@@ -86,6 +86,8 @@ const UmapSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   umapSettings: settings?.umap ?? {},
+  coreSettings: settings?.core ?? {},
+
   
 });
 

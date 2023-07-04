@@ -17,20 +17,44 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import Dropdown from "react-bootstrap/Dropdown";
 
 const RenderSuggestion = function (props) {
-  //console.log("props", props);
-  if (props.genes.length > 0 && props.alias && props.alias.startsWith("Not among")) {  
-    console.log(props);
-    let title = props.genes[0].hugoGeneSymbol.length + (props.alias === "Not among targets"? " perturbations ":" genes ") + "were not found in the perturbseq data \n" + props.genes[0].hugoGeneSymbol.toString();
+  console.log("props", props);
+  if (props.genes.length > 0 && props.type && props.type.startsWith("Not among")) {  
+  
+    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Not among targets"? " perturbations ":" genes ") + "were not found in the perturbseq data \n" + props.genes[0].hugoGeneSymbol.toString();
     let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, "");
     return (
       <div className={styles.warningBubble} title={title} onClick={onClick}>
         <FaTimesCircle className={styles.icon} />
-        <span className={styles.noChoiceLabel}>{props.alias}</span>
+        <span className={styles.noChoiceLabel}>{"Not among targets"}</span>
       </div>
     );
   }
 
-  if (props.genes.length === 0) {
+  if (props.genes.length > 0 && props.type && props.type.startsWith("Not exists")) {  
+  
+    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Not exists targets"? " perturbations ":" genes ") + "were not identified. Click to remove all of them. \n" + props.genes[0].hugoGeneSymbol.toString();
+    let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, "");
+    return (
+      <div className={styles.warningBubble3} title={title} onClick={onClick}>
+        <FaTimesCircle className={styles.icon} />
+        <span className={styles.noChoiceLabel}>{"Remove All Unknowns"}</span>
+      </div>
+    );
+  }
+
+  if (props.genes.length > 0 && props.type && props.type.startsWith("Alias")) {  
+    
+    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Alias targets"? " perturbations ":" genes ") + "have alias gene symbols. Click to change all of them. \n" + props.genes[0].hugoGeneSymbol.toString();
+    let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, props.alias);
+    return (
+      <div className={styles.warningBubble2} title={title} onClick={onClick}>
+        <FaTimesCircle className={styles.icon} />
+        <span className={styles.noChoiceLabel}>{"Change All Alias"}</span>
+      </div>
+    );
+  }
+
+  if (props.alias &&  props.type && props.type.startsWith("SingleNotExists")) {
     let title =
       "Could not find gene symbol. Click to remove it from the gene list.";
     let onClick = () => props.replaceGene(props.alias, "");
@@ -42,19 +66,23 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if (props.genes.length === 1) {
+  if (props.type && props.type.startsWith("SingleAlias")) {
     let { hugoGeneSymbol } = props.genes[0];
-    let title = `'${props.alias}' is a synonym for '${hugoGeneSymbol}'. Click here to replace it with the official symbol.`;
-    let onClick = () => props.replaceGene(props.alias, hugoGeneSymbol);
+    let title = `'${hugoGeneSymbol}' is a synonym for '${props.alias}'. Click here to replace it with the official symbol.`;
+    let onClick = () => props.replaceGene(hugoGeneSymbol, props.alias);
     return (
       <div className={styles.suggestionBubble} title={title} onClick={onClick}>
         <FaQuestionCircle className={styles.icon} />
-        <span className={styles.singleChoiceLabel}>{props.alias}</span>
-        <span>{`: ${hugoGeneSymbol}`}</span>
+        <span className={styles.singleChoiceLabel}>{hugoGeneSymbol}</span>
+        <span>{`: ${props.alias}`}</span>
       </div>
     );
   }
 
+  return;
+
+
+  //NEED TO FIX THIS LATER HUGO GENESYMBOL AND ALIAS NEED TO BE CHANGED
   let title =
     "Ambiguous gene symbol. Click on one of the alternatives to replace it.";
   let options = props.genes.map((gene) => ({
@@ -91,31 +119,11 @@ const RenderSuggestion = function (props) {
 
 const GeneSymbolValidatorMessageChild = (props) => {
   console.log("props in ge",props)
-  if (props.oql instanceof Error) {
-    return (
-      <div className={styles.GeneSymbolValidator}>
-        <span className={styles.errorMessage}>
-          {`Cannot validate gene symbols because of invalid OQL.`}
-          &nbsp;&nbsp;
-          <a
-            className={"underline"}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              props.highlightError();
-            }}
-          >
-            Click to highlight error
-          </a>
-        </span>
-      </div>
-    );
-  }
-
-  if (props.oql === undefined || props.oql.query.length === 0) {
+  if (props.isEmpty) {
     return null;
   }
 
-  if (!props.errorMessageOnly && props.validatingGenes) {
+  if (props.validatingGenes) {
     return (
       <div className={styles.GeneSymbolValidator}>
         <span className={styles.pendingMessage}>
@@ -125,7 +133,7 @@ const GeneSymbolValidatorMessageChild = (props) => {
     );
   }
 
-  if (props.genes instanceof Error) {
+  if (props.suggestions && props.suggestions instanceof Error) {
     return (
       <div className={styles.GeneSymbolValidator}>
         <span className={styles.pendingMessage}>
@@ -135,7 +143,7 @@ const GeneSymbolValidatorMessageChild = (props) => {
     );
   }
 
-  if (props.genes.suggestions.length > 0) {
+  if (props.suggestions && props.suggestions.length > 0) {
     return (
       <div className={styles.GeneSymbolValidator}>
         <div
@@ -145,75 +153,29 @@ const GeneSymbolValidatorMessageChild = (props) => {
           <FaExclamationCircle className={styles.icon} />
           <span>Invalid gene symbols.</span>
         </div>
-
         
 
-        {props.genes.suggestions.map((suggestion, index) => (
-          
+        {props.suggestions.map((suggestion, index) => (          
           <RenderSuggestion
             key={index}
             genes={suggestion.genes}
             alias={suggestion.alias}
-            replaceGene={props.replaceGene}           
+            type={suggestion.type}
+            replaceGene={props.replaceGene}                 
           />
         ))}
       </div>
     );
   }
 
-  // TDOD: remove this condition once multiple entrez gene ids is supported
-  const hugoGeneSymbolSet = groupBy(
-    props.genes.found,
-    (gene) => gene.hugoGeneSymbol
-  );
-  const genesWithMultipleEntrezGeneIds = reduce(
-    hugoGeneSymbolSet,
-    (acc, genes, hugoGeneSymbol) => {
-      if (genes.length > 1) {
-        acc.push(hugoGeneSymbol);
-      }
-      return acc;
-    },
-    []
-  );
-
-  if (genesWithMultipleEntrezGeneIds.length > 0) {
-    return (
-      <div className={styles.GeneSymbolValidator}>
-        <div
-          className={styles.invalidBubble}
-          title="Please edit the gene symbols."
-        >
-          <FaExclamationCircle className={styles.icon} />
-          <span>
-            The portal does not currently support the following gene(s):
-          </span>
-        </div>
-
-        {genesWithMultipleEntrezGeneIds.map((gene, index) => (
-          <RenderSuggestion
-            key={index}
-            genes={[]}
-            alias={gene}
-            replaceGene={props.replaceGene}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (props.errorMessageOnly) {
-    return null;
-  }
+  
   return (
     <div
-      className={classNames(styles.GeneSymbolValidator, {
-        [styles.nowrap]: !props.wrapTheContent,
-      })}
+      className={classNames(styles.GeneSymbolValidator)}
     >
       <div className={styles.validBubble} title="You can now submit the list.">
         <FaCheckCircle className={styles.icon} name="check-circle" />
-        <span>All gene symbols are valid.</span>
+        <span>&nbsp;All gene symbols are valid.</span>
       </div>
     </div>
   );

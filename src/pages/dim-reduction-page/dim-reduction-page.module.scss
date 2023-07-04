@@ -2,16 +2,30 @@
   padding: 25px;
   width: 100%;
   overflow: auto;
+  height: 100%;
+  font-size: 17px;
+}
+
+.submainView {
+  padding: 10px;
+  padding-top: 0px;
+  width: 100%;
+  overflow: auto;
+  height: 100%;
+  font-size: 17px;
 }
 
 .infoSection {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  
+  justify-content: flex-start;
   max-width: 1200px;
 }
 
 .moduleTextInfos {
-  width: 70%;
+  width: 100%;
+  font-size: 17px;
 }
 
 .float-right {

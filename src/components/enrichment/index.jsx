@@ -254,7 +254,7 @@ const performEnrichmentNow = function (genes) {
     </>
   );
   //let allGenes = selectedCluster?clusters[selectedCluster?.split(" (")[0]]?.split(","):[]
-  let allGenes = selectedCluster?genelistOptions.find(item => item.value === selectedCluster).genes?.split(","):[]
+  let allGenes = selectedCluster?genelistOptions.find(item => item.value === selectedCluster).genes?.replaceAll("_2","").split(","):[]
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
@@ -268,7 +268,7 @@ const performEnrichmentNow = function (genes) {
           value: value.length,
           "tooltip": value.join(", "),
           type: 'Popover',          
-          content: <ClusterInfoForm title = {datasetName}  value={value.join(", ")} value2={allGenes.filter(x => !value.includes(x)).join(", ")} />,
+          content: <ClusterInfoForm title = {datasetName}  value={value.join(", ")} value2={allGenes.filter(x => !value.includes(x) && !value.includes(x + "_2") ).join(", ")} />,
           //type: "Input",
           //disabled: false,
         }:{
@@ -351,12 +351,14 @@ const performEnrichmentNow = function (genes) {
       //3D chart
       const bubbleGraphData = [];
 
+      
+
       for( let data in keyedData){
         const objClone = {
           'Adjusted p-value': -Math.log10(keyedData[data]['Adjusted p-value']),
           'p-value': -Math.log10(keyedData[data]['P-value']),
           'Combined score':keyedData[data]['Combined score'],
-          'Z-score':keyedData[data]['Z-score'],
+          'Z-score': keyedData[data]['Z-score'],// Math.log(keyedData[data]['Z-score'],10),
           'Term name':keyedData[data]['Term name'],
           'Genes':keyedData[data]['GC'],
           'Dataset':keyedData[data]['Dataset'],
@@ -495,7 +497,35 @@ const performEnrichmentNow = function (genes) {
                       fontSize:'14',
                       borderColor:'black',
                       borderWidth:3,
-                  }
+                  }                  
+              },
+              labelLayout: {
+                align: 'center',
+                hideOverlap: true,
+                moveOverlap: 'shiftY',
+                draggable: true,
+                
+                
+
+              },
+             
+              label: {
+                textBorderColor:"black",
+                show: true,
+                overflow: "truncate",
+                distance:15,
+                width: 250,
+                formatter: function (param) {
+                  
+                  let maxVis = Math.min(10, bubbleGraphData.length)
+                  if(param.data && param.data["Adjusted p-value"]>2 && param.data["Adjusted p-value"]> bubbleGraphData[maxVis]["Adjusted p-value"]){                    
+                    return param.data['Term name'];
+                  }else 
+                  return ""
+                  
+                },
+                minMargin: 10,
+                position: 'top'
               },
               itemStyle: {
                   //shadowBlur: 10,
@@ -547,6 +577,8 @@ const performEnrichmentNow = function (genes) {
        <Card heading={<Heading>Enrichment</Heading>}>
 
         <Row spacing={0} width="100%" height="10%">
+         {genelistOptions.length>1?(
+          <>
           <Field labelLeft labelWidth="130px" label="Select Gene List">
             <Select
               onChange={({ target: { value} }) => {
@@ -560,10 +592,9 @@ const performEnrichmentNow = function (genes) {
               width={"250px"}
               value= {selectedCluster}
             />
-
-
-          </Field>
-          <Spacer width="16px" />
+          </Field>          
+          <Spacer width="16px"/></>
+          ):(null)}
           <div>
             <Popover
               content={

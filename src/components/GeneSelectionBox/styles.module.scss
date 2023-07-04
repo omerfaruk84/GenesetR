@@ -52,12 +52,7 @@
   display: flex;
   align-items: center;
   padding-top: 1px;
-  flex-wrap: wrap;
-  &.nowrap {
-    white-space: nowrap;
-    flex-wrap: nowrap;
-    width: 200px;
-  }
+  flex-wrap: wrap; 
 
   button {
     line-height: 1 !important;
@@ -94,6 +89,36 @@
   }
   div.warningBubble {
     background: rgb(230, 233, 48); // $redError;
+    white-space: nowrap;
+    border-radius: 15px;
+    padding-right:8px;
+    
+    .icon {
+      color: rgb(0, 0, 0);
+      line-height: 15px;
+      text-align: center;
+      margin-top: 5px;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+  }
+  div.warningBubble2 {
+    background: rgb(162, 233, 48); // $redError;
+    white-space: nowrap;
+    border-radius: 15px;
+    padding-right:8px;
+    
+    .icon {
+      color: rgb(0, 0, 0);
+      line-height: 15px;
+      text-align: center;
+      margin-top: 5px;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+  }
+  div.warningBubble3 {
+    background: rgb(233, 153, 48); // $redError;
     white-space: nowrap;
     border-radius: 15px;
     padding-right:8px;

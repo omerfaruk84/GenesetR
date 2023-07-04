@@ -6,7 +6,7 @@ import { TsneSettingsTypes } from './enums';
 import styles from './settings.module.scss';
 
 const TsneSettings = ({
-  tsneSettings,
+  tsneSettings,coreSettings,
   tsneSettingsChanged,
 }) => {
   const tsneMetricOptions = [
@@ -26,7 +26,7 @@ const TsneSettings = ({
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.numcomponents}
-            max={200}
+            max={Math.min(200, coreSettings.cellLine[1]?.split(" ")[1])}
             min={3}
             value={tsneSettings?.numcomponents}
             onChange={({ target: { value } }) =>tsneSettingsChanged({
@@ -112,6 +112,8 @@ const TsneSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   tsneSettings: settings?.tsne ?? {},
+  coreSettings: settings?.core ?? {},
+
 });
 
 const mapDispatchToProps = {

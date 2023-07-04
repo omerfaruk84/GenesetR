@@ -7,6 +7,7 @@ import { TsneSettings } from './tsne-settings';
 import { BiClusteringSettings } from './bi-clustering-settings';
 import { GeneRegulationSettings } from './gene-regulation-core-settings';
 import { CorrelationSettings } from './correlation-settings';
+import { GeneSignatureSettings } from './genesignature-settings';
 import { ClusteringSettings } from './clustering-settings';
 import { PcaSettings } from './pca-settings';
 import { UmapSettings } from './umap-settings';
@@ -20,24 +21,24 @@ const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
     [ROUTES.HOME]: [
       {
-        settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        //settingsName: SettingsTypes.CORE_SETTINGS,
+        //settings: <CoreSettings />
       }
     ],
     [ROUTES.CORRELATION]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings showcellLineOptions = {true} showPerturbationList = {true} showGeneList= {true} showdataTypeOptions = {true} showgraphTypeOptions = {false} />
       },
       {
         settingsName: SettingsTypes.CORRELATION_SETTINGS,
-        settings: <CorrelationSettings />
+        settings: <CorrelationSettings/>
       },
     ],
     [ROUTES.PCA]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings  />
       },
       {
         settingsName: SettingsTypes.PCA_SETTINGS,
@@ -106,19 +107,14 @@ const SettingsSelector = ({ pathname }) => {
         settings: <ScatterPlotSettings />
       },
     ],
-    [ROUTES.BI_CLUSTERING]: [
-      {
-        settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
-      },
-      {
-        settingsName: SettingsTypes.BI_CLUSTERING_SETTINGS,
-        settings: <BiClusteringSettings />
-      },
-    ],
     [ROUTES.GENE_REGULATION]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: <CoreSettings/>,
+        hidden: true
+      },
+      {
+        settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
         settings: <GeneRegulationSettings />
       },          
       {
@@ -129,7 +125,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.HEATMAP]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings showgraphTypeOptions = {false}  />
       },
       {
         settingsName: SettingsTypes.HEAT_MAP,
@@ -139,7 +135,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.PATHFINDER]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings perturbationListTitle = {"Downregulated Genes"} geneListTitle = {"Upregulated Genes"} showgraphTypeOptions = {false} showcellLineOptions = {false} showdataTypeOptions = {false} />
       },      
       {
         settingsName: SettingsTypes.PATH_FINDER_SETTINGS,
@@ -153,14 +149,20 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.GENESIGNATURE]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings showcellLineOptions = {false} showdataTypeOptions = {false} showgraphTypeOptions = {false}  showPerturbationList = {false} isGeneSignature = {true}  />
       }
+      ,
+      {
+        settingsName: SettingsTypes.GENE_SIGNATURE_SETTINGS,
+        settings: <GeneSignatureSettings />
+      },
     ],
   };
 
   return (
     <div>
-      {settingsMap?.[pathname]?.map(({ settingsName, settings, isAccordion = true }, key) => (
+      {settingsMap?.[pathname]?.map(({ settingsName, settings, hidden = false, isAccordion = true }, key) => (
+        <div style={{display:hidden===false? "block": "none"}}>
         <Settings
           key={key}
           expended
@@ -168,6 +170,7 @@ const SettingsSelector = ({ pathname }) => {
           settings={settings}
           isAccordion={isAccordion}
         />
+         </div>
       ))}
     </div>
   );

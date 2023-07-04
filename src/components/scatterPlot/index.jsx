@@ -61,6 +61,7 @@ const ScatterPlot = ({
   coreSettingsChanged,
 }) => {
   const [options, setOptions] = useState({});
+  
 
   const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
   const genes = scatterplotSettings.genesTolabel
@@ -299,11 +300,12 @@ const ScatterPlot = ({
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
               params.data[3],
               function (content) {
+                console.log(content)
                 res =
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
-                  ": </b></span>" +
-                  JSON.parse(content).description;
+                  ": </b></span>" + content.description
+                //JSON.parse(content).description;
                 //console.log("Get results:", content)  
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
@@ -319,11 +321,14 @@ const ScatterPlot = ({
           dimension: 4,
           pieces: pieces,
           orient: "vertical",
-          show:true,         
+          seriesIndex: 1,
+          //show:true,         
           padding:[60,5,5,5],
           inverse:true,
           itemGap:5,
-          align:'left'
+          align:'left'               
+          
+          
         },
         grid: { 
           right:'13%' 
@@ -536,11 +541,12 @@ const ScatterPlot = ({
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
               params.data[3],
               function (content) {
+                console.log(content)
                 res =
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
-                  ": </b></span>" +
-                  JSON.parse(content).description;
+                  ": </b></span>" + (content).description
+                  //JSON.parse(content).description;
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
               }
@@ -559,6 +565,20 @@ const ScatterPlot = ({
           ],
           source: data,
         },
+        toolbox: {
+          show: true,
+          feature: {
+            mark: { show: true },
+            dataView: { show: true, readOnly: false },
+            restore: { show: true },
+            saveAsImage: { show: true },
+            dataZoom: {},
+            brush: {
+              type: ["rect", "polygon", "keep", "clear"],
+            },
+          },
+        },
+        brush: {},
         series: [
           {
             symbol: "circle",
@@ -595,78 +615,11 @@ const ScatterPlot = ({
     //}
   }, [coreSettings, scatterplotSettings, graphdata]);
 
-  const saveDataset =() => {
-    
-    //Create item and insert to the list
-    //First check if exists delete it
-    console.log("coreSettings2", coreSettings)
-   //deleteItemAndChildren(graphData.taskID);
-
-   let arr =  [...coreSettings?.datasetList];
-   let exists = arr.some(item => item.id.toString() === graphData.taskID.toString());
-   if (exists) return;
-
-   var newItem = {      
-    droppable: false,
-    id: graphData.taskID,
-    name: graphData.taskName?? "Control",
-    parent: graphData.dataset,
-    onClick: () => coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: graphData.taskID.toString()}),
-    actions: [
-      {
-        icon: <FaTrash />,
-        label: 'Delete',
-        onClick: () => deleteItemAndChildren(graphData.taskID.toString()),
-      }
-    ],
-  }
-
-  arr.push(newItem) 
-  //Save the settings
-  coreSettingsChanged({settingName: CoreSettingsTypes.DATASETLIST, newValue: arr})
-  }
-
-  const deleteItemAndChildren =(id) => { 
-    
-    let parent = 1;
-
-    coreSettings?.datasetList.forEach((item, index) => {
-      if (item.id.toString() === id) {
-        parent = item.parent
-      }
-    });
-
-    let arr = deleteItemAndChildrenHelper(id)
-    
-
-    coreSettingsChanged({
-      settingName: CoreSettingsTypes.DATASETLIST,
-      newValue: arr
-    })
-
-    coreSettingsChanged({
-      settingName: CoreSettingsTypes.CELL_LINE,
-      newValue: parent
-    })
   
-  }
 
-  function deleteItemAndChildrenHelper (id, ds = coreSettings?.datasetList) {  
-    let arr =  [...ds];
-    console.log("id and arr", id)
-    console.log("id and arr2", arr)    
   
-    arr.forEach((item, index) => {
-      if (item.id.toString() === id) {
-        
-        console.log("FOUND")
-        arr.splice(index, 1); // remove the item
-        // recursively delete its children
-        arr.filter(child => child.parent.toString() === id).forEach(child => deleteItemAndChildrenHelper(child.id.toString(), arr));
-      }
-    });
-     return arr;  
-  }
+
+  
   
 
 
@@ -678,12 +631,7 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
-      <Button colored="success" 
-      label="ADD THIS TO DATASETS" 
-      onClick={saveDataset}
-      small
       
-      />
         <Row spacing={0} width="100%" height="85%">
           <ReactEChartsCore
             echarts={echarts}

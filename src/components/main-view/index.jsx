@@ -11,73 +11,46 @@ import styles from './main-view.module.scss';
 import { NotFoundPage } from '../not-found-page';
 import { Spacer } from '@oliasoft-open-source/react-ui-library';
 import { SideBar } from '../side-bar';
-import { Cytoscape } from '../cytoscape';
-import { HeatMap } from '../heat-map';
 import { GeneRegulationPage } from '../../pages/gene-regulation/gene-regulation-page';
-import { PcaPage } from '../../pages/pca/pca-page';
-import { MdePage } from '../../pages/mde/mde-page';
-import { UmapPage } from '../../pages/umap/umap-page';
-import { TsnePage } from '../../pages/tsne/tsne-page';
 import { PathFinderPage } from '../../pages/pathfinder/pathfinder';
 import { GeneSignaturePage } from '../../pages/genesignature/gene-signature-page';
 import { HeatMapPage } from '../../pages/heatmap/heatmap-page';
+import { MainPage} from '../../pages/mainpage/mainpage';
 import { DimReductionPage } from '../../pages/dim-reduction-page/dim-reduction-page';
 const MainView = () => {
   return (
     <div className={styles.mainView}>
       <Router>
         <TopBar />
-        <SideBar />
+       
         <Spacer />
         <Routes>
-          {/* <Route exact path={ROUTES.HEATMAP} element={<HeatMap />} /> */}
+          {/* Home page route without SideBar */}
+          <Route exact path={ROUTES.HOME} element={<MainPage />} />
+          
+          {/* Other page routes with SideBar */}
           <Route
-            exact
-            path={ROUTES.PCA}
-            //element={<PcaPage path={ROUTES.PCA} />}
-            element={<DimReductionPage/>}
+            path="*"
+            element={
+              <>
+                <SideBar />
+                <Routes>
+                  <Route exact path={ROUTES.DR} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.DR + "/pca"} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.PCA} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.MDE} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.UMAP} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.TSNE} element={<DimReductionPage />} />
+                  <Route exact path={ROUTES.CORRELATION} element={<CorrelationPage path={ROUTES.CORRELATION} />} />
+                  <Route exact path={ROUTES.PATHFINDER} element={<PathFinderPage path={ROUTES.PATHFINDER} />} />
+                  <Route exact path={ROUTES.GENESIGNATURE} element={<GeneSignaturePage path={ROUTES.GENESIGNATURE} />} />
+                  <Route exact path={ROUTES.HEATMAP} element={<HeatMapPage path={ROUTES.HEATMAP} />} />
+                  <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage  path={ROUTES.GENE_REGULATION}/>} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </>
+            }
           />
-          <Route
-            exact
-            path={ROUTES.MDE}
-            element={<MdePage path={ROUTES.MDE} />}
-          />
-           <Route
-            exact
-            path={ROUTES.UMAP}
-            element={<UmapPage path={ROUTES.UMAP} />}
-          />
-           <Route
-            exact
-            path={ROUTES.TSNE}
-            element={<TsnePage path={ROUTES.TSNE} />}
-          />       
-          <Route
-            exact
-            path={ROUTES.CORRELATION}
-            element={<CorrelationPage path={ROUTES.CORRELATION} />}
-          />
-           <Route
-            exact
-            path={ROUTES.PATHFINDER}
-            element={<PathFinderPage path={ROUTES.PATHFINDER} />}
-          />
-          <Route
-            exact
-            path={ROUTES.GENESIGNATURE}
-            element={<GeneSignaturePage path={ROUTES.GENESIGNATURE} />}
-          />
-
-            <Route
-            exact
-            path={ROUTES.HEATMAP}
-            element={<HeatMapPage path={ROUTES.HEATMAP} />}
-          />
-          {/* <Route exact path={ROUTES.BI_CLUSTERING} element={<HeatMap />} /> */}
-          <Route exact path={ROUTES.GENE_REGULATION} element={<GeneRegulationPage />} />
-         
-
-          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </div>

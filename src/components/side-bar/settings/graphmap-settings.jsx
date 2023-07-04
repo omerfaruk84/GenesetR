@@ -99,17 +99,6 @@ const GraphMapSettings = ({
     />
      </Field>
       
-      <Field label='Data Type' labelLeft labelWidth="130px" helpText="Repulsion is what">
-        <Select
-          onChange={({ target: { value } }) => graphmapSettingsChanged({
-            settingName: GraphmapSettingsTypes.DATA_TYPE,
-            newValue: value
-          })}
-          options={dataTypeOptions}
-          value={graphmapSettings?.dataType}
-        />
-      </Field>
-   
       
     </>
   );

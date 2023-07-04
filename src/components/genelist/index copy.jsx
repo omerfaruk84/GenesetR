@@ -65,7 +65,7 @@ const Genelist = ({setPerturbationList}) => {
           message: { "type":  "Error",
           "icon": true,
           "heading": "Genelist Retrival",
-          "content": "Failed to get genelists."},
+          "content": "Failed to get genelists." + error},
           autoClose:2000
         })
       })   

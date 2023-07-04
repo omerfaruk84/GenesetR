@@ -63,8 +63,33 @@ const CorrelationSettings = ({
     }
   ];
 
+  const corrtypeOptions = [
+    {
+      label: 'Pearson',
+      value: 'pearson',
+    },
+    {
+      label: 'Spearman',
+      value: 'spearman',
+    },
+    {
+      label: 'Kendall',
+      value: 'kendall',
+    }
+  ];
+
   return (
     <>
+     <Field label='Correlation Algorithm'>
+        <Select
+          onChange={({ target: { value } }) => correlationSettingsChanged({
+            settingName: CorrelationSettingsTypes.CORRTYPE,
+            newValue: value
+          })}
+          options={corrtypeOptions}
+          value={correlationSettings?.corrType}
+        />
+      </Field> 
       <Field label='Minimum Correlation'>
         <div className={styles.inputRange}>         
           <Slider

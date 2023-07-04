@@ -72,110 +72,152 @@ async function getAliasesForGeneList(genes) {
 }
 
 
-async function checkGenes(currentGenes, isPerturbationList, cellLine){
+async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSignature){
   let notFound = [];
   let notExist = [];
   let notInPerturbSeq = [];
   let found = []
   let suggestions =[]
   let query = []
+  
 
   let extension =  "_perturb";
-  if(!isPerturbationList) 
+  if(!isPerturbationList || isGeneSignature ) 
     extension = "_genes"
   let perturbDict = await get("geneList_" + cellLine + extension)
-  console.log("perturbDict", perturbDict)
-  if (perturbDict && perturbDict.size > 0) {      
-      let genes = currentGenes.replace(/^\\n+|\\n+$/g, '').split("\n").filter(gene => gene.trim().length>0);
-      //console.log("genes", genes)
+  console.log("perturbDict"+ cellLine + extension , perturbDict)
+  
+  if (perturbDict && perturbDict.size > 0) { 
+    let genes  = ""
+      if(isGeneSignature)  
+        genes = currentGenes.replace(/\s/g, '').split(/[+-]/).filter(gene => gene.length > 0);
+      else
+        genes = currentGenes.replace(/^\\n+|\\n+$/g, '').split("\n").filter(gene => gene.trim().length>0);
+      
+      console.log("genes" , genes)
       notFound = genes.filter(gene => !perturbDict.has(gene));
       found = genes.filter(gene => perturbDict.has(gene));
-      //console.log("notFound", notFound)
+  
       
       let allGenes = await get("allHugoGenes");
       if (allGenes && allGenes.size > 0) {       
         notExist = notFound.filter(gene => !allGenes.has(gene));
-        console.log("notExist", notExist)
+        //console.log("notExist", notExist)
         notInPerturbSeq = notFound.filter(gene => allGenes.has(gene));
-        console.log("notInPerturbSeq", notInPerturbSeq)
+        //console.log("notInPerturbSeq", notInPerturbSeq)
       } else {
         notExist = notFound;
       }
 
+      let notExist2 =[]
+      let aliasExist =[]
+      let aliasExist2 =[]
+
       let aliases = await  getAliasesForGeneList(notExist);
-      console.log("aliases", aliases)
+      //console.log("aliases", aliases)
       for(let i=notExist.length -1; i>-1; i--){
-        console.log("checking ", notExist[i])
+        //console.log("checking ", notExist[i])
         if(aliases.has(notExist[i])){
-          console.log("aliases.has(notExist[i])", notExist[i])
-          console.log("perturbDict", perturbDict.has(aliases.get(notExist[i])), aliases.get(notExist[i]))
+          //console.log("aliases.has(notExist[i])", notExist[i])
+          //console.log("perturbDict", perturbDict.has(aliases.get(notExist[i])), aliases.get(notExist[i]))
+          //If therer is an alias check perturb seq has alias of it
           if (!perturbDict.has(aliases.get(notExist[i]))){
-            console.log("!perturbDict.has(aliases[notExist[i]])", notExist[i])
+            //console.log("!perturbDict.has(aliases[notExist[i]])", notExist[i])
             //alias does not exist among perturbseq so we should remove it or add it to notInPerturbSeq list
-            if(allGenes && allGenes.has(aliases.get(notExist[i]))){
-              console.log("allGenes.has(aliases[notExist[i]])", notExist[i])
+            //if(allGenes && allGenes.has(aliases.get(notExist[i]))){
+              //console.log("allGenes.has(aliases[notExist[i]])", notExist[i])
               //This gene exists but not in perturbseq 
               notInPerturbSeq.push(notExist[i])
-            }                       
+            //}                       
           }else {
             //then we have it in perturbseq data so offer to change it
+            aliasExist.push(notExist[i])
+            aliasExist2.push(aliases.get(notExist[i]))
             suggestions.push(
               {
-                alias: notExist[i],
+                type : "SingleAlias",
+                alias: aliases.get(notExist[i])  ,
                 genes: [
                   {              
-                    hugoGeneSymbol: aliases.get(notExist[i])          
+                    hugoGeneSymbol: notExist[i]          
                   },
                 ],
               }
             )            
-            query.push({ gene:  notExist[i], alterations: false })
+
           }          
         }else {
           //No such a gene so needs to be deleted
+          notExist2.push(notExist[i])
           suggestions.push(
             {
-              alias: notExist[i],
-              genes: [],
+              type : "SingleNotExists",
+              alias: [],
+              genes: notExist[i],
             }
           )
-          query.push({ gene: notExist[i], alterations: false })
+
         } 
         
-        console.log(suggestions,query )
+        //console.log(suggestions,query )
       }
      
       if(notInPerturbSeq.length>0){
-      console.log("adding notInPerturbSeq", notInPerturbSeq)
+      //console.log("adding notInPerturbSeq", notInPerturbSeq)
         suggestions.push(
           {
-            alias: isPerturbationList? "Not among targets":"Not among detected",            
+            type : isPerturbationList? "Not among targets":"Not among detected",
+            alias: [],          
             genes: [
               {              
                 hugoGeneSymbol: notInPerturbSeq           
               },
             ],
           }
-        )
-        
-        query.push({ gene: "notInPerturbSeq", alterations: false })
+        )        
+
       }
+
+      if(notExist2.length>2){
+        //console.log("adding notInPerturbSeq", notInPerturbSeq)
+          suggestions.push(
+            {
+              type : isPerturbationList? "Not exists targets":"Not exists detected", 
+              alias:    [],        
+              genes: [
+                {              
+                  hugoGeneSymbol: notExist2           
+                },
+              ],
+            }
+          )       
+        }
+
+        if(aliasExist.length>2){
+          //console.log("adding notInPerturbSeq", notInPerturbSeq)
+            suggestions.push(
+              {
+                type : isPerturbationList? "Alias targets":"Alias detected",
+                alias: aliasExist2,                 
+                genes: [
+                  {              
+                    hugoGeneSymbol: aliasExist
+                  },
+                ],
+              }
+            )      
+          }
 
       }else {
         console.log("Upps where is the list for genes?")
+        suggestions = Error();
       }
   
   
-      return {
-        oql: {
-          query: query,
-        },
-        validatingGenes: false,        
-        wrapTheContent: false,
-        genes: {
-          found: found,
-          suggestions: suggestions,
-        },
+      return {       
+        validatingGenes: false,
+        isEmpty:  currentGenes.length<1,   
+        suggestions: suggestions,        
       };  
 }
 export {getAliasesForGeneList, checkGenes};

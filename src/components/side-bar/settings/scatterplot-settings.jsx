@@ -37,26 +37,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
 
   return (
     <>
-    <Popover
-  content={
-    <TextArea
-    placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
-    tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
-    rows={6}
-    resize='vertical'
-    value={scatterplotSettings?.genesTolabel}
-    onChange={({ target: { value } }) => scatterplotSettingsChanged({
-      settingName: ScatterPlotSettingsTypes.GENES_TO_LABEL,
-      newValue: value
-    })}       
-  />
-
-
-  }
-  overflowContainer
->
-  <Button label="Toggle me" />
-</Popover>
+   
      <Field label='Label Genes' labelLeft labelWidth="130px" helpText="Select the  genes that you would like to label">
      <TextArea
           placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'

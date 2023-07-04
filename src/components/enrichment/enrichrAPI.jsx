@@ -119,8 +119,9 @@ function hashGeneList(geneList) {
 
 
       const runEnrichr = (genes) => {  
-        console.log("genes",genes.split(",").length)
-        let genes_str = genes.replaceAll(",","\n");
+        //We need to remove _2 as second sgRNAs contain that. 
+        console.log("genes",genes.replaceAll("_2","").split(",").length)
+        let genes_str = genes.replaceAll("_2","").replaceAll(",","\n");
         let description = 'Example gene list';
        
         const formData = new FormData();

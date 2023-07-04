@@ -13,7 +13,7 @@ const SettingsTypes = {
   GRAPHMAP_SETTINGS: "GraphMap Settings",
   SCATTERPLOT_SETTINGS: "Scatter Plot Settings",
   GENESETENRICHMENT_SETTINGS: "GeneSet Enrichment Settings",
-  
+  GENE_SIGNATURE_SETTINGS: "Gene Signature Settings",
 };
 
 const BiClusteringSettingsTypes = {
@@ -40,6 +40,7 @@ const CoreSettingsTypes = {
   TARGET_LIST: "targetGeneList",
   GRAPH_TYPE: "graphType",
   DATASETLIST: "datasetList",
+  CURRENT_MODULE: "currentModule"
 };
 
 const GraphmapSettingsTypes = {
@@ -59,6 +60,7 @@ const CorrelationSettingsTypes = {
   AXIS: "axis",
   NORMALIZE: "normalize",
   WRITE_ORGINAL: "write_original",
+  CORRTYPE: "corrType",
 };
 
 const MdeSettingsTypes = {
@@ -100,6 +102,21 @@ const GeneRegulationCoreSettingsTypes = {
   DPR:"dpr",
   UNR:"unr",
   DNR:"dnr",
+  NEIGHBOUR_COUNT: "neighbourCount",
+  ONLY_LINKED: "onlyLinked",
+  BASED_ON_FINAL: "basedOnFinal",
+  FILTER_BLACKLISTED:"filterBlackListed",
+  FILTER_BLACKLISTEDEXP:"filterBlackListedExp",
+  FILTER1_ENABLED:"filter1Enabled",
+  FILTER2_ENABLED:"filter2Enabled",
+  FILTER3_ENABLED:"filter3Enabled",
+  FILTER4_ENABLED:"filter4Enabled",
+  FILTER5_ENABLED:"filter5Enabled",
+  FILTER1_DIRECTIONAL:"filter1Directional",
+  FILTER2_DIRECTIONAL:"filter2Directional", 
+  FILTER_COUNT1:"filterCount1",
+  FILTER_COUNT2:"filterCount2",
+  FILTER_COUNT5:"filterCount5",
 
 };
 
@@ -141,6 +158,12 @@ const GeneSetEnrichmentSettingsTypes = {
   GENELIST: "genes",
 };
 
+const GeneSignatureSettingsTypes = {  
+  FILTER_BLACKLISTED:"filterBlackListed",
+  FILTER: "filter",  
+};
+
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -157,4 +180,5 @@ export {
   GraphmapSettingsTypes,
   ScatterPlotSettingsTypes,
   GeneSetEnrichmentSettingsTypes,
+  GeneSignatureSettingsTypes,
 };

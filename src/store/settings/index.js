@@ -13,7 +13,7 @@ import { heatMapSettingsReducer } from './heatmap-settings';
 import { pathfinderSettingsReducer } from './pathfinder-settings';
 import { graphmapSettingsReducer } from './graphmap-settings';
 import { scatterplotSettingsReducer } from './scatterplot-settings';
-
+import { genesignatureSettingsReducer } from './gene-signature-settings';
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -29,6 +29,7 @@ const settingsReducer = combineReducers({
   pathfinder: pathfinderSettingsReducer,
   graphmap: graphmapSettingsReducer,
   scatterplot: scatterplotSettingsReducer,
+  genesignature: genesignatureSettingsReducer,
 });
 
 export { settingsReducer };

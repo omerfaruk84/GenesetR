@@ -9,6 +9,7 @@ const initialState = {
   axis: 'both',  
   normalize: true,
   write_original: true,
+  corrType:"spearman",
 };
 
 export const correlationSettingsSlice = createSlice({

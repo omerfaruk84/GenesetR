@@ -40,7 +40,7 @@ const EnrichmentTable = ({headings, keyedData, helps}) => {
           Object.keys(filters).every((key) => {
             return filters[key] === ''
               ? true
-              : row[key].toString().includes(filters[key]);
+              : row[key].toString().toUpperCase().includes(filters[key].toUpperCase());
           }),
         )
         .sort((a, b) =>

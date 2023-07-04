@@ -6,7 +6,7 @@ import { MdeSettingsTypes } from './enums';
 import styles from './settings.module.scss';
 
 const MdeSettings = ({
-  mdeSettings,
+  mdeSettings,coreSettings,
   mdeSettingsChanged,
 }) => {
   const mdePreProcessingOptions = [
@@ -41,7 +41,7 @@ const MdeSettings = ({
         <div className={styles.inputRange}>
             <Slider
             label={mdeSettings?.numcomponents}
-            max={200}
+            max={Math.min(200, coreSettings.cellLine[1]?.split(" ")[1])}
             min={3}
             value={mdeSettings?.numcomponents}
             onChange={({ target: { value } }) => mdeSettingsChanged({
@@ -91,6 +91,7 @@ const MdeSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   mdeSettings: settings?.mde ?? {},
+  coreSettings: settings?.core ?? {},
 });
 
 const mapDispatchToProps = {

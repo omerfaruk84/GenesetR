@@ -1,49 +1,55 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useRef} from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, TextArea, Text, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Button, Spacer } from '@oliasoft-open-source/react-ui-library';
 import { coreSettingsChanged } from '../../../store/settings/core-settings';
 import { CoreSettingsTypes } from './enums';
 import { useLocation } from 'react-router-dom';
 import {Genelist}  from '../../genelist/index';
 import {DatasetSelector} from '../../dataset-selector';
-import Axios from 'axios';
-import { get, set, del} from "idb-keyval";
+import { ROUTES } from '../../../common/routes';
+
 const CoreSettings = ({
-  coreSettings,
+  coreSettings,tsneResults, umapResults, mdeResults,pcaResults,
   coreSettingsChanged,module,SettingsSelector,
+  showcellLineOptions = true, 
+  showPerturbationList = true, 
+  showGeneList = true, 
+  showdataTypeOptions = true,
+  showgraphTypeOptions = true,
+  isGeneSignature = false,
+  geneListTitle = "Genes",
+  perturbationListTitle = "Perturbations",
+
+  
 }) => {
 
+  
 
+  const childRef  = React.useRef();
+
+ 
   const cellLineOptions = [
     {
       label: 'K562-Whole Genome',
-      value: 1,
+      value: 'K562gwps',
     },
     {
       label: 'K562-Essential',
-      value: 2,
+      value: 'K562essential',
     },
     {
       label: 'RPE1-Essential',
-      value: 3,
+      value: 'RPE1essential',
     }
   ];
   const dataTypeOptions = [
     {
       label: 'Perturbation',
-      value: 1,
+      value: 'pert',
     },
     {
       label: 'Gene Expression',
-      value: 2,
-    },
-    {
-      label: 'Perturbation Correlation',
-      value: 3,
-    },
-    {
-      label: 'Expression Correlation',
-      value: 4,
+      value: 'genes',
     }
   ];
   const graphTypeOptions = [
@@ -57,18 +63,11 @@ const CoreSettings = ({
     }
   ];
 
-  var currGraph = useLocation().pathname;
+  var location = useLocation().pathname;
+  const { pathname } = location;
+  
+  
 
-
-  const numberOfGenesEntered = coreSettings?.peturbationList
-    ?.replaceAll(/\s+|,\s+|,/g, ';')
-    ?.split(';')
-    ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
-
-  const numberOfTargetsEntered = coreSettings?.targetGeneList
-    ?.replaceAll(/\s+|,\s+|,/g, ';')
-    ?.split(';')
-    ?.reduce((prev, step) => step?.trim()?.length > 0 ? prev + 1 : prev, 0);
 
    const setPerturbationList = useCallback((value) => {
     coreSettingsChanged({
@@ -82,61 +81,35 @@ const CoreSettings = ({
         newValue: value
       })}, [coreSettingsChanged]);
     
-    const getData = async(dataType) =>{ 
-       //if already exists in db return and dont do anything
-       //else download it and save it
-       get("geneList_" + dataType + "_perturb").then((val) => {
-        console.log("val in core set", val);
-        if (val && val.size>0) 
-
-          return;
-        else
-        {
-          Axios.post("https://29d3-2001-700-100-400a-00-f-f95c.eu.ngrok.io/getData", 
-          {
-            body: JSON.stringify({
-              dataset: dataType,
-              request: 'getAllGenes'
-            }),
-          })
-            .then(response => 
-              {
-              if(response && response.data) {
-                //console.log(response.data.result.columns)           
-                set("geneList_" + dataType + "_perturb", new Set(response.data.result.rows));
-                set("geneList_" + dataType + "_genes", new Set(response.data.result.columns));
-              }
-              });      
-        }}); 
-
    
-   
-           
-    }
+    var graphData = undefined    
+    if (coreSettings?.currentModule === "tsne") graphData = tsneResults;
+    else if (coreSettings?.currentModule === "umap") graphData = umapResults;
+    else if (coreSettings?.currentModule === "pca") graphData = pcaResults;
+    else if (coreSettings?.currentModule === "mde") graphData = mdeResults;
+
 
   return (
-    <>
-      <DatasetSelector items={coreSettings?.datasetList}> </DatasetSelector>
+    <> 
+   
+      <div style={{display:showcellLineOptions==true? "block": "none"}}>      
+
+      <DatasetSelector 
+        ref={childRef}
+        onlyMain = {(pathname === ROUTES.CORRELATION || pathname === ROUTES.HEATMAP)}      
+      />  <Spacer height={5}/>
+      </div>
+      {graphData? <>
+      {console.log("graphData", graphData)}
+      <Button colored="success" width = "100%" 
+            label="ADD THIS TO DATASETS" 
+            onClick={() => childRef?.current?.saveDataset(graphData.taskID, graphData.taskName, graphData.dataset, graphData.resultShape)}    
+            small      
+            /><Spacer height={10}/></>:""}
+
       
-      <Field label='Cell Line' labelLeft labelWidth="80px" helpText="Repulsion is what">
-        <Select
-          onChange={({ target: { value} }) =>           
-          {coreSettingsChanged({
-            settingName: CoreSettingsTypes.CELL_LINE,
-            newValue: value
-          })
-          //Download perturbations and save them to indexdb
-          getData(value);
-          }
-        
-          }
-          options={cellLineOptions}
-          value={coreSettings?.cellLine}
-        />
-      </Field>
-
-
-      <Field label='Data Type' labelLeft labelWidth="80px" helpText="Repulsion is what">
+      <div style={{display:showdataTypeOptions===true? "block": "none"}}>   
+      <Field label='Data Type' labelLeft labelWidth="80px" helpText="Datatype that analyzes will be performed on.">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.DATA_TYPE,
@@ -145,15 +118,22 @@ const CoreSettings = ({
           options={dataTypeOptions}
           value={coreSettings?.dataType}
         />
-      </Field>   
+      </Field> 
+      </div> 
 
+     
+      <div style={{display:showPerturbationList===true? "block": "none"}}>   
+      <Genelist listTitle= {coreSettings?.dataType === "pert"?perturbationListTitle:geneListTitle}  setPerturbationList = {setPerturbationList} isPerturbationList =  {coreSettings?.dataType === "pert"}/>
+      </div> 
+    
+      <div style={{display:showGeneList===true? "block": "none"}}>   
+     <Genelist listTitle= {coreSettings?.dataType === "pert"?geneListTitle:perturbationListTitle}  setPerturbationList = {setGeneList} isPerturbationList = {!coreSettings?.dataType === "pert"} isGeneSignature ={isGeneSignature} />
+     </div> 
 
-      <Genelist setPerturbationList = {setPerturbationList} isPerturbationList =  {true}/>
-      <Genelist setPerturbationList = {setGeneList} isPerturbationList = {false} />
 
     
-      { (currGraph != "/heatmap" && currGraph != "/correlation" && currGraph != "/bi-clustering" && currGraph != "/pathfinder") ?
-      <Field label='Graph Type' labelLeft labelWidth="80px" helpText="Repulsion is what">
+      <div style={{display:showgraphTypeOptions===true? "block": "none"}}>   
+      <Field label='Graph Type' labelLeft labelWidth="80px" helpText="Style of scatter graph.">
         <Select
           onChange={({ target: { value } }) => coreSettingsChanged({
             settingName: CoreSettingsTypes.GRAPH_TYPE,
@@ -162,8 +142,9 @@ const CoreSettings = ({
           options={graphTypeOptions}
           value={coreSettings?.graphType}
         />
-      </Field>: null      
-    }
+      </Field> 
+      </div> 
+     
     </>
   );
 };
@@ -171,6 +152,10 @@ const CoreSettings = ({
 const mapStateToProps = ({ settings, calcResults }) => ({
   coreSettings: settings?.core ?? {},
   currentGraph: calcResults?.currentGraph ?? null,
+  tsneResults: calcResults?.["tsneGraph"]?.result ?? null,
+  mdeResults: calcResults?.["mdeGraph"]?.result ?? null,
+  pcaResults: calcResults?.["pcaGraph"]?.result ?? null,
+  umapResults: calcResults?.["umapGraph"]?.result ?? null,
 });
 
 const mapDispatchToProps = {
