@@ -20,14 +20,24 @@ const SideBar = ({ runCalculation, calcResults, coreSettings }) => {
   const { pathname } = location;
   var isCalcRunning = false;
 
-  if(pathname === ROUTES.DR){ 
-        
+  //We need this as we have multiple DR algorithms under DR tab
+  if(pathname === ROUTES.DR){        
     isCalcRunning = calcResults?.[ModulePathNames?.["/"+ coreSettings.currentModule]]?.running;
   }else
   {
     isCalcRunning = calcResults?.[ModulePathNames?.[pathname]]?.running;
   }
- 
+
+  //To set runcalc button disabled or not
+  let isDisabled = true
+  if(
+    (pathname === ROUTES.CORRELATION && coreSettings.peturbationList?.trim().split("\n").length>1) ||
+    (pathname === ROUTES.DR && coreSettings.peturbationList?.trim().split("\n").length>9) ||
+    (pathname === ROUTES.GENE_REGULATION) ||
+    (pathname === ROUTES.HEATMAP && (coreSettings.peturbationList?.trim().split("\n").length>2  ||  coreSettings.targetGeneList?.trim().split("\n").length>2)) ||
+    (pathname === ROUTES.PATHFINDER && coreSettings.peturbationList?.trim().split("\n").length>1) ||
+    (pathname === ROUTES.GENESIGNATURE && coreSettings.targetGeneList?.length>1))
+    isDisabled = false
 
   return (
     <Drawer
@@ -44,7 +54,7 @@ const SideBar = ({ runCalculation, calcResults, coreSettings }) => {
           label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
           colored
           width="90%"
-          disabled={isCalcRunning}
+          disabled={isCalcRunning || isDisabled}
           onClick={() => runCalculation(pathname)}
         />
       </Flex>

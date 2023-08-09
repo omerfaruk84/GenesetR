@@ -1,11 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Slider, Divider, Toggle,Spacer, Label } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Slider, Divider, Toggle,Spacer, Label, Flex } from '@oliasoft-open-source/react-ui-library';
 import { geneRegulationCoreSettingsChanged } from '../../../store/settings/gene-regulation-core-settings';
 import { GeneRegulationCoreSettingsTypes } from './enums';
 import styles from './settings.module.scss';
 import { set, get } from 'idb-keyval';
 import Axios from 'axios';
+import { updateGeneLists } from '../../../store/api';
 
 
 const GeneRegulationSettings = ({
@@ -13,69 +14,61 @@ const GeneRegulationSettings = ({
   geneRegulationCoreSettingsChanged,
 }) => {
 
- 
+  const layoutOption = [
+    {
+      label: 'Force',
+      value: 'force',
+    },
+    {
+      label: 'Circular',
+      value: 'circular',
+    },
+    {
+      label: 'Dagre',
+      value: 'none',
+    }
+  ];
   const [geneOptions, setGeneOptions] = useState([]);
 
-  useEffect(populateGeneOptions,[])
-
-  function populateGeneOptions(){
-
-    let check = new Set()
-
-    get("geneList_K562gwps_perturb").then((val) => {
-      console.log("val", val)
-      if (val && val.size > 0) {
+  useEffect(() => {
+    async function fetchDataAndPopulate() {
+        let check = new Set();
         
-        for (let item of val) {
-          check.add(item.split("_")[0])
-        }
-      }
-      return get("geneList_K562gwps_genes");
-    }).then((val) => {
-      console.log("val2", val)
-      if (val && val.size > 0) {
-        for (let item of val) {
-          check.add(item.split("_")[0])
-        }
-      }
-     
-      if (check.size === 0) {
-        return Axios.post("https://genesetr.uio.no/api/getData",
-        //return Axios.post("https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/getData",
-          {
-            headers: {
-              'ngrok-skip-browser-warning': '69420',
-            },
-            body: JSON.stringify({
-              dataset: "K562gwps",
-              request: 'getAllGenes'
-            }),
-          })
-      }
-    }).then(response => {
-      if (response && response.data) {
-        response.data.result.perturbations.forEach((val) => {
-          check.add(val.split("_")[0])
-        })
-        response.data.result.genes.forEach((val) => {
-          check.add(val.split("_")[0])
-        })
-
-        //console.log("Received genes and pert", response.data)
+        try {
+            await updateGeneLists("K562gwps");
     
-        set("geneList_K562gwps_perturb", new Set(response.data.result.perturbations));
-        set("geneList_K562gwps_genes", new Set(response.data.result.genes));
-      }
+            const perturbVal = await get("geneList_K562gwps_perturb");
+            addToCheckSet(perturbVal, check);
+            
+            const genesVal = await get("geneList_K562gwps_genes");
+            addToCheckSet(genesVal, check);
+    
+            check.delete(""); // Remove any empty values
+    
+            // Convert the set to array, filter, and map.
+            let temp = Array.from(check)
+                .filter(val => !val.startsWith("non-"))
+                .map(val => ({ label: val, value: val }));
+            
+            // Now that all asynchronous operations are done, sort and set gene options.
+            setGeneOptions(temp.sort((a, b) => a.label.localeCompare(b.label)));
+    
+        } catch (error) {
+            console.error("Error populating gene options:", error);
+        }
+    }
 
-      check.delete("") // There is one empty coming that needs to be removed
-      // Convert the set to array here
-      let temp = Array.from(check).filter(val => !val.startsWith("non-")).map(val => ({ label: val, value: val }));
-      // Now that all asynchronous operations are done, it's safe to sort and set gene options.
-      setGeneOptions(temp.sort((a, b) => a.label.localeCompare(b.label)));
-       });       
-       
-  }
-   
+    const addToCheckSet = (val, checkSet) => {
+        if (val && val.size > 0) {
+            for (let item of val) {
+                checkSet.add(item.split("_")[0]);
+            }
+        }
+    };
+    
+    fetchDataAndPopulate();
+}, []);
+
 
   return (
     <>
@@ -90,7 +83,7 @@ const GeneRegulationSettings = ({
         />
       </Field>
     
-      <Field label='Show Exprresional Regulation' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+      <Field label='Show Regulation of Expression' labelLeft labelWidth="250px" helpText="Include links based on gene expression regulation. Default is true. You can deactivate this if you want to generate a network based on correlations only.">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.INCLUDE_EXP,
@@ -98,7 +91,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.include_exp}
     /></Field>
-      <Field  labelLeft label='Absolute Z Score threshold'>
+      <Field  labelLeft label='Absolute Z Score Threshold'  helpText=  "Adjusts the minimum threshold for the absolute Z Score. Higher thresholds result in more stringent filtering of genes based on their effect size.">
         <div className={styles.inputRange}>         
           <Slider
             label={geneRegulationCoreSettings?.absoluteZScore}
@@ -112,7 +105,7 @@ const GeneRegulationSettings = ({
           />
         </div>
       </Field>
-      <Field  labelLeft label='Minimum Neighbour Count'>
+      <Field  labelLeft label='Minimum Neighbour Count'  helpText= "Sets the minimum number of neighboring genes that a gene should have to be kept in the network. A higher count will result in fewer but potentially more influential genes.">
         <div className={styles.inputRange}>         
           <Slider
             label={geneRegulationCoreSettings?.neighbourCount}
@@ -126,8 +119,8 @@ const GeneRegulationSettings = ({
           />
         </div>
       </Field>
-     
-      <Field  label='Filter Black Listed sgRNAs'>
+      <Divider align="left"> Noise filters </Divider>
+      <Field  label='Filter Black Listed sgRNAs'  helpText= "Enables or disables the filtering of blacklisted sgRNAs (sgRNAs that increase or decrease total mRNA levels). When 'Directional Only' is enabled, genes that downregulate or upregulate total mRNA levels will be removed from UPR and UNR genes, respectively.">
       <Spacer width="10px" />
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
@@ -161,7 +154,7 @@ const GeneRegulationSettings = ({
           />
         </div>
       </Field>
-      <Field  label='Filter Black Listed Genes'>
+      <Field  label='Filter Black Listed Genes'  helpText= "Enables or disables the filtering of blacklisted genes (Genes that tend to be up or down regulated by abormally high number of sgRNAs). When 'Directional Only' is enabled, genes that tend to be nonspecifically up or downregulated will be removed from the genes that are up or downregulated by GOI, respectively">
       <Spacer width="10px" />
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
@@ -196,7 +189,7 @@ const GeneRegulationSettings = ({
         </div>
       </Field>
 
-      <Field  label='Perturbation Count Filter'>
+      <Field  label='Perturbation Count Filter'  helpText= "Filters out genes that deregulate more than selected number of genes upon their knockdown. Default value is 750.">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.FILTER3_ENABLED,
@@ -221,7 +214,7 @@ const GeneRegulationSettings = ({
         </div>
       </Field>
 
-      <Field  label='Gene Expression Count Filter'>
+      <Field  label='Gene Expression Count Filter'  helpText= "Filters out genes that are deregulated by more than selected number of perturbations. Default value is 750.">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.FILTER4_ENABLED,
@@ -245,8 +238,8 @@ const GeneRegulationSettings = ({
           />
         </div>
       </Field>
-
-      <Field  label='Simplified View' helpText="If enabled only links between Gene of Interest and its immediate neighbours will be shown.">
+      <Divider align="left"> Others </Divider>
+      <Field  label='Simplified View' helpText="If enabled only links between Gene of Interest and its immediate neighbours will be shown. Slider sets the minimum number of neighbours required for a gene to be included in the simplified view">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.FILTER5_ENABLED,
@@ -273,7 +266,7 @@ const GeneRegulationSettings = ({
 
 
 
-      <Field label='Only Linked to Gene Of Interest' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+      <Field label='Only Linked to Gene Of Interest' labelLeft labelWidth="250px" helpText="Keep genes only directly or indirectly linked to the GOI. Activating this ">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.ONLY_LINKED,
@@ -282,7 +275,7 @@ const GeneRegulationSettings = ({
       checked={geneRegulationCoreSettings?.onlyLinked}
     /></Field>
 
-     <Field label='Node Size Based on Final Map' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+     <Field label='Node Size Based on Final Map' labelLeft labelWidth="250px" helpText="Adjust node sizes based on number of neighbouring genes, after filtering. Default True">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.BASED_ON_FINAL,
@@ -290,7 +283,8 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.basedOnFinal}
     /></Field> 
-     <Field label='Include Correlation' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+     <Divider align="left"> Correlation </Divider>
+     <Field label='Include Correlation' labelLeft labelWidth="250px" helpText="Include links based on perturbation correlation. Default is true. You can deactivate this if you want to generate a network based on expressional regulation only.">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.INCLUDE_CORR,
@@ -298,7 +292,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.include_corr}
     /></Field>
-      <Field labelLeft label='Correlation R threshold'>
+      <Field labelLeft label='Correlation R Threshold' helpText="The threshold of correlation significance. By adjusting this filter, users can control the minimum strength of correlation needed for a relationship between two genes to be considered in the analysis.">
         <div className={styles.inputRange}>         
           <Slider
             label={geneRegulationCoreSettings?.corr_cutoff}
@@ -315,7 +309,10 @@ const GeneRegulationSettings = ({
       
       <Divider align="left"> Edges to display </Divider>
 
-      <Field label='Upstream Positive Regulators' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+      <div className={styles.edgeArea}>   
+      <Flex justifyContent="space-between">
+
+      <Field label='UPR' labelLeft labelWidth="100px" helpText="Show Upstream Positive Regulators (Genes that lead to downregulation of GOI upon their knockdown)">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UPR,
@@ -323,7 +320,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.upr}
     /></Field>
-    <Field label='Upstream Negative Regulators' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='UNR' labelLeft labelWidth="100px" helpText="Show Upstream Negative Regulators (Genes that lead to upregulation of GOI upon their knockdown)">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UNR,
@@ -331,7 +328,8 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.unr}
     /></Field>
-    <Field label='Downstream Positively Regulated' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+   
+    <Field label='DPR' labelLeft labelWidth="100px" helpText="Show Downstream Positively Regulated genes (Genes that are downregulated upon knockdown of GOI)">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.DPR,
@@ -339,7 +337,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.dpr}
     /></Field>
-    <Field label='Downstream Negatively Regulated' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='DNR' labelLeft labelWidth="100px" helpText="Show Downstream Negatively Regulated genes (Genes that are upregulated upon knockdown of GOI)">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.DNR,
@@ -347,7 +345,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.dnr}
     /></Field>
-    <Field label='UPR to DPR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='UPR to DPR' labelLeft labelWidth="100px" helpText="Show links between Upstream Positive Regulators and Downstream Positively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UPR_DPR,
@@ -355,7 +353,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.upr_dpr}
     /></Field>
-    <Field label='UPR to DNR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='UPR to DNR' labelLeft labelWidth="100px" helpText="Show links between Upstream Positive Regulators and Downstream Negatively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UPR_DNR,
@@ -363,7 +361,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.upr_dnr}
     /></Field>
-    <Field label='UNR to DPR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='UNR to DPR' labelLeft labelWidth="100px" helpText="Show links between Upstream Negative Regulators and Downstream Positively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UNR_DPR,
@@ -371,7 +369,7 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.unr_dpr}
     /></Field>
-    <Field label='UNR to DNR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='UNR to DNR' labelLeft labelWidth="100px" helpText="Show links between Upstream Negative Regulators and Downstream Negatively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.UNR_DNR,
@@ -379,7 +377,43 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.unr_dnr}
     /></Field>
-     <Field label='Among UPR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+
+    <Field label='UPR to UNR' labelLeft labelWidth="100px" helpText="Show links between Upstream Positive Regulators and Upstream Negative Regulators">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.UPR_UNR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.upr_unr}
+    /></Field>
+    <Field label='UNR to UPR' labelLeft labelWidth="100px" helpText="Show links between Upstream Negative Regulators and Upstream Positive Regulators">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.UNR_UPR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.unr_upr}
+    /></Field>
+    <Field label='DPR to DNR' labelLeft labelWidth="100px" helpText="Show links between Downstream Positively and Negatively Regulated genes">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.DPR_DNR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.dpr_dnr}
+    /></Field>
+    <Field label='DNR to DPR' labelLeft labelWidth="100px" helpText="Show links between Downstream Negatively and Positively Regulated genes">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.DNR_DPR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.dnr_dpr}
+    /></Field>
+
+
+
+     <Field label='Among UPR' labelLeft labelWidth="100px" helpText="Show links among the Upstream Positively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.AMONG_UPR,
@@ -387,7 +421,15 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.among_upr}
     /></Field>
-      <Field label='Among DPR' labelLeft labelWidth="250px" helpText="Adjust symbol opacity based on clustering probability">
+    <Field label='Among UNR' labelLeft labelWidth="100px" helpText="Show links among the Upstream Negatively Regulated genes">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.AMONG_UNR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.among_unr}
+    /></Field>
+      <Field label='Among DPR' labelLeft labelWidth="100px" helpText="Show links among the Downstream Positively Regulated genes">
       <Toggle      
        onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
         settingName: GeneRegulationCoreSettingsTypes.AMONG_DPR,
@@ -395,8 +437,76 @@ const GeneRegulationSettings = ({
       })}
       checked={geneRegulationCoreSettings?.among_dpr}
     /></Field>
-    
+    <Field label='Among DNR' labelLeft labelWidth="100px" helpText="Show links among the Downstream Negatively Regulated genes">
+      <Toggle      
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.AMONG_DNR,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.among_dnr}
+    /></Field>
+     </Flex>
+    </div>
 
+    <Divider align="left"> Graph Settings </Divider>
+    <Field label='Layout' labelLeft labelWidth="130px" helpText="Set the layout style for genes.">
+        <Select
+          onChange={({ target: { value } }) => geneRegulationCoreSettingsChanged({
+            settingName: GeneRegulationCoreSettingsTypes.LAYOUT,
+            newValue: value
+          })}
+          options={layoutOption}
+          value={geneRegulationCoreSettings?.layout}
+        />
+      </Field>
+
+{geneRegulationCoreSettings?.layout === 'force'?
+    <Field label='Repulsion' labelLeft labelWidth="130px" helpText="The repulsion factor between nodes. The repulsion will be stronger and the distance between two nodes becomes further as this value becomes larger.">
+        <div className={styles.inputRange}>         
+          <Slider
+            label={geneRegulationCoreSettings?.repulsion}
+            max={1000}
+            min={50}
+            value={geneRegulationCoreSettings?.repulsion}
+            onChange={({ target: { value } }) => geneRegulationCoreSettingsChanged({
+              settingName: GeneRegulationCoreSettingsTypes.REPULSION,
+              newValue: value
+            })}
+          />
+        </div>
+      </Field>:""}
+
+
+
+      {geneRegulationCoreSettings?.layout === 'none'?
+      <Field label='Dagre Layout Node Seperation' labelLeft labelWidth="130px" helpText="Sets the seperation">
+        <div className={styles.inputRange}>         
+          <Slider
+            label={geneRegulationCoreSettings?.dagreSeperation}
+            max={1000}
+            min={-1000}
+            value={geneRegulationCoreSettings?.dagreSeperation}
+            onChange={({ target: { value } }) => geneRegulationCoreSettingsChanged({
+              settingName: GeneRegulationCoreSettingsTypes.DAGRE_SEPERATION,
+              newValue: value
+            })}
+          />
+        </div>
+      </Field>:""
+      }
+
+
+      
+      <Field label='Isolated nodes' labelLeft labelWidth="130px" helpText="Hide/Show genes that are not connected to any other gene.">
+      <Toggle
+      label = "Show"
+       onChange={({ target: { checked } }) => geneRegulationCoreSettingsChanged({
+        settingName: GeneRegulationCoreSettingsTypes.ISOLATED_NODES,
+        newValue: checked
+      })}
+      checked={geneRegulationCoreSettings?.isolatednodes}
+    />
+     </Field>
 
 
     </>

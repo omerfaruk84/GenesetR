@@ -1,6 +1,6 @@
 import React from 'react';
 import {connect} from 'react-redux';
-import { Field, Select, CheckBox, Slider, Spacer } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, CheckBox, Slider, Spacer, Flex } from '@oliasoft-open-source/react-ui-library';
 import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
 import { CorrelationSettingsTypes } from './enums';
 import styles from './settings.module.scss';
@@ -80,8 +80,9 @@ const CorrelationSettings = ({
 
   return (
     <>
-     <Field label='Correlation Algorithm'>
+     <Field label='Correlation Algorithm' labelLeft labelWidth={150} helpText = "Set the correlation algorithm. Note that Pearson measures a linear relationship between two variables, while Kendall and Spearman measure how likely it is for two variables to move in the same direction, but not necessarily at a constant rate. Pearson provides information about the strength and direction of the linear relationship between two variables but is sensitive to outliers.">
         <Select
+        small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.CORRTYPE,
             newValue: value
@@ -90,7 +91,7 @@ const CorrelationSettings = ({
           value={correlationSettings?.corrType}
         />
       </Field> 
-      <Field label='Minimum Correlation'>
+      <Field label='Minimum Correlation' labelLeft labelWidth={150} helpText = "Set the threshold for minimum correlation that will be shown in the table">
         <div className={styles.inputRange}>         
           <Slider
             label={correlationSettings?.filter}
@@ -104,8 +105,9 @@ const CorrelationSettings = ({
           />
         </div>
       </Field>
-      <Field label='Cluster Axis'>
+      <Field label='Cluster Axis' labelLeft labelWidth={150} helpText = "Set clustering axis (row/both) (default: both)">
         <Select
+        small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.AXIS,
             newValue: value
@@ -114,8 +116,9 @@ const CorrelationSettings = ({
           value={correlationSettings?.axis}
         />
       </Field> 
-      <Field label='Row Distance'>
+      <Field label='Row Distance' labelLeft labelWidth={150} helpText = "Set the distance to use for clustering rows (default: euclidean)">
         <Select
+        small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.ROW_DISTANCE,
             newValue: value
@@ -124,8 +127,9 @@ const CorrelationSettings = ({
           value={correlationSettings?.row_distance}
         />
       </Field>
-      <Field label='Column Distance'>
+      <Field label='Column Distance' labelLeft labelWidth={150} helpText = "Set the distance to use for clustering columns (default: euclidean)">
         <Select
+        small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.COLUMN_DISTANCE,
             newValue: value
@@ -134,8 +138,9 @@ const CorrelationSettings = ({
           value={correlationSettings?.column_distance}
         />
       </Field>
-      <Field label='Row Linkage Method'>
+      <Field label='Row Linkage Method' labelLeft labelWidth={150} helpText = "Set the linkage to use for clustering rows (default: Average)">
         <Select
+        small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.ROW_LINKAGE,
             newValue: value
@@ -144,8 +149,9 @@ const CorrelationSettings = ({
           value={correlationSettings?.row_linkage}
         />
       </Field>
-      <Field label='Column Linkage Method'>
+      <Field label='Column Linkage Method' labelLeft labelWidth={150} helpText = "Set the linkage to use for clustering columns (default: Average)">
         <Select
+         small
           onChange={({ target: { value } }) => correlationSettingsChanged({
             settingName: CorrelationSettingsTypes.COLUMN_LINKAGE,
             newValue: value
@@ -153,26 +159,25 @@ const CorrelationSettings = ({
           options={linkageMethodOptions}
           value={correlationSettings?.column_linkage}
         />
-      </Field>       
-      <Field>             
-      <CheckBox
-        label="Normalization"
-        onChange={({ target: { checked } }) => correlationSettingsChanged({
+      </Field> 
+      <Flex gap="25px">      
+      <Field  labelLeft labelWidth={105} label='Normalization' helpText = "Whether to normalize data to (0,1) scale">             
+      <CheckBox small onChange={({ target: { checked } }) => correlationSettingsChanged({
           settingName: CorrelationSettingsTypes.NORMALIZE,
           newValue: checked
         })}
         checked={correlationSettings?.normalize}/>
       </Field>   
-      <Field>             
+      <Field labelLeft labelWidth={105} label='Keep Original' helpText = "Cluster normalized data (only when normalize is checked), but display original data in the heatmap">             
       <CheckBox
-        label="Keep Orginal"
+      small        
         onChange={({ target: { checked } }) => correlationSettingsChanged({
           settingName: CorrelationSettingsTypes.WRITE_ORGINAL,
           newValue: checked
         })}
         checked={correlationSettings?.write_original}/>
       </Field>  
-      <Spacer height={50} />
+      </Flex>
     </>
   );
 };

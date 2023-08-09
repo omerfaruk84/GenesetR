@@ -8,8 +8,8 @@ const TabNames = {
   TSNE: 'tSNE',
   GENE_REGULATION: 'Gene-Regulation',
   HEATMAP: 'HeatMap',
-  PATHFINDER: 'PathFinder',
-  GENESIGNATURE: 'GeneSignature',
+  PATHFINDER: 'Path Explorer',
+  GENESIGNATURE: 'Gene Signature',
 }
 
 export { TabNames };

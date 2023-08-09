@@ -1,7 +1,12 @@
 .mainView {
-  padding: 25px;
+  padding: 15px;
   width: 100%;
   overflow: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  
+
 }
 
 .infoSection {
@@ -23,5 +28,26 @@
 .responsive-image {
   max-width: 100%;
   height: auto;
-  
+ }
+
+.fastRewind {
+  background-image: url('../../../public/images/rewind.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center; 
+  flex: 1;
+  &:hover{
+  background-image: url('../../../public/images/rewind_black.png');
+}
+}
+
+.fastForward {
+  background-image: url('../../../public/images/forward.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center; 
+  flex: 1;
+  &:hover{
+  background-image: url('../../../public/images/forward_black.png');
+}
 }

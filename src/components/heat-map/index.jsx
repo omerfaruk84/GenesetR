@@ -15,8 +15,46 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   const [selectedGenes, setSelectedGenes] = useState({});
   const [selectedView, setSelectedView] = useState(0);
   const [keyedData, setkeyedData] = useState([{}]);
-  
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleWheel = (event) => {
+    if (event.shiftKey) {
+    event.preventDefault();
+
+    let newScale = scale + event.deltaY * -0.0005;
+
+    // Restrict scale
+    newScale = Math.min(Math.max(.125, newScale), 4);
+
+    // Set scale
+    setScale(newScale);
+    }
+  };
+
+  const handleMouseDown = (event) => {
+    // Check if middle button (wheel) is pressed
+    if (event.shiftKey) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (event) => {
+    if (isDragging) {
+      setPosition(prevPosition => ({
+        x: prevPosition.x + event.movementX,
+        y: prevPosition.y + event.movementY,
+      }));
+    }
+  };
+  //const [rowCount, setrowCount] = useState(1);
  
+  let rowCount =0;
   const tableInfo = []
   const headings  = ['Gene 1', 'Gene 2', 'Corr R']
   const helps = {'Corr R':'Correlation Co-efficient'}
@@ -32,11 +70,13 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   ];
   useEffect(() => {  
     //console.log("HI2",correlationSettings?.filter)  
+    rowCount = 0
     if(graphData?.data?.nodes){
       tableInfo.length =0
       //console.log("HI")
       for(let i in graphData?.data?.nodes){
         if(graphData?.data?.nodes[i].count ===1){
+          rowCount++
           let gene1= graphData?.data?.nodes[i].objects[0];
           for(let j in graphData?.data?.nodes[i].features){
             if(Math.abs(graphData?.data?.nodes[i].features[j])>=correlationSettings?.filter && graphData?.data?.feature_names[j] !== gene1 )
@@ -44,7 +84,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           }    
         }else break;
       }
-      setkeyedData(tableInfo)
+      setkeyedData(tableInfo)      
     }
   },[correlationSettings?.filter , graphData])
  
@@ -52,7 +92,8 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   useEffect(() => {
     if (graphData) {
       // Should inject heat map into div with id=inchlib
-  
+      console.log("graphData",graphData)
+      console.log("rowCount",rowCount)
       $(document).ready(function () {
         var current_gene = "";
        
@@ -74,11 +115,16 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           column_metadata: false,
           max_height: 1500,          
           dendrogram: true,
-          width: 1000,
+          width: Math.min(graphData?.data?.feature_names.length *13,2000),         
           heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
-          draw_row_ids: true,
-          heatmap_part_width:0.85,
+          draw_row_ids: rowCount>100? false: true,
+          heatmap_part_width:0.97,
+          max_column_width: 10,
+          max_row_height:10,
+          fixed_row_id_size: rowCount>100? 0: 9,
+        
+          highlighted_rows: ["TELO2", "MED17"]
           //independent_columns: false,
           //column_dendrogram:false,
           // dendrogram:false,
@@ -134,6 +180,24 @@ const HeatMap = ({ graphData, correlationSettings }) => {
             },
         });*/
     }
+
+
+    //Set the genes for GSEA analyzes
+    window.inchlib.events.column_dendrogram_node_onclick = function(column_indexes, node_id, evt){
+      console.log("column_indexes", column_indexes)
+      console.log(node_id)
+      console.log(evt)
+      let selectedGenesTemp = []
+      for (let gene in column_indexes){
+          selectedGenesTemp.push(window.inchlib.data?.feature_names[gene].split("_")[0])
+      }
+      
+      if(selectedGenesTemp.length>3) setSelectedGenes(selectedGenesTemp)
+
+
+    }
+
+    
 
       //define function for dendrogram_node_onclick event
       window.inchlib.events.dendrogram_node_onclick = function(object_ids){        
@@ -244,8 +308,13 @@ const HeatMap = ({ graphData, correlationSettings }) => {
       
       <> 
         <script src="https://www.openscreen.cz/software/inchlib/static/js/inchlib-1.2.0.min.js"></script>
-        <div id='dendrogram'  hidden={selectedView ===1}></div>
-        <div id="protein_div">
+        <div id='dendrogram' onWheel={handleWheel}  
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}  
+          hidden={selectedView ===1} style={{ transform: `scale(${scale})`, display: "flex" , justifyContent: "center"} } ></div>
+        
+        <div id="protein_div" style={{marginLeft:"auto", display: "block" , marginRight:"auto", width : "100%"}}>
             <div id="protein">
                 <div id="protein_src"></div>
                 <div id="loading">
@@ -255,10 +324,9 @@ const HeatMap = ({ graphData, correlationSettings }) => {
             <div id="protein_card"></div>
             <div id="overflow_div"></div>
             {selectedGenes.length>3?(
-              <div hidden={selectedView ===1} style={{marginLeft:"auto", width : "90%", paddingLeft: "20px"} }>
-            <Row width="100%" height="90%" justifyContent={"center"}> 
+              <div hidden={selectedView ===1} style={{display: "block", marginLeft:"auto", marginRight:"auto", width : "100%"} }>
               <GeneSetEnrichmentTable genesets={{"Selected Genes": selectedGenes.join()}} />
-            </Row></div>)
+            </div>)
             :(null)}
         </div>
       </>

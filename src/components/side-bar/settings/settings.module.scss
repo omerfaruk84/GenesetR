@@ -6,6 +6,8 @@
 .inputRange {
   padding-right: 15px;
   padding-left: 10px;
+  margin-bottom: -5px;
+  margin-top: -5px;
 }
 
 .switchPanel {
@@ -13,3 +15,9 @@
   margin-bottom: 1px;
   height: 20px;
 }
+
+div.edgeArea div[class*='labelLeft'] {
+  margin-bottom: -2px;
+  height: 35px;
+}
+

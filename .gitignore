@@ -36,3 +36,8 @@ src/components/GeneSelectionBox/QueryStore.ts
 src/store/extra/firstRun.js
 package.json
 yarn.lock
+API/temp/
+API/node_modules
+API/data/
+API/Old/
+API/precalc/

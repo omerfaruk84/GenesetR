@@ -94,10 +94,16 @@ const GeneRegulationCoreSettingsTypes = {
   INCLUDE_EXP: "include_exp",
   AMONG_DPR:"among_dpr",
   AMONG_UPR:"among_upr",
+  AMONG_DNR:"among_dnr",
+  AMONG_UNR:"among_unr",
   UNR_DNR:"unr_dnr",
   UNR_DPR:"unr_dpr",
   UPR_DNR:"upr_dnr",
   UPR_DPR:"upr_dpr",
+  UPR_UNR:"upr_unr",
+  UNR_UPR:"unr_upr",
+  DPR_DNR:"dpr_dnr",
+  DNR_DPR:"dnr_dpr",
   UPR:"upr",
   DPR:"dpr",
   UNR:"unr",
@@ -117,7 +123,10 @@ const GeneRegulationCoreSettingsTypes = {
   FILTER_COUNT1:"filterCount1",
   FILTER_COUNT2:"filterCount2",
   FILTER_COUNT5:"filterCount5",
-
+  DAGRE_SEPERATION:"dagreSeperation", 
+  REPULSION: "repulsion",
+  LAYOUT: "layout",
+  ISOLATED_NODES: "isolatednodes",
 };
 
 const HeatMapSettingsTypes = {
@@ -137,6 +146,16 @@ const PathFinderSettingsTypes = {
   CHECK_CORR: "checkCorr",
   CORR_CUTOFF: "corrCutOff",
   CHECK_BIOGRID: "BioGridData",
+  REPULSION: "repulsion",
+  LAYOUT: "layout",
+  ISOLATED_NODES: "isolatednodes",
+  SHOW_LABELS:"showLabels",
+  MAX_NODE_SIZE: "maxNodeSize",
+  LABEL_SIZE: "labelSize",
+  MIN_NEIGHBOUR_COUNT: "minNeighbourCount",
+  MINIMUM_EDGE_OPACITY:"minEdgeopacity", 
+  MINIMUM_NODE_OPACITY:"minNodeopacity",   
+  DAGRE_SEPERATION:"dagreSeperation",  
 };
 
 const ScatterPlotSettingsTypes = {
@@ -161,6 +180,7 @@ const GeneSetEnrichmentSettingsTypes = {
 const GeneSignatureSettingsTypes = {  
   FILTER_BLACKLISTED:"filterBlackListed",
   FILTER: "filter",  
+  GENES_TO_LABEL: "genesTolabel",
 };
 
 

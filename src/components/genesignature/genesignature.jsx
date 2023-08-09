@@ -27,11 +27,19 @@ const helps = {'Gene':'sgRNAs that mediate effect',
                'Z-Score':'Z Score based on the distribution'
               }
 
+const headings2  = ['Gene', 'Similarity','Included']
+const helps2 = {'Gene':'Genes that show similar profile to the current gene signature',
+                'Similarity': 'Pearson correlation score between current gene signature and other genes in the data (only abs(r) > 0.1)',
+                'Included': 'Whether gene is currently included in the gene signature'
+              }
+
 const GeneSignature = ({coreSettings, genesignatureSettings,  data}) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({}); 
   const [pointData, setPointData] = useState([]);   
+  const [pointDistribution, setPointDistribution] = useState([]);   
   const [keyedData, setkeyedData] = useState([{}]); 
+  const [keyedData2, setkeyedData2] = useState([{}]); 
   const [selectedTab, setSelectedTab] = useState({label: 'Geneset Enrichment', value: 'gsea'});
   const [genelists, setGeneLists] = useState([]); 
   const [blackListDown, setblackListDown] = useState({});
@@ -42,18 +50,18 @@ const GeneSignature = ({coreSettings, genesignatureSettings,  data}) => {
       label: 'Geneset Enrichment',
       value: 'gsea',
     },
-    {
+/*    {
       label: 'HeatMap',
       value: 'heatmap',
     },
     {
       label: 'Network',
       value: 'network',
-    }
+    }*/
   ];
 
 
-  console.log("Start of the page")
+  //console.log("Start of the page")
 
   //Function to find nearest index
 
@@ -85,7 +93,7 @@ const GeneSignature = ({coreSettings, genesignatureSettings,  data}) => {
     const nearest = (target - arr[right] < arr[left] - target) ? right : left;
     
     if(target>5)
-    console.log(target, nearest, distY[nearest])
+    //console.log(target, nearest, distY[nearest])
     //we have the nearest index 
     //return a random Y in the range 
     return getRandomArbitrary(-1* distY[nearest] * 10 -5, distY[nearest] * 10 +5);
@@ -143,18 +151,31 @@ useEffect(()=> {
 
   useEffect(() => {
 
-    let highlightList = new Set(coreSettings.targetGeneList.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n').split('\n'))
-   
-    if(data.geneRegulationResults && data.geneRegulationResults.x && data.geneRegulationResults.x.length>0)
+    let signatureGenes = coreSettings.targetGeneList.replaceAll(/[,\s;]+/g, '+').replaceAll(/\++|\-+/g, '+').trimStart('+').split('+')
+    let highlightList = new Set(genesignatureSettings?.genesTolabel.replaceAll(/[,\s;]+/g, '\n').trimStart('\n').split('\n'));
+    highlightList = new Set([...highlightList, ...signatureGenes]);
+    
+
+
+
+    if(data.geneRegulationResults && data.geneRegulationResults.results && data.geneRegulationResults.results.length>0)
     {
    
     
       //const chart = echarts.init(chartRef.current);
       let xValues = data.geneRegulationResults.results;
       const labels = data.geneRegulationResults.genes;
-      const distX = data.geneRegulationResults.x;
-      const distY = data.geneRegulationResults.y;      
+      let similarGenes = data.geneRegulationResults.correlations;
+   
       let tableInfo = []
+      let similarGenesTableInfo = []
+
+      let signatureGenesSet= new Set(signatureGenes);
+
+      Object.keys(similarGenes).forEach(gene => similarGenesTableInfo.push({'Gene':gene, 'Similarity':similarGenes[gene], 'Included':signatureGenesSet.has(gene.split("_")[0])?"YES":""}))
+      setkeyedData2(similarGenesTableInfo.sort((geneA, geneB) => geneB["Similarity"] - geneA["Similarity"]))
+
+
       const pointData = []   
 
       var results = trimmedMean(xValues,0.2)  
@@ -163,12 +184,50 @@ useEffect(()=> {
         // Calculate the Z-scores for each data point
       const zScores = xValues.map((value) => (value - results.mean) / results.std);
       
-      console.log("highlightList", highlightList,coreSettings )
-      
+      //console.log("highlightList", highlightList,coreSettings )
+
+      // Determine the range of the data
+      let min = Math.min(...zScores);
+      let max = Math.max(...zScores);
+
+      // Initialize bins
+      let bins = [];
+      let binSize = 0.05;
+      for (let i = min; i <= max; i += binSize) {
+        
+          bins.push({binStart: i, binEnd: i + binSize, count: 0});          
+      }
+
+      // Iterate through data and increment the count of the corresponding bin
+      for (let value of zScores) {
+          let binIndex = Math.floor((value - min) / binSize);
+          bins[binIndex].count++;
+      }
+
+      //Calculate rolling average for distribution graph
+      const pointDistribution = [] 
+      for ( let i = 2; i <= bins.length-3; i += 1) {        
+          pointDistribution.push([bins[i].binEnd, ( bins[i-2].count + bins[i-1].count+ bins[i].count+ bins[i+1].count + bins[i+2].count)/5])
+      }
+      setPointDistribution(pointDistribution)
+      //console.log("pointDistribution", pointDistribution)
+     
+      //findNearestIndex(distX,distY, xValues[i])
       for (let i = 0; i<xValues.length;i++){
         if(genesignatureSettings.filter && xValues[i]<0 && blackListDown[labels[i]] !== undefined && blackListDown[labels[i]]>genesignatureSettings.filterBlackListed) continue;
         else if( genesignatureSettings.filter && xValues[i]>0 && blackListUp[labels[i]] !== undefined && blackListUp[labels[i]]>genesignatureSettings.filterBlackListed) continue;
-        pointData.push([xValues[i], findNearestIndex(distX,distY, xValues[i]),labels[i], zScores[i], highlightList.has(labels[i]) ])
+        
+        //For sgRNAs that are not significant we dont need to show all.
+        if(zScores[i]<1.5 && zScores[i]>-1.5 && !highlightList.has(labels[i]) ){
+          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
+          if(randomNum <7) 
+            continue
+        }
+       
+        
+        let binLoc = bins[Math.floor((zScores[i] - min) / binSize)].count
+        let histY = Math.random() * 2 * binLoc - binLoc;
+        pointData.push([zScores[i],histY ,labels[i],xValues[i], highlightList.has(labels[i]) ])
         tableInfo.push({'Gene':labels[i] , 'Effect':zScores[i]>2?"UP":zScores[i]<-2?"DOWN":"NO CHANGE"  , 'Score':xValues[i],'Z-Score':zScores[i] })
       }
 
@@ -199,45 +258,45 @@ useEffect(()=> {
 
       setkeyedData(tableInfo)
 
-
+      pointData.sort((a,b) => b[0]-a[0])
       console.log("pointData", pointData)
       setPointData(pointData)
     
   }
+
+
   }, [data, coreSettings.targetGeneList, genesignatureSettings]);
 
+  console.log(pointData)
   useEffect(() => {
     if (!data.geneRegulationResults)
      return 
 
   setOptions({
-    legend: {},
+   
     tooltip: {      
       formatter: function (params) {
        
-        return params.data[2] + '\n' + params.data[0];
+        return params.data[2] + ' Score:' +  params.data[0]?.toFixed(2);
       }
     },
     xAxis: [ {
       type: 'value',
-      min:data.geneRegulationResults.x[0] - 0.1,
-      max:data.geneRegulationResults.x[data.geneRegulationResults.x.length-1] + 0.1        
+      //max:pointData.length>0?Math.ceil(pointData[0][0] + 0.1):2,
+      //min:pointData.length>0?Math.floor(pointData[pointData.length-1][0] - 0.1):-2       
        
-    },
-    {
-      type: 'value',    
-      //show: false,  
-      min:data.geneRegulationResults.x[0] - 0.1,
-      max:data.geneRegulationResults.x[data.geneRegulationResults.x.length-1] + 0.1 
-      
     }],
     yAxis: {},
     dataZoom: [
       {
         type :'slider',
         show: true,
+      //  throttle: 300 ,
         realtime: true,
-        xAxisIndex:[1,0],                
+       // startValue: 10,  // Increase this value
+       // endValue: 90,     // Decrease this value
+        xAxisIndex:[0], 
+      //  filterMode: 'empty'             
       }
     ],
     toolbox: {
@@ -248,11 +307,24 @@ useEffect(()=> {
         restore: {},
         saveAsImage: {}
       }
-    },    
-    legend: [
+    },   
+    
+    series: [
+      {
+        name: 'Series 2',
+        type: 'line',
+        roam: true, 
+        symbol: 'none',
+        lineStyle: {        
+          width:0
+        } ,
+        xAxisIndex: 0, // use the second x-axis for this series
+        //yAxisIndex: 0, // use the second y-axis for this series
+        data: pointDistribution.map(function (x) {
+          return [x[0],x[1]];
+        })       
       
-    ],
-    series: [{
+      },{
       roam: true, 
       data: pointData,
       itemStyle: {
@@ -261,13 +333,13 @@ useEffect(()=> {
             return 'rgba(216, 245, 39, 0.5)'; //yellow
           else if (params.data[4] === true) {
               return 'rgba(39, 96, 245, 0.7)';} //blue highlight
-          else if (params.data[3] > 2) {
+          else if (params.data[0] > 2) {
             return 'rgba(39, 245, 55, 0.7)'; //green
-          } else if (params.data[3] < -2) {
+          } else if (params.data[0] < -2) {
             return 'rgba(245, 55, 39, 0.7)'; //red
           } else {
             //if( params.data[3]> -2 &&params.data[3]<2 )
-              return 'rgba(200, 200, 200,' + String((Math.abs(params.data[3])+0.1)*0.15+0.185) + ')' ;
+              return 'rgba(200, 200, 200,' + String((Math.abs(params.data[0])+0.1)*0.15+0.185) + ')' ;
           }
         }},
         label: {
@@ -278,7 +350,7 @@ useEffect(()=> {
           formatter: function (params) {
             if (params.data[4] === true) {
               return params.data[2];
-            } else if (params.data[3] > 2 || params.data[3] < -2) {
+            } else if (params.data[0] > 2 || params.data[0] < -2) {
               return params.data[2];
             } else {
               return '';
@@ -288,33 +360,20 @@ useEffect(()=> {
         symbolSize:function(params) { 
         if (params[2].startsWith("non-targeting"))
         return 6;
-        else if (params[3] > 2 || params[3] < -2)
+        else if (params[0] > 2 || params[0] < -2)
         return 10;
         else
-         return Math.round(Math.abs(params[3])*2.5+3); 
+         return Math.round(Math.abs(params[0])*2.5+3); 
       },
-      type: 'scatter',          
-    },
-    {
-      name: 'Series 2',
-      type: 'line',
-      roam: true, 
-      symbol: 'none',
-      lineStyle: {        
-        width:0
-      }, 
+      type: 'scatter',   
+             
+    }
+  
           
-      xAxisIndex: 1, // use the second x-axis for this series
-      yAxisIndex: 0, // use the second y-axis for this series
-      data: data.geneRegulationResults.x.map(function (value, index) {
-        return [value, data.geneRegulationResults.y[index]];
-      })   
-      
-      
-      
-    },  
+   
+
   ]
-  })},[pointData])
+  })},[pointData, data.geneRegulationResults])
 
 
 
@@ -353,6 +412,11 @@ useEffect(()=> {
             icon: <FaTable />,
             key: 1,
             label: 'Table',
+          },
+          {
+            icon: <FaTable />,
+            key: 2,
+            label: 'Similar Genes',
           }
         ]}
         onSelected={(key) => setSelectedView(key)}
@@ -364,6 +428,14 @@ useEffect(()=> {
         <EnrichmentTable keyedData={keyedData} headings = {headings} helps= {helps} />        
       </>
       )}
+
+      {keyedData2 && selectedView === 2 && (
+      <> 
+        <EnrichmentTable keyedData={keyedData2} headings = {headings2} helps= {helps2} />        
+      </>
+      )}
+
+
       {selectedView === 0 && (
         <>
         <div className={styles.mainView}>
@@ -387,8 +459,12 @@ useEffect(()=> {
           }}
         />
 
-         <GeneSetEnrichmentTable genesets={genelists}/>        
+        {
+         (selectedTab.value === "gsea"?  <GeneSetEnrichmentTable genesets={genelists}/> : <span> Will be available soon! </span>)  
+         }      
          </>
+
+
       )}
       
 

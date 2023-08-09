@@ -7,7 +7,16 @@ const initialState = {
   depth: 1,
   checkCorr: 'True',
   corrCutOff: 0.3,
-  BioGridData:  'True',
+  BioGridData:  'True',  
+  isolatednodes: false,
+  layout: 'none',
+  showLabels:1,
+  maxNodeSize:35,
+  labelSize:12,
+  minNeighbourCount:0, 
+  minEdgeopacity:0.35,
+  minNodeopacity:0.5,
+  dagreSeperation:200,
 };
 
 export const pathfinderSettingsSlice = createSlice({

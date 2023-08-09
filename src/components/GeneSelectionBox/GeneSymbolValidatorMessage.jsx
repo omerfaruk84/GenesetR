@@ -54,14 +54,14 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if (props.alias &&  props.type && props.type.startsWith("SingleNotExists")) {
+  if ( props.type && props.type.startsWith("SingleNotExists")) {
     let title =
       "Could not find gene symbol. Click to remove it from the gene list.";
-    let onClick = () => props.replaceGene(props.alias, "");
+    let onClick = () => props.replaceGene(props.genes, "");
     return (
       <div className={styles.suggestionBubble} title={title} onClick={onClick}>
         <FaTimesCircle className={styles.icon} />
-        <span className={styles.noChoiceLabel}>{props.alias}</span>
+        <span className={styles.noChoiceLabel}>{props.genes}</span>
       </div>
     );
   }

@@ -1,4 +1,11 @@
 .mainView {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.mainView2 {
   display: flex;
   justify-content: center;
   width: 100vh;

@@ -28,7 +28,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.CORRELATION]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings showcellLineOptions = {true} showPerturbationList = {true} showGeneList= {true} showdataTypeOptions = {true} showgraphTypeOptions = {false} />
+        settings: <CoreSettings source = {"CORR"} showcellLineOptions = {true} showPerturbationList = {true} showGeneList= {true} showdataTypeOptions = {true} showgraphTypeOptions = {false} />
       },
       {
         settingsName: SettingsTypes.CORRELATION_SETTINGS,
@@ -38,7 +38,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.PCA]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings  />
+        settings: <CoreSettings  source = {"DR"} />
       },
       {
         settingsName: SettingsTypes.PCA_SETTINGS,
@@ -56,7 +56,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.MDE]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings source = {"DR"} />
       },
       {
         settingsName: SettingsTypes.MDE_SETTINGS,
@@ -74,7 +74,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.UMAP]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings source = {"DR"} />
       },
       {
         settingsName: SettingsTypes.UMAP_SETTINGS,
@@ -92,7 +92,7 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.TSNE]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />
+        settings: <CoreSettings source = {"DR"} />
       },
       {
         settingsName: SettingsTypes.TSNE_SETTINGS,
@@ -116,16 +116,12 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
         settings: <GeneRegulationSettings />
-      },          
-      {
-        settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
-        settings: <GraphMapSettings />
-      },
+      },      
     ],
     [ROUTES.HEATMAP]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings showgraphTypeOptions = {false}  />
+        settings: <CoreSettings  source = {"HEATMAP"}  showgraphTypeOptions = {false} showdataTypeOptions = {false}/>
       },
       {
         settingsName: SettingsTypes.HEAT_MAP,
@@ -135,16 +131,12 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.PATHFINDER]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings perturbationListTitle = {"Downregulated Genes"} geneListTitle = {"Upregulated Genes"} showgraphTypeOptions = {false} showcellLineOptions = {false} showdataTypeOptions = {false} />
+        settings: <CoreSettings source = {"PATHFINDER"}  showgraphTypeOptions = {false} showcellLineOptions = {false} showdataTypeOptions = {false} />
       },      
       {
         settingsName: SettingsTypes.PATH_FINDER_SETTINGS,
         settings: <PathFinderSettings />
-      },
-      {
-        settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
-        settings: <GraphMapSettings />
-      },
+      }
     ],
     [ROUTES.GENESIGNATURE]: [
       {

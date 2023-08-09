@@ -34,7 +34,7 @@ echarts.use(
 );
 
 const GeneRegulation = ({
-  geneRegulationCoreSettings, geneRegulationGraph,graphmapSettings,
+  geneRegulationCoreSettings, geneRegulationGraph,
 }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({}); 
@@ -189,12 +189,22 @@ for(let m = edges.length-1; m >-1; m--)
   if(edges[m].type === "UNR_DPR" && (!geneRegulationCoreSettings.unr_dpr || !geneRegulationCoreSettings.unr || !geneRegulationCoreSettings.dpr) )continue;
   if(edges[m].type === "UPR_DNR" && (!geneRegulationCoreSettings.upr_dnr || !geneRegulationCoreSettings.upr || !geneRegulationCoreSettings.dnr)) continue;
   if(edges[m].type === "UPR_DPR" && (!geneRegulationCoreSettings.upr_dpr || !geneRegulationCoreSettings.upr || !geneRegulationCoreSettings.dpr) ) continue;
+  if(edges[m].type === "UPR_UNR" && (!geneRegulationCoreSettings.upr_unr || !geneRegulationCoreSettings.unr || !geneRegulationCoreSettings.upr) )continue;
+  if(edges[m].type === "UNR_UPR" && (!geneRegulationCoreSettings.unr_upr || !geneRegulationCoreSettings.unr || !geneRegulationCoreSettings.upr) )continue;
+  if(edges[m].type === "DPR_DNR" && (!geneRegulationCoreSettings.dpr_dnr || !geneRegulationCoreSettings.dpr || !geneRegulationCoreSettings.dnr)) continue;
+  if(edges[m].type === "DNR_DPR" && (!geneRegulationCoreSettings.dnr_dpr || !geneRegulationCoreSettings.dnr || !geneRegulationCoreSettings.dpr) ) continue;
+  
+  
+  
+  
   if(edges[m].type === "UPR" && !geneRegulationCoreSettings.upr ) continue;
   if(edges[m].type === "DPR" && !geneRegulationCoreSettings.dpr ) continue;
   if(edges[m].type === "UNR" && !geneRegulationCoreSettings.unr ) continue;
   if(edges[m].type === "DNR" && !geneRegulationCoreSettings.dnr ) continue;
-  if(edges[m].type === "among_dpr" && !geneRegulationCoreSettings.among_dpr) continue;
-  if(edges[m].type === "among_upr" && !geneRegulationCoreSettings.among_upr ) continue;
+  if(edges[m].type === "DPR_DPR" && (!geneRegulationCoreSettings.among_dpr || !geneRegulationCoreSettings.dpr)) continue;
+  if(edges[m].type === "UPR_UPR" && (!geneRegulationCoreSettings.among_upr || !geneRegulationCoreSettings.upr))  continue;
+  if(edges[m].type === "DNR_DNR" && (!geneRegulationCoreSettings.among_dnr || !geneRegulationCoreSettings.dnr)) continue;
+  if(edges[m].type === "UNR_UNR" && (!geneRegulationCoreSettings.among_unr || !geneRegulationCoreSettings.unr)) continue;
   if(edges[m].type2 === "Exp" && Math.abs(edges[m].value) < geneRegulationCoreSettings.absoluteZScore ) continue;
   if(edges[m].type2 === "Corr" && Math.abs(edges[m].value) < geneRegulationCoreSettings.corr_cutoff ) continue;
   if(edges[m].source ===  edges[m].target) continue;
@@ -224,7 +234,7 @@ let nodesFiltered = nodes.filter(node =>
   ); 
 
 
-  if(!graphmapSettings.isolatednodes){
+  if(!geneRegulationCoreSettings.isolatednodes){
     let uniqueNodeNamesWithEdges = new Set()
     //We need to keep the key gene
     uniqueNodeNamesWithEdges.add(geneRegulationCoreSettings.selectedGene)
@@ -477,20 +487,21 @@ for(let m = edgesFiltered.length-1; m >-1; m--)
 
 tableInfo.push({'Regulation Type':edgesFiltered[m].type2 , 'Direction': edgesFiltered[m].type, 'Gene Symbol From': edgesFiltered[m].source,'Gene Symbol To':edgesFiltered[m].target,'Score': edgesFiltered[m].value, 'Source NC': nodeCounts[edgesFiltered[m].source], 'Target NC': nodeCounts[edgesFiltered[m].target], 'Total NC': nodeCounts[edgesFiltered[m].target] +nodeCounts[edgesFiltered[m].source ]})
 }
+tableInfo.sort((edge1,edge2)=>edge2['Total NC']-edge1['Total NC'])
 setkeyedData(tableInfo)
 
 
 let nodesFinal =[]
 let edgesFinal =[]
 
-if(graphmapSettings.layout ==="none"){ 
+if(geneRegulationCoreSettings.layout ==="none"){ 
     // Create a new directed graph 
     var g = new dagre.graphlib.Graph();    
     // Set an object for the graph label
     g.setGraph({      
-      height:100,
-      width:100,
-      ranksep:800,
+      //height:100,
+      //width:100,
+      ranksep:(geneRegulationCoreSettings.dagreSeperation)===0?1:(geneRegulationCoreSettings.dagreSeperation),
       nodesep:100
     });
     // Default to assigning a new object as a label for each new edge.
@@ -541,7 +552,7 @@ setOptions({
   },
   legend: [
     {
-      data:["Upstream Pos. Regulator","Upstream Neg. Regulator","Downstream Pos. Regulated","Downstream Neg. Regulated"]
+      data:["Upstream Positive Regulator","Upstream Negative Regulator","Downstream Positively Regulated","Downstream Negatively Regulated"]
       ,
       top: 'top',
       itemGap : 5,
@@ -574,10 +585,10 @@ setOptions({
         rotateLabel: true
       },
       type: 'graph',
-      layout:  graphmapSettings.layout,       
+      layout:  geneRegulationCoreSettings.layout,       
       data: nodesFinal,
       links: edgesFinal,  
-      categories:[{"name": "Upstream Pos. Regulator"},{"name":"Upstream Neg. Regulator"},{"name":"Downstream Pos. Regulated"},{"name":"Downstream Neg. Regulated"}],     
+      categories:[{"name": "Upstream Positive Regulator"},{"name":"Upstream Negative Regulator"},{"name":"Downstream Positively Regulated"},{"name":"Downstream Negatively Regulated"}],     
       edgeSymbol: ['circle', 'arrow'],
       edgeSymbolSize: [4, 20],
       edgeLabel: {
@@ -621,7 +632,7 @@ setOptions({
      // categories: sample.categories,
       roam: true,        
       force: {
-        repulsion: graphmapSettings.repulsion,
+        repulsion: geneRegulationCoreSettings.repulsion,
         initLayout: 'circular',
         //layoutAnimation : false,
         friction:0.1
@@ -632,7 +643,7 @@ setOptions({
 
 }
 
-}, [geneRegulationGraph, graphmapSettings, geneRegulationCoreSettings]);
+}, [geneRegulationGraph,  geneRegulationCoreSettings]);
 
 
   return (

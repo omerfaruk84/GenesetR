@@ -39,6 +39,9 @@ const MainPage = ({ coreSettingsChanged }) => {
         })
           navigate (ROUTES.CORRELATION);
           break;
+      case 7:
+        navigate (ROUTES.HEATMAP);
+        break;
 
       default:
         console.log(`Strange! You shouldn't be seeing this message.`);
@@ -60,7 +63,7 @@ const MainPage = ({ coreSettingsChanged }) => {
         Capitalizing on the power of Genome-wide Perturb-Seq (GWPS) data, GeneSetR provides a novel 
         platform for in-depth analysis of user defined gene lists. GeneSetR is a user-friendly tool 
         to interpret and cluster gene lists, helping researchers to navigate the Genomewide Perturb-Seq 
-        (GWPS) datasets that recently became available.       
+        (GWPS) dataset that recently became available.       
         </p>
 
 
@@ -69,11 +72,13 @@ const MainPage = ({ coreSettingsChanged }) => {
     <h2 style={{margin:"0px"}}>Potential Analyses in GeneSetR:</h2>
     <div className ={`${styles['button-container']}`}>
     <button  onClick={() =>handleClick(1)} className ={`${styles['glass-button']}`}>Find genes that regulate, or are regulated, by a given gene of interest</button><Row/>
-    <button  onClick={() =>handleClick(2)} className ={`${styles['glass-button']}`}>Find perturbations that modulate a given gene signature</button>
     <button  onClick={() =>handleClick(3)} className ={`${styles['glass-button']}`}>Analyze RNA-seq results to identify pathways</button>
     <button  onClick={() =>handleClick(4)} className ={`${styles['glass-button']}`}>Cluster a given genelist to identify functional groups</button>
     <button  onClick={() =>handleClick(5)} className ={`${styles['glass-button']}`}>Draw a correlation map based on knockdown profiles</button>
     <button  onClick={() =>handleClick(6)} className ={`${styles['glass-button']}`}>Generate a correlation map based on expression of genes upon perturbations</button>
+    <button  onClick={() =>handleClick(7)} className ={`${styles['glass-button']}`}>Generate a heatmap illustrating the relationship between chosen genes and perturbations</button>
+    <button  onClick={() =>handleClick(2)} className ={`${styles['glass-button']}`}>Find perturbations that modulate a given gene signature</button>
+
     </div>
     </div>
 
@@ -83,8 +88,8 @@ const MainPage = ({ coreSettingsChanged }) => {
     <b >To acknowledge GenesetR, please cite:</b> <br/>
     </div>
     <div style = {{marginLeft: "20px"}}>
-                <a style = {{ color: "#D90000", outline: "0", textDecoration: "none", fontSize:"0.9em"}} href="https://www.ncbi.nlm.nih.gov/pubmed/23586463" id="pubmedCitation-link" target="_blank">
-                    Kuzu OF, Saatcioglu F.<br/>GeneSetR xxxxxxxxx<br/><i>Bioinformatics. 2023; 128(14)</i>.
+                <a style = {{ color: "#D90000", outline: "0", textDecoration: "none", fontSize:"0.9em"}} href="https://www.ncbi.nlm.nih.gov/pubmed/" id="pubmedCitation-link" target="_blank">
+                    Kuzu OF, Saatcioglu F.<br/>GeneSetR<br/><i> ...</i>.
                 </a>
                 <br/><br/>
             </div>
@@ -99,23 +104,23 @@ const MainPage = ({ coreSettingsChanged }) => {
       </a>
      
      
-      <a   target="_blank" rel="noopener noreferrer" href="https://rexomedia.co.uk/saatcioglu/">
-      <img style= {{marginLeft: "10%", maxWidth: "100%", maxHeight:"50px" , height: "auto",  objectFit:"contain"}} alt='Saatcioglu Lab' src='/images/fslab2.png' />
+      <a   target="_blank" rel="noopener noreferrer" href="https://saatcioglulab.org/">
+      <img style= {{marginLeft: "10%", maxWidth: "100%", maxHeight:"45px" , height: "auto",  objectFit:"contain"}} alt='Saatcioglu Lab' src='/images/fslab2.png' />
       </a>   
 </div></div>
 
 <div  style= {{ width: "100%", maxWidth:"880px" , justifyContent:"start", display: "flex", alignItems :"center"}}>
 
-    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/MaayanLab/enrichr_issues">
+    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR/issues">
     <img style= {{height: "30px", marginLeft: "28%"}} src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"/>
     </a>
-    <a  style= {{fontSize: "1em"}} target="_blank" rel="noopener noreferrer" href="https://github.com/MaayanLab/enrichr_issues">
+    <a  style= {{fontSize: "1em"}} target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR/issues">
     <span style= {{marginLeft: "10px"}}>Click here to raise an issue on GitHub</span>
     </a>
         
-    <a  style= {{fontSize: "1em",  marginLeft: "3%"}} target="_blank" rel="noopener noreferrer" href="https://github.com/MaayanLab/enrichr_issues">
+    <a  style= {{fontSize: "1em",  marginLeft: "3%"}} target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR_API">
     <span  style = {{color: "#D90000"}} >Would you like to contribute?</span> <span>  Visit our   </span>
-    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/MaayanLab/enrichr_issues">
+    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR_API">
     <img style= {{width: "45px"}} src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png"/>
     </a>
     <span style= {{marginLeft: "3px"}}>page.</span>

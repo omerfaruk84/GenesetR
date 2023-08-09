@@ -9,7 +9,7 @@ const HeatmapTargetGeneListSettings = ({
     <>
       <Spacer height={10} />
       <TextArea
-        placeholder="Please enter gene list seperated by comma, new line, space, or semicolon!"
+        placeholder="Please enter the gene list seperated by comma, new line, space, or semicolon."
         value={heatMapSettings?.targetGeneList}
         rows={10}
       />

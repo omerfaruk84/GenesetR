@@ -1,60 +1,14 @@
 import { toast } from '@oliasoft-open-source/react-ui-library';
 import Axios from 'axios';
+import { get, set} from "idb-keyval";
 
-
-const getData2 = async(body) =>{    
-  const { task_id, task_result } = await Axios.post("https://genesetr.uio.no/api/getData", {
-  //const { task_id, task_result } = await Axios.post("https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/getData", {  
-    headers: {
-      'ngrok-skip-browser-warning': '69420',
-    },  
-  body: JSON.stringify(body),
-  })
-    .then(response => response.data);
-
-  if(task_id ==="FAILURE")
-    throw new Error(task_result);
-
-  const delay = ms => new Promise(res => setTimeout(res, ms));
-  const fetchData = async () => {
-     let idCheck = task_id
-    if(idCheck.startsWith("b\'"))
-        idCheck = idCheck.split('\'')[1]
-
-    let times = 1;
-    do {
-      const { data: { task_result, task_status } }  = await Axios.get("https://genesetr.uio.no/api/tasks/" + idCheck, {
-      //const { data: { task_result, task_status } }  = await Axios.get("https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/tasks/" + idCheck, {
- 
-      headers: {
-          'ngrok-skip-browser-warning': '69420',
-        },
-      });
-      
-      console.log("task_status", task_status)
-      console.log("task_result", task_result)
-
-      if(task_status ==="FAILURE")
-      {
-        throw new Error(task_result)
-       };
-      if (task_result !== null) {
-       // console.log(task_result)
-        return task_result;
-      };
-
-      await delay(times*250);
-      times++;
-    } while (times < 30);
-  };
-  return fetchData(task_id);
-}
+const SERVER_ADRESS = "https://genesetr.uio.no/api";
+//const SERVER_ADRESS = "https://da4f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
 
 const getData = async (body) => {
   try {
     const response = await Axios.post(
-      "https://genesetr.uio.no/api/getData",
-      //"https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/getData",
+      SERVER_ADRESS + "/getData",      
       {
         body: JSON.stringify(body),
       },
@@ -64,15 +18,14 @@ const getData = async (body) => {
         },
       });
 
-    console.log("response", response)
+    //console.log("response", response)
     const { task_id } = response.data;
-    console.log("task_id", task_id)
+    //console.log("task_id", task_id)
     const delay = ms => new Promise(res => setTimeout(res, ms));
     let times = 1;
     do {
       const response2  = await Axios.get(
-        `https://genesetr.uio.no/api/tasks/${task_id}`,
-        //`https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/tasks/${task_id}`,
+        SERVER_ADRESS + `/tasks/${task_id}`,
         {
           headers: {
             "ngrok-skip-browser-warning": "69420",
@@ -80,10 +33,10 @@ const getData = async (body) => {
         }
       );
 
-      console.log("response2", response2)
+      //console.log("response2", response2)
       const { status, task_result } = response2.data;
       console.log("task_status", status);
-      console.log("task_result", task_result);
+      //console.log("task_result", task_result);
 
       if (status === "PENDING") {
         console.log("Still not started")
@@ -256,7 +209,7 @@ const runCorrCalc = async (core, corr) => {
 
 const runHeatMap = async (core, heatMap) => {  
   const body = {
-    dataType: core.dataType,
+    //dataType: core.dataType,
     cell_line: core.cellLine[0],
     geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ';'),
     targetList: core.targetGeneList?.replaceAll(/\s+|,\s+|,/g, ';').trim(),
@@ -276,12 +229,8 @@ const runHeatMap = async (core, heatMap) => {
 };
 
 const runGeneRegulation = async (core, geneRegulationCore) => {  
-  const body = {
-    //dataType: core.dataType,
-    //cell_line: core.cellLine[0],
-    gene: geneRegulationCore.selectedGene,
-    //absoluteZScore: geneRegulationCore.absoluteZScore,
-
+  const body = {    
+    gene: geneRegulationCore.selectedGene,    
     request: 'expandGene'
   };
   return await getData(body);  
@@ -297,8 +246,7 @@ const runGeneSignature = async (core) => {
 };
 
 const getBlackList = async(body) =>{  
-  const response = await Axios.get("https://genesetr.uio.no/api/getBlackList", {
-  //const response = await Axios.get("https://ca10-2001-700-100-400a-00-f-f95c.ngrok-free.app/getBlackList", { 
+  const response = await Axios.get(SERVER_ADRESS +"/getBlackList", {
   headers: {
       'ngrok-skip-browser-warning': '69420',
     },  
@@ -314,6 +262,65 @@ const getBlackList = async(body) =>{
 
 }
 
+
+const updateGeneLists = async (dataType) => {
+  try {
+    // Check if perturb already exists in DB
+    const perturbVal = await get("geneList_" + dataType + "_perturb");
+    if (perturbVal && perturbVal.size > 0) {
+      // Check if genes already exists in DB
+      const genesVal = await get("geneList_" + dataType + "_genes");
+      if (genesVal && genesVal.size > 0) {
+        return;
+      }
+      
+      // If genes do not exist, download and save them
+      const response = await Axios.post(SERVER_ADRESS +"/getData", {
+        headers: {
+          'ngrok-skip-browser-warning': '69420',
+        },
+        body: JSON.stringify({
+          dataset: dataType,
+          request: 'getAllGenes'
+        }),
+      });
+
+      if (response && response.data) {
+        set("geneList_" + dataType + "_perturb", new Set(response.data.result.perturbations));
+        set("geneList_" + dataType + "_genes", new Set(response.data.result.genes));
+      }
+    }
+  } catch (error) {
+    console.error("Error updating gene lists:", error);
+  }
+}
+
+const fetchHugoGenes = async  () => {
+  const storedGenes = await get("allHugoGenes");
+
+  if (!storedGenes || storedGenes.size === 0) {
+      try {
+          const response = await Axios.post(SERVER_ADRESS +"/getData", {
+              headers: {
+                  'ngrok-skip-browser-warning': '69420',
+              },
+              body: JSON.stringify({
+                  request: 'getHugoGenes'
+              }),
+          });
+
+          if (response && response.data) {
+              set("allHugoGenes", new Set(response.data.result));
+          }
+      } catch (error) {
+          console.error("Failed to fetch Hugo genes: ", error);
+      }
+  }
+}
+
+
+
+
 export {
   runPcaGraphCalc,
   runMdeGraphCalc,
@@ -326,4 +333,6 @@ export {
   runHeatMap, 
   runGeneSignature,
   getBlackList,
+  updateGeneLists,
+  fetchHugoGenes,
 };

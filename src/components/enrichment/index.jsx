@@ -9,7 +9,6 @@ import {
   Card,
   toast,
   Heading,
-  Text,
   TextArea,
   
 } from "@oliasoft-open-source/react-ui-library";
@@ -28,6 +27,7 @@ import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { performEnrichment} from "./enrichrAPI";
 import { saveAs } from 'file-saver';
+
 import {
   GridComponent,
   BrushComponent,
@@ -119,9 +119,36 @@ const headings = ["Dataset", "Rank", "Term name", "P-value",  "Z-score", "Combin
 
 let temp =[{}]
 
+function findCheckedLeaves(node) {
+  // Initialize an array to hold the labels of checked leaf nodes
+  let checkedLeaves = [];
+  // Check if the node is a leaf and if it is checked
+  if (!node.children && node.checked) {
+    // If it is, add its label to the array
+    checkedLeaves.push(node.label);
+  }
+
+  // If the node has children, repeat the process for each child
+  if (node.children) {
+    for (let child of node.children) {
+      // Call the function recursively and merge the result with the current array     
+      checkedLeaves = checkedLeaves.concat(findCheckedLeaves(child));
+    }
+  }
+
+  // Return the array of checked leaf labels
+  return checkedLeaves;
+}
+
 const performEnrichmentNow = function (genes) {
-  let selectedDatasets = data.filter(function (node){return node.checked===true;}).map(node => (node.label)).join()
-  performEnrichment(genes, selectedDatasets).then((results)=>{
+
+  let selectedDatasets = [];
+
+for (let obj of data) {
+  selectedDatasets = selectedDatasets.concat(findCheckedLeaves(obj));}
+ 
+  
+  performEnrichment(genes, selectedDatasets.join().replaceAll(" ", "_")).then((results)=>{
     //console.log("keyedData", temp, results)
     for(let i in results){
       for(let j in results[i].data){
@@ -290,6 +317,7 @@ const performEnrichmentNow = function (genes) {
       }),
   ];
   const table = {
+    fixedWidth: '850px',
     headers: [
       {
         cells: dataSortCells,
@@ -494,9 +522,9 @@ const performEnrichmentNow = function (genes) {
                           return param.data['Term name'];
                       },
                       position: 'top',
-                      fontSize:'14',
-                      borderColor:'black',
-                      borderWidth:3,
+                      fontSize:'12',
+                      //borderColor:'black',
+                      //borderWidth:2,
                   }                  
               },
               labelLayout: {
@@ -514,7 +542,8 @@ const performEnrichmentNow = function (genes) {
                 show: true,
                 overflow: "truncate",
                 distance:15,
-                width: 250,
+                width: 300,
+                fontSize:'12',
                 formatter: function (param) {
                   
                   let maxVis = Math.min(10, bubbleGraphData.length)
@@ -551,15 +580,15 @@ const performEnrichmentNow = function (genes) {
 
   //In the first run set the selected cluter to cluster 0
   useEffect(() => {
-    console.log("KEYS", Object.keys(genesets))
+    
     if(Object.keys(genesets).length>0){
       let tempx = []
       Object.keys(genesets).forEach((gl) => {
-      
-      tempx.push({label:gl + " ("+ genesets[gl].trim(',').split(',').length + " genes)", value: gl, genes: genesets[gl]})
+        if (genesets[gl].trim(',').split(',').length>2)
+          tempx.push({label:gl + " ("+ genesets[gl].trim(',').split(',').length + " genes)", value: gl, genes: genesets[gl]})
       
       })
-      console.log("KEYSX", tempx)
+      
       setGeneListOptions(tempx);
       setselectedCluster(Object.keys(genesets)[0]);     
       performEnrichmentNow(genesets[Object.keys(genesets)[0]]);  
@@ -574,7 +603,8 @@ const performEnrichmentNow = function (genes) {
 
   return (
     <>
-       <Card heading={<Heading>Enrichment</Heading>}>
+      <div style={{display: "block", marginLeft:"auto", marginRight:"auto", width : "95%"} }>
+        <Card heading={<Heading>Enrichment</Heading>}>
 
         <Row spacing={0} width="100%" height="10%">
          {genelistOptions.length>1?(
@@ -598,6 +628,7 @@ const performEnrichmentNow = function (genes) {
           <div>
             <Popover
               content={
+                <>
                 <DropdownTreeSelect
                   data={data}
                   onChange={onChange}
@@ -606,7 +637,8 @@ const performEnrichmentNow = function (genes) {
                   className="mdl-demo"
                   //keepChildrenOnSearch={true}
                   //keepOpenOnSelect ={true}
-                />
+                />           
+              </>
               }
             >
               <Button
@@ -647,16 +679,16 @@ const performEnrichmentNow = function (genes) {
           />
            </div>
         </Row>        
-
-        <Row spacing={0} width="100%" height="50%">
-          <Table width={"100%"} table={table} />;
-        </Row>
-
+        <div style={{overflowX:"auto", display: "block", marginLeft:"auto", marginRight:"auto", width : "100%"}}>
+        
+          <Table table={table} />;
+       
+        </div>
       
 
         </Card>
 
-     
+        </div>
     </>
   );
 };

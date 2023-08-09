@@ -11,7 +11,8 @@ const PcaSettings = ({
 }) => {
   return (
     <>
-      <Field label='Number of components'>
+      <Field label='Explained Variance' helpText ="Sets the threshold for the cumulative percentage 
+      of the total variance in the data to estimate the required number of components.">
         <div className={styles.inputRange}>         
           <Slider
             label={pcaSettings?.numberOfComponents}

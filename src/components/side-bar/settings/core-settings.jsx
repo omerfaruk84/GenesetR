@@ -19,6 +19,7 @@ const CoreSettings = ({
   isGeneSignature = false,
   geneListTitle = "Genes",
   perturbationListTitle = "Perturbations",
+  source ="",
 
   
 }) => {
@@ -63,6 +64,47 @@ const CoreSettings = ({
     }
   ];
 
+  let helpText1 = "Please enter a minimum of 2 targets (seperated by comma, new line, space, or semicolon) to perform correlation analysis"
+  let helpText2 = "Please enter a minimum of 20 genes (seperated by comma, new line, space, or semicolon) to perform correlation analysis based on a specific subset of detected genes. If the field is left empty or fewer than 20 genes are entered, the analysis will be performed using all detected genes."
+
+
+  if(coreSettings?.dataType === "pert" || source === "HEATMAP"){
+    perturbationListTitle = "Perturbations"
+    geneListTitle = "Genes"
+  }else{
+    perturbationListTitle = "Genes"
+    geneListTitle = "Perturbations"
+  }
+
+ 
+  if(source === "DR"){
+    helpText1 = helpText1.replace("correlation", "dimensionality reduction")
+    helpText1 = helpText1.replace("2 targets", "10 targets")
+    helpText2 = helpText2.replace("correlation", "dimensionality reduction")    
+  }else if(isGeneSignature){
+    helpText2 = 'Please input your gene signature, designating each gene by a plus (+) or minus (-) symbol.'    
+    geneListTitle = "Gene Signature"
+
+  }else if(source === "PATHFINDER"){
+    helpText1 = 'Please enter a minimum of 2 downregulated genes (or genes from a CRISPR screen for instance) seperated by comma, new line, space, or semicolon.'    
+    helpText2 = '[OPTIONAL] Please enter upregulated genes seperated by comma, new line, space, or semicolon.'
+    perturbationListTitle = "Downregulated Genes"
+    geneListTitle = "Upregulated Genes"
+
+  }else if(source === ""){
+    helpText1 = 'Please enter the target genes seperated by comma, new line, space, or semicolon.'    
+    helpText2 = 'Please enter the genes seperated by comma, new line, space, or semicolon.'
+  }
+
+  if(coreSettings?.dataType !== "pert"){
+    helpText1 = helpText1.replace("targets", "genes")
+    helpText1 = helpText1.replace("genes", "targets")
+    helpText2 = helpText2.replaceAll("detected genes", "perturbations")
+  }
+
+
+
+
   var location = useLocation().pathname;
   const { pathname } = location;
   
@@ -103,7 +145,7 @@ const CoreSettings = ({
       {console.log("graphData", graphData)}
       <Button colored="success" width = "100%" 
             label="ADD THIS TO DATASETS" 
-            onClick={() => childRef?.current?.saveDataset(graphData.taskID, graphData.taskName, graphData.dataset, graphData.resultShape)}    
+            onClick={() => childRef?.current?.saveDataset(graphData.taskID, graphData.taskName, graphData.dataset, graphData.resultShape, graphData.dataType)}    
             small      
             /><Spacer height={10}/></>:""}
 
@@ -115,6 +157,7 @@ const CoreSettings = ({
             settingName: CoreSettingsTypes.DATA_TYPE,
             newValue: value
           })}
+          disabled ={coreSettings?.cellLine[0]?.length>27}
           options={dataTypeOptions}
           value={coreSettings?.dataType}
         />
@@ -123,11 +166,11 @@ const CoreSettings = ({
 
      
       <div style={{display:showPerturbationList===true? "block": "none"}}>   
-      <Genelist listTitle= {coreSettings?.dataType === "pert"?perturbationListTitle:geneListTitle}  setPerturbationList = {setPerturbationList} isPerturbationList =  {coreSettings?.dataType === "pert"}/>
+      <Genelist textTooltip = {helpText1} listTitle= {perturbationListTitle}  setPerturbationList = {setPerturbationList} isPerturbationList =  {coreSettings?.dataType === "pert"}/>
       </div> 
     
       <div style={{display:showGeneList===true? "block": "none"}}>   
-     <Genelist listTitle= {coreSettings?.dataType === "pert"?geneListTitle:perturbationListTitle}  setPerturbationList = {setGeneList} isPerturbationList = {!coreSettings?.dataType === "pert"} isGeneSignature ={isGeneSignature} />
+     <Genelist textTooltip = {helpText2}  listTitle= {geneListTitle}  setPerturbationList = {setGeneList} isPerturbationList = {!coreSettings?.dataType === "pert"} isGeneSignature ={isGeneSignature} />
      </div> 
 
 

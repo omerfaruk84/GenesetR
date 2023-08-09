@@ -10,10 +10,17 @@ const initialState = {
   include_exp: true,
   among_dpr: true,
   among_upr: true,
+  among_dnr: true,
+  among_unr: true,
   unr_dnr: true,
   unr_dpr: true,
   upr_dnr: true,
   upr_dpr: true,
+  upr_unr:true,
+  unr_upr:true,
+  dpr_dnr:true,
+  dnr_dpr:true,
+
   upr: true,
   dpr: true,
   unr: true,
@@ -31,6 +38,10 @@ const initialState = {
   filterCount1:750,
   filterCount2:750,
   filterCount5:5,
+  dagreSeperation:200,
+  repulsion: 100,
+  isolatednodes: false,
+  layout: 'force',
 };
 
 export const geneRegulationCoreSettingsSlice = createSlice({

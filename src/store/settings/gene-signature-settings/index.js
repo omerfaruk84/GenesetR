@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {  
   filterBlackListed:2,
   filter:true,
+  genesTolabel:"",
 };
 
 export const genesignatureSettingsSlice = createSlice({

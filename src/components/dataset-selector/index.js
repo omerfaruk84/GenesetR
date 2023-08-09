@@ -10,6 +10,7 @@ import { get, set} from "idb-keyval";
 import Axios from 'axios';
 import { ROUTES } from '../../common/routes';
 import { useLocation } from 'react-router-dom';
+import { updateGeneLists } from "../../store/api";
 
 const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, onlyMain) => {
 
@@ -53,6 +54,7 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
   const updateActivityById  = (id) => { 
 
      let dataShape = ""
+     let dataType = ""
        setDatasetList(prevDatasetList => {     
      const arr = []
      for(const e in prevDatasetList){    
@@ -70,18 +72,24 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
          id: itemx.id,
          name: itemx?.name,
          resultShape: itemx?.resultShape,
+         dataType: itemx?.dataType,
          parent: itemx?.parent,
          onClick: ((id) => () => updateActivityById(id))(itemx.id),
          actions: actionsNew, 
          active : itemx?.id===id,
        }
-       if(itemx?.id===id)
+       if(itemx?.id===id){
           dataShape = itemx?.resultShape
+          dataType = itemx?.dataType
+        }
      
        arr.push(newItem)    
     }
 
-    coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: [id,dataShape]})   
+    if(dataType && dataType !=="" )
+      coreSettingsChanged({settingName: CoreSettingsTypes.DATA_TYPE, newValue: dataType})   
+    
+      coreSettingsChanged({settingName: CoreSettingsTypes.CELL_LINE, newValue: [id,dataShape]})   
     return arr;
   });
     
@@ -129,7 +137,7 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
  }
 
  useImperativeHandle(ref, () => ({
-  saveDataset: (newID, name, parentID, dataShape) => {
+  saveDataset: (newID, name, parentID, dataShape, dataType) => {
   
   setDatasetList(prevDatasetList => {    
   let arr =  [];
@@ -150,6 +158,7 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
       droppable: false,
       isOpen: itemx.id ===parentID,
       id: itemx.id,
+      dataType: itemx?.dataType,
       name: itemx?.name,
       parent: itemx?.parent,
       onClick: ((id) => () => updateActivityById(id))(itemx.id),
@@ -161,6 +170,7 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
   
   var newItem = {    
     resultShape: dataShape,  
+    dataType: dataType,  
     droppable: false,
     isOpen:true,
     id: newID,
@@ -186,39 +196,12 @@ const DatasetSelector = forwardRef(({ coreSettingsChanged , coreSettings}, ref, 
     },
 }));
 
-const getData = async(dataType) =>{ 
-  //if already exists in db return and dont do anything
-  //else download it and save it
-  get("geneList_" + dataType + "_perturb").then((val) => {
-   if (val && val.size>0) 
-     return;
-   else
-   {
-     Axios.post("https://genesetr.uio.no/api/getData", 
-    // Axios.post("https://localhost:8443/getData", 
-     {
-      headers: {
-        'ngrok-skip-browser-warning': '69420',
-      },
-       body: JSON.stringify({
-         dataset: dataType,
-         request: 'getAllGenes'
-       }),
-     })
-       .then(response => 
-         {
-         if(response && response.data) {
-           //console.log(response.data.result.columns)           
-           set("geneList_" + dataType + "_perturb", new Set(response.data.result.perturbations));
-           set("geneList_" + dataType + "_genes", new Set(response.data.result.genes));
-         }
-         });      
-   }}); 
-}
+
+
 
 useEffect(() => { 
   //console.log(coreSettings.cellLine
-  getData(coreSettings.cellLine[0])  
+  updateGeneLists(coreSettings.cellLine[0])  
 }, [coreSettings.cellLine]);
 
 useEffect(() => { 

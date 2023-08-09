@@ -40,8 +40,8 @@ const ScatterPlotSettings = ({scatterplotSettings,
    
      <Field label='Label Genes' labelLeft labelWidth="130px" helpText="Select the  genes that you would like to label">
      <TextArea
-          placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
-          tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
+          placeholder='Please enter the target gene list seperated by comma, new line, space, or semicolon.'
+          tooltip='Please enter the gene list seperated by comma, new line, space, or semicolon.'
           rows={6}
           resize='vertical'
           value={scatterplotSettings?.genesTolabel}
@@ -51,7 +51,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
           })}       
         />
      </Field>
-    <Field label='Highlight Clusters' labelLeft labelWidth="130px" helpText="Repulsion is what">
+    <Field label='Highlight Clusters' labelLeft labelWidth="130px" helpText="Highlight cluster backgrounds with distinct colors.">
       <Toggle     
        onChange={({ target: { checked } }) => scatterplotSettingsChanged({
         settingName: ScatterPlotSettingsTypes.HIGHLIGHT_CLUSTERS,
@@ -61,7 +61,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
     />
      </Field>
 
-    <Field label='Symbol Size' labelLeft labelWidth="130px" helpText="Repulsion is what">
+    <Field label='Symbol Size' labelLeft labelWidth="130px" helpText="Adjust size of the symbols representing genes.">
         <div className={styles.inputRange}>         
           <Slider
             label={scatterplotSettings?.symbolSize}

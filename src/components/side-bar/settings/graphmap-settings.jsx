@@ -60,7 +60,7 @@ const GraphMapSettings = ({
 
   return (
     <>
-    <Field label='Repulsion' labelLeft labelWidth="130px" helpText="Repulsion is what">
+    <Field label='Repulsion' labelLeft labelWidth="130px" helpText="The repulsion factor between nodes. The repulsion will be stronger and the distance between two nodes becomes further as this value becomes larger.">
         <div className={styles.inputRange}>         
           <Slider
             label={graphmapSettings?.repulsion}
@@ -75,7 +75,7 @@ const GraphMapSettings = ({
         </div>
       </Field>
 
-      <Field label='Layout' labelLeft labelWidth="130px" helpText="Repulsion is what">
+      <Field label='Layout' labelLeft labelWidth="130px" helpText="Set the layout style for genes.">
         <Select
           onChange={({ target: { value } }) => graphmapSettingsChanged({
             settingName: GraphmapSettingsTypes.LAYOUT,
@@ -88,7 +88,7 @@ const GraphMapSettings = ({
 
 
       
-      <Field label='Isolated nodes' labelLeft labelWidth="130px" helpText="Repulsion is what">
+      <Field label='Isolated nodes' labelLeft labelWidth="130px" helpText="Hide/Show genes that are not connected to any other gene.">
       <Toggle
       label = "Show"
        onChange={({ target: { checked } }) => graphmapSettingsChanged({

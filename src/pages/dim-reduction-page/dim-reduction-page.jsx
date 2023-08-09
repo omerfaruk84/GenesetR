@@ -12,6 +12,8 @@ import { CustomChart, LineChart, BarChart } from "echarts/charts";
 import { ROUTES } from '../../common/routes';
 import { coreSettingsChanged } from '../../store/settings/core-settings';
 import { CoreSettingsTypes } from '../../components/side-bar/settings/enums';
+import VideoHelpPage from '../../components/video-help';
+import helpVideo from '../../common/videos/2.webm'
 import {
   GridComponent,
   BrushComponent,
@@ -224,7 +226,7 @@ const DimReductionPage = ({ tsneResults, umapResults, mdeResults,pcaResults, cor
       <> 
       <div style={{display:"flex"}}>      
           <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>&nbsp; &nbsp; &nbsp; &nbsp;<span><strong>t-SNE</strong> is a non-linear dimensionality reduction technique. It&nbsp;</span><span>aids in the visual interpretation of GWPS data by transforming the high-dimensional expression changes associated with each perturbation into a lower-dimensional map. Similar perturbations, based on their effects on gene expression, are represented by points that are close together on the map. This allows for the identification of functionally related genes or perturbations and the exploration of genetic networks, as perturbations that have similar effects likely target the same pathways or biological processes. Thus, t-SNE provides a valuable tool for deciphering complex GWPS data, revealing underlying patterns and structures in the data that can guide further analysis and research.</span></p>
+            <p className={styles.moduleTextInfos}>&nbsp; &nbsp; &nbsp; &nbsp;<span><strong>t-SNE</strong> is a non-linear dimensionality reduction technique. It&nbsp;</span><span>aids in the visual interpretation of GWPS data by transforming the high-dimensional expression changes associated with each perturbation into a lower-dimensional map. Similar perturbations, based on their effects on gene expression, are represented by points that are close together on the map. This allows for the identification of functionally related genes or perturbations and the exploration of genetic networks, as perturbations that have similar effects likely target the same pathways or biological processes. Thus, t-SNE is a valuable approach for probing complex GWPS data, revealing underlying patterns and structures that can guide further analysis and research.</span></p>
             </div> 
             <img alt='MDE' src='/images/correlation.png' />
           </div> </>     
@@ -245,7 +247,7 @@ const DimReductionPage = ({ tsneResults, umapResults, mdeResults,pcaResults, cor
               However, UMAP generally does a better job of preserving the global structure of the data, 
               ensuring that data point distance is similar in both high- and low-dimensional space. 
               t-SNE tends to prioritize local over global relationships, which can sometimes result in 
-              misleading representations when the goal is to understand the broader relationships in the data.</span></p>
+              misleading representations when the goal is to uncover the broader relationships in the data.</span></p>
             </div>  
              
             <img alt='UMAP' src='/images/correlation.png' />
@@ -258,8 +260,8 @@ const DimReductionPage = ({ tsneResults, umapResults, mdeResults,pcaResults, cor
       <div style={{display:"flex"}}>  
           <div className={styles.infoSection}>
             <p className={styles.moduleTextInfos}><strong>&nbsp; &nbsp; &nbsp; &nbsp;Minimum Distortion Embedding</strong> (MDE) is a nonlinear dimensionality reduction method used in the field of data analysis.&nbsp;The "distortion" in MDE refers to the discrepancy between distances (or more generally, relationships) in the high-dimensional data and the lower-dimensional representation. The goal of MDE is to minimize this distortion, thereby maintaining a faithful representation of the relationships within the data.</p>
-            <p className={styles.moduleTextInfos}><span><strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>In our extensive benchmarking study of various dimensionality reduction (DR) algorithms, </span>MDE had superior performance at an optimal number of components (NOC) of 43, yielding the highest clustering score of 48 and identifying up to 15 distinct clusters. However, MDE had limitations in handling high NOC values ({'>'} components  for a gene list harboring 384 genes).&nbsp;</p>
-            <p className={styles.moduleTextInfos}><strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>In our quest for improved clustering, we combined PCA with the non-linear DR algorithms and observed that the combination of PCA and MDE provided the best clustering results with increasing scores up to an impressive 80. This combination generated up to 23 clusters covering almost all genes, with 12 clusters having a cluster score greater than one. It is noteworthy that the computation cost of the PCA-MDE combination remained reasonable in comparison to other methods. Thus, in light of efficiency, computation time, and quality of clustering, PCA-MDE integration appears to be the most efficient approach in our tests.</p>
+            <p className={styles.moduleTextInfos}><span><strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>In our extensive benchmarking of various dimensionality reduction (DR) algorithms, </span>MDE had superior performance at an optimal number of components (NOC) of 43, yielding the highest clustering score of 48 and identifying up to 15 distinct clusters. However, MDE had limitations in handling high NOC values ({'>'} 150 components).&nbsp;</p>
+            <p className={styles.moduleTextInfos}><strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>With the aim to improve clustering, we combined PCA with the non-linear DR algorithms and observed that the combination of PCA and MDE provided the best clustering results with increasing scores up to an impressive 80. This combination generated up to 23 clusters covering almost all genes, with 12 clusters having a score {'>'}1. It is noteworthy that the computation cost of the PCA-MDE combination remained acceptable in comparison to other methods. Thus, in light of efficiency, computation time, and quality of clustering, PCA-MDE integration appears to be the most efficient approach in our tests.</p>
             </div>  
             <img style={{objectFit:"scale-down"}} alt='MDE' src='/images/correlation.png' />
           </div>    </>         
@@ -304,7 +306,7 @@ const DimReductionPage = ({ tsneResults, umapResults, mdeResults,pcaResults, cor
     <div className={styles.mainView}>
  {console.log(graphdata)}
       {graphdata===null? 
-      <div >
+      /*<div >
       <h2><strong>Dimensionality Reduction and Clustering Module</strong></h2>
       <p>Handling high-dimensional data can complicate visualization and increase the computational load. <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Dimensionality_reduction"><strong>Dimensionality reduction</strong></a></span> (DR) techniques address this issue by minimizing the number of features while preserving most of the original information. Two main types of DR algorithms exist:</p>
       <ul>
@@ -314,8 +316,12 @@ const DimReductionPage = ({ tsneResults, umapResults, mdeResults,pcaResults, cor
       <li>Non-linear DR methods, such as <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding"><strong>t-Distributed Stochastic Neighbor Embedding</strong></a></span> (tSNE), <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction#Uniform_manifold_approximation_and_projection"><strong>Uniform Manifold Approximation and Projection</strong></a></span> (UMAP), and <span style={{color: "black"}}><a target="_blank" href="https://web.stanford.edu/~boyd/papers/pdf/min_dist_emb.pdf"><strong>Minimum-Distortion Embedding</strong></a></span> (MDE), can capture more complex relationships and preserve non-linear relationships.</li>
       </ul>
       <p>After dimensionality reduction, GeneSetR uses <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">the HDBSCAN</a> algorithm to cluster the data. This method generates clusters of different shapes, sizes, and densities without prior knowledge of the data, making it advantageous for high-dimensional data with complex cluster shapes. <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">HDBSCAN</a> does not require the user to specify the number of clusters, however, users still need to adjust certain parameters, such as<strong> minimum cluster size</strong>, <strong>minimum number of samples per cluster</strong>, and<strong> clustering metric</strong>, to find the optimal number of clusters.</p>
+      
+      */
+       <><VideoHelpPage videoFile={helpVideo}/>
+      <div >
       <h4><span style={{color: "black"}}><span style={{color: "#0000ff"}}><strong>Please choose one of the tabs below to perform DR and Clustering on your gene lists.</strong></span></span></h4>          
-          </div>: null
+          </div></>: null
     }
       <Tabs
         name="Main Tabs"

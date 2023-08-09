@@ -26,7 +26,8 @@ import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorM
 import { debounce } from "lodash";
 import { coreSettingsChanged } from '../../store/settings/core-settings'
 import { CoreSettingsTypes } from '../side-bar/settings/enums';
-import {getAliasesForGeneList, checkGenes} from './helper'
+import {getAliasesForGeneList, checkGenes} from './helper';
+import { fetchHugoGenes, updateGeneLists } from "../../store/api";
 
 /*
 let isLoaded = false;
@@ -34,55 +35,18 @@ var db;
 const dbPromise = window.indexedDB.open("GeneListDB", 1);
 */
 
-const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList, isGeneSignature = false, listTitle =""}) => {
+const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList, isGeneSignature = false, listTitle ="", textTooltip ="" }) => {
   
-  if(listTitle === "" && isPerturbationList) listTitle = "Perturbations"
-  else if(listTitle === "" && isGeneSignature === true) listTitle = "Gene Signature"
-  else if (listTitle === "") listTitle = "Genes"
-
-
+ 
   useEffect(() => {
     //When page loaded refresh genelist
-    refreshList();
-    //console.log("currentGeneLists", currentGeneLists);
+    refreshList();   
     
-    //When page loaded check whether  all gene list exists if not download the all gene list
-    get("allHugoGenes").then((val) => {
-      //console.log("val", val) 
-      if (!val || val.size===0)
-      {
-        Axios.post("https://genesetr.uio.no/api/getData", 
-        //Axios.post("https://localhost:8443/getData", 
-        {
-          headers: {
-            'ngrok-skip-browser-warning': '69420',
-          },
-          body: JSON.stringify({            
-            request: 'getHugoGenes'
-          }),
-        })
-          .then(response => 
-            {            
-            if(response && response.data) { 
-              //console.log(response.data)          
-              set("allHugoGenes", new Set(response.data.result));              
-            }
-            });      
-    }});
+    //check whether  all gene list exists if not download the all gene list
+    fetchHugoGenes();
 
-    //if perturbation list was not downloaded before, download it.
-    get("geneList_" + coreSettings?.cellLine[0] + "_genes").then((val) => {
-      //console.log("val", val) 
-      if (!val || val.size===0){
-
-        // WHAT IS THIS FOR????
-        //coreSettingsChanged({
-        //  settingName: CoreSettingsTypes.CELL_LINE,
-        //  newValue:  coreSettings?.cellLine
-        //})
-      }
-    
-    });
+    //if gene and perturbation list was not downloaded before, download it.
+    updateGeneLists(coreSettings?.cellLine[0]) 
 
   }, []);
 
@@ -146,7 +110,7 @@ const Genelist = ({ setPerturbationList, coreSettings ,isPerturbationList, isGen
 const numberOfGenesEntered = currentGenes
     ? currentGenes
           .trim()
-          .replace(/\s+|,|;|\n+/g, "\n")
+          .replace(/\s+|,|;|\+|\-|\n+/g, "\n")
           .split("\n")
           .reduce((prev, step) => (step.trim() ? prev + 1 : prev), 0)
     : 0;
@@ -289,21 +253,23 @@ const numberOfGenesEntered = currentGenes
   }, [currentGenes, coreSettings.cellLine]);
   
  
-  function genesChanged(value) { 
-    const cleanedValue = value?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n');
+  function genesChanged(value) {     
+    if(isGeneSignature)
+      value = value?.replaceAll(/\s+|,|\n+|;/g, '+').replaceAll(/\++/g, '+').replaceAll(/-+/g, '-').trimStart('+');
+    else
+      value = value?.replaceAll(/\s+|,|;/g, '\n').replaceAll(/\n+/g, '\n').trimStart('\n');
+
+    value = value.toUpperCase()
   
-    setGenes(cleanedValue, () => {
-      setProps (() => ({
-        oql: {
-          query: { gene: "", alterations: false },
-        },
+    setGenes(value, () => {
+      setProps (() => ({     
         validatingGenes: true,
         replaceGene: replaceGene,        
         genes: {
           found: [],
           suggestions: [],
         },
-        currentGenes: cleanedValue,
+        currentGenes: value,
       }));
     });
   }
@@ -323,34 +289,44 @@ const debouncedChangeHandler = useCallback(
   return (
     <div className={styles.mainView}>
       <Card heading={ <div style={{width:'100%'}}><Flex alignItems="center"   justifyContent="space-between">
-        <Heading>{listTitle}</Heading> <Button
+        <Heading >{listTitle}</Heading> <Button
                       label="Example"
                       small
                       colored="success"
                       onClick={()=>{
                         if(isGeneSignature)
                         genesChanged("HSPA5+DDIT3+EDEM1+PPP1R15A+HERPUD1+DNAJC3+DNAJB9+DNAJB11+MANF+HERPUD1+SDF2L1+HSP90B1+SELENOK+CDK2AP2+CALR-TUBB-SLC25A3-PTMA-PRDX1-PPIA-TUBB4B-HSPE1-CD59")
-                        else
-                        genesChanged("IER3IP1,YIPF5,SEC61B,HSPA5,TMEM167A,SPCS3,SEL1L,INTS8,SMG5,MANF,SEC61A1,UFL1,UPF2,CNOT3,SLC35B1,SRP19,EIF2B3,SSR1,SLC39A7,TTI1,SCYL1,DDRGK1,SEC61G,SEC63,TMED2,SYVN1,BTAF1,SSR2,MED12,SMG7,TMED10,OXA1L,MRPS9,HYOU1,HSD17B12,MTHFD1,EPRS1,PSMA4,MED21,DNAJB9,ATP5F1B,VPS29,XPO1,UMPS,INTS10,DNAJC19,UROD,ATF6,TELO2,PRELID3B,SRPRB,UPF1,IDH3A,KANSL3,HSD17B10,DHX30,ASCC3,MNAT1,SAMM50,HSP90B1,INTS15,POLR3A,MRPL22,P4HB,TARS2,SLC33A1,EIF2B5,EMC2,PPP1R10,MED30,AARS1,SMC1A,PSMD4,INTS2,THRAP3,MRPS33,FAF2,AFG3L2,FECH,MED19,UQCRB,COX6C,MRPL17,SRP72,CLNS1A,OGT,TSEN2,DDX39B,PSMA7,MRPL18,PMPCB,SARS1,MED22,PSMD6,GTF2H1,PRRC2A,NDUFA8,SPCS2,ORC5,CDK6,PNISR,RNGTT,MRPS14,PSMB2,PHB1,PSMD12,ATP5ME,XRN1,MRPL43,MED23,TIMM44,ZFX,YTHDC1,MRPL34,GTF3C2,FLCN,SSR3,CCAR1,GAB2,MRPS18A,FARSB,TCF3,MRPL19,SSBP1,MRPS27,SAE1,CTPS1,GRSF1,SHOC2,SMNDC1,COX4I1,EEF1A1,VPS16,MED1,MRPS21,DAD1,METTL17,PFDN2,INPPL1,ZEB2,NDUFS1,EP400,GNPNAT1,MRPL13,MARS2,LONP1,PDIA6,SOCS1,TLK2,TPR,TARS1,CHCHD4,NSD1,ILF2,MCM6,EIF5,KDM5C,MRPS5,VARS1,PUM1,GBF1,HBS1L,SLC7A1,ZNF236,MRPL10,MRPL33,HARS1,NEDD8,SLC39A9,CALU,CSNK1A1,TTI2,MRPL55,SAP18,TRMT10C,IPO13,PSMB7,INTS14,PTCD3,MRPS23,PGD,MRPS12,RPN1,MED17,CBLL1,ALYREF,DNAJA3,HEATR1,GMPPB,PRPF39,SMC3,MED27,MRPL58,GADD45GIP1,ATP5MJ,SDHC,PSMD11,ATP5PD,CNOT2,MED6,NUP54,MED18,SNRNP70,MTPAP,MED14,DDOST,DARS1,CAD,ALG9,LAMTOR1,NDUFA9,SUPT6H,BRIP1,SLC25A51,COX10,FNIP1,GFM1,CDK7,MRPS10,PTDSS1,SUGT1,PSMD13,DTYMK,PSMD14,MRPL16,CCNH,MCM3,EIF2B4,IARS2,MRPL9,PPP2R1A,PET117,POLR2L,LRPPRC,GINS4,SEM1,UBA6,HCCS,UQCRC1,KANSL2,ZNF687,DHX15,RPL41,MRPS35,CHMP6,ALG12,DERL2,COX7C,PRKCSH,MED10,VPS4A,COPB1,EIF2S1,PSMB5,BRD8,DMAP1,MED24,SMARCA5,MRPL37,MED31,MRPS17,LYL1,NRDE2,CENPI,NCAPD2,ELL,EIF2B2,SRSF3,RPN2,MRPL27,PSMC6,MED20,RARS2,ZFR,RANBP3,COQ2,ORC2,GTF2E1,ZEB1,PNPT1,EMC4,MRPL51,POLR3B,PPRC1,MRPL32,COPG1,CARM1,PSMB1,CCDC174,CCND3,PTCD1,MRPL39,RARS1,POLG2,LAMTOR5,MRPS16,ZBTB14,ALG13,MCM2,PSMA2,FUBP3,TIAL1,MRPL36,FOXN3,MRPS18B,CHERP,TRRAP,VPS39,LAMTOR4,SMN2,UBE4B,MRPS31,MYC,BCR,MRPL35,PHB2,MARS1,THOC2,HSPA13,DMAC1,ARHGAP22,ERCC2,PABPC4,GTF2H3,MRPL20,MED16,TMCO1,CPNE1,MRPL42,SRP68,TAPT1,MCM10,DLD,XRCC5,TFB1M,MYB,TAF13,RHOXF2,RHOXF2B,ATP13A1,SRF,STT3A,MRPS7,LAMTOR2,ACAD9,ATP5PB,SNAI1,ZCRB1,NDUFB4,SKA3,OPA1,DHDDS,GTF3C1,MRPL15,MRPL49,SEC11A,SNRNP27,PSMC1,TWNK,TBP,MCM5,PPP2R2A,MED7,PGK1,CYB5B,UBE2J1,TRPM7,HINFP,CPSF6,BMS1,DNAJC24,PSMC3,MRPL3,SLC25A3,FASTKD5,NEDD8-MDP1,BCLAF1,HEXIM1,ATP5MF,ATP5PO,SINHCAF,RRAGA,CUL3,CARS2")                 
+                        else{
+                          let genes = "IER3IP1,YIPF5,SEC61B,HSPA5,TMEM167A,SPCS3,SEL1L,INTS8,SMG5,MANF,SEC61A1,UFL1,UPF2,CNOT3,SLC35B1,SRP19,EIF2B3,SSR1,SLC39A7,TTI1,SCYL1,DDRGK1,SEC61G,SEC63,TMED2,SYVN1,BTAF1,SSR2,MED12,SMG7,TMED10,OXA1L,MRPS9,HYOU1,HSD17B12,MTHFD1,EPRS1,PSMA4,MED21,DNAJB9,ATP5F1B,VPS29,XPO1,UMPS,INTS10,DNAJC19,UROD,ATF6,TELO2,PRELID3B,SRPRB,UPF1,IDH3A,KANSL3,HSD17B10,DHX30,ASCC3,MNAT1,SAMM50,HSP90B1,INTS15,POLR3A,MRPL22,P4HB,TARS2,SLC33A1,EIF2B5,EMC2,PPP1R10,MED30,AARS1,SMC1A,PSMD4,INTS2,THRAP3,MRPS33,FAF2,AFG3L2,FECH,MED19,UQCRB,COX6C,MRPL17,SRP72,CLNS1A,OGT,TSEN2,DDX39B,PSMA7,MRPL18,PMPCB,SARS1,MED22,PSMD6,GTF2H1,PRRC2A,NDUFA8,SPCS2,ORC5,CDK6,PNISR,RNGTT,MRPS14,PSMB2,PHB1,PSMD12,ATP5ME,XRN1,MRPL43,MED23,TIMM44,ZFX,YTHDC1,MRPL34,GTF3C2,FLCN,SSR3,CCAR1,GAB2,MRPS18A,FARSB,TCF3,MRPL19,SSBP1,MRPS27,SAE1,CTPS1,GRSF1,SHOC2,SMNDC1,COX4I1,EEF1A1,VPS16,MED1,MRPS21,DAD1,METTL17,PFDN2,INPPL1,ZEB2,NDUFS1,EP400,GNPNAT1,MRPL13,MARS2,LONP1,PDIA6,SOCS1,TLK2,TPR,TARS1,CHCHD4,NSD1,ILF2,MCM6,EIF5,KDM5C,MRPS5,VARS1,PUM1,GBF1,HBS1L,SLC7A1,ZNF236,MRPL10,MRPL33,HARS1,NEDD8,SLC39A9,CALU,CSNK1A1,TTI2,MRPL55,SAP18,TRMT10C,IPO13,PSMB7,INTS14,PTCD3,MRPS23,PGD,MRPS12,RPN1,MED17,CBLL1,ALYREF,DNAJA3,HEATR1,GMPPB,PRPF39,SMC3,MED27,MRPL58,GADD45GIP1,ATP5MJ,SDHC,PSMD11,ATP5PD,CNOT2,MED6,NUP54,MED18,SNRNP70,MTPAP,MED14,DDOST,DARS1,CAD,ALG9,LAMTOR1,NDUFA9,SUPT6H,BRIP1,SLC25A51,COX10,FNIP1,GFM1,CDK7,MRPS10,PTDSS1,SUGT1,PSMD13,DTYMK,PSMD14,MRPL16,CCNH,MCM3,EIF2B4,IARS2,MRPL9,PPP2R1A,PET117,POLR2L,LRPPRC,GINS4,SEM1,UBA6,HCCS,UQCRC1,KANSL2,ZNF687,DHX15,RPL41,MRPS35,CHMP6,ALG12,DERL2,COX7C,PRKCSH,MED10,VPS4A,COPB1,EIF2S1,PSMB5,BRD8,DMAP1,MED24,SMARCA5,MRPL37,MED31,MRPS17,LYL1,NRDE2,CENPI,NCAPD2,ELL,EIF2B2,SRSF3,RPN2,MRPL27,PSMC6,MED20,RARS2,ZFR,RANBP3,COQ2,ORC2,GTF2E1,ZEB1,PNPT1,EMC4,MRPL51,POLR3B,PPRC1,MRPL32,COPG1,CARM1,PSMB1,CCDC174,CCND3,PTCD1,MRPL39,RARS1,POLG2,LAMTOR5,MRPS16,ZBTB14,ALG13,MCM2,PSMA2,FUBP3,TIAL1,MRPL36,FOXN3,MRPS18B,CHERP,TRRAP,VPS39,LAMTOR4,SMN2,UBE4B,MRPS31,MYC,BCR,MRPL35,PHB2,MARS1,THOC2,HSPA13,DMAC1,ARHGAP22,ERCC2,PABPC4,GTF2H3,MRPL20,MED16,TMCO1,CPNE1,MRPL42,SRP68,TAPT1,MCM10,DLD,XRCC5,TFB1M,MYB,TAF13,RHOXF2,RHOXF2B,ATP13A1,SRF,STT3A,MRPS7,LAMTOR2,ACAD9,ATP5PB,SNAI1,ZCRB1,NDUFB4,SKA3,OPA1,DHDDS,GTF3C1,MRPL15,MRPL49,SEC11A,SNRNP27,PSMC1,TWNK,TBP,MCM5,PPP2R2A,MED7,PGK1,CYB5B,UBE2J1,TRPM7,HINFP,CPSF6,BMS1,DNAJC24,PSMC3,MRPL3,SLC25A3,FASTKD5,NEDD8-MDP1,BCLAF1,HEXIM1,ATP5MF,ATP5PO,SINHCAF,RRAGA,CUL3,CARS2"
+                          var shuffledArray = genes.split(',').sort(function() { return 0.5 - Math.random() });
+                          var x = Math.floor(Math.random() * 51) + 50; // Math.random() is [0, 1), so we multiply by 51 (difference between 100 and 50 plus 1) to get a number between 0 and 51, then add 50 to shift the range to [50, 101), and floor the result to get an integer
+                          // Ensure that x does not exceed the total number of genes
+                          x = Math.min(x, shuffledArray.length);
+                          // Slice the array to get 'x' elements
+                          var selectedGenes = shuffledArray.slice(0, x);
+                          // Join the selected genes into a string and submit
+                          genesChanged(selectedGenes.join(','));
+                        }
                         }}
                     /></Flex> </div>}>
         <Row spacing={0} width="100%" height="15%">
           <div className={styles.subItems}>
             <Field
-              label="Saved Lists"
+              label= {"Saved "  + (isGeneSignature?"gene signatures":"genelists")}
               labelLeft
-              labelWidth="80px"
-              helpText="Your locally saved genelists"
+              labelWidth="90px"             
+              helpText={"Your locally saved " + (isGeneSignature?"gene signatures":"genelists")}
               className={styles.mainView}
             >
               <Select
+              
                 onChange={({ target: { value } }) => {
-                  console.log("value", value);
+                  //console.log("value", value);
                   setSelectedGeneList(value);
 
                   getGenelistById(value)
                     .then((result) => {
-                      console.log(result);
+                      //console.log(result);
                       setGenes(result.genes);
                     })
                     .catch((error) => {
@@ -368,8 +344,8 @@ const debouncedChangeHandler = useCallback(
         <div className={styles.subItems}>  
         <TextArea
             width="100%" 
-            placeholder='Please enter target list seperated by comma, new line, space, or semicolon!'
-            tooltip='Please enter gene list seperated by comma, new line, space, or semicolon!'
+            placeholder= {textTooltip}
+            tooltip={textTooltip}
             rows={8}
             resize='vertical'
             value={currentGenes}
@@ -379,7 +355,7 @@ const debouncedChangeHandler = useCallback(
           
             <GeneSymbolValidatorMessage {...props} />
             <Spacer height={3} />
-            <Text>{numberOfGenesEntered}</Text>
+            <Text>{numberOfGenesEntered + (isGeneSignature? " genes in the signature": (isPerturbationList?" perturbations":" genes"))}</Text>
           </div>
         </Row>
 
@@ -392,6 +368,7 @@ const debouncedChangeHandler = useCallback(
               //  style={{width: "100%"}}
             >
               <Button
+              small
                 colored="danger"
                 disabled={
                   selectedGeneList === undefined ||
@@ -406,17 +383,19 @@ const debouncedChangeHandler = useCallback(
               />
 
               <Popover
+               showCloseButton
+               
                 disabled={numberOfGenesEntered === 0}
                 content={
                   <InputGroup>
                     <Input
                       value={newGeneListName ?? "New Gene List"}
-                      width="150px"
+                      
                       onChange={({ target: { value } }) =>
                         setNewGeneListName(value)
                       }
                     />
-                    <Button
+                    <Button                      
                       colored="success"
                       label="Save"
                       icon={<FaSave />}
@@ -430,16 +409,12 @@ const debouncedChangeHandler = useCallback(
                         });
                         //set genelist to current one
                       }}
-                    />
-                    <Button
-                      label="Cancel"
-                      icon={<FaWindowClose />}
-                      onClick={function Tl() {}}
-                    />
+                    />                   
                   </InputGroup>
                 }
               >
                 <Button
+                  small
                   colored
                   label="SAVE LIST"
                   icon={<FaSave />}

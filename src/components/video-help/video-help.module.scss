@@ -1,0 +1,53 @@
+.mainView {
+  padding: 15px;
+  width: 100%;
+  overflow: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  
+
+}
+
+.infoSection {
+  display: block;
+  justify-content: space-between;
+  max-width: 1200px;
+}
+
+.moduleTextInfos {
+  width: 90%;
+  font-size: 17px;
+}
+
+.float-right {
+  float: right;
+  margin: 0 0 10px 10px;
+}
+
+.responsive-image {
+  max-width: 100%;
+  height: auto;
+ }
+
+.fastRewind {
+  background-image: url('../../../public/images/rewind.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;  
+  flex: 1;
+  &:hover{
+  background-image: url('../../../public/images/rewind_black.png');
+}
+}
+
+.fastForward {
+  background-image: url('../../../public/images/forward.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center; 
+  flex: 1;
+  &:hover{
+  background-image: url('../../../public/images/forward_black.png');
+}
+}
