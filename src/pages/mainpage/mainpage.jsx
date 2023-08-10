@@ -118,9 +118,9 @@ const MainPage = ({ coreSettingsChanged }) => {
     <span style= {{marginLeft: "10px"}}>Click here to raise an issue on GitHub</span>
     </a>
         
-    <a  style= {{fontSize: "1em",  marginLeft: "3%"}} target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR_API">
+    <a  style= {{fontSize: "1em",  marginLeft: "3%"}} target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR">
     <span  style = {{color: "#D90000"}} >Would you like to contribute?</span> <span>  Visit our   </span>
-    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR_API">
+    <a  target="_blank" rel="noopener noreferrer" href="https://github.com/omerfaruk84/GenesetR">
     <img style= {{width: "45px"}} src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png"/>
     </a>
     <span style= {{marginLeft: "3px"}}>page.</span>
