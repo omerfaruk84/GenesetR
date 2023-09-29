@@ -38,6 +38,7 @@ const GeneRegulationSettings = ({
             await updateGeneLists("K562gwps");
     
             const perturbVal = await get("geneList_K562gwps_perturb");
+            console.log("perturbVal",perturbVal)
             addToCheckSet(perturbVal, check);
             
             const genesVal = await get("geneList_K562gwps_genes");

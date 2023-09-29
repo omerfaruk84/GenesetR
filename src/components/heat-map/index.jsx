@@ -20,6 +20,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleWheel = (event) => {
+
     if (event.shiftKey) {
     event.preventDefault();
 
@@ -32,6 +33,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     setScale(newScale);
     }
   };
+
 
   const handleMouseDown = (event) => {
     // Check if middle button (wheel) is pressed
@@ -54,6 +56,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   };
   //const [rowCount, setrowCount] = useState(1);
  
+  
   let rowCount =0;
   const tableInfo = []
   const headings  = ['Gene 1', 'Gene 2', 'Corr R']
@@ -69,7 +72,8 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     }   
   ];
   useEffect(() => {  
-    //console.log("HI2",correlationSettings?.filter)  
+    console.log("graphData",graphData)  
+    
     rowCount = 0
     if(graphData?.data?.nodes){
       tableInfo.length =0
@@ -86,11 +90,13 @@ const HeatMap = ({ graphData, correlationSettings }) => {
       }
       setkeyedData(tableInfo)      
     }
+
   },[correlationSettings?.filter , graphData])
  
 
   useEffect(() => {
     if (graphData) {
+      //graphData = JSON.parse(graphData?.pert)
       // Should inject heat map into div with id=inchlib
       console.log("graphData",graphData)
       console.log("rowCount",rowCount)
@@ -115,9 +121,11 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           column_metadata: false,
           max_height: 1500,          
           dendrogram: true,
+          column_dendrogram: false,
           width: Math.min(graphData?.data?.feature_names.length *13,2000),         
           heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
+          independent_columns: false, //Color based on whole heatmap
           draw_row_ids: rowCount>100? false: true,
           heatmap_part_width:0.97,
           max_column_width: 10,
@@ -130,10 +138,42 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           // dendrogram:false,
           //fixed_row_id_size:12,
         });
+        
+        console.log("graphData", graphData?.data)
         window.inchlib.read_data(graphData);
+        console.log("window.inchlib", window.inchlib)
         window.inchlib.draw();
         //window.inchlib.add_prefix();
+        let cordinates = Object.entries(window.inchlib.leaves_y_coordinates).sort((a, b) => a[1] - b[1]); 
+        let genesinrows = []
+        const valueKeyMap = new Map();
+        for (const [key, value] of Object.entries(window.inchlib.objects2leaves)) {
+          // Add the value as the key and the key as the value to the valueKeyMap map.
+          valueKeyMap.set(value, key);
+        }
+
+        for(let key in cordinates){         
+          genesinrows.push(valueKeyMap.get(cordinates[key][0]))
+        }
+
+        for(let key in graphData?.data?.feature_names){         
+          valueKeyMap.set(graphData?.data?.feature_names[key], key);
+        }
+
+
+        let columnOrder = []
+
+        for(let key in genesinrows){ 
+          columnOrder.push(valueKeyMap.get(genesinrows[key]))
+        }
         
+
+        console.log("columnOrder", columnOrder)
+        window.inchlib.update_settings({"columns_order": columnOrder.reverse()})
+        window.inchlib.redraw()
+
+
+   
         window.inchlib.events.row_onmouseover = function(ids, evt){
          // console.log("row_onmouseover",ids,evt)
         };

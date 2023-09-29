@@ -1,30 +1,15 @@
-div._item_1xgsk_413 {
-  //display: none;
-  margin-left: "5px";
-  //background-color: red;
-}
-
-#root > div > div.main-view_mainView__ZF1p5 > div.top-bar__topbar_1xgsk_339__WWyhI > div > div {
-  display: none;
-}
-
-._topbar_1xgsk_339{
-  //display: none;
-  //margin-left: 250px;
-  background-color: red;
-  justify-content: center;
-}
-._topbar_1xgsk_339{
-  justify-content: center;
-  background-color: red;
-}
-
-
 .topBar {
-  background-color: blue;
+  div {
+    > div:nth-child(2) {
+      display: none;
+    }
+    justify-content: center;
+  }
+  font-size: medium;
+  background-color: rgb(255, 0, 0);
   max-width: 1200px;
   height: 60px;
-  border: 2px solid blue;
+  border: 2px solid rgb(34, 0, 6);
   margin-top: 30px;
   ul {
     height: 100%;

@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { Spacer, Select, Row , Card, Heading, Button} from "@oliasoft-open-source/react-ui-library";
+import {
+  Spacer,
+  Select,
+  Row,
+  Card,
+  Heading,
+  Button,
+} from "@oliasoft-open-source/react-ui-library";
 import DataTable from "react-data-table-component";
 import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
@@ -9,8 +16,8 @@ import { registerTransform } from "echarts/core";
 //import GraphChart from 'echarts/charts';
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { transform } from "echarts-stat";
-import { coreSettingsChanged } from '../../store/settings/core-settings';
-import { CoreSettingsTypes } from '../side-bar/settings/enums';
+import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { CoreSettingsTypes } from "../side-bar/settings/enums";
 import { FaTrash } from "react-icons/fa";
 import {
   GridComponent,
@@ -61,7 +68,6 @@ const ScatterPlot = ({
   coreSettingsChanged,
 }) => {
   const [options, setOptions] = useState({});
-  
 
   const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
   const genes = scatterplotSettings.genesTolabel
@@ -70,67 +76,64 @@ const ScatterPlot = ({
   const genesTolabel = new Set(genes);
   var pieces = [];
   const clusterData = [];
-  const minandmax = [0,0,0,0,0,0];
-
-  
+  const minandmax = [0, 0, 0, 0, 0, 0];
 
   //const [clusters, setClusters] = useState();
 
   const clusters = {};
 
-  
-  let graphdata = graphData; 
+  let graphdata = graphData;
   if (
     graphdata &&
     graphdata["PC1"] &&
     graphdata["PC2"] &&
     graphdata["GeneSymbols"]
   ) {
-    
-     // There's no real number bigger than plus Infinity
+    // There's no real number bigger than plus Infinity
     var lowest = Number.POSITIVE_INFINITY;
     var highest = Number.NEGATIVE_INFINITY;
     var tmp;
-    for (let i=graphdata["PC1"].length-1; i>=0; i--) {
-        tmp = graphdata["PC1"][i];
-        if (tmp < lowest) lowest = tmp;
-        if (tmp > highest) highest = tmp;
+    for (let i = graphdata["PC1"].length - 1; i >= 0; i--) {
+      tmp = graphdata["PC1"][i];
+      if (tmp < lowest) lowest = tmp;
+      if (tmp > highest) highest = tmp;
     }
-   
-    minandmax[0] = lowest
-    minandmax[1] = highest
+
+    minandmax[0] = lowest;
+    minandmax[1] = highest;
 
     lowest = Number.POSITIVE_INFINITY;
     highest = Number.NEGATIVE_INFINITY;
-    for (let i=graphdata["PC2"].length-1; i>=0; i--) {
-        tmp = graphdata["PC2"][i];
-        if (tmp < lowest) lowest = tmp;
-        if (tmp > highest) highest = tmp;
+    for (let i = graphdata["PC2"].length - 1; i >= 0; i--) {
+      tmp = graphdata["PC2"][i];
+      if (tmp < lowest) lowest = tmp;
+      if (tmp > highest) highest = tmp;
     }
-    minandmax[2] = lowest
-    minandmax[3] = highest
-    
-    
+    minandmax[2] = lowest;
+    minandmax[3] = highest;
+
     lowest = Number.POSITIVE_INFINITY;
     highest = Number.NEGATIVE_INFINITY;
-    for (let i=graphdata["PC3"].length-1; i>=0; i--) {
-        tmp = graphdata["PC3"][i];
-        if (tmp < lowest) lowest = tmp;
-        if (tmp > highest) highest = tmp;
+    for (let i = graphdata["PC3"].length - 1; i >= 0; i--) {
+      tmp = graphdata["PC3"][i];
+      if (tmp < lowest) lowest = tmp;
+      if (tmp > highest) highest = tmp;
     }
-    minandmax[4] = lowest
-    minandmax[5] = highest
- 
-
+    minandmax[4] = lowest;
+    minandmax[5] = highest;
 
     if (graphdata["clusterCount"] > 0) {
-      
-      let arrayOfArrays = Array.from(Array(graphdata["clusterCount"]), () => []);
-      console.log("arrayOfArrays empty", arrayOfArrays)
+      let arrayOfArrays = Array.from(
+        Array(graphdata["clusterCount"]),
+        () => []
+      );
+      console.log("arrayOfArrays empty", arrayOfArrays);
       for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
         //collect the clusters
-        if(graphdata["clusterLabels"][i]> -1) {
-          arrayOfArrays[graphdata["clusterLabels"][i]].push( graphdata["GeneSymbols"][i])
+        if (graphdata["clusterLabels"][i] > -1) {
+          arrayOfArrays[graphdata["clusterLabels"][i]].push(
+            graphdata["GeneSymbols"][i]
+          );
           //console.log(i, arrayOfArrays)
         }
 
@@ -143,20 +146,17 @@ const ScatterPlot = ({
           graphdata["clusterProb"][i],
         ]);
       }
-      
+
       //clusters = {}
-      console.log("arrayOfArrays",arrayOfArrays)
-      for(let i =0;i<arrayOfArrays.length;i++){
-        clusters["Cluster" + (i+1)] = arrayOfArrays[i].join();
+      console.log("arrayOfArrays", arrayOfArrays);
+      for (let i = 0; i < arrayOfArrays.length; i++) {
+        clusters["Cluster" + (i + 1)] = arrayOfArrays[i].join();
       }
 
-      console.log("clusters",clusters)
-
-
-
+      console.log("clusters", clusters);
     } else {
-      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {  
-          data.push([
+      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
+        data.push([
           graphdata["PC1"][i] ?? 0,
           graphdata["PC2"][i] ?? 0,
           graphdata["PC3"][i] ?? 0,
@@ -187,7 +187,6 @@ const ScatterPlot = ({
       "#bcbd22",
       "#17becf",
     ];
-
 
     if (graphdata["clusterCount"] > 0) {
       for (let i = -1; i < graphdata["clusterCount"]; i++) {
@@ -227,9 +226,8 @@ const ScatterPlot = ({
         color: COLOR_ALL[1],
       });
     }
-  } 
+  }
   useEffect(() => {
-
     function renderItem(params, api) {
       var curIndex = api.value(0) * 10000;
 
@@ -289,7 +287,7 @@ const ScatterPlot = ({
             overflow: "break",
           },
           formatter: function (params, ticket, callback) {
-            //console.log("Check", params)          
+            //console.log("Check", params)
             var res = localStorage.getItem(params.data[3]);
             if (res !== null) {
               //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
@@ -298,22 +296,31 @@ const ScatterPlot = ({
 
             $.get(
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-              params.data[3],
-              function (content) {
-                console.log(content)
+                params.data[3]
+            )
+              .done(function (content) {
+                let parsedContent =
+                  typeof content === "string" ? JSON.parse(content) : content;
+                console.log(content);
                 res =
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
-                  ": </b></span>" + content.description
-                //JSON.parse(content).description;
-                //console.log("Get results:", content)  
+                  "(" +
+                  parsedContent?.name +
+                  "): </b></span>" +
+                  parsedContent?.description;
+
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
-              }
-            );
+              })
+              .fail(function (jqXHR, textStatus, errorThrown) {
+                console.error(
+                  "Request failed: " + textStatus + ", " + errorThrown
+                );
+              });
             return "Loading";
           },
-        },       
+        },
         visualMap: {
           type: "piecewise",
           top: "top",
@@ -322,60 +329,55 @@ const ScatterPlot = ({
           pieces: pieces,
           orient: "vertical",
           seriesIndex: 1,
-          //show:true,         
-          padding:[60,5,5,5],
-          inverse:true,
-          itemGap:5,
-          align:'left'               
-          
-          
+          //show:true,
+          padding: [60, 5, 5, 5],
+          inverse: true,
+          itemGap: 5,
+          align: "left",
         },
-        grid: { 
-          right:'13%' 
-        
+        grid: {
+          right: "13%",
         },
-        xAxis: {    
+        xAxis: {
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: 'black',
-          },     
-          nameLocation : "center",
-              nameTextStyle:{
-                fontWeight:'bold',
-                fontSize : '15',
-                color: 'black',
-              },
-              name: "Component 1",           
-              nameGap: 25,
-              min:  minandmax[0] - (minandmax[1] - minandmax[0])*0.1,
-              max:  minandmax[1] + (minandmax[1] - minandmax[0])*0.1,
-
-      },
+            color: "black",
+          },
+          nameLocation: "center",
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "15",
+            color: "black",
+          },
+          name: "Component 1",
+          nameGap: 25,
+          min: minandmax[0] - (minandmax[1] - minandmax[0]) * 0.1,
+          max: minandmax[1] + (minandmax[1] - minandmax[0]) * 0.1,
+        },
 
         yAxis: {
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: 'black',
+            color: "black",
           },
-           nameRotate: 90,
-           scale: true,
-           name: "Component 2",
-           nameLocation : "center",
-           nameGap: 50,
-           nameTextStyle:{
-             fontWeight:'bold',
-             fontSize : '15',
-             verticalAlign : 'center',
-             color: 'black',
-           },
-           min:  minandmax[2] - (minandmax[3] - minandmax[2])*0.1,
-           max:  minandmax[3] + (minandmax[3] - minandmax[2])*0.1,
-          
+          nameRotate: 90,
+          scale: true,
+          name: "Component 2",
+          nameLocation: "center",
+          nameGap: 50,
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "15",
+            verticalAlign: "center",
+            color: "black",
           },
+          min: minandmax[2] - (minandmax[3] - minandmax[2]) * 0.1,
+          max: minandmax[3] + (minandmax[3] - minandmax[2]) * 0.1,
+        },
         toolbox: {
           show: true,
           feature: {
@@ -449,65 +451,63 @@ const ScatterPlot = ({
                 : "orthographic",
           },
         },
-        
-      xAxis3D: {    
+
+        xAxis3D: {
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: 'black',
-          },              
-              nameTextStyle:{
-                fontWeight:'bold',
-                fontSize : '15',
-                color: 'black',
-              },
-              name: "Component 1",           
-              nameGap: 25,
-              min:  minandmax[0] - (minandmax[1] - minandmax[0])*0.1,
-              max:  minandmax[1] + (minandmax[1] - minandmax[0])*0.1,
-      },
-      yAxis3D: {
-        axisLabel: {
-          formatter: function (value) {
-            return value.toFixed(2);
+            color: "black",
           },
-          color: 'black',
-        },        
-         scale: true,
-         name: "Component 2",       
-         
-         nameTextStyle:{
-           fontWeight:'bold',
-           fontSize : '15',
-           verticalAlign : 'center',
-           color: 'black',
-         },
-         min:  minandmax[2] - (minandmax[3] - minandmax[2])*0.1,
-         max:  minandmax[3] + (minandmax[3] - minandmax[2])*0.1,
-        
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "15",
+            color: "black",
+          },
+          name: "Component 1",
+          nameGap: 25,
+          min: minandmax[0] - (minandmax[1] - minandmax[0]) * 0.1,
+          max: minandmax[1] + (minandmax[1] - minandmax[0]) * 0.1,
+        },
+        yAxis3D: {
+          axisLabel: {
+            formatter: function (value) {
+              return value.toFixed(2);
+            },
+            color: "black",
+          },
+          scale: true,
+          name: "Component 2",
+
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "15",
+            verticalAlign: "center",
+            color: "black",
+          },
+          min: minandmax[2] - (minandmax[3] - minandmax[2]) * 0.1,
+          max: minandmax[3] + (minandmax[3] - minandmax[2]) * 0.1,
         },
         zAxis3D: {
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: 'black',
-          },          
-           scale: true,
-           name: "Component 3",          
-           
-           nameTextStyle:{
-             fontWeight:'bold',
-             fontSize : '15',
-             verticalAlign : 'center',
-             color: 'black',
-           },
-           min:  minandmax[4] - (minandmax[5] - minandmax[4])*0.1,
-           max:  minandmax[5] + (minandmax[5] - minandmax[4])*0.1,
-          
+            color: "black",
           },
-       
+          scale: true,
+          name: "Component 3",
+
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "15",
+            verticalAlign: "center",
+            color: "black",
+          },
+          min: minandmax[4] - (minandmax[5] - minandmax[4]) * 0.1,
+          max: minandmax[5] + (minandmax[5] - minandmax[4]) * 0.1,
+        },
+
         visualMap: {
           type: "piecewise",
           top: "bottom",
@@ -539,18 +539,28 @@ const ScatterPlot = ({
 
             $.get(
               "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-              params.data[3],
-              function (content) {
-                console.log(content)
+                params.data[3]
+            )
+              .done(function (content) {
+                let parsedContent =
+                  typeof content === "string" ? JSON.parse(content) : content;
+                console.log(content);
                 res =
                   '<span style="color: #e28743";> <b>' +
                   params.data[3] +
-                  ": </b></span>" + (content).description
-                  //JSON.parse(content).description;
+                  "(" +
+                  parsedContent?.name +
+                  "): </b></span>" +
+                  parsedContent?.description;
                 localStorage.setItem(params.data[3], res);
                 callback(ticket, res);
-              }
-            );
+              })
+              .fail(function (jqXHR, textStatus, errorThrown) {
+                console.error(
+                  "Request failed: " + textStatus + ", " + errorThrown
+                );
+              });
+
             return "Loading";
           },
         },
@@ -615,14 +625,6 @@ const ScatterPlot = ({
     //}
   }, [coreSettings, scatterplotSettings, graphdata]);
 
-  
-
-  
-
-  
-  
-
-
   return (
     /*<EchartsReact
         option={options}
@@ -631,7 +633,6 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
-      
         <Row spacing={0} width="100%" height="85%">
           <ReactEChartsCore
             echarts={echarts}
@@ -642,13 +643,11 @@ const ScatterPlot = ({
           />
         </Row>
         <Spacer height="2em" />
-        {Object.keys(clusters).length>0 && (
-        
-        <Row spacing={-100} width="100%" height="90%">
-
-          <GeneSetEnrichmentTable genesets={clusters} />
-        </Row>)
-        }
+        {Object.keys(clusters).length > 0 && (
+          <Row spacing={-100} width="100%" height="90%">
+            <GeneSetEnrichmentTable genesets={clusters} />
+          </Row>
+        )}
       </div>
     </>
   );
