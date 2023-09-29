@@ -1,17 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <link id="favicon" rel="icon" href="https://cdn.pixabay.com/photo/2018/02/27/01/55/gene-icon-3184523_1280.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <!-- Google tag (gtag.js) -->
+    <title>GenesetR</title>
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="Genesetr is a specialized tool for analyzing gene lists, or for finding genes regulated by gene of interest."
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <meta
+      name="keywords"
+      content="Perturb-Seq, Gene Function, RNA-Seq analysis, Proteomics analysis,RNA-Seq"
+    />
+
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://genesetr.uio.no/" />
+    <meta property="og:title" content="Perturb-Seq Analyzer" />
+    <meta
+      property="og:description"
+      content="A tool for analyzing genetic sequences."
+    />
+    <meta
+      property="og:image"
+      content="https://genesetr.uio.no/images/logo.png"
+    />
+    <meta property="og:url" content="https://genesetr.uio.no/" />
+
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-80PDL3N0GG"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-80PDL3N0GG");
+    </script>
+    <meta charset="utf-8" />
+    <link
+      id="favicon"
+      rel="icon"
+      href="https://cdn.pixabay.com/photo/2018/02/27/01/55/gene-icon-3184523_1280.png"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+
+    <link
+      rel="apple-touch-icon"
+      href="https://genesetr.uio.no/images/logo.png"
+    />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Droid+Sans&display=swap" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Droid+Sans&display=swap"
+    />
 
     <script src="jquery-2.0.3.min.js"></script>
     <script src="kinetic-v5.1.0.min.js"></script>
@@ -20,6 +64,5 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-  
   </body>
 </html>
