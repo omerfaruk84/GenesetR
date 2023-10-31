@@ -1,14 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import {
-  Spacer,
-  Select,
-  Row,
-  Card,
-  Heading,
-  Button,
-} from "@oliasoft-open-source/react-ui-library";
-import DataTable from "react-data-table-component";
+import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
+
 import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
 import * as echarts from "echarts/core";
@@ -17,8 +10,7 @@ import { registerTransform } from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { transform } from "echarts-stat";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
-import { CoreSettingsTypes } from "../side-bar/settings/enums";
-import { FaTrash } from "react-icons/fa";
+
 import {
   GridComponent,
   BrushComponent,
