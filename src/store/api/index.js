@@ -6,7 +6,9 @@ let SERVER_ADRESS = "https://genesetr.uio.no/api";
 //const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
 
 if (process.env.NODE_ENV !== "production") {
-  SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
+  console.log("WORKING IN PRODUCTION MODE");
+  SERVER_ADRESS = "https://b74f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
+  SERVER_ADRESS = "http://localhost:8443";
 }
 
 const getData = async (body) => {
@@ -70,7 +72,11 @@ const getData = async (body) => {
 
 const runPcaGraphCalc = async (core, pca, clustering) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
     numcomponents: pca.numberOfComponents,
@@ -87,7 +93,11 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
 
 const runMdeGraphCalc = async (core, mde, clustering) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
 
@@ -110,7 +120,11 @@ const runMdeGraphCalc = async (core, mde, clustering) => {
 
 const runUMAPGraphCalc = async (core, umap, clustering) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
 
@@ -132,7 +146,11 @@ const runUMAPGraphCalc = async (core, umap, clustering) => {
 
 const runtSNEGraphCalc = async (core, tsne, clustering) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
 
@@ -156,7 +174,11 @@ const runtSNEGraphCalc = async (core, tsne, clustering) => {
 
 const runbiClusteringCalc = async (core, biClustering) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
 
@@ -171,7 +193,11 @@ const runbiClusteringCalc = async (core, biClustering) => {
 
 const runPathFinderCalc = async (core, pathfinder) => {
   const body = {
-    downgeneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    downgeneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cellLine: core.cellLine[0],
 
@@ -190,10 +216,18 @@ const runPathFinderCalc = async (core, pathfinder) => {
 
 const runCorrCalc = async (core, corr) => {
   const body = {
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine[0],
-    targetList: core.targetGeneList?.replaceAll(/\s+|,\s+|,/g, ";"),
+    targetList: core.targetGeneList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     row_distance: corr.row_distance,
     column_distance: corr.column_distance,
     row_linkage: corr.row_linkage,
@@ -212,8 +246,16 @@ const runHeatMap = async (core, heatMap) => {
   const body = {
     //dataType: core.dataType,
     cell_line: core.cellLine[0],
-    geneList: core.peturbationList?.replaceAll(/\s+|,\s+|,/g, ";"),
-    targetList: core.targetGeneList?.replaceAll(/\s+|,\s+|,/g, ";").trim(),
+    geneList: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    targetList: core.targetGeneList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
 
     row_distance: heatMap.row_distance,
     column_distance: heatMap.column_distance,
@@ -241,6 +283,23 @@ const runGeneSignature = async (core) => {
     formula: core.targetGeneList.trim("\n", " "),
 
     request: "calcGeneSignature",
+  };
+  return await getData(body);
+};
+
+const runGeneExp = async (core, geneExp) => {
+  const body = {
+    gene: geneExp.selectedGene,
+    dataType: core.dataType,
+    cell_line: core.cellLine[0],
+    targetList: geneExp.targetList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    correlationType: geneExp.corrType,
+    retType: 0,
+    request: "geneExpression",
   };
   return await getData(body);
 };
@@ -333,4 +392,5 @@ export {
   getBlackList,
   updateGeneLists,
   fetchHugoGenes,
+  runGeneExp,
 };

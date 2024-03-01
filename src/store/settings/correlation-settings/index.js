@@ -7,9 +7,10 @@ const initialState = {
   row_distance: 'euclidean',
   column_distance: 'euclidean',
   axis: 'both',  
-  normalize: true,
+  normalize: false,
   write_original: true,
   corrType:"spearman",
+  row_col_sameorder:true,
 };
 
 export const correlationSettingsSlice = createSlice({

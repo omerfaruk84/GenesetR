@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Heading, Spacer , Row, Column} from "@oliasoft-open-source/react-ui-library";
-import { HeatMap } from '../../components/heat-map';
+import { HeatMap } from '../../components/heat-map/index';
 import styles from './heatmap-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
 import VideoHelpPage from '../../components/video-help';

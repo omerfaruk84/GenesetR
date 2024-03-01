@@ -10,11 +10,19 @@ import {
   toast,
   Heading,
   TextArea,
+  Modal,
+  Dialog,
+  InputGroup,
+  Flex,
+  Label,
+  Toggle,
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
+import GenelistAdd from "../genelist-add";
 import { connect } from "react-redux";
-import { FiCopy, FiDatabase, FiDownload } from "react-icons/fi";
-import { FaCopy, FaDatabase, FaDownload } from "react-icons/fa";
+import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
+
+import { FaCopy, FaDatabase, FaDownload, FaTimesCircle } from "react-icons/fa";
 import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
@@ -26,6 +34,7 @@ import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { performEnrichment } from "./enrichrAPI";
 import { saveAs } from "file-saver";
+import { CopyToClipboard } from "react-copy-to-clipboard";
 
 import {
   GridComponent,
@@ -44,6 +53,11 @@ import {
   CanvasRenderer,
   // SVGRenderer,
 } from "echarts/renderers";
+import { SmsSharp } from "@mui/icons-material";
+import {
+  GeneSetEnrichmentSettingsTypes,
+  GenelistCompareSettingsTypes,
+} from "../side-bar/settings/enums";
 
 echarts.use([
   TitleComponent,
@@ -83,13 +97,9 @@ var checkNode = function (obj, path, value) {
   }
   obj.checked = value;
 };
-//console.log(data);
 
 const onChange = (currentNode, selectedNodes) => {
   checkNode(data, currentNode.path, currentNode.checked);
-};
-const onAction = (node, action) => {
-  console.log("onAction::", action, node);
 };
 
 /*
@@ -99,8 +109,8 @@ Container component manages state and configuration of table
 const GeneSetEnrichmentTable = ({
   //runEnrichr,
   genesets,
-  //genesetEnrichmentSettingsChanged,
-  //genesetEnrichmentSettings,
+  genesetEnrichmentSettingsChanged,
+  genesetEnrichmentSettings,
   //clusteringSettingsChanged,
 }) => {
   assignObjectPaths(data);
@@ -152,7 +162,7 @@ const GeneSetEnrichmentTable = ({
 
     performEnrichment(genes, selectedDatasets.join().replaceAll(" ", "_"))
       .then((results) => {
-        //console.log("keyedData", temp, results)
+        temp.length = 0;
         for (let i in results) {
           for (let j in results[i].data) {
             temp.push({
@@ -175,7 +185,9 @@ const GeneSetEnrichmentTable = ({
             });
           }
         }
-        // console.log(temp)
+
+        temp.sort((a, b) => b["Combined score"] - a["Combined score"]);
+
         setkeyedData(temp);
       })
       .catch((error) => {
@@ -203,6 +215,9 @@ const GeneSetEnrichmentTable = ({
   const [selectedPage, setSelectedPage] = useState(1);
   const [filters, setFilters] = useState({});
   const [sorts, setSorts] = useState({});
+  const [newListVisible, setNewListVisible] = useState(false);
+  const [genesToSave, setgenesToSave] = useState("");
+  const [datasetVisible, setdatasetVisible] = useState(false);
 
   useEffect(() => {
     setSelectedPage(1);
@@ -216,7 +231,7 @@ const GeneSetEnrichmentTable = ({
         Object.keys(filters).every((key) => {
           return filters[key] === ""
             ? true
-            : row[key].toString().includes(filters[key]);
+            : row[key]?.toString().includes(filters[key]);
         })
       )
       .sort((a, b) =>
@@ -292,6 +307,7 @@ const GeneSetEnrichmentTable = ({
     </>
   );
   //let allGenes = selectedCluster?clusters[selectedCluster?.split(" (")[0]]?.split(","):[]
+
   let allGenes = selectedCluster
     ? genelistOptions
         .find((item) => item.value === selectedCluster)
@@ -302,7 +318,6 @@ const GeneSetEnrichmentTable = ({
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
       .map((dataRow) => {
-        //console.log("dataRow", dataRow)
         const datasetName = dataRow["Dataset"];
         const rowsCells = Object.entries(dataRow).map(([key, value]) =>
           key === "GC"
@@ -394,40 +409,90 @@ const GeneSetEnrichmentTable = ({
 
   const [options, setOptions] = useState({});
 
-  useEffect(() => {
-    /*
-        "Dataset":results[i].name.replaceAll("_"," "),
-          "Rank":results[i].data[j][0],
-          "Term name": results[i].data[j][1].charAt(0).toUpperCase() + results[i].data[j][1].slice(1).split("(")[0],        
-          "P-value":results[i].data[j][2]>0.001?results[i].data[j][2].toFixed(5):results[i].data[j][2].toExponential(2),  
-          "Z-score":results[i].data[j][3].toFixed(1), 
-          "Combined score":results[i].data[j][4].toFixed(1), 
-          "Adjusted p-value":results[i].data[j][6]>0.001?results[i].data[j][6].toFixed(5):results[i].data[j][6].toExponential(2),  
-          "GC":results[i].data[j][5]}    
-    */
+  function copyGenes(text) {
+    return new Promise((resolve, reject) => {
+      if (
+        typeof navigator !== "undefined" &&
+        typeof navigator.clipboard !== "undefined" &&
+        navigator.permissions !== "undefined"
+      ) {
+        const type = "text/plain";
+        const blob = new Blob([text], { type });
+        const data = [new ClipboardItem({ [type]: blob })];
+        navigator.permissions
+          .query({ name: "clipboard-write" })
+          .then((permission) => {
+            if (
+              permission.state === "granted" ||
+              permission.state === "prompt"
+            ) {
+              navigator.clipboard
+                .write(data)
+                .then(resolve, reject)
+                .catch(reject);
+            } else {
+              reject(new Error("Permission not granted!"));
+            }
+          });
+      } else if (
+        document.queryCommandSupported &&
+        document.queryCommandSupported("copy")
+      ) {
+        var textarea = document.createElement("textarea");
+        textarea.textContent = text;
+        textarea.style.position = "fixed";
+        textarea.style.width = "2em";
+        textarea.style.height = "2em";
+        textarea.style.padding = 0;
+        textarea.style.border = "none";
+        textarea.style.outline = "none";
+        textarea.style.boxShadow = "none";
+        textarea.style.background = "transparent";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+          resolve();
+        } catch (e) {
+          document.body.removeChild(textarea);
+          reject(e);
+        }
+      } else {
+        reject(
+          new Error("None of copying methods are supported by this browser!")
+        );
+      }
+    });
+  }
 
-    //3D chart
+  useEffect(() => {
     const bubbleGraphData = [];
 
     for (let data in keyedData) {
-      const objClone = {
-        "Adjusted p-value": -Math.log10(keyedData[data]["Adjusted p-value"]),
-        "p-value": -Math.log10(keyedData[data]["P-value"]),
-        "Combined score": keyedData[data]["Combined score"],
-        "Z-score": keyedData[data]["Z-score"], // Math.log(keyedData[data]['Z-score'],10),
-        "Term name": keyedData[data]["Term name"],
-        Genes: keyedData[data]["GC"],
-        Dataset: keyedData[data]["Dataset"],
-      };
+      if (keyedData[data]["Adjusted p-value"] < 0.05) {
+        const objClone = {
+          "Adjusted log p-value": (-Math.log10(
+            keyedData[data]["Adjusted p-value"]
+          )).toFixed(2),
+          "p-value": -Math.log10(keyedData[data]["P-value"]),
+          "Combined score": keyedData[data]["Combined score"],
+          "Z-score": keyedData[data]["Z-score"], // Math.log(keyedData[data]['Z-score'],10),
+          "Term name": keyedData[data]["Term name"],
+          Genes: keyedData[data]["GC"],
+          Dataset: keyedData[data]["Dataset"],
+        };
 
-      bubbleGraphData.push(objClone);
+        bubbleGraphData.push(objClone);
+      }
     }
-    console.log("bubbleGraphData", bubbleGraphData);
+
     setOptions({
       dataset: {
         dimensions: [
           "Z-score",
-          "Adjusted p-value",
+          "Adjusted log p-value",
           "Combined score",
           "Term name",
         ],
@@ -576,9 +641,9 @@ const GeneSetEnrichmentTable = ({
               let maxVis = Math.min(10, bubbleGraphData.length);
               if (
                 param.data &&
-                param.data["Adjusted p-value"] > 2 &&
-                param.data["Adjusted p-value"] >
-                  bubbleGraphData[maxVis]["Adjusted p-value"]
+                param.data["Adjusted log p-value"] > 2 &&
+                param.data["Adjusted log  p-value"] >
+                  bubbleGraphData[maxVis]["Adjusted log  p-value"]
               ) {
                 return param.data["Term name"];
               } else return "";
@@ -604,8 +669,133 @@ const GeneSetEnrichmentTable = ({
         },
       ],
     });
+
+    setOptions2({
+      dataset: {
+        dimensions: [
+          "Term name",
+          "Z-score",
+          "Adjusted log p-value",
+          "Combined score",
+        ],
+        source: bubbleGraphData,
+      },
+
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "shadow",
+        },
+      },
+
+      toolbox: {
+        show: true,
+        feature: {
+          dataZoom: {},
+          mark: { show: true },
+          saveAsImage: { show: true, pixelRatio: 3 },
+        },
+      },
+
+      xAxis: [
+        {
+          type: "value",
+          position: "bottom",
+          inverse: true,
+          name: "Z-score",
+          nameLocation: "center",
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: "14",
+          },
+          nameGap: 25,
+        },
+        {
+          type: "value",
+          position: "top",
+          inverse: true,
+          name: "Adjusted log p-value",
+          nameLocation: "center",
+          nameTextStyle: {
+            fontWeight: "bold",
+            fontSize: 14,
+          },
+          nameGap: 30,
+
+          axisLine: { show: true }, // Hide axis line for Adjusted p-value
+          axisTick: { show: true }, // Hide axis ticks for Adjusted p-value
+          axisLabel: { show: true }, // Optionally hide labels for clarity
+        },
+      ],
+
+      grid: {
+        right: "50%",
+      },
+
+      yAxis: {
+        inverse: true,
+        splitLine: {
+          lineStyle: {
+            type: "dashed",
+          },
+        },
+        axisLabel: {
+          margin: 10, // Adjusts the space between the labels and the axis line
+          // Other properties like rotate, formatter, etc., can also be adjusted here
+        },
+        type: "category",
+        nameRotate: 90,
+        position: "right",
+        data: bubbleGraphData.map((item) => item["Term name"]), // Assuming bubbleGraphData is an array of objects
+        //scale: true,
+      },
+      dataZoom: [
+        {
+          show: true,
+          xAxisIndex: [0, 1], // Apply to both X-axes
+          start: 0,
+          end: 100,
+          filterMode: "none",
+          bottom: 5,
+        },
+
+        {
+          startValue: 0,
+          endValue: 16,
+          minValueSpan: 6,
+          maxValueSpan: 30,
+          show: true,
+          yAxisIndex: 0,
+          //filterMode: "empty",
+          width: 30,
+          height: "80%",
+          showDataShadow: true,
+          left: "93%",
+          filterMode: "filter",
+        },
+      ],
+      series: [
+        {
+          name: "Z-score",
+          type: "bar",
+          xAxisIndex: 0, // Use first xAxis for Z-score
+          data: bubbleGraphData.map((item) => item["Z-score"]),
+          label: {
+            show: true,
+          },
+        },
+        {
+          name: "Adjusted log p-value",
+          type: "scatter",
+          xAxisIndex: 1, // Use second xAxis for Adjusted p-value
+          symbolSize: 7, // Adjust as needed
+          data: bubbleGraphData.map((item) => item["Adjusted log p-value"]),
+        },
+      ],
+    });
   }, [keyedData]);
 
+  const [options2, setOptions2] = useState({});
   //In the first run set the selected cluter to cluster 0
   useEffect(() => {
     if (Object.keys(genesets).length > 0) {
@@ -621,12 +811,14 @@ const GeneSetEnrichmentTable = ({
       });
 
       setGeneListOptions(tempx);
-      setselectedCluster(Object.keys(genesets)[0]);
+      if (tempx.length > 0 && selectedCluster === tempx[0].value) {
+        performEnrichmentNow(tempx[0].genes);
+      }
+      if (tempx.length > 0) setselectedCluster(tempx[0].value);
       //performEnrichmentNow(genesets[Object.keys(genesets)[0]]);
     }
 
     // setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");
-    // console.log("Checking Clusters ", clusters[Object.keys(clusters)[0]])
     // performEnrichmentNow(clusters[Object.keys(clusters)[0]]);
   }, [genesets]);
 
@@ -636,6 +828,22 @@ const GeneSetEnrichmentTable = ({
     )?.genes;
     genesToEnrich && performEnrichmentNow(genesToEnrich);
   }, [selectedCluster]);
+
+  const handleSaveGeneList = () => {
+    let genesString = selectedCluster
+      ? genelistOptions
+          .find((item) => item.value === selectedCluster)
+          .genes.replaceAll("_2", "")
+          .split(",")
+          .filter((gene) => !gene.trim().startsWith("non-targeting"))
+          .join(",")
+      : "";
+
+    if (genesString.length > 2) {
+      setgenesToSave(genesString);
+      setNewListVisible(true);
+    }
+  };
 
   return (
     <>
@@ -651,60 +859,167 @@ const GeneSetEnrichmentTable = ({
           <Row spacing={0} width="100%" height="10%">
             {genelistOptions.length > 1 ? (
               <>
-                <Field labelLeft labelWidth="130px" label="Select Gene List">
+                <Field labelLeft labelWidth="100px" label="Select Gene List">
                   <Select
+                    searchable
+                    small
                     onChange={({ target: { value } }) => {
                       setselectedCluster(value);
-                      console.log("selectedCluster", selectedCluster, value);
                     }}
                     options={genelistOptions}
                     width={"250px"}
                     value={selectedCluster}
                   />
                 </Field>
-                <Spacer width="16px" />
+                <Spacer width="12px" />
               </>
             ) : null}
-            <div>
-              <Popover
-                content={
-                  <>
+            <div
+              style={{
+                borderColor: "orange",
+                alignItems: "flex-start",
+                display: "flex",
+                flexDirection: "row",
+              }}
+            >
+              <Modal centered={true} visible={datasetVisible}>
+                <Flex flex direction={"column"}>
+                  <div
+                    style={{
+                      backgroundColor: "white",
+                      border: "solid",
+                      borderColor: "orange",
+                      alignItems: "flex-end",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: "white",
+                        alignItems: "flex-end",
+                        display: "flex",
+                        padding: "2px",
+                      }}
+                    >
+                      <Button
+                        padding
+                        colored
+                        round
+                        small
+                        margin-top={20}
+                        onClick={() => {
+                          setdatasetVisible(false);
+                        }}
+                        icon={<FaTimesCircle />}
+                      />
+                    </div>
                     <DropdownTreeSelect
                       data={data}
                       onChange={onChange}
-                      onAction={onAction}
+                      //onAction={onAction}
                       showDropdown="always"
                       className="mdl-demo"
                       //keepChildrenOnSearch={true}
                       //keepOpenOnSelect ={true}
                     />
-                  </>
+                  </div>
+                </Flex>
+              </Modal>
+
+              <Button
+                label="Set Datasets"
+                colored
+                small
+                width={80}
+                onClick={() => {
+                  setdatasetVisible(true);
+                }}
+                icon={<FaDatabase />}
+              />
+              <Spacer width="6px" />
+              <CopyToClipboard
+                text={
+                  selectedCluster
+                    ? genelistOptions
+                        .find((item) => item.value === selectedCluster)
+                        .genes.replaceAll("_2", "")
+                        .split(",")
+                        .filter(
+                          (gene) => !gene.trim().startsWith("non-targeting")
+                        )
+                        .join("\n")
+                    : ""
                 }
               >
                 <Button
-                  label="Set Datasets"
-                  colored
-                  margin-top={20}
-                  icon={<FaDatabase />}
+                  small
+                  label="Copy Genes"
+                  colored="success"
+                  icon={<FaCopy />}
+                  width={80}
+                />
+              </CopyToClipboard>
+
+              <Spacer width="6px" />
+
+              <Button
+                label="Create Genelist"
+                colored="danger"
+                width={80}
+                small
+                onClick={handleSaveGeneList}
+                icon={<PlaylistAddCircleRoundedIcon />}
+              />
+              {newListVisible && (
+                <GenelistAdd
+                  genes={genesToSave}
+                  setNewListVisible={setNewListVisible}
+                />
+              )}
+
+              <Spacer width="6px" />
+
+              <Popover
+                closeOnOutsideClick
+                content={
+                  <TextArea
+                    rows={10}
+                    value={
+                      selectedCluster
+                        ? genelistOptions
+                            .find((item) => item.value === selectedCluster)
+                            .genes.replaceAll("_2", "")
+                            .split(",")
+                            .filter(
+                              (gene) => !gene.trim().startsWith("non-targeting")
+                            )
+                            .join("\n")
+                        : ""
+                    }
+                  />
+                }
+                overflowContainer
+                showCloseButton
+              >
+                <Button
+                  label="List of Genes"
+                  colored="danger"
+                  small
+                  width={80}
+                  icon={<PlaylistAddCircleRoundedIcon />}
                 />
               </Popover>
-            </div>
-            <div>
-              <Spacer width="16px" />
-              <Button
-                label="Copy Genes"
-                colored="success"
-                margin-top={20}
-                icon={<FaCopy />}
-                onClick={() => {
-                  if (selectedCluster)
-                    navigator.clipboard.writeText(
-                      genelistOptions
-                        .find((item) => item.value === selectedCluster)
-                        .genes.replaceAll("_2", "")
-                        .replaceAll(",", "\n")
-                    );
-                }}
+              <Spacer width="6px" />
+              <Toggle
+                label="Bar Graph"
+                checked={genesetEnrichmentSettings.isBargraph}
+                onChange={({ target: { checked } }) =>
+                  genesetEnrichmentSettingsChanged({
+                    settingName: GeneSetEnrichmentSettingsTypes.ISBARGRAPH,
+                    newValue: checked,
+                  })
+                }
               />
             </div>
           </Row>
@@ -713,7 +1028,9 @@ const GeneSetEnrichmentTable = ({
             <div style={{ width: "100%", height: "100%" }}>
               <ReactEChartsCore
                 echarts={echarts}
-                option={options}
+                option={
+                  genesetEnrichmentSettings.isBargraph ? options2 : options
+                }
                 style={{ height: "60VH", width: "100%" }}
                 notMerge={true}
                 lazyUpdate={true}
@@ -726,6 +1043,7 @@ const GeneSetEnrichmentTable = ({
               display: "block",
               marginLeft: "auto",
               marginRight: "auto",
+              marginTop: "20px",
               width: "100%",
             }}
           >

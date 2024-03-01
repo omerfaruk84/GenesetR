@@ -1,24 +1,24 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  gseaDatasets: '',
-  genes: '',
+  gseaDatasets: "",
+  genes: "",
+  isBargraph: true,
 };
 
 export const genesetEnrichmentSettingsSlice = createSlice({
-  name: 'genesetEnrichment',
+  name: "genesetEnrichment",
   initialState,
   reducers: {
     genesetEnrichmentSettingsChanged: (state, action) => {
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
       console.log("genesetEnrichmentSettingsChanged");
-    }
+    },
   },
 });
-export const {
-  genesetEnrichmentSettingsChanged
-} = genesetEnrichmentSettingsSlice.actions;
+export const { genesetEnrichmentSettingsChanged } =
+  genesetEnrichmentSettingsSlice.actions;
 
 const genesetEnrichmentSettingsReducer = genesetEnrichmentSettingsSlice.reducer;
 

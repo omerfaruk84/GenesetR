@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
 import { Box, Button } from "@mui/material";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
 import { mkConfig, generateCsv, download } from "export-to-csv";
 import React from "react";
+import GenelistAdd from "../genelist-add";
 
 const csvConfig = mkConfig({
   fieldSeparator: "\t",
@@ -15,6 +17,8 @@ const csvConfig = mkConfig({
 });
 
 const EnrichmentTable = ({ columns, data }) => {
+  const [newListVisible, setNewListVisible] = useState(false);
+  const [genesToSave, setgenesToSave] = useState("");
   const table = useMaterialReactTable({
     columns,
     data,
@@ -89,6 +93,7 @@ const EnrichmentTable = ({ columns, data }) => {
         <Button onClick={handleExportData} startIcon={<FileDownloadIcon />}>
           Export All Data
         </Button>
+
         <Button
           disabled={
             !table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
@@ -97,6 +102,15 @@ const EnrichmentTable = ({ columns, data }) => {
           startIcon={<FileDownloadIcon />}
         >
           Export Selected Rows
+        </Button>
+        <Button
+          disabled={
+            !table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
+          }
+          onClick={() => handleSaveGeneList(table.getSelectedRowModel().rows)}
+          startIcon={<PlaylistAddCircleRoundedIcon />}
+        >
+          Create Genelist From Selected
         </Button>
       </Box>
     ),
@@ -111,6 +125,23 @@ const EnrichmentTable = ({ columns, data }) => {
     const rowData = rows.map((row) => row.original);
     const csv = generateCsv(csvConfig)(rowData);
     download(csvConfig)(csv);
+  };
+
+  const handleSaveGeneList = (rows) => {
+    const rowData = rows.map((row) => row.original);
+    let genesString = rowData.map((obj) => obj["Gene"]).join(",");
+    genesString +=
+      "," + rowData.map((obj) => obj["Gene Symbol From"]).join(",");
+    genesString += "," + rowData.map((obj) => obj["Gene Symbol To"]).join(",");
+    genesString = genesString
+      .replaceAll(",,", ",")
+      .replaceAll(",,", ",")
+      .replaceAll(",,", ",");
+
+    if (genesString.length > 2) {
+      setgenesToSave(genesString);
+      setNewListVisible(true);
+    }
   };
 
   /*
@@ -128,6 +159,17 @@ const EnrichmentTable = ({ columns, data }) => {
   };
   */
 
-  return <MaterialReactTable table={table} />;
+  return (
+    <>
+      <MaterialReactTable table={table} />
+    
+      {newListVisible && (
+        <GenelistAdd
+          genes={genesToSave}
+          setNewListVisible={setNewListVisible}
+        />
+      )}
+    </>
+  );
 };
 export default EnrichmentTable;

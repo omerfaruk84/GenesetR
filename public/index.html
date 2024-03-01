@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
@@ -29,15 +29,43 @@
       async
       src="https://www.googletagmanager.com/gtag/js?id=G-80PDL3N0GG"
     ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
 
-      gtag("config", "G-80PDL3N0GG");
+    <script>
+      window.addEventListener("DOMContentLoaded", (event) => {
+        // Function to check if consent cookie is present and consent is given
+        function checkConsentCookie() {
+          const consentGiven = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("userConsent="));
+          return consentGiven && consentGiven.split("=")[1] == "true";
+        }
+
+        // Function to dynamically load Google Analytics script
+        function loadGoogleAnalytics() {
+          const script = document.createElement("script");
+          script.async = true;
+          script.src =
+            "https://www.googletagmanager.com/gtag/js?id=G-80PDL3N0GG";
+          document.head.appendChild(script);
+
+          // Initialize Google Analytics after the script is loaded
+          script.onload = function () {
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+              dataLayer.push(arguments);
+            }
+            gtag("js", new Date());
+            gtag("config", "G-80PDL3N0GG");
+          };
+        }
+
+        // Check for consent before loading Google Analytics
+        if (checkConsentCookie()) {
+          loadGoogleAnalytics();
+        }
+      });
     </script>
+
     <meta charset="utf-8" />
     <link
       id="favicon"
@@ -51,14 +79,14 @@
       rel="apple-touch-icon"
       href="https://genesetr.uio.no/images/logo.png"
     />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="manifest" href="others/manifest.json" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Droid+Sans&display=swap"
     />
 
-    <script src="jquery-2.0.3.min.js"></script>
-    <script src="kinetic-v5.1.0.min.js"></script>
+    <script src="others/jquery-2.0.3.min.js"></script>
+    <script src="others/kinetic-v5.1.0.min.js"></script>
     <title>Perturb-Seq Analyzer</title>
   </head>
   <body>

@@ -1,19 +1,21 @@
 import { combineReducers } from "@reduxjs/toolkit";
-import { coreSettingsReducer } from './core-settings';
-import { mdeSettingsReducer } from './mde-settings';
-import { genesetEnrichmentSettingsReducer } from './geneset-enrichment-settings';
-import { umapSettingsReducer } from './umap-settings';
-import { tsneSettingsReducer } from './tsne-settings';
-import { biClusteringSettingsReducer } from './bi-clustering-settings';
-import { geneRegulationCoreSettingsReducer } from './gene-regulation-core-settings';
-import { pcaSettingsReducer } from './pca-settings';
-import { clusteringSettingsReducer } from './clustering-settings';
-import { correlationSettingsReducer } from './correlation-settings';
-import { heatMapSettingsReducer } from './heatmap-settings';
-import { pathfinderSettingsReducer } from './pathfinder-settings';
-import { graphmapSettingsReducer } from './graphmap-settings';
-import { scatterplotSettingsReducer } from './scatterplot-settings';
-import { genesignatureSettingsReducer } from './gene-signature-settings';
+import { coreSettingsReducer } from "./core-settings";
+import { mdeSettingsReducer } from "./mde-settings";
+import { genesetEnrichmentSettingsReducer } from "./geneset-enrichment-settings";
+import { umapSettingsReducer } from "./umap-settings";
+import { tsneSettingsReducer } from "./tsne-settings";
+import { biClusteringSettingsReducer } from "./bi-clustering-settings";
+import { geneRegulationCoreSettingsReducer } from "./gene-regulation-core-settings";
+import { pcaSettingsReducer } from "./pca-settings";
+import { clusteringSettingsReducer } from "./clustering-settings";
+import { correlationSettingsReducer } from "./correlation-settings";
+import { heatMapSettingsReducer } from "./heatmap-settings";
+import { pathfinderSettingsReducer } from "./pathfinder-settings";
+import { graphmapSettingsReducer } from "./graphmap-settings";
+import { scatterplotSettingsReducer } from "./scatterplot-settings";
+import { genesignatureSettingsReducer } from "./gene-signature-settings";
+import { expressionanalyzerSettingsReducer } from "./expression-analyzer-settings";
+import { genelistcompareSettingsReducer } from "./genelist-compare-settings";
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -30,6 +32,8 @@ const settingsReducer = combineReducers({
   graphmap: graphmapSettingsReducer,
   scatterplot: scatterplotSettingsReducer,
   genesignature: genesignatureSettingsReducer,
+  expressionanalyzer: expressionanalyzerSettingsReducer,
+  genelistcompare: genelistcompareSettingsReducer,
 });
 
 export { settingsReducer };

@@ -1,0 +1,35 @@
+.mainView {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.page {
+  width: 60%;
+  text-align: center;
+  padding: 40px 0;
+  background: #fff;
+  font-family: "Arvo", serif;
+}
+
+.page img {
+  width: 50%;
+}
+
+.wait_bg {
+  background-image: url(https://cdn.dribbble.com/users/2004171/screenshots/5646149/dribbble_canvas__calculator_.gif);
+  height: 400px;
+  background-position: center;
+}
+
+.wait_bg h1 {
+  font-size: 80px;
+}
+
+.four_zero_four_bg h3 {
+  font-size: 80px;
+}
+
+.wait_message {
+  margin-top: 20px;
+}

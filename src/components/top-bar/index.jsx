@@ -8,6 +8,9 @@ import {
   FcGrid,
   FcLineChart,
   FcSerialTasks,
+  FcAbout,
+  FcSignature,
+  FcWorkflow,
 } from "react-icons/fc";
 import { ROUTES, isActiveTab } from "../../common/routes";
 import { TabNames } from "./enums";
@@ -34,7 +37,11 @@ const TopBar = () => {
       name: TabNames.DR,
       toLink: ROUTES.DR,
     },
-
+    {
+      icon: () => <FcWorkflow size={"2em"} />,
+      name: TabNames.EXPRESSIONANALYZER,
+      toLink: ROUTES.EXPRESSIONANALYZER,
+    },
     {
       icon: () => <FcSerialTasks size={"2em"} />,
       name: TabNames.GENE_REGULATION,
@@ -52,8 +59,18 @@ const TopBar = () => {
     },
     {
       icon: () => <FcMindMap size={"2em"} />,
+      name: TabNames.GENELISTCOMPARE,
+      toLink: ROUTES.GENELISTCOMPARE,
+    },
+    {
+      icon: () => <FcSignature size={"2em"} />,
       name: TabNames.GENESIGNATURE,
       toLink: ROUTES.GENESIGNATURE,
+    },
+    {
+      icon: () => <FcAbout size={"2em"} />,
+      name: TabNames.ABOUT,
+      toLink: ROUTES.ABOUTUS,
     },
   ];
   return (
@@ -68,7 +85,7 @@ const TopBar = () => {
         }))}
         title={{
           onClick: () => navigate(ROUTES.HOME),
-          version: "V0.1.1",
+          version: "V1.0.5",
           logo: <img alt="logo" src="/images/logo.png" />,
         }}
         contentRight={undefined}

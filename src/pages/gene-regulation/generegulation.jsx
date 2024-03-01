@@ -939,9 +939,7 @@ const GeneRegulation = ({
         edgesFinal = edgesFiltered;
       }
 
-      console.log("nodesFinal", nodesFinal);
-      console.log("edgesFinal", edgesFinal);
-
+ 
       setOptions({
         tooltip: {
           formatter: function (params) {

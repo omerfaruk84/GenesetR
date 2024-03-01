@@ -5,8 +5,6 @@
   display: block;
   margin-left: auto;
   margin-right: auto;
-  
-
 }
 
 .infoSection {
@@ -28,26 +26,35 @@
 .responsive-image {
   max-width: 100%;
   height: auto;
- }
+}
 
 .fastRewind {
-  background-image: url('../../../public/images/rewind.png');
+  background-image: url("../../../public/images/rewind.png");
   background-size: contain;
   background-repeat: no-repeat;
-  background-position: center; 
+  background-position: center;
   flex: 1;
-  &:hover{
-  background-image: url('../../../public/images/rewind_black.png');
-}
+  &:hover {
+    background-image: url("../../../public/images/rewind_black.png");
+  }
 }
 
 .fastForward {
-  background-image: url('../../../public/images/forward.png');
+  background-image: url("../../../public/images/forward.png");
   background-size: contain;
   background-repeat: no-repeat;
-  background-position: center; 
+  background-position: center;
   flex: 1;
-  &:hover{
-  background-image: url('../../../public/images/forward_black.png');
+  &:hover {
+    background-image: url("../../../public/images/forward_black.png");
+  }
 }
+.mainViewOuter {
+  padding: 0px;
+  width: 100%;
+  height: 100%;
+}
+.help {
+  margin-top: 5px;
+  margin-left: -15px;
 }

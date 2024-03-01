@@ -1,16 +1,19 @@
 const ROUTES = Object.freeze({
-  HOME: '/',
-  CORRELATION: '/correlation',
-  DR: '/dr',
-  PCA: '/pca',
-  MDE: '/mde',
-  UMAP: '/umap',
-  TSNE: '/tsne',
-  BI_CLUSTERING: '/bi-clustering',
-  GENE_REGULATION: '/gene-regulation',
-  HEATMAP: '/heatmap',
-  PATHFINDER: '/pathfinder',
-  GENESIGNATURE: '/genesignature',
+  HOME: "/",
+  CORRELATION: "/correlation",
+  DR: "/dr",
+  PCA: "/pca",
+  MDE: "/mde",
+  UMAP: "/umap",
+  TSNE: "/tsne",
+  BI_CLUSTERING: "/bi-clustering",
+  GENE_REGULATION: "/gene-regulation",
+  HEATMAP: "/heatmap",
+  PATHFINDER: "/pathfinder",
+  GENESIGNATURE: "/genesignature",
+  EXPRESSIONANALYZER: "/expressionanalyzer",
+  GENELISTCOMPARE: "/genelists",
+  ABOUTUS: "/about",
 });
 
 /**
@@ -25,6 +28,6 @@ export const isActiveTab = (currentPath, navPath) => {
     return true;
   }
   return false;
-}
+};
 
 export { ROUTES };

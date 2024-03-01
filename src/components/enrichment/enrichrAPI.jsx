@@ -3,7 +3,6 @@ import { get, set } from "idb-keyval";
 
 // async function to perform enrichment
 async function performEnrichment(geneList, datasets) {
-  console.log("Triggered 1");
   // Get hash of the genelist.
   let hashVal = hashGeneList(geneList);
 
@@ -11,14 +10,10 @@ async function performEnrichment(geneList, datasets) {
   let listID = undefined;
   try {
     listID = await get(hashVal);
-    console.log("Triggered listID", listID, geneList);
-  } catch (error) {
-    console.log("Not in hash?", error);
-  }
+  } catch (error) {}
 
   if (!listID) {
     // if the genelist does not exist, connect to Enrichr and get the list ID+
-    console.log("Triggered 2");
     listID = await runEnrichr(geneList);
 
     if (listID) {
@@ -45,7 +40,7 @@ async function performEnrichment(geneList, datasets) {
         }
       }
     } catch (error) {
-      console.log("Not in hash?", error);
+      //console.log("Not in hash?", error);
     }
 
     // if there are still missing datasets, retrieve them from the API
@@ -123,14 +118,13 @@ const runEnrichr = (genes) => {
                 "content": "Sorry. Enrichr servers are not responding."},
                 autoClose:2000
               })*/
-        console.log("Sorry. Enrichr servers are not responding.", error);
         reject(error); // Reject the promise with the error message
       });
   });
 };
 
 const getEnrichr = (listID, datasets) => {
-  console.log("datasets", datasets);
+  //console.log("datasets", datasets);
   return fetch(
     `https://maayanlab.cloud/Enrichr/enrich?userListId=${listID}&backgroundType=${datasets}`,
     {
@@ -141,11 +135,12 @@ const getEnrichr = (listID, datasets) => {
       if (response.ok) {
         return response.json();
       } else {
+        console.log(response);
         throw new Error("Request failed.");
       }
     })
     .then((result) => {
-      //console.log(result);
+      console.log(result);
       return { name: datasets, data: result[datasets] };
     })
     .catch((error) => {

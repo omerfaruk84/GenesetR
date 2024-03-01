@@ -3,6 +3,11 @@
   padding-bottom: 10px;
 }
 
+.buttonMargin {
+  margin: 0px;
+  margin-right: 0px;
+}
+
 .inputRange {
   padding-right: 15px;
   padding-left: 10px;
@@ -16,8 +21,7 @@
   height: 20px;
 }
 
-div.edgeArea div[class*='labelLeft'] {
+div.edgeArea div[class*="labelLeft"] {
   margin-bottom: -2px;
   height: 35px;
 }
-

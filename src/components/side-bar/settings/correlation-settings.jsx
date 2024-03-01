@@ -159,25 +159,15 @@ const CorrelationSettings = ({
           options={linkageMethodOptions}
           value={correlationSettings?.column_linkage}
         />
-      </Field> 
-      <Flex gap="25px">      
-      <Field  labelLeft labelWidth={105} label='Normalization' helpText = "Whether to normalize data to (0,1) scale">             
+      </Field>         
+      <Field  labelLeft labelWidth={165} label='Row/Column same order' helpText = "Whether to order columns in the same order with rows. Enabling this will remove column dendogram.">             
       <CheckBox small onChange={({ target: { checked } }) => correlationSettingsChanged({
-          settingName: CorrelationSettingsTypes.NORMALIZE,
+          settingName: CorrelationSettingsTypes.ROW_COL_SAMEORDER,
           newValue: checked
         })}
-        checked={correlationSettings?.normalize}/>
+        checked={correlationSettings?.row_col_sameorder}/>
       </Field>   
-      <Field labelLeft labelWidth={105} label='Keep Original' helpText = "Cluster normalized data (only when normalize is checked), but display original data in the heatmap">             
-      <CheckBox
-      small        
-        onChange={({ target: { checked } }) => correlationSettingsChanged({
-          settingName: CorrelationSettingsTypes.WRITE_ORGINAL,
-          newValue: checked
-        })}
-        checked={correlationSettings?.write_original}/>
-      </Field>  
-      </Flex>
+    
     </>
   );
 };

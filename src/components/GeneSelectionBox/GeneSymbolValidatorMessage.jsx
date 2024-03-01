@@ -17,10 +17,16 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import Dropdown from "react-bootstrap/Dropdown";
 
 const RenderSuggestion = function (props) {
-  console.log("props", props);
-  if (props.genes.length > 0 && props.type && props.type.startsWith("Not among")) {  
-  
-    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Not among targets"? " perturbations ":" genes ") + "were not found in the perturbseq data \n" + props.genes[0].hugoGeneSymbol.toString();
+  if (
+    props.genes.length > 0 &&
+    props.type &&
+    props.type.startsWith("Not among")
+  ) {
+    let title =
+      props.genes[0].hugoGeneSymbol.length +
+      (props.type === "Not among targets" ? " perturbations " : " genes ") +
+      "were not found in the perturbseq data \n" +
+      props.genes[0].hugoGeneSymbol.toString();
     let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, "");
     return (
       <div className={styles.warningBubble} title={title} onClick={onClick}>
@@ -30,9 +36,16 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if (props.genes.length > 0 && props.type && props.type.startsWith("Not exists")) {  
-  
-    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Not exists targets"? " perturbations ":" genes ") + "were not identified. Click to remove all of them. \n" + props.genes[0].hugoGeneSymbol.toString();
+  if (
+    props.genes.length > 0 &&
+    props.type &&
+    props.type.startsWith("Not exists")
+  ) {
+    let title =
+      props.genes[0].hugoGeneSymbol.length +
+      (props.type === "Not exists targets" ? " perturbations " : " genes ") +
+      "were not identified. Click to remove all of them. \n" +
+      props.genes[0].hugoGeneSymbol.toString();
     let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, "");
     return (
       <div className={styles.warningBubble3} title={title} onClick={onClick}>
@@ -42,10 +55,14 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if (props.genes.length > 0 && props.type && props.type.startsWith("Alias")) {  
-    
-    let title = props.genes[0].hugoGeneSymbol.length + (props.type === "Alias targets"? " perturbations ":" genes ") + "have alias gene symbols. Click to change all of them. \n" + props.genes[0].hugoGeneSymbol.toString();
-    let onClick = () => props.replaceGene(props.genes[0].hugoGeneSymbol, props.alias);
+  if (props.genes.length > 0 && props.type && props.type.startsWith("Alias")) {
+    let title =
+      props.genes[0].hugoGeneSymbol.length +
+      (props.type === "Alias targets" ? " perturbations " : " genes ") +
+      "have alias gene symbols. Click to change all of them. \n" +
+      props.genes[0].hugoGeneSymbol.toString();
+    let onClick = () =>
+      props.replaceGene(props.genes[0].hugoGeneSymbol, props.alias);
     return (
       <div className={styles.warningBubble2} title={title} onClick={onClick}>
         <FaTimesCircle className={styles.icon} />
@@ -54,7 +71,7 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  if ( props.type && props.type.startsWith("SingleNotExists")) {
+  if (props.type && props.type.startsWith("SingleNotExists")) {
     let title =
       "Could not find gene symbol. Click to remove it from the gene list.";
     let onClick = () => props.replaceGene(props.genes, "");
@@ -80,7 +97,6 @@ const RenderSuggestion = function (props) {
   }
 
   return;
-
 
   //NEED TO FIX THIS LATER HUGO GENESYMBOL AND ALIAS NEED TO BE CHANGED
   let title =
@@ -118,7 +134,7 @@ const RenderSuggestion = function (props) {
 };
 
 const GeneSymbolValidatorMessageChild = (props) => {
-  console.log("props in ge",props)
+  console.log("props in ge", props);
   if (props.isEmpty) {
     return null;
   }
@@ -146,33 +162,33 @@ const GeneSymbolValidatorMessageChild = (props) => {
   if (props.suggestions && props.suggestions.length > 0) {
     return (
       <div className={styles.GeneSymbolValidator}>
-        <div
-          className={styles.invalidBubble}
-          title="Please edit the gene symbols."
-        >
-          <FaExclamationCircle className={styles.icon} />
-          <span>Invalid gene symbols.</span>
-        </div>
-        
+        {props.suggestions.some((obj) =>
+          obj.type.startsWith("SingleNotExists")
+        ) && (
+          <div
+            className={styles.invalidBubble}
+            title="Please edit the gene symbols."
+          >
+            <FaExclamationCircle className={styles.icon} />
+            <span>Invalid gene symbols.</span>
+          </div>
+        )}
 
-        {props.suggestions.map((suggestion, index) => (          
+        {props.suggestions.map((suggestion, index) => (
           <RenderSuggestion
             key={index}
             genes={suggestion.genes}
             alias={suggestion.alias}
             type={suggestion.type}
-            replaceGene={props.replaceGene}                 
+            replaceGene={props.replaceGene}
           />
         ))}
       </div>
     );
   }
 
-  
   return (
-    <div
-      className={classNames(styles.GeneSymbolValidator)}
-    >
+    <div className={classNames(styles.GeneSymbolValidator)}>
       <div className={styles.validBubble} title="You can now submit the list.">
         <FaCheckCircle className={styles.icon} name="check-circle" />
         <span>&nbsp;All gene symbols are valid.</span>

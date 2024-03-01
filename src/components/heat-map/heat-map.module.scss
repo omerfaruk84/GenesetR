@@ -13,3 +13,18 @@
   flex-wrap:nowrap;
   padding: 25px;
 }
+
+.zoomButton{
+font-size :16px;
+margin-left: 10px;  
+background-color:green;
+padding:5px;
+transition-duration: 0.4s;            
+color:white;
+
+}
+
+.zoomButton:hover {
+  background-color: yellow; /* Green */
+  color: black;
+}

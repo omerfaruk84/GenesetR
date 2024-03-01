@@ -1,15 +1,35 @@
 .topBar {
   div {
     > div:nth-child(2) {
-      display: none;
+      display: flex;
+      margin-right: 15px;
+    }
+
+    margin-left: 1px;
+    padding-right: 10px;
+    padding-left: 10px;
+    > div {
+      > a > span {
+        white-space: "pre-wrap";
+        text-overflow: clip;
+        line-height: 1em;
+        font-size: 0.8em;
+        margin-top: 3px;
+      }
+      > a {
+        display: flex;
+        flex-direction: column;
+      }
     }
     justify-content: center;
+    margin-top: 3px;
   }
+
   font-size: medium;
-  background-color: rgb(255, 0, 0);
+  //background-color: rgb(255, 0, 0);
   max-width: 1200px;
   height: 60px;
-  border: 2px solid rgb(34, 0, 6);
+  //border: 2px solid rgb(3, 76, 233);
   margin-top: 30px;
   ul {
     height: 100%;
@@ -31,13 +51,13 @@
         display: flex;
         align-items: center;
         border-radius: 5px;
-        font-size: 20px;
+        font-size: 1px;
         padding: 10px;
-        color: whitesmoke;
+
         text-decoration: none;
         &:hover {
           @extend .active;
-          background-color: whitesmoke;
+          background-color: rgb(199, 58, 58);
         }
       }
     }

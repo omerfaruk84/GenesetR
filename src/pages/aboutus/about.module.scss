@@ -1,0 +1,108 @@
+.mainView {
+  padding: 25px;
+  width: 70%;
+
+  margin-right: 15%;
+  margin-left: 15%;
+}
+.updateDate {
+  background-color: rgb(43, 219, 160);
+  border-radius: 10px;
+  border-color: darkblue;
+  border: dashed;
+  font-family: "Courier New", Courier, monospace;
+  font-size: larger;
+  padding: 2px;
+  font-weight: bolder;
+  margin-right: 10px;
+  margin-bottom: 1px;
+  float: left;
+  margin-top: 2px;
+
+  display: inline-flex; /* Make it an inline-flex container */
+  align-items: center; /* Align items vertically */
+  justify-content: center; /* Center content horizontally, if needed */
+}
+
+.infoSection {
+  display: flex;
+  justify-content: space-between;
+  max-width: 1200px;
+}
+
+.box {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0px;
+  margin: 20px;
+  h1 {
+    margin-bottom: 0px;
+  }
+}
+.nameAndMail {
+  font-size: 1.3em;
+  vertical-align: middle;
+  float: right;
+  text-align: center;
+}
+
+.updateBody {
+  overflow: auto;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  border-color: black;
+  border-top: 3px solid #000000;
+  background: #dacfcf;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 3px;
+  border-bottom-left-radius: 3px;
+  padding: 15px;
+  width: 100%;
+  p {
+    font-size: 1.1em;
+    vertical-align: middle;
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    margin-top: 1px;
+  }
+}
+
+.contactBody {
+  overflow: auto;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  border-color: black;
+  border-top: 3px solid #000000;
+  background: #dacfcf;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 3px;
+  border-bottom-left-radius: 3px;
+  padding: 15px;
+  width: 100%;
+  p {
+    font-size: 1.1em;
+    vertical-align: middle;
+    text-align: center;
+  }
+}
+
+.helpBody {
+  overflow: auto;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  border-color: black;
+  border-top: 3px solid #000000;
+  background: linear-gradient(to bottom, white 0%, #dacfcf 100%);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 3px;
+  border-bottom-left-radius: 3px;
+  padding: 15px;
+  width: 100%;
+  p {
+    font-size: 1.1em;
+    vertical-align: middle;
+    text-align: center;
+  }
+}

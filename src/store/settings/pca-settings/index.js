@@ -1,11 +1,11 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  numberOfComponents: 85,
+  numberOfComponents: 60,
 };
 
 export const pcaSettingsSlice = createSlice({
-  name: 'pca',
+  name: "pca",
   initialState,
   reducers: {
     pcaSettingsChanged: (state, action) => {
@@ -15,9 +15,7 @@ export const pcaSettingsSlice = createSlice({
   },
 });
 
-export const {
-  pcaSettingsChanged,
-} = pcaSettingsSlice.actions;
+export const { pcaSettingsChanged } = pcaSettingsSlice.actions;
 
 const pcaSettingsReducer = pcaSettingsSlice.reducer;
 

@@ -62,11 +62,7 @@ const DatasetSelector = forwardRef(
 
     const location = useLocation();
     const { pathname } = location;
-    React.useEffect(() => {
-      console.log("URL changed:", location.pathname);
-      // Add any other logic you want to handle on URL change
-    }, [location]); // useEffect dependency on location will cause this effect to run every time the location (URL) changes
-
+  
     const updateActivityById = (id) => {
       let dataShape = "";
       let dataType = "";

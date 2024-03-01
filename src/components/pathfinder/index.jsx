@@ -163,6 +163,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
     []
   );
   useEffect(() => {
+    console.log("pathFinderGraph", pathFinderGraph);
     if (
       pathFinderGraph &&
       pathFinderGraph.nodes &&
@@ -193,16 +194,16 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
             edge.type === "Cor"
               ? "rgb(25, 25, 250)"
               : edge.value < -0.2
-              ? "rgb(25, 206, 17)"
-              : edge.value > 0.2
-              ? "rgb(255, 1, 1)"
-              : "rgb(123, 123, 123)",
+                ? "rgb(25, 206, 17)"
+                : edge.value > 0.2
+                  ? "rgb(255, 1, 1)"
+                  : "rgb(123, 123, 123)",
           type:
             edge.type === "Cor"
               ? "dotted"
               : edge.type === "Int"
-              ? "dashed"
-              : "solid",
+                ? "dashed"
+                : "solid",
           curveness:
             edge.type === "Cor" ? 0.3 : edge.type === "Int" ? 0.5 : 0.4,
         },
@@ -215,11 +216,11 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
                 "<br />" +
                 edge.id.replace("+cor+", " ~ ")
               : edge.type === "Int"
-              ? "Protein-Protein Intereation: "
-              : "Effect: " +
-                edge.value +
-                "<br />" +
-                edge.id.replace("+", " → "),
+                ? "Protein-Protein Intereation: "
+                : "Effect: " +
+                  edge.value +
+                  "<br />" +
+                  edge.id.replace("+", " → "),
         },
         //value: edge.value,
       }));
@@ -281,7 +282,6 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         );
       });
 
-      console.log(nodeCounts);
       // Update node counts in nodes array
       nodesFiltered.forEach((node) => {
         const { id } = node;
@@ -390,8 +390,6 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
       setkeyedData(tableInfo);
 
       tableInfo.sort((edge1, edge2) => edge2["Total NC"] - edge1["Total NC"]);
-
-      console.log(nodesFinal);
 
       setOptions({
         tooltip: {
@@ -503,23 +501,66 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
+      {console.log(options)}
 
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
       )}
-      {selectedView === 0 && (
-        <>
-          <div className={styles.mainView}>
-            <ReactEChartsCore
-              echarts={echarts}
-              option={options}
-              style={{ height: "120%", width: "100%" }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </div>
-        </>
+      {selectedView === 0 &&
+        options.series &&
+        options.series.length > 0 &&
+        options.series[0].data?.length > 0 && (
+          <>
+            <div className={styles.mainView}>
+              <ReactEChartsCore
+                echarts={echarts}
+                option={options}
+                style={{ height: "120%", width: "100%" }}
+                notMerge={true}
+                lazyUpdate={true}
+              />
+            </div>
+          </>
+        )}
+
+      {console.log(
+        "Checks",
+        !options.series,
+        options.series?.length === 0,
+        !options.series[0]?.data,
+        options.series[0]?.data?.length === 0
       )}
+
+      {selectedView === 0 &&
+        (!options.series ||
+          options.series.length === 0 ||
+          !options.series[0].data ||
+          options.series[0].data.length === 0) && (
+          <>
+            <div className={styles.mainView}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "50vh", // This assumes the parent container takes up the full viewport height
+                  margin: "0 auto",
+                  lineHeight: "1.6",
+                  fontSize: "1.5em",
+                  fontWeight: "bold",
+                  padding: "20px",
+                  maxWidth: "500px",
+                  borderRadius: "10px",
+                  textAlign: "center", // Ensuring text is centered within the div
+                }}
+              >
+                Unfortunately, no links were identified among submitted genes.
+                You may try decreasing the Z-Score cutoff or increasing search
+                depth.
+              </div>
+            </div>
+          </>
+        )}
     </>
   );
 };
