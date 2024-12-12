@@ -167,7 +167,7 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: (
           <CoreSettings
-            showcellLineOptions={false}
+            showcellLineOptions={true}
             showdataTypeOptions={false}
             showgraphTypeOptions={false}
             showPerturbationList={false}

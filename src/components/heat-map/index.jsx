@@ -10,10 +10,7 @@ import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../enrichment-table-new/index.jsx";
 import { connect } from "react-redux";
 
-import {
-  Spacer,
-  ButtonGroup,
-} from "@oliasoft-open-source/react-ui-library";
+import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 
 const HeatMap = ({ graphData, correlationSettings }) => {
   const [selectedGenes, setSelectedGenes] = useState({});
@@ -22,7 +19,6 @@ const HeatMap = ({ graphData, correlationSettings }) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
- 
 
   const handleWheel = (event) => {
     if (event.shiftKey) {
@@ -139,9 +135,9 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     }
   }, [correlationSettings?.filter, graphData]);
 
-useEffect(()=> {
-if(window.inchlib){
-  if(correlationSettings?.row_col_sameorder){
+  useEffect(() => {
+    if (window.inchlib) {
+      if (correlationSettings?.row_col_sameorder) {
         let cordinates = Object.entries(
           window.inchlib.leaves_y_coordinates
         ).sort((a, b) => a[1] - b[1]);
@@ -168,33 +164,30 @@ if(window.inchlib){
         for (let key in genesinrows) {
           columnOrder.push(valueKeyMap.get(genesinrows[key]));
         }
-   
+
         window.inchlib.update_settings({
           columns_order: columnOrder.reverse(),
           column_dendrogram: false,
         });
-
-    }else{
- window.inchlib.update_settings({
+      } else {
+        window.inchlib.update_settings({
           columns_order: [],
           column_dendrogram: true,
         });
-      
+      }
+
+      window.inchlib.redraw();
     }
+  }, [correlationSettings?.row_col_sameorder]);
 
-    window.inchlib.redraw();
-}
-
-  }, [correlationSettings?.row_col_sameorder])
-
-     function fitToscreen(){
-        var containerDiv = document.getElementById('heatmap'); // Select your div
-        var scaleX = window.innerWidth / containerDiv.offsetWidth;
-        var scaleY = window.innerHeight / containerDiv.offsetHeight;
-        var scale = Math.min(scaleX, scaleY); // Choose the smaller scale factor
-        //containerDiv.style.transform = 'scale(' + scale + ')';
-        setScale(scale);
-        }
+  function fitToscreen() {
+    var containerDiv = document.getElementById("heatmap"); // Select your div
+    var scaleX = window.innerWidth / containerDiv.offsetWidth;
+    var scaleY = window.innerHeight / containerDiv.offsetHeight;
+    var scale = Math.min(scaleX, scaleY); // Choose the smaller scale factor
+    //containerDiv.style.transform = 'scale(' + scale + ')';
+    setScale(scale);
+  }
 
   useEffect(() => {
     if (graphData) {
@@ -215,7 +208,7 @@ if(window.inchlib){
         var protein_canvas = $("<div></div>");
 
         //protein_div.css({"left": x_pos + target_element.width()-40, "top": max_y});
-        console.log("graphData?.data?.feature_names.", graphData?.data)
+        console.log("graphData?.data?.feature_names.", graphData?.data);
         window.inchlib = new InCHlib({
           target: "heatmap",
           metadata: false,
@@ -223,7 +216,10 @@ if(window.inchlib){
           max_height: 1500,
           dendrogram: true,
           column_dendrogram: !correlationSettings?.row_col_sameorder,
-          width: Math.min(Math.max(graphData?.data?.feature_names.length * 10,300), 2000),
+          width: Math.min(
+            Math.max(graphData?.data?.feature_names.length * 10, 300),
+            2000
+          ),
           heatmap_colors: "BuWhRd",
           metadata_colors: "Reds",
           independent_columns: false, //Color based on whole heatmap
@@ -240,9 +236,8 @@ if(window.inchlib){
           //fixed_row_id_size:12,
         });
 
-
         window.inchlib.read_data(graphData);
-           window.inchlib.draw();
+        window.inchlib.draw();
         let cordinates = Object.entries(
           window.inchlib.leaves_y_coordinates
         ).sort((a, b) => a[1] - b[1]);
@@ -270,23 +265,15 @@ if(window.inchlib){
           columnOrder.push(valueKeyMap.get(genesinrows[key]));
         }
 
-      
         window.inchlib.update_settings({
           columns_order: columnOrder.reverse(),
           column_dendrogram: false,
         });
         window.inchlib.redraw();
-     
-        
 
-        
-
-
-        
         fitToscreen();
         //window.inchlib.add_prefix();
 
-        
         window.inchlib.events.row_onmouseover = function (ids, evt) {
           // console.log("row_onmouseover",ids,evt)
         };
@@ -306,8 +293,6 @@ if(window.inchlib){
           }
           loading.fadeOut();
         };
-
-     
 
         function get_protein_from_pdb(id) {
           protein_canvas = $("#protein > canvas");
@@ -341,7 +326,6 @@ if(window.inchlib){
           node_id,
           evt
         ) {
-    
           let selectedGenesTemp = [];
           for (let gene in column_indexes) {
             selectedGenesTemp.push(
@@ -466,74 +450,73 @@ if(window.inchlib){
         <button onClick={() => fitToscreen()} className={styles.zoomButton}>
           FIT TO SCREEN
         </button>
-       
+
+        <div
+          id="outerDiv"
+          hidden={selectedView === 1}
+          style={{
+            display: "flex",
+            justifyContent: "left",
+            height: `${
+              document.getElementsByClassName("kineticjs-content")[0]
+                ?.offsetHeight
+                ? document.getElementsByClassName("kineticjs-content")[0]
+                    ?.offsetHeight * scale
+                : "auto"
+            }px`,
+          }}
+        >
           <div
-            id="outerDiv"
+            id="heatmap"
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
             hidden={selectedView === 1}
             style={{
+              transform: `scale(${scale})`,
               display: "flex",
               justifyContent: "left",
-              height: `${
-                document.getElementsByClassName("kineticjs-content")[0]
-                  ?.offsetHeight
-                  ? document.getElementsByClassName("kineticjs-content")[0]
-                      ?.offsetHeight * scale
-                  : "auto"
-              }px`,
+              transformOrigin: "left top",
+              marginLeft: "20px",
             }}
-          >
+          ></div>
+        </div>
+
+        <div
+          id="protein_div"
+          style={{
+            marginLeft: "auto",
+            display: "block",
+            marginRight: "auto",
+            width: "100%",
+          }}
+        >
+          <div id="protein">
+            <div id="protein_src"></div>
+            <div id="loading">
+              <img src="https://www.openscreen.cz/software/inchlib/static/img/loading.gif" />
+            </div>
+          </div>
+
+          <div id="overflow_div"></div>
+          {selectedGenes.length > 3 ? (
             <div
-              id="heatmap"
-              onWheel={handleWheel}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
               hidden={selectedView === 1}
               style={{
-                transform: `scale(${scale})`,
-                display: "flex",
-                justifyContent: "left",
-                transformOrigin: "left top",
-                marginLeft: "20px",
+                display: "block",
+                marginLeft: "auto",
+                marginRight: "auto",
+                width: "100%",
               }}
-            ></div>
-          </div>
-
-          <div
-            id="protein_div"
-            style={{
-              marginLeft: "auto",
-              display: "block",
-              marginRight: "auto",
-              width: "100%",
-            }}
-          >
-            <div id="protein">
-              <div id="protein_src"></div>
-              <div id="loading">
-                <img src="https://www.openscreen.cz/software/inchlib/static/img/loading.gif" />
-              </div>
+            >
+              {console.log(selectedGenes.length)}
+              <GeneSetEnrichmentTable
+                genesets={{ "Selected Genes": selectedGenes.join() }}
+              />
             </div>
-
-            <div id="overflow_div"></div>
-            {selectedGenes.length > 3 ? (
-              <div
-                hidden={selectedView === 1}
-                style={{
-                  display: "block",
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                  width: "100%",
-                }}
-              >
-                {console.log(selectedGenes.length)}
-                <GeneSetEnrichmentTable
-                  genesets={{ "Selected Genes": selectedGenes.join() }}
-                />
-              </div>
-            ) : null}
-          </div>
-  
+          ) : null}
+        </div>
       </>
     </div>
   );

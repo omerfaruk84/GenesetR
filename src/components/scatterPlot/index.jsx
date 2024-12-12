@@ -625,7 +625,7 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
-        <Row spacing={0} width="100%" height="85%">
+        <Row spacing={0} width="100%" height="80vh">
           <ReactEChartsCore
             echarts={echarts}
             option={options}

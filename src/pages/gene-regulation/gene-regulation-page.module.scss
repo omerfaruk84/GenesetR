@@ -1,13 +1,13 @@
 .mainView {
   padding: 10px;
   width: 100%;
-  height: 100%;
+  height: max-content;
 }
 
-.mainViewOuter {
+.echart {
   padding: 0px;
   width: 100%;
-  height: 100%;
+  height: 80vh;
 }
 .help {
   margin-top: 5px;

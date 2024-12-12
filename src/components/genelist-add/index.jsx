@@ -11,7 +11,6 @@ const GenelistAdd = ({
 }) => {
   return (
     <>
-      {console.log("Hereeeee")}
       <Modal visible={true} centered={true}>
         <InputGroup width={400}>
           <Genelist

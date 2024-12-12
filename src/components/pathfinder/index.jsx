@@ -162,8 +162,20 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
     ],
     []
   );
+
+  function fixTextLength(text) {
+    // Custom tooltip formatter function
+    var content = "";
+    var maxLength = 60; // Maximum characters per line
+    for (var i = 0; i < text.length; i += maxLength) {
+      content += text.substring(i, i + maxLength) + "<br/>";
+    }
+    return content;
+  }
+
+  console.log("pathfinderSettings", pathfinderSettings);
+
   useEffect(() => {
-    console.log("pathFinderGraph", pathFinderGraph);
     if (
       pathFinderGraph &&
       pathFinderGraph.nodes &&
@@ -181,15 +193,18 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         target: edge.target,
         id: edge.id,
         type: edge.type,
-        value: edge.value,
+        value: edge.type === "Int" ? 1 : edge.value,
         lineStyle: {
           opacity: Math.min(
             ((1 - pathfinderSettings.minEdgeopacity) / 0.8) *
-              Math.abs(edge.value) +
+              Math.abs(edge.type === "Int" ? 1 : edge.value) +
               (pathfinderSettings.minEdgeopacity - 0.2) / 0.8,
             1
           ), //y = 0.813x + 0.187 //ax+b = y // ((1-pathfinderSettings.minEdgeopacity)/0.8) + ((pathfinderSettings.minEdgeopacity-0.2)/0.8)
-          width: Math.max(2.222 * Math.abs(edge.value) + 3.556, 4),
+          width: Math.max(
+            2.222 * Math.abs(edge.type === "Int" ? 1 : edge.value) + 3.556,
+            4
+          ),
           color:
             edge.type === "Cor"
               ? "rgb(25, 25, 250)"
@@ -216,7 +231,12 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
                 "<br />" +
                 edge.id.replace("+cor+", " ~ ")
               : edge.type === "Int"
-                ? "Protein-Protein Intereation: "
+                ? "<b>Prot.-Prot. Int.:</b> " +
+                  edge.id.replace("+int+", " ¤ ") +
+                  "<br />" +
+                  edge.info?.replaceAll(" # ", "<br />") +
+                  "<br />" +
+                  fixTextLength(edge.info2)
                 : "Effect: " +
                   edge.value +
                   "<br />" +
@@ -261,7 +281,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
 
       // Create a map to keep track of node counts
       const nodeCounts = {};
-      let maxNodeCount = 0;
+      let maxNodeCount = 2;
       // Count number of each node in edges array
       edgesFiltered.forEach((edge) => {
         const { source, target } = edge;
@@ -281,6 +301,8 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
           maxNodeCount
         );
       });
+
+      console.log("maxNodeCount", maxNodeCount);
 
       // Update node counts in nodes array
       nodesFiltered.forEach((node) => {
@@ -391,6 +413,8 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
 
       tableInfo.sort((edge1, edge2) => edge2["Total NC"] - edge1["Total NC"]);
 
+      console.log(nodesFinal, edgesFiltered);
+
       setOptions({
         tooltip: {
           formatter: function (params) {
@@ -423,6 +447,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
           },
         },
         brush: {},
+
         series: [
           {
             type: "graph",
@@ -430,7 +455,10 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
             circular: {
               rotateLabel: true,
             },
-            layout: pathfinderSettings.layout,
+            layout:
+              pathfinderSettings.layout === "none" && nodesFinal.length > 30
+                ? "circular"
+                : pathfinderSettings.layout,
             data: nodesFinal,
             links: edgesFinal,
             edgeSymbol: ["circle", "arrow"],
@@ -501,7 +529,6 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
-      {console.log(options)}
 
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
@@ -511,6 +538,10 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         options.series.length > 0 &&
         options.series[0].data?.length > 0 && (
           <>
+            {(pathfinderSettings.layout === "none") &
+            (options.series[0].data?.length > 30)
+              ? "Dagre layout can not be applied due to the size of the network. Using circular layout instead."
+              : ""}
             <div className={styles.mainView}>
               <ReactEChartsCore
                 echarts={echarts}
@@ -522,14 +553,6 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
             </div>
           </>
         )}
-
-      {console.log(
-        "Checks",
-        !options.series,
-        options.series?.length === 0,
-        !options.series[0]?.data,
-        options.series[0]?.data?.length === 0
-      )}
 
       {selectedView === 0 &&
         (!options.series ||

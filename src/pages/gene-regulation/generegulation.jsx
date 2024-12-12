@@ -6,7 +6,7 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import styles from "./gene-regulation-page.module.scss";
-
+import { GeneSetEnrichmentTable } from "../../components/enrichment/index.jsx";
 import { connect } from "react-redux";
 import { useEffect, useMemo } from "react";
 import * as echarts from "echarts/core";
@@ -180,6 +180,7 @@ const GeneRegulation = ({
   const [blackListExpUp, setblackListExpUp] = useState({});
   const [blackListPCount, setblackListPCount] = useState({});
   const [blackListECount, setblackListECount] = useState({});
+  const [genelists, setGeneLists] = useState([]);
 
   //console.log("Start of the page")
   useEffect(() => {
@@ -258,15 +259,15 @@ const GeneRegulation = ({
           color: edge.id.includes("+cor+")
             ? "rgb(153, 51, 255)"
             : edge.value < -0.3
-            ? "rgb(25, 206, 17)"
-            : edge.value > 0.3
-            ? "rgb(255, 1, 1)"
-            : "rgb(123, 123, 123)",
+              ? "rgb(25, 206, 17)"
+              : edge.value > 0.3
+                ? "rgb(255, 1, 1)"
+                : "rgb(123, 123, 123)",
           type: edge.id.includes("+cor+")
             ? "dotted"
             : edge.id.includes("+int+")
-            ? "dashed"
-            : "solid",
+              ? "dashed"
+              : "solid",
           //curveness: edge.id.includes("+cor+")? 0.3: (edge.id.includes("+int+")  ? 0.5:0.4),
         },
         tooltip: {
@@ -278,13 +279,13 @@ const GeneRegulation = ({
               "<br />" +
               edge.Type.replace("_", " to ")
             : edge.id.includes("+int+")
-            ? "Protein-Protein Intereation: "
-            : "Effect: " +
-              edge.value +
-              "<br />" +
-              edge.id.replace("+exp+", " → ") +
-              "<br />" +
-              edge.Type.replace("_", " to "),
+              ? "Protein-Protein Intereation: "
+              : "Effect: " +
+                edge.value +
+                "<br />" +
+                edge.id.replace("+exp+", " → ") +
+                "<br />" +
+                edge.Type.replace("_", " to "),
         },
       }));
 
@@ -896,6 +897,52 @@ const GeneRegulation = ({
 
       let nodesFinal = [];
       let edgesFinal = [];
+      const temp = {
+        UPR: [],
+        DPR: [],
+        UNR: [],
+        DNR: [],
+        UPSTREAM: [],
+        DOWNSTREAM: [],
+      };
+
+      tableInfo.forEach((interaction) => {
+        const geneSymbol =
+          interaction["Gene Symbol From"] ===
+          geneRegulationCoreSettings.selectedGene
+            ? interaction["Gene Symbol To"]
+            : interaction["Gene Symbol From"];
+
+        switch (interaction.Direction) {
+          case "UPR":
+            temp["UPR"].push(geneSymbol);
+            temp["UPSTREAM"].push(geneSymbol);
+            break;
+          case "DPR":
+            temp["DPR"].push(geneSymbol);
+            temp["DOWNSTREAM"].push(geneSymbol);
+            break;
+          case "UNR":
+            temp["UNR"].push(geneSymbol);
+            temp["UPSTREAM"].push(geneSymbol);
+            break;
+          case "DNR":
+            temp["DNR"].push(geneSymbol);
+            temp["DOWNSTREAM"].push(geneSymbol);
+            break;
+          default:
+            break;
+        }
+      });
+
+      // Convert arrays to strings
+      temp["UPR"] = temp["UPR"].join();
+      temp["DPR"] = temp["DPR"].join();
+      temp["UNR"] = temp["UNR"].join();
+      temp["DNR"] = temp["DNR"].join();
+      temp["UPSTREAM"] = temp["UPSTREAM"].join();
+      temp["DOWNSTREAM"] = temp["DOWNSTREAM"].join();
+      setGeneLists(temp);
 
       if (geneRegulationCoreSettings.layout === "none") {
         // Create a new directed graph
@@ -939,7 +986,6 @@ const GeneRegulation = ({
         edgesFinal = edgesFiltered;
       }
 
- 
       setOptions({
         tooltip: {
           formatter: function (params) {
@@ -1076,7 +1122,7 @@ const GeneRegulation = ({
       )}
       {selectedView === 0 && (
         <>
-          <div className={styles.mainView}>
+          <div className={styles.echart}>
             <ReactEChartsCore
               echarts={echarts}
               option={options}
@@ -1088,6 +1134,11 @@ const GeneRegulation = ({
         </>
       )}
       <Spacer height={70} />
+      {genelists && Object.keys(genelists).length > 0 && (
+        <>
+          <GeneSetEnrichmentTable genesets={genelists} />
+        </>
+      )}
     </>
   );
 };

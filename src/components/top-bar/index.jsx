@@ -10,13 +10,18 @@ import {
   FcSerialTasks,
   FcAbout,
   FcSignature,
+  FcElectricalSensor,
   FcWorkflow,
+  FcTodoList,
 } from "react-icons/fc";
 import { ROUTES, isActiveTab } from "../../common/routes";
 import { TabNames } from "./enums";
 //import styles from "./top-bar.module.scss";
 import styles from "./top-bar.module.scss";
-
+import loadingicon from "../../common/loading.gif";
+import heatmapicon from "../../common/images/heatmap.png";
+import clusteringicon from "../../common/images/clustering.png";
+//import generegicon from "../../common/images/generegulation.png";
 const TopBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,12 +33,18 @@ const TopBar = () => {
       toLink: ROUTES.HOME,
     },
     {
-      icon: () => <FcLineChart size={"2em"} />,
+      icon: () => <FcScatterPlot size={"2em"} />,
       name: TabNames.CORRELATION,
       toLink: ROUTES.CORRELATION,
     },
     {
-      icon: () => <FcScatterPlot size={"2em"} />,
+      icon: () => (
+        <img
+          src={clusteringicon}
+          style={{ width: 35, marginLeft: 15, marginRight: 15 }}
+          alt="Dimensionality Reduction and Clustering"
+        />
+      ),
       name: TabNames.DR,
       toLink: ROUTES.DR,
     },
@@ -43,27 +54,33 @@ const TopBar = () => {
       toLink: ROUTES.EXPRESSIONANALYZER,
     },
     {
-      icon: () => <FcSerialTasks size={"2em"} />,
+      icon: () => <FcMindMap size={"2em"} />,
       name: TabNames.GENE_REGULATION,
       toLink: ROUTES.GENE_REGULATION,
     },
     {
-      icon: () => <FcGrid size={"2em"} />,
+      icon: () => (
+        <img
+          src={heatmapicon}
+          style={{ width: 33, marginLeft: 15, marginRight: 15 }}
+          alt="Heatmap"
+        />
+      ),
       name: TabNames.HEATMAP,
       toLink: ROUTES.HEATMAP,
     },
     {
-      icon: () => <FcMindMap size={"2em"} />,
+      icon: () => <FcSerialTasks size={"2em"} />,
       name: TabNames.PATHFINDER,
       toLink: ROUTES.PATHFINDER,
     },
     {
-      icon: () => <FcMindMap size={"2em"} />,
+      icon: () => <FcTodoList size={"2em"} />,
       name: TabNames.GENELISTCOMPARE,
       toLink: ROUTES.GENELISTCOMPARE,
     },
     {
-      icon: () => <FcSignature size={"2em"} />,
+      icon: () => <FcElectricalSensor size={"2em"} />,
       name: TabNames.GENESIGNATURE,
       toLink: ROUTES.GENESIGNATURE,
     },

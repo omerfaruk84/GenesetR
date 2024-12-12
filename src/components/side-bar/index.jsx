@@ -69,22 +69,27 @@ const SideBar = ({
       width={sideBarWith}
       onResize={handleSideBarResize}
     >
-      <Spacer />
-      <Flex justifyContent="center">
-        <Button
-          label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
-          colored
-          width="90%"
-          disabled={isCalcRunning || isDisabled}
-          onClick={() => {
-            runCalculation(pathname);
-            coreSettingsChanged({
-              settingName: CoreSettingsTypes.SHOW_HELP,
-              newValue: false,
-            });
-          }}
-        />
-      </Flex>
+      {pathname !== ROUTES.GENELISTCOMPARE &&
+        pathname !== ROUTES.GENE_REGULATION && (
+          <>
+            <Spacer />
+            <Flex justifyContent="center">
+              <Button
+                label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
+                colored
+                width="90%"
+                disabled={isCalcRunning || isDisabled}
+                onClick={() => {
+                  runCalculation(pathname);
+                  coreSettingsChanged({
+                    settingName: CoreSettingsTypes.SHOW_HELP,
+                    newValue: false,
+                  });
+                }}
+              />
+            </Flex>
+          </>
+        )}
       <Spacer />
       {pathname === ROUTES.DR ? (
         <SettingsSelector pathname={"/" + coreSettings.currentModule} />

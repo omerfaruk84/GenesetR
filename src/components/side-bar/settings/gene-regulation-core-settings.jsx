@@ -104,7 +104,7 @@ const GeneRegulationSettings = ({
       <Field
         label="Show Regulation of Expression"
         labelLeft
-        labelWidth="250px"
+        labelWidth="200px"
         helpText="Include links based on gene expression regulation. Default is true. You can deactivate this if you want to generate a network based on correlations only."
       >
         <Toggle
@@ -118,14 +118,13 @@ const GeneRegulationSettings = ({
         />
       </Field>
       <Field
-        labelLeft
         label="Absolute Z Score Threshold"
         helpText="Adjusts the minimum threshold for the absolute Z Score. Higher thresholds result in more stringent filtering of genes based on their effect size."
       >
         <div className={styles.inputRange}>
           <Slider
             label={geneRegulationCoreSettings?.absoluteZScore}
-            max={200}
+            max={40}
             min={4}
             value={geneRegulationCoreSettings?.absoluteZScore * 20}
             onChange={({ target: { value } }) =>
@@ -138,7 +137,6 @@ const GeneRegulationSettings = ({
         </div>
       </Field>
       <Field
-        labelLeft
         label="Minimum Neighbour Count"
         helpText="Sets the minimum number of neighboring genes that a gene should have to be kept in the network. A higher count will result in fewer but potentially more influential genes."
       >

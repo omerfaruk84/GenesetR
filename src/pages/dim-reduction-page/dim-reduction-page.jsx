@@ -341,7 +341,7 @@ const DimReductionPage = ({
               {" "}
               Total number of principal components: {pcaResults.ratio?.length}
             </div>
-            <Row spacing={0} width="100%" height="35%">
+            <Row spacing={0} width="100%" height="35vh">
               <ReactEChartsCore
                 echarts={echarts}
                 option={graphoptions}

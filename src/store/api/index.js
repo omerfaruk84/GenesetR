@@ -192,6 +192,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
 };
 
 const runPathFinderCalc = async (core, pathfinder) => {
+  console.log(core, pathfinder)
   const body = {
     downgeneList: core.peturbationList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
@@ -201,12 +202,15 @@ const runPathFinderCalc = async (core, pathfinder) => {
     dataType: core.dataType,
     cellLine: core.cellLine[0],
 
-    upgeneList: pathfinder.upgeneList,
+    upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
     cutoff: 0.2, //pathfinder.cutoff,
     depth: pathfinder.depth,
     checkCorr: pathfinder.checkCorr,
     corrCutOff: pathfinder.corrCutOff,
-    BioGridData: pathfinder.BioGridData,
+    BioGridData: "" + pathfinder.BioGridData,
 
     retType: 0,
     request: "findPath",
@@ -281,7 +285,7 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
 const runGeneSignature = async (core) => {
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
-
+    cell_line: core.cellLine[0],
     request: "calcGeneSignature",
   };
   return await getData(body);

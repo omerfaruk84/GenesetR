@@ -421,6 +421,8 @@ const ExpressionAnalyzer = ({
         selectedData[Object.keys(selectedData)[selectedProbe]]
       );
 
+      console.log(xValues, labels);
+
       let tableInfo = [];
       //setkeyedData(tableInfo);
       const pointData2 = [];
@@ -433,7 +435,7 @@ const ExpressionAnalyzer = ({
       }
 
       var result = calculateDataDistribution(zScores, binSize);
-
+      console.log(result);
       //findNearestIndex(distX,distY, xValues[i])
       for (let i = 0; i < xValues.length; i++) {
         //if (!zScoreConv && xValues[i] === 1) continue;
@@ -463,9 +465,18 @@ const ExpressionAnalyzer = ({
           if (randomNum < 7) continue;
         }
 
-        let binLoc =
-          result.bins[Math.floor((zScores[i] - result.min) / result.binSize)]
-            .count;
+        console.log(
+          zScores[i],
+          result.min,
+          result.binSize,
+          Math.floor((zScores[i] - result.min) / result.binSize),
+          result
+        );
+
+        let index = Math.floor((zScores[i] - result.min) / result.binSize);
+        if (index >= result.bins.length) index = result.bins.length - 1;
+
+        let binLoc = result.bins[Math.max(0, index)].count;
         let histY = Math.random() * 2 * binLoc - binLoc;
         pointData2.push([
           zScores[i],
@@ -519,64 +530,81 @@ const ExpressionAnalyzer = ({
         tableInfo.sort((geneA, geneB) => geneB["Score"] - geneA["Score"]);
       }
 
-      const upreg = tableInfo
-        .filter((gene) => gene.Effect.startsWith("UP"))
-        .map((gene) => gene.Gene);
-      const dowreg = tableInfo
-        .filter((gene) => gene.Effect.startsWith("DOWN"))
-        .map((gene) => gene.Gene);
-      const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
-      const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
-      const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
-      const bottom20 = tableInfo
-        .slice(Math.max(tableInfo.length - 20, 0))
-        .map((gene) => gene.Gene);
-      const bottom50 = tableInfo
-        .slice(Math.max(tableInfo.length - 50, 0))
-        .map((gene) => gene.Gene);
-      const bottom100 = tableInfo
-        .slice(Math.max(tableInfo.length - 100, 0))
-        .map((gene) => gene.Gene);
       const temp = {};
 
       if (selectedInnerTab.value === 0) {
-        temp["Upregulated"] = upreg.join();
-        temp["Downregulated"] = dowreg.join();
-        temp["Top 20 Upregulated"] = top20.join();
-        temp["Top 50 Upregulated"] = top50.join();
-        temp["Top 100 Upregulated"] = top100.join();
-        temp["Top 20 Downregulated"] = bottom20.join();
-        temp["Top 50 Downregulated"] = bottom50.join();
-        temp["Top 100 Downregulated"] = bottom100.join();
+        const genesLength = tableInfo.length;
+        const upreg = [];
+        const dowreg = [];
+        // First pass to categorize genes based on upregulation or downregulation
+        tableInfo.forEach((gene, index) => {
+          if (gene.Effect.startsWith("UP")) {
+            upreg.push(gene.Gene);
+          } else if (gene.Effect.startsWith("DOWN")) {
+            dowreg.push(gene.Gene);
+          }
+          // For top and bottom genes, since it's based on position, no need to process here.
+        });
+        // Assigning top and bottom gene slices
+        const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
+        const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
+        const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
+        const bottom20 = tableInfo
+          .slice(Math.max(genesLength - 20, 0))
+          .map((gene) => gene.Gene);
+        const bottom50 = tableInfo
+          .slice(Math.max(genesLength - 50, 0))
+          .map((gene) => gene.Gene);
+        const bottom100 = tableInfo
+          .slice(Math.max(genesLength - 100, 0))
+          .map((gene) => gene.Gene);
+
+        if (upreg.length > 3) temp["Upregulated"] = upreg.join();
+        if (dowreg.length > 3) temp["Downregulated"] = dowreg.join();
+        if (top20.length > 3) temp["Top 20 Upregulated"] = top20.join();
+        if (top50.length > 3) temp["Top 50 Upregulated"] = top50.join();
+        if (top100.length > 3) temp["Top 100 Upregulated"] = top100.join();
+        if (bottom20.length > 3) temp["Top 20 Downregulated"] = bottom20.join();
+        if (bottom50.length > 3) temp["Top 50 Downregulated"] = bottom50.join();
+        if (bottom100.length > 3)
+          temp["Top 100 Downregulated"] = bottom100.join();
       } else {
-        temp["STRONG POSITIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score > 0.8)
-          .map((gene) => gene.Gene)
-          .join();
+        // Since correlation calculations are separate, process them individually
+        const strongPosCorr = [];
+        const posCorr = [];
+        const weakPosCorr = [];
+        const strongNegCorr = [];
+        const negCorr = [];
+        const weakNegCorr = [];
 
-        temp["POSITIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score > 0.5 && gene.Score <= 0.8)
-          .map((gene) => gene.Gene)
-          .join();
+        tableInfo.forEach((gene) => {
+          const score = gene.Score;
+          const geneName = gene.Gene;
+          if (score > 0.8) {
+            strongPosCorr.push(geneName);
+          } else if (score > 0.5) {
+            posCorr.push(geneName);
+          } else if (score > 0.1) {
+            weakPosCorr.push(geneName);
+          } else if (score < -0.8) {
+            strongNegCorr.push(geneName);
+          } else if (score < -0.5) {
+            negCorr.push(geneName);
+          } else if (score < -0.1) {
+            weakNegCorr.push(geneName);
+          }
+        });
 
-        temp["WEAK POSITIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score > 0.1 && gene.Score <= 0.5)
-          .map((gene) => gene.Gene)
-          .join();
-        temp["STRONG NEGATIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score < -0.8)
-          .map((gene) => gene.Gene)
-          .join();
-
-        temp["NEGATIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score < -0.5 && gene.Score >= -0.8)
-          .map((gene) => gene.Gene)
-          .join();
-
-        temp["WEAK NEGATIVE CORR"] = tableInfo
-          .filter((gene) => gene.Score < -0.1 && gene.Score >= -0.5)
-          .map((gene) => gene.Gene)
-          .join();
+        if (strongPosCorr.length > 3)
+          temp["STRONG POSITIVE CORR"] = strongPosCorr.join();
+        if (posCorr.length > 3) temp["POSITIVE CORR"] = posCorr.join();
+        if (weakPosCorr.length > 3)
+          temp["WEAK POSITIVE CORR"] = weakPosCorr.join();
+        if (strongNegCorr.length > 3)
+          temp["STRONG NEGATIVE CORR"] = strongNegCorr.join();
+        if (negCorr.length > 3) temp["NEGATIVE CORR"] = negCorr.join();
+        if (weakNegCorr.length > 3)
+          temp["WEAK NEGATIVE CORR"] = weakNegCorr.join();
       }
 
       //console.log("Here we go #2");

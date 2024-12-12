@@ -410,33 +410,46 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
         (geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]
       );
 
-      const upreg = tableInfo
-        .filter((gene) => gene.Effect === "UP")
+      const upreg = [];
+      const dowreg = [];
+
+      tableInfo.forEach((gene) => {
+        if (gene.Effect === "UP") {
+          upreg.push(gene.Gene);
+        } else if (gene.Effect === "DOWN") {
+          dowreg.push(gene.Gene);
+        }
+      });
+
+      const topRange = 100; // Adjust this value based on the maximum top range you're interested in
+      const bottomRange = 100; // Adjust for the maximum bottom range
+      const totalLength = sortedtableInfo.length;
+
+      // Calculate slices to map, ensuring we don't map more than necessary
+      const maxTopIndex = Math.min(topRange, totalLength);
+      const minBottomIndex = Math.max(totalLength - bottomRange, 0);
+
+      // Map only the necessary parts
+      const topGenes = sortedtableInfo
+        .slice(0, maxTopIndex)
         .map((gene) => gene.Gene);
-      const dowreg = tableInfo
-        .filter((gene) => gene.Effect === "DOWN")
+      const bottomGenes = sortedtableInfo
+        .slice(minBottomIndex, totalLength)
         .map((gene) => gene.Gene);
-      const top20 = sortedtableInfo.slice(0, 20).map((gene) => gene.Gene);
-      const top50 = sortedtableInfo.slice(0, 50).map((gene) => gene.Gene);
-      const top100 = sortedtableInfo.slice(0, 100).map((gene) => gene.Gene);
-      const bottom20 = sortedtableInfo
-        .slice(Math.max(sortedtableInfo.length - 20, 0))
-        .map((gene) => gene.Gene);
-      const bottom50 = sortedtableInfo
-        .slice(Math.max(sortedtableInfo.length - 50, 0))
-        .map((gene) => gene.Gene);
-      const bottom100 = sortedtableInfo
-        .slice(Math.max(sortedtableInfo.length - 100, 0))
-        .map((gene) => gene.Gene);
+
       const temp = {};
       temp["Upregulated"] = upreg.join();
       temp["Downregulated"] = dowreg.join();
-      temp["Top 20 Upregulated"] = top20.join();
-      temp["Top 50 Upregulated"] = top50.join();
-      temp["Top 100 Upregulated"] = top100.join();
-      temp["Top 20 Downregulated"] = bottom20.join();
-      temp["Top 50 Downregulated"] = bottom50.join();
-      temp["Top 100 Downregulated"] = bottom100.join();
+      temp["Top 20 Upregulated"] = topGenes.slice(0, 20).join();
+      temp["Top 50 Upregulated"] = topGenes.slice(0, 50).join();
+      temp["Top 100 Upregulated"] = topGenes.slice(0, 100).join();
+      temp["Top 20 Downregulated"] = bottomGenes
+        .slice(Math.max(bottomGenes.length - 20, 0))
+        .join();
+      temp["Top 50 Downregulated"] = bottomGenes
+        .slice(Math.max(bottomGenes.length - 50, 0))
+        .join();
+      temp["Top 100 Downregulated"] = bottomGenes.join();
 
       setGeneLists(temp);
 
@@ -535,8 +548,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
             formatter: function (params) {
               if (params.data[4] === true) {
                 return params.data[2];
-              } else if (params.data[0] > 2 || params.data[0] < -2) {
-                return params.data[2];
+                //} else if (params.data[0] > 2 || params.data[0] < -2) {
+                //  return params.data[2];
               } else {
                 return "";
               }

@@ -92,6 +92,14 @@ const AboutPage = () => {
             }}
           />
 
+          <span className={styles.updateDate}>2024-03-11</span>
+          <p>
+            We have done several improvements and fixed various bugs. For
+            instance, now it is possible to perform Geneset Enrichment Analyses
+            on the Gene-Regulation module too.
+          </p>
+          <hr style={{ height: 1 }} />
+
           <span className={styles.updateDate}>2024-01-23</span>
           <p>
             We're pleased to introduce a new update to our GeneSetr application,

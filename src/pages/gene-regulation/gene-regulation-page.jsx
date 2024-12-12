@@ -10,7 +10,6 @@ import helpVideo from "../../common/videos/3.webm";
 const GeneRegulationPage = (geneRegulationResults) => {
   return (
     <div className={styles.mainView}>
-      HELP
       {geneRegulationResults.geneRegulationResults !== null ? (
         <GeneRegulation />
       ) : (

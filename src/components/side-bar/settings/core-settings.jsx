@@ -141,7 +141,7 @@ const CoreSettings = ({
 
   return (
     <>
-      <div style={{ display: showcellLineOptions == true ? "block" : "none" }}>
+      <div style={{ display: showcellLineOptions === true ? "block" : "none" }}>
         <DatasetSelector
           ref={childRef}
           onlyMain={
