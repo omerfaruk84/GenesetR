@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import * as echarts from "echarts/core";
 import { ButtonGroup } from "@oliasoft-open-source/react-ui-library";
-//import GraphChart from 'echarts/charts';
 import { GraphChart } from "echarts/charts";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../../components/enrichment-table-new";
@@ -14,23 +13,10 @@ import {
   DatasetComponent,
   ToolboxComponent,
 } from "echarts/components";
-import {
-  CanvasRenderer,
-  // SVGRenderer,
-} from "echarts/renderers";
+import { CanvasRenderer } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
-// import text from './sample.json';
 import dagre from "dagre";
 import styles from "./pathfinder.module.scss";
-
-const helps = {
-  "Regulation Type":
-    "Cor: Correlation; Exp: Expression; Int: Protein-Protein Interaction",
-  Score: "r Value for correlation\n Z Score for expression",
-  "Source NC": "Source Neighbour Count",
-  "Target NC": "Target Neighbour Count",
-  "Total NC": "Total Neighbour Count",
-};
 
 echarts.use([
   TitleComponent,

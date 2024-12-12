@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import React from "react";
 import { connect } from "react-redux";
-import { Heading, Spacer } from "@oliasoft-open-source/react-ui-library";
+
 import { HeatMap } from "../../components/heat-map/index";
 import styles from "./correlation-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";

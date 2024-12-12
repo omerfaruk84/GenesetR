@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import $ from "jquery";
-//import InCHlib from 'biojs-vis-inchlib';
 import InCHlib from "../../store/extra/inchlib-1.2.0.js";
-//import InCHlib from "../../store/extra/inchlib-2.0.js";
-//import InCHlib from '@baliga-lab/inchlib.js';
 import styles from "./heat-map.module.scss";
 import { GeneSetEnrichmentTable } from "../enrichment/index.jsx";
 import { FaChartBar, FaTable } from "react-icons/fa";
@@ -98,16 +95,6 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     []
   );
 
-  const tabOptions = [
-    {
-      label: "Graph",
-      value: "graph",
-    },
-    {
-      label: "Table",
-      value: "table",
-    },
-  ];
   useEffect(() => {
     rowCount = 0;
     if (graphData?.data?.nodes) {
@@ -197,17 +184,10 @@ const HeatMap = ({ graphData, correlationSettings }) => {
       $(document).ready(function () {
         var current_gene = "";
 
-        var target_element = $("#dendrogram");
-        var offset = target_element.offset();
-        var max_y = offset?.top + 150;
-        var x_pos = offset?.left;
         var loading = $("#loading");
         loading.fadeOut();
         var protein_card = $("#protein_card");
-        var protein_div = $("#protein_div");
-        var protein_canvas = $("<div></div>");
 
-        //protein_div.css({"left": x_pos + target_element.width()-40, "top": max_y});
         console.log("graphData?.data?.feature_names.", graphData?.data);
         window.inchlib = new InCHlib({
           target: "heatmap",
@@ -293,32 +273,6 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           }
           loading.fadeOut();
         };
-
-        function get_protein_from_pdb(id) {
-          protein_canvas = $("#protein > canvas");
-          protein_canvas.hide();
-          //loading.fadeIn();
-
-          protein_card.hide();
-
-          protein_card.fadeIn();
-          /*$.ajax({
-            type: 'GET',
-            dataType: "json",
-            url: "/software/inchlib/get_pdb_file",
-            data:{pdb_id: id, webgl: webgl},
-            success: function(pdb){
-                if(webgl){
-                    $("#protein_src").val(pdb.pdb_file);
-                    glmol.loadMolecule();
-                    loading.hide();
-                    protein_canvas.fadeIn();
-                }
-                create_pdb_card(pdb);
-                protein_card.fadeIn();
-            },
-        });*/
-        }
 
         //Set the genes for GSEA analyzes
         window.inchlib.events.column_dendrogram_node_onclick = function (
