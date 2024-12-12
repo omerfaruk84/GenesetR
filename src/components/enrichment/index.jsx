@@ -113,6 +113,7 @@ const GeneSetEnrichmentTable = ({
   genesetEnrichmentSettings,
   //clusteringSettingsChanged,
 }) => {
+  console.log(genesets);
   assignObjectPaths(data);
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
@@ -308,12 +309,13 @@ const GeneSetEnrichmentTable = ({
   );
   //let allGenes = selectedCluster?clusters[selectedCluster?.split(" (")[0]]?.split(","):[]
 
-  let allGenes = selectedCluster
-    ? genelistOptions
-        .find((item) => item.value === selectedCluster)
-        .genes?.replaceAll("_2", "")
-        .split(",")
-    : [];
+  let allGenes =
+    selectedCluster && genelistOptions.length > 0
+      ? genelistOptions
+          .find((item) => item?.value === selectedCluster)
+          .genes?.replaceAll("_2", "")
+          .split(",")
+      : [];
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
@@ -486,6 +488,9 @@ const GeneSetEnrichmentTable = ({
 
         bubbleGraphData.push(objClone);
       }
+    }
+
+    if (bubbleGraphData.length < 3) {
     }
 
     setOptions({
@@ -940,7 +945,7 @@ const GeneSetEnrichmentTable = ({
               <Spacer width="6px" />
               <CopyToClipboard
                 text={
-                  selectedCluster
+                  selectedCluster && genelistOptions.length > 0
                     ? genelistOptions
                         .find((item) => item.value === selectedCluster)
                         .genes.replaceAll("_2", "")
@@ -986,7 +991,7 @@ const GeneSetEnrichmentTable = ({
                   <TextArea
                     rows={10}
                     value={
-                      selectedCluster
+                      selectedCluster && genelistOptions.length > 0
                         ? genelistOptions
                             .find((item) => item.value === selectedCluster)
                             .genes.replaceAll("_2", "")

@@ -91,7 +91,7 @@ const EnrichmentTable = ({ columns, data }) => {
         }}
       >
         <Button onClick={handleExportData} startIcon={<FileDownloadIcon />}>
-          Export All Data
+          Export
         </Button>
 
         <Button
@@ -101,13 +101,26 @@ const EnrichmentTable = ({ columns, data }) => {
           onClick={() => handleExportRows(table.getSelectedRowModel().rows)}
           startIcon={<FileDownloadIcon />}
         >
-          Export Selected Rows
+          Export Selected
+        </Button>
+        <Button
+          disabled={!table.getFilteredRowModel().rows.length > 0}
+          onClick={() => {
+            handleSaveGeneList(table.getFilteredRowModel().rows);
+            table.resetRowSelection();
+          }}
+          startIcon={<PlaylistAddCircleRoundedIcon />}
+        >
+          Create Genelist
         </Button>
         <Button
           disabled={
             !table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
           }
-          onClick={() => handleSaveGeneList(table.getSelectedRowModel().rows)}
+          onClick={() => {
+            handleSaveGeneList(table.getSelectedRowModel().rows);
+            table.resetRowSelection();
+          }}
           startIcon={<PlaylistAddCircleRoundedIcon />}
         >
           Create Genelist From Selected
@@ -162,7 +175,7 @@ const EnrichmentTable = ({ columns, data }) => {
   return (
     <>
       <MaterialReactTable table={table} />
-    
+
       {newListVisible && (
         <GenelistAdd
           genes={genesToSave}
