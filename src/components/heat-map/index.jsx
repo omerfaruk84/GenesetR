@@ -1,67 +1,32 @@
-import React, { useEffect, useState, useMemo } from "react";
-import $ from "jquery";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import InCHlib from "../../store/extra/inchlib-1.2.0.js";
 import styles from "./heat-map.module.scss";
 import { GeneSetEnrichmentTable } from "../enrichment/index.jsx";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../enrichment-table-new/index.jsx";
 import { connect } from "react-redux";
-
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const HeatMap = ({ graphData, correlationSettings }) => {
-  const [selectedGenes, setSelectedGenes] = useState({});
+  const [selectedGenes, setSelectedGenes] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
-  const [keyedData, setkeyedData] = useState([{}]);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [keyedData, setKeyedData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleWheel = (event) => {
-    if (event.shiftKey) {
-      event.preventDefault();
+  const heatmapContainerRef = useRef(null);
+  const heatmapRef = useRef(null);
+  const inchlibInstance = useRef(null);
+  const transformWrapperRef = useRef(null);
 
-      let newScale = scale + event.deltaY * -0.0005;
-
-      // Restrict scale
-      newScale = Math.min(Math.max(0.125, newScale), 4);
-
-      // Set scale
-      setScale(newScale);
-    }
-  };
-
-  const handleMouseDown = (event) => {
-    // Check if middle button (wheel) is pressed
-    if (event.shiftKey) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (event) => {
-    if (isDragging) {
-      setPosition((prevPosition) => ({
-        x: prevPosition.x + event.movementX,
-        y: prevPosition.y + event.movementY,
-      }));
-    }
-  };
-  //const [rowCount, setrowCount] = useState(1);
-
-  let rowCount = 0;
-  const tableInfo = [];
   const columns = useMemo(
     () => [
       {
-        accessorKey: "Gene 1", //normal accessorKey
+        accessorKey: "Gene 1",
         header: "Gene 1",
         size: 75,
         filterVariant: "autocomplete",
-        minSize: 50, //min size enforced during resizing
+        minSize: 50,
         maxSize: 150,
         muiFilterTextFieldProps: {
           placeholder: "Symbol",
@@ -78,7 +43,6 @@ const HeatMap = ({ graphData, correlationSettings }) => {
           size: "small",
         },
       },
-
       {
         accessorKey: "Corr R",
         header: "Score",
@@ -95,348 +59,279 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     []
   );
 
+  const heatmapWidth = useMemo(() => {
+    if (graphData) {
+      return Math.min(
+        Math.max(graphData.data.feature_names.length * 42, 400),
+        3500
+      );
+    }
+    return 400;
+  }, [graphData]);
+
+  // Populate the table data based on correlation settings
   useEffect(() => {
-    rowCount = 0;
     if (graphData?.data?.nodes) {
-      tableInfo.length = 0;
-      //console.log("HI")
-      for (let i in graphData?.data?.nodes) {
-        if (graphData?.data?.nodes[i].count === 1) {
-          rowCount++;
-          let gene1 = graphData?.data?.nodes[i].objects[0];
-          for (let j in graphData?.data?.nodes[i].features) {
-            if (
-              Math.abs(graphData?.data?.nodes[i].features[j]) >=
-                correlationSettings?.filter &&
-              graphData?.data?.feature_names[j] !== gene1
-            )
+      const tableInfo = [];
+      for (let i in graphData.data.nodes) {
+        if (graphData.data.nodes[i].count === 1) {
+          let gene1 = graphData.data.nodes[i].objects[0];
+          for (let j in graphData.data.nodes[i].features) {
+            const value = graphData.data.nodes[i].features[j];
+            if (graphData.data.feature_names[j] !== gene1) {
               tableInfo.push({
                 "Gene 1": gene1,
-                "Gene 2": graphData?.data?.feature_names[j],
-                "Corr R": graphData?.data?.nodes[i].features[j],
+                "Gene 2": graphData.data.feature_names[j],
+                "Corr R": value,
               });
-          }
-        } else break;
-      }
-      setkeyedData(tableInfo);
-    }
-  }, [correlationSettings?.filter, graphData]);
-
-  useEffect(() => {
-    if (window.inchlib) {
-      if (correlationSettings?.row_col_sameorder) {
-        let cordinates = Object.entries(
-          window.inchlib.leaves_y_coordinates
-        ).sort((a, b) => a[1] - b[1]);
-        let genesinrows = [];
-
-        const valueKeyMap = new Map();
-        for (const [key, value] of Object.entries(
-          window.inchlib.objects2leaves
-        )) {
-          // Add the value as the key and the key as the value to the valueKeyMap map.
-          valueKeyMap.set(value, key);
-        }
-
-        for (let key in cordinates) {
-          genesinrows.push(valueKeyMap.get(cordinates[key][0]));
-        }
-
-        for (let key in graphData?.data?.feature_names) {
-          valueKeyMap.set(graphData?.data?.feature_names[key], key);
-        }
-
-        let columnOrder = [];
-
-        for (let key in genesinrows) {
-          columnOrder.push(valueKeyMap.get(genesinrows[key]));
-        }
-
-        window.inchlib.update_settings({
-          columns_order: columnOrder.reverse(),
-          column_dendrogram: false,
-        });
-      } else {
-        window.inchlib.update_settings({
-          columns_order: [],
-          column_dendrogram: true,
-        });
-      }
-
-      window.inchlib.redraw();
-    }
-  }, [correlationSettings?.row_col_sameorder]);
-
-  function fitToscreen() {
-    var containerDiv = document.getElementById("heatmap"); // Select your div
-    var scaleX = window.innerWidth / containerDiv.offsetWidth;
-    var scaleY = window.innerHeight / containerDiv.offsetHeight;
-    var scale = Math.min(scaleX, scaleY); // Choose the smaller scale factor
-    //containerDiv.style.transform = 'scale(' + scale + ')';
-    setScale(scale);
-  }
-
-  useEffect(() => {
-    if (graphData) {
-      //graphData = JSON.parse(graphData?.pert)
-      // Should inject heat map into div with id=inchlib
-
-      $(document).ready(function () {
-        var current_gene = "";
-
-        var loading = $("#loading");
-        loading.fadeOut();
-        var protein_card = $("#protein_card");
-
-        console.log("graphData?.data?.feature_names.", graphData?.data);
-        window.inchlib = new InCHlib({
-          target: "heatmap",
-          metadata: false,
-          column_metadata: false,
-          max_height: 1500,
-          dendrogram: true,
-          column_dendrogram: !correlationSettings?.row_col_sameorder,
-          width: Math.min(
-            Math.max(graphData?.data?.feature_names.length * 10, 300),
-            2000
-          ),
-          heatmap_colors: "BuWhRd",
-          metadata_colors: "Reds",
-          independent_columns: false, //Color based on whole heatmap
-          draw_row_ids: rowCount > 120 ? false : true,
-          heatmap_part_width: 0.97,
-          max_column_width: 10,
-          max_row_height: 10,
-          fixed_row_id_size: rowCount > 120 ? 0 : 9,
-
-          //highlighted_rows: ["TELO2", "MED17"],
-          //independent_columns: false,
-          //column_dendrogram:false,
-          // dendrogram:false,
-          //fixed_row_id_size:12,
-        });
-
-        window.inchlib.read_data(graphData);
-        window.inchlib.draw();
-        let cordinates = Object.entries(
-          window.inchlib.leaves_y_coordinates
-        ).sort((a, b) => a[1] - b[1]);
-        let genesinrows = [];
-
-        const valueKeyMap = new Map();
-        for (const [key, value] of Object.entries(
-          window.inchlib.objects2leaves
-        )) {
-          // Add the value as the key and the key as the value to the valueKeyMap map.
-          valueKeyMap.set(value, key);
-        }
-
-        for (let key in cordinates) {
-          genesinrows.push(valueKeyMap.get(cordinates[key][0]));
-        }
-
-        for (let key in graphData?.data?.feature_names) {
-          valueKeyMap.set(graphData?.data?.feature_names[key], key);
-        }
-
-        let columnOrder = [];
-
-        for (let key in genesinrows) {
-          columnOrder.push(valueKeyMap.get(genesinrows[key]));
-        }
-
-        window.inchlib.update_settings({
-          columns_order: columnOrder.reverse(),
-          column_dendrogram: false,
-        });
-        window.inchlib.redraw();
-
-        fitToscreen();
-        //window.inchlib.add_prefix();
-
-        window.inchlib.events.row_onmouseover = function (ids, evt) {
-          // console.log("row_onmouseover",ids,evt)
-        };
-
-        window.inchlib.events.heatmap_onmouseout = function (evt) {
-          // console.log("heatmap_onmouseout", evt)
-        };
-
-        window.inchlib.events.row_onclick = function (ids) {
-          //console.log("ids", ids)
-          //console.log("current_gene", current_gene)
-          if (ids.length === 1 && ids[0] !== current_gene) {
-            current_gene = ids[0];
-            //get_protein_from_pdb(ids[0]);
-            window.inchlib.highlight_rows(ids);
-            window.inchlib.unhighlight_cluster();
-          }
-          loading.fadeOut();
-        };
-
-        //Set the genes for GSEA analyzes
-        window.inchlib.events.column_dendrogram_node_onclick = function (
-          column_indexes,
-          node_id,
-          evt
-        ) {
-          let selectedGenesTemp = [];
-          for (let gene in column_indexes) {
-            selectedGenesTemp.push(
-              window.inchlib.data?.feature_names[gene].split("_")[0]
-            );
-          }
-
-          if (selectedGenesTemp.length > 3) setSelectedGenes(selectedGenesTemp);
-        };
-
-        //define function for dendrogram_node_onclick event
-        window.inchlib.events.dendrogram_node_onclick = function (object_ids) {
-          setSelectedGenes(object_ids.map((gene) => gene.split("_")[0]));
-
-          var i;
-
-          for (i = 0; i < object_ids.length; i++) {
-            if (object_ids[i] === current_gene) {
-              return;
             }
           }
-          $("#protein > canvas").hide();
-          protein_card.hide();
-          window.inchlib.highlight_rows([]);
-        };
-
-        window.inchlib.events.empty_space_onclick = function () {
-          window.inchlib.highlight_rows([]);
-          window.inchlib.unhighlight_cluster();
-        };
-
-        /*
-      window.inchlib.events.dendrogram_node_highlight = function(object_ids, evt){
-        console.log("dendrogram_node_highlight",object_ids,evt)
-          //var i;
-          
-          $.ajax({
-              type: 'GET',
-              dataType: "json",
-              url: "/software/inchlib/get_scaffolds",
-              data:{compounds: object_ids},
-              success: function(scaffolds){
-                  hide_molecule();
-                  show_scaffolds(scaffolds, evt);
-                  dendrogram.events.row_onmouseover = function(ids, evt){
-                      floating_mol.hide();
-                      floating_mol.css({"top": evt.evt.pageY, "left": evt.evt.pageX+30});
-                      floating_mol.find("img").attr("src", molecule_url + ids[0] + ".png");
-                      floating_mol.show();
-                  };
-              },
-          });
-          
-          for(i = 0; i<object_ids.length; i++){
-              if(object_ids[i] == current_mol){
-                  return;
-              }
-          }
-          dendrogram.highlight_rows([]);
-          
+        } else {
+          break;
+        }
       }
-
-
-      /*
-
-      window.inchlib.events.dendrogram_node_unhighlight = function(){
-          // scaffolds_element.hide();
-          console.log("dendrogram_node_unhighlight")
-      }
-
-      window.inchlib.events.empty_space_onclick = function(){
-          
-          hide_molecule();
-          dendrogram.highlight_rows([]);
-          bind_dendrogram_events();
-          console.log("dendrogram_node_unhighlight")
-      }
-  */
-      });
+      setKeyedData(tableInfo);
     }
   }, [graphData]);
 
+  // Initialize InCHlib when graphData changes
+  useEffect(() => {
+    if (graphData && heatmapRef.current) {
+      setLoading(true);
+
+      // Initialize InCHlib with the correct target selector
+      const inchlib = new InCHlib({
+        target: "heatmap", // Corrected target as a string selector
+        metadata: false,
+        column_metadata: false,
+        max_height: heatmapWidth,
+        dendrogram: true,
+        width: heatmapWidth,
+        heatmap_colors: "BuWhRd",
+        metadata_colors: "Reds",
+        independent_columns: false,
+        draw_row_ids:
+          (graphData?.data?.nodes?.length ?? 0) > 120 ? false : true,
+        heatmap_part_width: 0.95,
+        max_column_width: 30,
+        max_row_height: 30,
+        fixed_row_id_size: (graphData?.data?.nodes?.length ?? 0) > 120 ? 0 : 16,
+      });
+
+      inchlibInstance.current = inchlib;
+      inchlib.read_data(graphData);
+      inchlib.draw();
+
+      // If same order is required
+      if (correlationSettings?.row_col_sameorder) {
+        let coordinates = Object.entries(inchlib.leaves_y_coordinates).sort(
+          (a, b) => a[1] - b[1]
+        );
+        let genesInRows = [];
+
+        const valueKeyMap = new Map();
+        for (const [key, value] of Object.entries(inchlib.objects2leaves)) {
+          valueKeyMap.set(value, key);
+        }
+
+        for (let key in coordinates) {
+          genesInRows.push(valueKeyMap.get(coordinates[key][0]));
+        }
+
+        for (let key in graphData.data.feature_names) {
+          valueKeyMap.set(graphData.data.feature_names[key], key);
+        }
+
+        let columnOrder = [];
+        for (let key in genesInRows) {
+          columnOrder.push(valueKeyMap.get(genesInRows[key]));
+        }
+
+        inchlib.update_settings({
+          columns_order: columnOrder.reverse(),
+          column_dendrogram: false,
+        });
+        inchlib.redraw();
+      }
+
+      // Attach Event Handlers
+      inchlib.events.row_onclick = function (ids) {
+        if (ids.length === 1) {
+          inchlib.highlight_rows(ids);
+          inchlib.unhighlight_cluster();
+        }
+      };
+
+      inchlib.events.column_dendrogram_node_onclick = function (
+        column_indexes
+      ) {
+        const selectedGenesTemp = Object.keys(column_indexes).map(
+          (gene) => inchlib.data?.feature_names[gene].split("_")[0]
+        );
+
+        if (selectedGenesTemp.length > 3) setSelectedGenes(selectedGenesTemp);
+      };
+
+      inchlib.events.dendrogram_node_onclick = function (object_ids) {
+        setSelectedGenes(object_ids.map((gene) => gene.split("_")[0]));
+        inchlib.highlight_rows([]);
+      };
+
+      inchlib.events.empty_space_onclick = function () {
+        inchlib.highlight_rows([]);
+        inchlib.unhighlight_cluster();
+      };
+
+      // Hide loading after rendering
+      setLoading(false);
+
+      // Measure the heatmap after rendering if needed
+      const measureHeatmap = () => {
+        if (heatmapRef.current) {
+          const rect = heatmapRef.current.getBoundingClientRect();
+          console.log("Heatmap dimensions:", rect.width, rect.height);
+          // You can use rect.width and rect.height if needed
+        }
+      };
+
+      setTimeout(measureHeatmap, 0);
+
+      return () => {
+        // Clean up event handlers
+        inchlib.events.row_onclick = null;
+        inchlib.events.column_dendrogram_node_onclick = null;
+        inchlib.events.dendrogram_node_onclick = null;
+        inchlib.events.empty_space_onclick = null;
+        inchlibInstance.current = null;
+      };
+    }
+  }, [graphData, correlationSettings?.row_col_sameorder, heatmapWidth]);
+
+  // Handle zoom reset and fit to screen via react-zoom-pan-pinch
+  const handleResetZoom = () => {
+    if (transformWrapperRef.current) {
+      transformWrapperRef.current.resetTransform();
+      transformWrapperRef.current.setTransform(0, 0, 1);
+    }
+  };
+
+  const handleFitToScreen = () => {
+    if (transformWrapperRef.current) {
+      const container = heatmapContainerRef.current;
+      if (container && heatmapRef.current) {
+        const containerRect = container.getBoundingClientRect();
+        const heatmapRect = heatmapRef.current.getBoundingClientRect();
+        // Calculate scale factors based on container size
+        const scaleX =
+          (containerRect.width - 50) / heatmapRef.current.clientWidth;
+        //const scaleY = containerRect.height / heatmapRef.current.clientHeight;
+        console.log(
+          scaleX,
+          //scaleY,
+          containerRect.width,
+          window.innerWidth,
+          heatmapRect.width,
+          containerRect.height,
+          window.innerHeight,
+          graphData
+        );
+
+        // Choose the smaller scale to fit both dimensions
+        //const newScale = Math.min(scaleX, scaleY);
+
+        // Align to the left and top
+        const x = 0;
+        const y = 0;
+
+        // Apply the transformation
+        transformWrapperRef.current.setTransform(x, y, scaleX);
+      }
+    }
+  };
+
   return (
-    <div className={styles.mainView}>
-      <ButtonGroup
-        items={[
-          {
-            icon: <FaChartBar />,
-            key: 0,
-            label: "Chart",
-          },
-          {
-            icon: <FaTable />,
-            key: 1,
-            label: "Table",
-          },
-        ]}
-        onSelected={(key) => setSelectedView(key)}
-        value={selectedView}
-      />
-      <Spacer height={5} />
+    <div className={styles.mainView} ref={heatmapContainerRef}>
+      {/* Control Bar */}
+      <div className={styles.controlBar}>
+        {/* ButtonGroup for Chart and Table */}
+        <ButtonGroup
+          items={[
+            {
+              icon: <FaChartBar />,
+              key: 0,
+              label: "Chart",
+            },
+            {
+              icon: <FaTable />,
+              key: 1,
+              label: "Table",
+            },
+          ]}
+          onSelected={(key) => setSelectedView(key)}
+          value={selectedView}
+        />
 
-      {keyedData && selectedView === 1 && (
-        <>
-          <EnrichmentTable data={keyedData} columns={columns} />
-        </>
-      )}
-
-      <>
-        <span
-          style={{
-            fontSize: "16px",
-            marginLeft: "10px",
-          }}
-        >
-          Please use mouse wheels to zoom in and out while pressing "Shift".
-          Current scale: {scale.toFixed(2)}
-        </span>
-        <button onClick={() => setScale(1.0)} className={styles.zoomButton}>
-          RESET ZOOM
-        </button>
-        <button onClick={() => fitToscreen()} className={styles.zoomButton}>
-          FIT TO SCREEN
-        </button>
+        {/* Instructional Text and Zoom Buttons */}
 
         <div
-          id="outerDiv"
-          hidden={selectedView === 1}
-          style={{
-            display: "flex",
-            justifyContent: "left",
-            height: `${
-              document.getElementsByClassName("kineticjs-content")[0]
-                ?.offsetHeight
-                ? document.getElementsByClassName("kineticjs-content")[0]
-                    ?.offsetHeight * scale
-                : "auto"
-            }px`,
-          }}
+          className={styles.controlGroup}
+          style={{ visibility: selectedView === 0 }}
         >
-          <div
-            id="heatmap"
-            onWheel={handleWheel}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            hidden={selectedView === 1}
-            style={{
-              transform: `scale(${scale})`,
-              display: "flex",
-              justifyContent: "left",
-              transformOrigin: "left top",
-              marginLeft: "20px",
-            }}
-          ></div>
+          <div className={styles.zoomControls}>
+            <button
+              onClick={handleResetZoom}
+              className={styles.zoomButton}
+              aria-label="Reset Zoom"
+            >
+              RESET ZOOM
+            </button>
+            <button
+              onClick={handleFitToScreen}
+              className={styles.zoomButton}
+              aria-label="Fit to Screen"
+            >
+              FIT TO SCREEN
+            </button>
+          </div>
         </div>
+      </div>
+      {/* Spacer */}
+      <Spacer height={5} />
+      {/* Conditional Rendering for Table View */}
+      {keyedData && selectedView === 1 && (
+        <div className={styles.geneTable}>
+          <EnrichmentTable data={keyedData} columns={columns} />
+        </div>
+      )}
+      {/* Heatmap and Protein Div */}
+      <div
+        className={styles.mainContent}
+        style={{ display: selectedView === 0 ? "flex" : "none" }}
+      >
+        <TransformWrapper
+          initialScale={1}
+          minScale={0.125}
+          maxScale={4}
+          initialPositionX={0} // Align to left
+          initialPositionY={0} // Align to top
+          limitToBounds={false}
+          ref={transformWrapperRef}
+          wheel={{ step: 0.1 }}
+          doubleClick={{ disabled: true }}
+          pinch={{ step: 0.1 }}
+          zoomAnimation={{ disabled: true }}
+          className={styles.transformWrapper}
+        >
+          {({ zoomIn, zoomOut, resetTransform, fitToBounds }) => (
+            <React.Fragment>
+              <TransformComponent>
+                <div id="heatmap" ref={heatmapRef}></div>
+              </TransformComponent>
+            </React.Fragment>
+          )}
+        </TransformWrapper>
 
+        {/* Protein Div */}
         <div
           id="protein_div"
           style={{
@@ -446,32 +341,26 @@ const HeatMap = ({ graphData, correlationSettings }) => {
             width: "100%",
           }}
         >
-          <div id="protein">
-            <div id="protein_src"></div>
-            <div id="loading">
-              <img src="https://www.openscreen.cz/software/inchlib/static/img/loading.gif" />
-            </div>
+          <div id="loadingform">
+            {loading && (
+              <div id="loading">
+                <img
+                  src="https://www.openscreen.cz/software/inchlib/static/img/loading.gif"
+                  alt="Loading"
+                />
+              </div>
+            )}
           </div>
 
-          <div id="overflow_div"></div>
-          {selectedGenes.length > 3 ? (
-            <div
-              hidden={selectedView === 1}
-              style={{
-                display: "block",
-                marginLeft: "auto",
-                marginRight: "auto",
-                width: "100%",
-              }}
-            >
-              {console.log(selectedGenes.length)}
+          {selectedGenes.length > 3 && (
+            <div className={styles.enrichmentTableContainer}>
               <GeneSetEnrichmentTable
-                genesets={{ "Selected Genes": selectedGenes.join() }}
+                genesets={{ "Selected Genes": selectedGenes.join(", ") }}
               />
             </div>
-          ) : null}
+          )}
         </div>
-      </>
+      </div>
     </div>
   );
 };
