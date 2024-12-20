@@ -1671,13 +1671,14 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
       self.heatmap_width = 0;
     }
 
-    self.pixels_for_dimension =
-      dimensions > 0 && self.heatmap_width > 0
-        ? self.heatmap_width / dimensions
-        : 0;
+  self.pixels_for_dimension =
+            dimensions > 0 && self.heatmap_width > 0
+                ? Math.floor(self.heatmap_width / dimensions)
+                : 0;
     if (self.pixels_for_dimension === 0) {
       self.heatmap_width = 0;
     }
+        self.heatmap_width = self.pixels_for_dimension * dimensions;
 
     self.distance =
       self.settings.width - self.heatmap_width - self.right_margin;
@@ -1689,6 +1690,8 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
     self.pixels_for_dimension = dimensions
       ? self.heatmap_width / dimensions
       : 0;
+       // Adjust heatmap width to match integer column widths
+        self.heatmap_width = self.pixels_for_dimension * dimensions;
   }
 
   if (
@@ -1975,7 +1978,7 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
 
   for (var i = 0, len = self.on_features["data"].length; i < len; i++) {
     col_index = self.on_features["data"][i];
-    x2 = x1 + self.pixels_for_dimension;
+    x2 = x1 + self.pixels_for_dimension;   
     y2 = y1;
     value = node.features[col_index];
     text_value = value;
@@ -2038,10 +2041,10 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
 
       line = self.objects_ref.heatmap_line.clone({
         stroke: color,
-        points: [x1, y1, x2, y2],
+        points: [x1, y1, x2+0.8, y2],
         value: text_value,
         column: ["d", col_index].join("_"),
-        strokeWidth: self.pixels_for_leaf,
+        strokeWidth: self.pixels_for_leaf +0.8,
       });
       row.add(line);
 
@@ -2052,7 +2055,7 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
               ("" + text_value).length * (self.value_font_size / 4)
           ),
           y: self._hack_round(y1 - self.value_font_size / 2),
-          fontSize: self.value_font_size,
+          fontSize: self.value_font_size+2,
           text: text_value,
         });
         row.add(text);
@@ -2264,10 +2267,10 @@ InCHlib.prototype._draw_row_ids = function () {
     text = self.objects_ref.heatmap_value.clone({
       x: x,
       y: self._hack_round(object_y[i][1] - self.row_id_size / 2),
-      fontSize: self.row_id_size,
+      fontSize: self.row_id_size+3,
       text: object_y[i][0],
-      fontStyle: "italic",
-      fill: "gray",
+      //fontStyle: "italic",
+      fill: "black",
     });
     self.heatmap_layer.add(text);
   }
@@ -2316,6 +2319,7 @@ InCHlib.prototype._get_row_id_size = function () {
       self.pixels_for_leaf,
       10
     );
+
     self.right_margin = 100;
   }
 };
