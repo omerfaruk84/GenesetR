@@ -54,7 +54,6 @@ const GraphmapSettingsTypes = {
 };
 
 const CorrelationSettingsTypes = {
-  FILTER: "filter",
   ROW_DISTANCE: "row_distance",
   COLUMN_DISTANCE: "column_distance",
   ROW_LINKAGE: "row_linkage",
