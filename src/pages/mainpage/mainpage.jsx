@@ -229,6 +229,7 @@ const MainPage = ({ coreSettingsChanged }) => {
                   href="https://www.biorxiv.org/content/10.1101/2023.09.18.558211v1"
                   id="citation-link"
                   target="_blank"
+                  rel="noreferrer"
                 >
                   Kuzu OF, Saatcioglu F.
                   <br />
@@ -307,6 +308,7 @@ const MainPage = ({ coreSettingsChanged }) => {
               <img
                 style={{ height: "30px", marginLeft: "28%" }}
                 src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                alt="GitHub Logo"
               />
             </a>
             <a
@@ -338,6 +340,7 @@ const MainPage = ({ coreSettingsChanged }) => {
                 <img
                   style={{ width: "45px" }}
                   src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png"
+                  alt="GitHub Logo"
                 />
               </a>
               <span style={{ marginLeft: "3px" }}>page.</span>
