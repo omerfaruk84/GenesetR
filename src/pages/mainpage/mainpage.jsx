@@ -1,15 +1,8 @@
 import React from "react";
 import { connect } from "react-redux";
-import { ModulePathNames } from "../../store/results/enums";
-import {
-  Column,
-  Row,
-  Flex,
-  Heading,
-  Spacer,
-} from "@oliasoft-open-source/react-ui-library";
+import { Row, Spacer } from "@oliasoft-open-source/react-ui-library";
 import styles from "./mainpage.module.scss";
-import { useNavigate, useEffect } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
@@ -17,6 +10,7 @@ import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
 const MainPage = ({ coreSettingsChanged }) => {
   const navigate = useNavigate();
 
+  /*
   var consent = getCookie("userConsent");
 
   function setCookie(name, value, days) {
@@ -67,9 +61,8 @@ const MainPage = ({ coreSettingsChanged }) => {
   const closeConsent = () => {
     document.getElementById("cookieConsentContainer").style.display = "none";
   };
-
+*/
   const handleClick = (page) => {
-    console.log(page);
     switch (page) {
       case 1:
         navigate(ROUTES.GENE_REGULATION);
@@ -109,6 +102,7 @@ const MainPage = ({ coreSettingsChanged }) => {
   return (
     <>
       <div className={styles.parentOfMainView}>
+        {/* 
         {!consent && (
           <div id="cookieConsentContainer" className={styles.consentContainer}>
             <p className={styles.consentTitle}>We value your privacy</p>
@@ -139,6 +133,7 @@ const MainPage = ({ coreSettingsChanged }) => {
             </div>
           </div>
         )}
+        */}
 
         <div className={styles.mainView}>
           <h1 style={{ fontFamily: "Droid Sans", fontSize: "30px" }}>
