@@ -1,9 +1,16 @@
-import React from 'react';
-import {connect} from 'react-redux';
-import { Field, Select, CheckBox, Slider, Spacer, Flex } from '@oliasoft-open-source/react-ui-library';
-import { correlationSettingsChanged } from '../../../store/settings/correlation-settings';
-import { CorrelationSettingsTypes } from './enums';
-import styles from './settings.module.scss';
+import React from "react";
+import { connect } from "react-redux";
+import {
+  Field,
+  Select,
+  CheckBox,
+  Slider,
+  Spacer,
+  Flex,
+} from "@oliasoft-open-source/react-ui-library";
+import { correlationSettingsChanged } from "../../../store/settings/correlation-settings";
+import { CorrelationSettingsTypes } from "./enums";
+import styles from "./settings.module.scss";
 
 const CorrelationSettings = ({
   correlationSettings,
@@ -11,173 +18,212 @@ const CorrelationSettings = ({
 }) => {
   const linkageMethodOptions = [
     {
-      label: 'Single',
-      value: 'single',
+      label: "Single",
+      value: "single",
     },
     {
-      label: 'Complete',
-      value: 'complete',
+      label: "Complete",
+      value: "complete",
     },
     {
-      label: 'Average',
-      value: 'average',
+      label: "Average",
+      value: "average",
     },
     {
-      label: 'Centroid',
-      value: 'centroid',
+      label: "Centroid",
+      value: "centroid",
     },
     {
-      label: 'Median',
-      value: 'median',
+      label: "Median",
+      value: "median",
     },
     {
-      label: 'Ward',
-      value: 'ward',
-    }
-
+      label: "Ward",
+      value: "ward",
+    },
   ];
-  
+
   const distanceMetricOptions = [
     {
-      label: 'Euclidean',
-      value: 'euclidean',
+      label: "Euclidean",
+      value: "euclidean",
     },
     {
-      label: 'Correlation',
-      value: 'correlation',
+      label: "Correlation",
+      value: "correlation",
     },
     {
-      label: 'Jaccard',
-      value: 'jaccard',
-    }
+      label: "Jaccard",
+      value: "jaccard",
+    },
   ];
 
   const axisOptions = [
     {
-      label: 'Both',
-      value: 'both',
+      label: "Both",
+      value: "both",
     },
     {
-      label: 'Row',
-      value: 'row',
-    }
+      label: "Row",
+      value: "row",
+    },
   ];
 
   const corrtypeOptions = [
     {
-      label: 'Pearson',
-      value: 'pearson',
+      label: "Pearson",
+      value: "pearson",
     },
     {
-      label: 'Spearman',
-      value: 'spearman',
+      label: "Spearman",
+      value: "spearman",
     },
     {
-      label: 'Kendall',
-      value: 'kendall',
-    }
+      label: "Kendall",
+      value: "kendall",
+    },
   ];
 
   return (
     <>
-     <Field label='Correlation Algorithm' labelLeft labelWidth={150} helpText = "Set the correlation algorithm. Note that Pearson measures a linear relationship between two variables, while Kendall and Spearman measure how likely it is for two variables to move in the same direction, but not necessarily at a constant rate. Pearson provides information about the strength and direction of the linear relationship between two variables but is sensitive to outliers.">
+      <Field
+        label="Correlation Algorithm"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the correlation algorithm. Note that Pearson measures a linear relationship between two variables, while Kendall and Spearman measure how likely it is for two variables to move in the same direction, but not necessarily at a constant rate. Pearson provides information about the strength and direction of the linear relationship between two variables but is sensitive to outliers."
+      >
         <Select
-        small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.CORRTYPE,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.CORRTYPE,
+              newValue: value,
+            })
+          }
           options={corrtypeOptions}
           value={correlationSettings?.corrType}
         />
-      </Field> 
-      <Field label='Minimum Correlation' labelLeft labelWidth={150} helpText = "Set the threshold for minimum correlation that will be shown in the table">
-        <div className={styles.inputRange}>         
-          <Slider
-            label={correlationSettings?.filter}
-            max={99}
-            min={0}            
-            value={correlationSettings?.filter * 100}
-            onChange={({ target: { value } }) => correlationSettingsChanged({
-              settingName: CorrelationSettingsTypes.FILTER,
-              newValue: value / 100
-            })}
-          />
-        </div>
       </Field>
-      <Field label='Cluster Axis' labelLeft labelWidth={150} helpText = "Set clustering axis (row/both) (default: both)">
+      <Field
+        label="Cluster Axis"
+        labelLeft
+        labelWidth={150}
+        helpText="Set clustering axis (row/both) (default: both)"
+      >
         <Select
-        small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.AXIS,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.AXIS,
+              newValue: value,
+            })
+          }
           options={axisOptions}
           value={correlationSettings?.axis}
         />
-      </Field> 
-      <Field label='Row Distance' labelLeft labelWidth={150} helpText = "Set the distance to use for clustering rows (default: euclidean)">
+      </Field>
+      <Field
+        label="Row Distance"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the distance to use for clustering rows (default: euclidean)"
+      >
         <Select
-        small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.ROW_DISTANCE,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.ROW_DISTANCE,
+              newValue: value,
+            })
+          }
           options={distanceMetricOptions}
           value={correlationSettings?.row_distance}
         />
       </Field>
-      <Field label='Column Distance' labelLeft labelWidth={150} helpText = "Set the distance to use for clustering columns (default: euclidean)">
+      <Field
+        label="Column Distance"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the distance to use for clustering columns (default: euclidean)"
+      >
         <Select
-        small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.COLUMN_DISTANCE,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.COLUMN_DISTANCE,
+              newValue: value,
+            })
+          }
           options={distanceMetricOptions}
           value={correlationSettings?.column_distance}
         />
       </Field>
-      <Field label='Row Linkage Method' labelLeft labelWidth={150} helpText = "Set the linkage to use for clustering rows (default: Average)">
+      <Field
+        label="Row Linkage Method"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the linkage to use for clustering rows (default: Average)"
+      >
         <Select
-        small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.ROW_LINKAGE,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.ROW_LINKAGE,
+              newValue: value,
+            })
+          }
           options={linkageMethodOptions}
           value={correlationSettings?.row_linkage}
         />
       </Field>
-      <Field label='Column Linkage Method' labelLeft labelWidth={150} helpText = "Set the linkage to use for clustering columns (default: Average)">
+      <Field
+        label="Column Linkage Method"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the linkage to use for clustering columns (default: Average)"
+      >
         <Select
-         small
-          onChange={({ target: { value } }) => correlationSettingsChanged({
-            settingName: CorrelationSettingsTypes.COLUMN_LINKAGE,
-            newValue: value
-          })}
+          small
+          onChange={({ target: { value } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.COLUMN_LINKAGE,
+              newValue: value,
+            })
+          }
           options={linkageMethodOptions}
           value={correlationSettings?.column_linkage}
         />
-      </Field>         
-      <Field  labelLeft labelWidth={165} label='Row/Column same order' helpText = "Whether to order columns in the same order with rows. Enabling this will remove column dendogram.">             
-      <CheckBox small onChange={({ target: { checked } }) => correlationSettingsChanged({
-          settingName: CorrelationSettingsTypes.ROW_COL_SAMEORDER,
-          newValue: checked
-        })}
-        checked={correlationSettings?.row_col_sameorder}/>
-      </Field>   
-    
+      </Field>
+      <Field
+        labelLeft
+        labelWidth={165}
+        label="Row/Column same order"
+        helpText="Whether to order columns in the same order with rows. Enabling this will remove column dendogram."
+      >
+        <CheckBox
+          small
+          onChange={({ target: { checked } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.ROW_COL_SAMEORDER,
+              newValue: checked,
+            })
+          }
+          checked={correlationSettings?.row_col_sameorder}
+        />
+      </Field>
     </>
   );
 };
 
 const mapStateToProps = ({ settings }) => ({
-  correlationSettings: settings?.correlation ?? {}
+  correlationSettings: settings?.correlation ?? {},
 });
 const mapDispatchToProps = {
   correlationSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(CorrelationSettings);
+const MainContainer = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(CorrelationSettings);
 export { MainContainer as CorrelationSettings };

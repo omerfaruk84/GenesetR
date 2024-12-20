@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {  
-  filter: 0.3,
   row_linkage: 'average',
   column_linkage: 'average',
   row_distance: 'euclidean',
