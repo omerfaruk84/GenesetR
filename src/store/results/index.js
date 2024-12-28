@@ -8,7 +8,6 @@ import {
   runUMAPGraphCalc,
   runMdeGraphCalc,
   runtSNEGraphCalc,
-  runbiClusteringCalc,
   runGeneRegulation,
   runGeneExp,
   runPathFinderCalc,
@@ -70,15 +69,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
     heatMap,
     umap,
     mde,
-    tsne,
-    biClustering,
+    tsne,  
     geneRegulationCore,
     clustering,
-    genesetEnrichment,
     correlation,
     pathfinder,
     expressionanalyzer,
-    genesignature,
   } = settings;
 
   /**

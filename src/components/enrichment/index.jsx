@@ -53,11 +53,7 @@ import {
   CanvasRenderer,
   // SVGRenderer,
 } from "echarts/renderers";
-import { SmsSharp } from "@mui/icons-material";
-import {
-  GeneSetEnrichmentSettingsTypes,
-  GenelistCompareSettingsTypes,
-} from "../side-bar/settings/enums";
+import { GeneSetEnrichmentSettingsTypes } from "../side-bar/settings/enums";
 
 echarts.use([
   TitleComponent,

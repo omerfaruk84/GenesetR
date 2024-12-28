@@ -10,6 +10,7 @@ import { pcaSettingsReducer } from "./pca-settings";
 import { clusteringSettingsReducer } from "./clustering-settings";
 import { correlationSettingsReducer } from "./correlation-settings";
 import { heatMapSettingsReducer } from "./heatmap-settings";
+import { inchlibSettingsReducer } from "./inchlib-settings";
 import { pathfinderSettingsReducer } from "./pathfinder-settings";
 import { graphmapSettingsReducer } from "./graphmap-settings";
 import { scatterplotSettingsReducer } from "./scatterplot-settings";
@@ -28,6 +29,7 @@ const settingsReducer = combineReducers({
   clustering: clusteringSettingsReducer,
   correlation: correlationSettingsReducer,
   heatMap: heatMapSettingsReducer,
+  inchlib: inchlibSettingsReducer,
   pathfinder: pathfinderSettingsReducer,
   graphmap: graphmapSettingsReducer,
   scatterplot: scatterplotSettingsReducer,
