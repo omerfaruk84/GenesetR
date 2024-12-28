@@ -66,7 +66,7 @@
 * @option {string} [heatmap_colors="Greens"]
 *   the heatmap color scale
 
-* @option {number} [heatmap_part_width=0.7]
+* @option {number} [dendrogram_part_width=200]
 *   define the heatmap part width from the width of the whole graph
 
 * @option {string} [highlight_colors="Reds"]
@@ -155,12 +155,10 @@
 */
 import Kinetic from "kinetic";
 import $ from "jquery";
-import Backbone from "backbone";
-//var _ = require("backbone");
-//var InCHlib;
-//let InCHlib;
+
+
 const _date = new Date();
-//var _date = new Date();
+
 
 function InCHlib(settings) {
   var self = this;
@@ -179,6 +177,7 @@ function InCHlib(settings) {
     heatmap: true,
     heatmap_header: true,
     dendrogram: true,
+    current_draw_values:true,
     metadata: false,
     column_metadata: false,
     column_metadata_row_height: 8,
@@ -187,9 +186,9 @@ function InCHlib(settings) {
     width: target_width,
     heatmap_colors: "Greens",
     heatmap_font_color: "black",
-    heatmap_part_width: 0.7,
-    column_dendrogram: false,
-    independent_columns: true,
+    dendrogram_part_width: 200,
+    column_dendrogram: true,
+    independent_columns: false,
     metadata_colors: "Reds",
     highlight_colors: "Oranges",
     highlighted_rows: [],
@@ -200,21 +199,23 @@ function InCHlib(settings) {
     max_row_height: 25,
     max_column_width: 150,
     font: "Helvetica",
-    draw_row_ids: false,
+    draw_row_ids: true,
     fixed_row_id_size: false,
     max_percentile: 100,
     min_percentile: 0,
+    dendrogram_line_width: 2,
     middle_percentile: 50,
+    left_margin : 0,
     columns_order: [],
     alternative_data: false,
     images_as_alternative_data: false,
     images_path: { dir: "", ext: "" },
     navigation_toggle: {
-      color_scale: true,
-      distance_scale: true,
+      color_scale: false,
+      distance_scale: false,
       export_button: true,
-      filter_button: true,
-      hint_button: true,
+      filter_button: false,
+      hint_button: false,
     },
   };
 
@@ -223,10 +224,10 @@ function InCHlib(settings) {
     settings.max_width && settings.max_width < target_width
       ? settings.max_width
       : self.settings.width;
-  self.settings.heatmap_part_width =
-    self.settings.heatmap_part_width > 0.9
-      ? 0.9
-      : self.settings.heatmap_part_width;
+  self.settings.dendrogram_part_width =
+    self.settings.dendrogram_part_width >300
+      ? 300
+      : self.settings.dendrogram_part_width;
 
   self.header_height = 150;
   self.footer_height = 70;
@@ -659,8 +660,8 @@ function InCHlib(settings) {
     }),
 
     node: new Kinetic.Line({
-      stroke: "grey",
-      strokeWidth: 2,
+      stroke: "black",
+      strokeWidth: self.settings.dendrogram_line_width,
       lineCap: "sqare",
       lineJoin: "round",
       listening: false,
@@ -683,6 +684,7 @@ function InCHlib(settings) {
       fontStyle: "bold",
       listening: false,
     }),
+    
 
     heatmap_line: new Kinetic.Line({
       lineCap: "butt",
@@ -791,6 +793,8 @@ InCHlib.prototype.read_data = function (json2) {
     settings.column_dendrogram = true;
   } else {
     settings.column_dendrogram = false;
+        console.log("Here we go2", self.settings.column_dendrogram);
+
   }
   if (json["column_metadata"] !== undefined) {
     self.column_metadata = json.column_metadata;
@@ -1034,7 +1038,7 @@ InCHlib.prototype._get_data_min_max_middle = function (data, axis) {
   var i, j, value, len, columns;
   var data_length = data[0].length;
 
-  if (axis == "column") {
+  if (axis === "column") {
     columns = [];
 
     for (i = 0; i < data_length; i++) {
@@ -1264,6 +1268,9 @@ InCHlib.prototype._reorder_heatmap = function (column_index) {
  */
 InCHlib.prototype.draw = function () {
   var self = this;
+  // Add a settings panel above the heatmap
+  
+
   self.zoomed_clusters = { row: [], column: [] };
   self.last_highlighted_cluster = null;
   self.current_object_ids = [];
@@ -1286,6 +1293,8 @@ InCHlib.prototype.draw = function () {
     self.dimensions = { data: 0, metadata: 0, overall: 0 };
     self.settings.heatmap_header = false;
     self.settings.column_dendrogram = false;
+
+
   }
   self._adjust_leaf_size(self.heatmap_array.length);
 
@@ -1302,6 +1311,8 @@ InCHlib.prototype.draw = function () {
     self.header_height +
     self.column_metadata_height +
     self.settings.column_metadata_row_height / 2;
+
+  
 
   if (self.settings.column_dendrogram && self.heatmap_header) {
     self.footer_height = 150;
@@ -1327,7 +1338,7 @@ InCHlib.prototype.draw = function () {
     self.root_id = self._get_root_id(self.data.nodes);
     self._draw_row_dendrogram(self.root_id);
 
-    if (self.settings.column_dendrogram && self.settings.dendrogram) {
+    if (self.settings.column_dendrogram) {
       self.column_root_id = self._get_root_id(self.column_dendrogram.nodes);
       self.nodes2columns = false;
       self.columns_start_index = 0;
@@ -1665,8 +1676,8 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
       self.heatmap_width =
         (self.settings.width -
           self.right_margin -
-          self.dendrogram_heatmap_distance) *
-        self.settings.heatmap_part_width;
+          self.dendrogram_heatmap_distance) -
+        self.settings.dendrogram_part_width;
     } else {
       self.heatmap_width = 0;
     }
@@ -1682,7 +1693,7 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
 
     self.distance =
       self.settings.width - self.heatmap_width - self.right_margin;
-    self.heatmap_distance = self.distance + self.dendrogram_heatmap_distance;
+      self.heatmap_distance = self.distance + self.dendrogram_heatmap_distance;
   } else {
     self.heatmap_width = self.settings.width - self.right_margin;
     self.distance = self.right_margin / 2;
@@ -1895,9 +1906,10 @@ InCHlib.prototype._draw_heatmap = function () {
 
   var heatmap_row, row_id, col_number, col_label, row_values, y;
   self.heatmap_layer = new Kinetic.Layer();
+  self.cell_value_layer = new Kinetic.Layer();
   self.heatmap_overlay = new Kinetic.Layer();
+  self.row_id_layer = new Kinetic.Layer();
 
-  self.current_draw_values = true;
   self.max_value_length = self._get_max_value_length();
   self.value_font_size = self._get_font_size(
     self.max_value_length,
@@ -1906,8 +1918,9 @@ InCHlib.prototype._draw_heatmap = function () {
     12
   );
 
-  if (self.value_font_size < 4) {
-    self.current_draw_values = false;
+
+  if (self.value_font_size < 4 && self.settings.current_draw_values) {
+    self.settings.current_draw_values = false;
   }
 
 
@@ -1921,9 +1934,10 @@ InCHlib.prototype._draw_heatmap = function () {
   ) {
     key = keys[i];
     y = self.leaves_y_coordinates[key];
-    heatmap_row = self._draw_heatmap_row(key, x1, y);
-    self.heatmap_layer.add(heatmap_row);
-    self._bind_row_events(heatmap_row);
+    var rows = self._draw_heatmap_row(key, x1, y);
+    self.heatmap_layer.add(rows[0]);
+    self.cell_value_layer.add(rows[1]);
+    self._bind_row_events(rows[0]);
   }
 
   if (self.settings.column_metadata) {
@@ -1953,12 +1967,15 @@ InCHlib.prototype._draw_heatmap = function () {
 
   self.highlighted_rows_layer = new Kinetic.Layer();
   self.stage.add(
+    self.cell_value_layer,
     self.heatmap_layer,
     self.heatmap_overlay,
     self.highlighted_rows_layer
   );
 
+ 
   self.highlighted_rows_layer.moveToTop();
+   self.cell_value_layer.moveToTop();
   self.row_overlay = self.objects_ref.heatmap_line.clone();
   self.column_overlay = self.objects_ref.heatmap_line.clone();
 
@@ -1974,6 +1991,8 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
   var self = this;
   var node = self.data.nodes[node_id];
   var row = new Kinetic.Group({ id: node_id });
+  var cell_values = new Kinetic.Group({ id: node_id });
+
   var x2, y2, color, line, value, text, text_value, col_index;
 
   for (var i = 0, len = self.on_features["data"].length; i < len; i++) {
@@ -2048,7 +2067,7 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
       });
       row.add(line);
 
-      if (self.current_draw_values) {
+      
         text = self.objects_ref.heatmap_value.clone({
           x: self._hack_round(
             (x1 + x2) / 2 -
@@ -2057,9 +2076,10 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
           y: self._hack_round(y1 - self.value_font_size / 2),
           fontSize: self.value_font_size+2,
           text: text_value,
+          opacity: self.settings.current_draw_values,
         });
-        row.add(text);
-      }
+        cell_values.add(text);
+      
     }
 
     x1 = x2;
@@ -2098,18 +2118,19 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
           });
           row.add(line);
 
-          if (self.current_draw_values) {
+          
             text = self.objects_ref.heatmap_value.clone({
               text: text_value,
               fontSize: self.value_font_size,
+              opacity: self.settings.current_draw_values,
             });
 
             var width = text.getWidth();
             var x = self._hack_round((x1 + x2) / 2 - width / 2);
             var y = self._hack_round(y1 - self.value_font_size / 2);
             text.position({ x: x, y: y });
-            row.add(text);
-          }
+            cell_values.add(text);
+          
         }
         x1 = x2;
       }
@@ -2139,19 +2160,20 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
     });
     row.add(line);
 
-    if (self.current_draw_values) {
+    
       text = self.objects_ref.heatmap_value.clone({
         text: count,
+        opacity:self.settings.current_draw_values,
       });
 
       width = text.getWidth();
       x = self._hack_round((x1 + x2) / 2 - width / 2);
       y = self._hack_round(y1 - self.value_font_size / 2);
       text.position({ x: x, y: y });
-      row.add(text);
-    }
+      cell_values.add(text);
+    
   }
-  return row;
+  return [row, cell_values];
 };
 
 InCHlib.prototype._draw_column_metadata_row = function (
@@ -2234,7 +2256,9 @@ InCHlib.prototype._bind_row_events = function (row) {
 };
 
 InCHlib.prototype._draw_row_ids = function () {
+
   var self = this;
+  self.row_id_layer.destroyChildren();
   if (self.pixels_for_leaf < 6 || self.row_id_size < 5) {
     return;
   }
@@ -2272,8 +2296,10 @@ InCHlib.prototype._draw_row_ids = function () {
       //fontStyle: "italic",
       fill: "black",
     });
-    self.heatmap_layer.add(text);
+    text.visibility = true;
+    self.row_id_layer.add(text);
   }
+  self.stage.add(self.row_id_layer);
 };
 
 InCHlib.prototype._get_row_id_size = function () {
@@ -2853,8 +2879,8 @@ InCHlib.prototype.highlight_rows = function (row_ids) {
     row = self._draw_heatmap_row(
       unique_row_ids[i],
       self.heatmap_distance,
-      self.leaves_y_coordinates[unique_row_ids[i]]
-    );
+      self.leaves_y_coordinates[unique_row_ids[i]],
+    )[0];
     self.highlighted_rows_layer.add(row);
     row.setAttr("listening", false);
   }
@@ -3770,6 +3796,10 @@ InCHlib.prototype._draw_target_overlay = function () {
   var self = this;
   var overlay = self.target_element.find(".target_overlay");
 
+  
+
+
+
   if (overlay.length) {
     overlay.fadeIn("fast");
   } else {
@@ -4346,16 +4376,18 @@ InCHlib.prototype._get_color_for_value = function (
   middle,
   color_scale
 ) {
+ 
   var self = this;
   var color = self.colors[color_scale];
   var c1 = color["start"];
   var c2 = color["end"];
 
   if (value > max) {
+  
     return "rgb(" + c2.r + "," + c2.g + "," + c2.b + ")";
   }
 
-  if (min == max || value < min) {
+  if (min === max || value < min) {
     return "rgb(" + c1.r + "," + c1.g + "," + c1.b + ")";
   }
 
@@ -4640,6 +4672,267 @@ InCHlib.prototype.redraw_heatmap = function () {
   self.heatmap_layer.moveToBottom();
   self.heatmap_layer.moveUp();
 };
+
+
+InCHlib.prototype.setRowIdsVisibility = function (visibility) {
+  if (typeof visibility !== "boolean") {
+     console.error("Visibility must be a boolean value.");
+      return;
+    }
+    const self = this;
+    self.settings.draw_row_ids = visibility;
+    if(visibility){
+       self.row_id_layer.show()
+    } else{
+        self.row_id_layer.hide()
+    }
+    self.row_id_layer.draw();
+};
+
+// Set the width ratio for the heatmap
+InCHlib.prototype.setDendrogramWidth = function (diff) {
+   const self = this;
+   
+   
+    if (typeof diff === "number") {
+        self.settings.dendrogram_part_width =  diff;
+       
+    self.redraw();
+
+
+       
+    } else {
+        console.error("Invalid width ratio. It must be a number between 0 and 1.");
+    }
+};
+
+// Toggle the visibility of row IDs
+InCHlib.prototype.setColumnIdsVisibility = function (visibility) {
+     if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    const self = this;
+    self.settings.current_draw_values = visibility;
+    if(visibility){
+       self.header_layer.show()
+    } else{
+        self.header_layer.hide()
+    }
+    self.header_layer.draw();
+
+
+    
+};
+
+
+
+InCHlib.prototype.updateCellColors = function (colorScale) {
+    const self = this;
+    // Update the heatmap color scale in settings
+    self.settings.heatmap_colors = colorScale;
+
+    if(!self.settings.independent_columns){
+      // Initialize a cache for color calculations
+    const colorCache = new Map();
+      const getColor = (value) => {        
+        if (colorCache.has(value)) {
+            return colorCache.get(value);
+        }
+
+        // Calculate the color
+        const color = self._get_color_for_value(
+            value,
+            self.data_descs[0].min,
+            self.data_descs[0].max,
+            self.data_descs[0].middle,
+            colorScale
+        );
+        // Store the result in the cache
+        colorCache.set(value, color);
+        return color;
+    };
+    // Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value;            
+
+                // Get the color (cached or calculated)
+                const color = getColor(value);
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    }  else{
+// Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value;
+                const colIndex = parseInt(line.attrs.column.split("_")[1], 10);
+
+                // Get the color for the current value
+                const color = self._get_color_for_value(
+                    value,
+                    self.data_descs[colIndex].min,
+                    self.data_descs[colIndex].max,
+                    self.data_descs[colIndex].middle,
+                    colorScale
+                );
+
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    }
+    // Redraw the heatmap layer to apply the changes
+    self.heatmap_layer.draw();  
+
+};
+
+InCHlib.prototype.updateCellColorsPercentile = function (colorPercentile) {
+    const self = this;
+   
+      // Initialize a cache for color calculations
+    const colorCache = new Map();
+      const getColor = (value) => {        
+        if (colorCache.has(value)) {
+
+            return colorCache.get(value);
+        }
+
+        // Calculate the color
+        const color = self._get_color_for_value(
+            value,
+            colorPercentile.minValue,
+            colorPercentile.maxValue,
+            (colorPercentile.maxValue + colorPercentile.minValue)/2,
+            self.settings.heatmap_colors
+        );
+        // Store the result in the cache
+    
+        colorCache.set(value, color);
+        return color;
+    };
+    // Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value; 
+
+                // Get the color (cached or calculated)
+                const color = getColor(value);
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    
+    // Redraw the heatmap layer to apply the changes
+    self.heatmap_layer.draw();  
+
+};
+InCHlib.prototype.updateDendrogramLineWidth = function (size) {
+    const self = this;
+
+    // Update the heatmap color scale in settings
+    self.settings.dendrogram_line_width = size;
+
+    // Iterate over rows and update their colors
+    var rows = self.dendrogram_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.strokeWidth !== undefined) {             
+                line.setAttr("strokeWidth", size);
+            }
+        });
+    });
+
+
+    rows = self.column_dendrogram_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.strokeWidth !== undefined) {             
+                line.setAttr("strokeWidth", size);
+            }
+        });
+    });
+
+    // Redraw the heatmap layer to apply the changes
+    self.dendrogram_layer.draw();
+    self.column_dendrogram_layer.draw();
+};
+
+InCHlib.prototype.setCellValueVisibility = function (visibility) {
+    if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    const self = this;
+    self.settings.current_draw_values = visibility;
+    if(visibility){
+        self.cell_value_layer.show()
+    } else{
+        self.cell_value_layer.hide()
+    }
+    self.cell_value_layer.draw();
+};
+
+InCHlib.prototype.setColumnDendrogramVisibility = function (visibility) {
+    if (typeof visibility !== "boolean" || self.column_dendrogram_layer === undefined) {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    
+    const self = this;
+   // self.settings.column_dendrogram = visibility;
+    if (visibility) {
+        self.column_dendrogram_layer.show();
+    } else {
+        self.column_dendrogram_layer.hide();
+    }
+    self.column_dendrogram_layer.draw();
+};
+
+InCHlib.prototype.setDendrogramVisibility = function (visibility) {
+    if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    const self = this;
+    self.settings.dendrogram = visibility;
+    if (visibility) {
+        self.dendrogram_layer.show();
+    } else {
+        self.dendrogram_layer.hide();
+    }
+    self.dendrogram_layer.draw();
+};
+
+
+
+//strokeWidth
 
 //module.exports = InCHlib;
 export default InCHlib;
