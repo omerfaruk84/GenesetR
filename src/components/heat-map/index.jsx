@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
-const HeatMap = ({ graphData, correlationSettings }) => {
+const HeatMap = ({ graphData, correlationSettings, inchlibSettings }) => {
   const [selectedGenes, setSelectedGenes] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
   const [keyedData, setKeyedData] = useState([]);
@@ -94,6 +94,90 @@ const HeatMap = ({ graphData, correlationSettings }) => {
     }
   }, [graphData]);
 
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.updateCellColors(inchlibSettings.color_scale);
+    }
+  }, [inchlibSettings.color_scale]);
+
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setDendrogramWidth(
+        inchlibSettings.max_dendrogram_width
+      );
+    }
+  }, [inchlibSettings.max_dendrogram_width]);
+
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      console.log(inchlibSettings.color_percentile);
+      inchlibInstance.current.updateCellColorsPercentile(
+        inchlibSettings.color_percentile
+      );
+    }
+  }, [
+    inchlibSettings.color_percentile.minValue,
+    inchlibSettings.color_percentile.maxValue,
+    inchlibSettings.color_scale,
+  ]);
+
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setRowIdsVisibility(inchlibSettings.draw_row_ids);
+    }
+  }, [inchlibSettings.draw_row_ids]);
+
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setColumnIdsVisibility(
+        inchlibSettings.show_column_names
+      );
+    }
+  }, [inchlibSettings.show_column_names]);
+
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setCellValueVisibility(
+        inchlibSettings.show_cell_values
+      );
+    }
+  }, [inchlibSettings.show_cell_values]);
+
+  // Update width ratio
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setWidthRatio(inchlibSettings.width_ratio);
+    }
+  }, [inchlibSettings.width_ratio]);
+
+  // Update row dendrogram visibility
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      console.log(inchlibSettings.show_row_dendrogram);
+      inchlibInstance.current.setDendrogramVisibility(
+        inchlibSettings.show_row_dendrogram
+      );
+    }
+  }, [inchlibSettings.show_row_dendrogram]);
+
+  // Update column dendrogram visibility
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.setColumnDendrogramVisibility(
+        inchlibSettings.show_column_dendrogram
+      );
+    }
+  }, [inchlibSettings.show_column_dendrogram]);
+
+  // Update column dendrogram visibility
+  useEffect(() => {
+    if (inchlibInstance.current) {
+      inchlibInstance.current.updateDendrogramLineWidth(
+        inchlibSettings.dendrogram_line_width
+      );
+    }
+  }, [inchlibSettings.dendrogram_line_width]);
+
   // Initialize InCHlib when graphData changes
   useEffect(() => {
     if (graphData && heatmapRef.current) {
@@ -104,6 +188,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
         target: "heatmap", // Corrected target as a string selector
         metadata: false,
         column_metadata: false,
+        column_dendrogram: true,
         max_height: heatmapWidth,
         dendrogram: true,
         width: heatmapWidth,
@@ -115,6 +200,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
         heatmap_part_width: 0.95,
         max_column_width: 30,
         max_row_height: 30,
+        heatmap: false,
         fixed_row_id_size: (graphData?.data?.nodes?.length ?? 0) > 120 ? 0 : 16,
       });
 
@@ -149,7 +235,9 @@ const HeatMap = ({ graphData, correlationSettings }) => {
 
         inchlib.update_settings({
           columns_order: columnOrder.reverse(),
-          column_dendrogram: false,
+          column_dendrogram: true,
+          heatmap: true,
+          //column_dendrogram: false,
         });
         inchlib.redraw();
       }
@@ -367,6 +455,7 @@ const HeatMap = ({ graphData, correlationSettings }) => {
 
 const mapStateToProps = ({ settings }) => ({
   correlationSettings: settings?.correlation ?? {},
+  inchlibSettings: settings?.inchlib ?? {},
 });
 
 const MainContainer = connect(mapStateToProps)(HeatMap);

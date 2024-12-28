@@ -9,6 +9,7 @@ const SettingsTypes = {
   BI_CLUSTERING_SETTINGS: "Clustering Settings",
   HEAT_MAP: "HeatMap Settings",
   HEAT_MAP_TARGET_GENE_LIST: "Target Gene List",
+  INCHLIB_SETTINGS: "Inchlib Settings",
   PATH_FINDER_SETTINGS: "Path Explorer Settings",
   GRAPHMAP_SETTINGS: "Gene Regulation Settings",
   SCATTERPLOT_SETTINGS: "Scatter Plot Settings",
@@ -63,6 +64,21 @@ const CorrelationSettingsTypes = {
   WRITE_ORGINAL: "write_original",
   CORRTYPE: "corrType",
   ROW_COL_SAMEORDER: "row_col_sameorder",
+};
+const InchlibSettingsTypes = {
+  COLOR_SCALE: "color_scale",
+  WIDTH_RATIO: "width_ratio",
+  DRAW_ROW_IDS: "draw_row_ids",
+  SHOW_COLUMN_NAMES: "show_column_names",
+  SHOW_ROW_DENDROGRAM: "show_row_dendrogram",
+  SHOW_COLUMN_DENDROGRAM: "show_column_dendrogram",
+  COLOR_PERCENTILE: "color_percentile", 
+  MAX_COLUMN_WIDTH: "max_column_width",
+  MAX_ROW_HEIGHT: "max_row_height",
+  SHOW_CELL_VALUES: "show_cell_values",
+  MAX_DENDROGRAM_WIDTH: "max_dendrogram_width",
+  MAX_DENDROGRAM_HEIGHT: "max_dendrogram_height",
+  DENDROGRAM_LINE_WIDTH: "dendrogram_line_width",
 };
 
 const MdeSettingsTypes = {
@@ -237,4 +253,5 @@ export {
   GeneSignatureSettingsTypes,
   ExpressionAnalyzerSettingsTypes,
   GenelistCompareSettingsTypes,
+  InchlibSettingsTypes,
 };

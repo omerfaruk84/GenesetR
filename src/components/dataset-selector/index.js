@@ -1,7 +1,6 @@
-import { Tree, Button } from "@oliasoft-open-source/react-ui-library";
+import { Tree } from "@oliasoft-open-source/react-ui-library";
 import React, {
-  useEffect,
-  useRef,
+  useEffect, 
   useState,
   useImperativeHandle,
   forwardRef,
@@ -10,10 +9,7 @@ import { connect } from "react-redux";
 import { FaTrash } from "react-icons/fa";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../side-bar/settings/enums";
-import { string } from "prop-types";
 import styles from "./AccordionMenu.scss";
-import { get, set } from "idb-keyval";
-import Axios from "axios";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
 import { updateGeneLists } from "../../store/api";
@@ -57,11 +53,19 @@ const DatasetSelector = forwardRef(
         parent: 0,
         active: false,
         resultShape: "3367 37528",
+      },      
+      {
+        droppable: true,
+        id: "SC00066",
+        name: "Jurkat Essential",
+        onClick: () => updateActivityById("SC00066"),
+        parent: 0,
+        active: false,
+        resultShape: "1514 8811",  //Cols vs Rows Perturbations vs Genes
       },
     ]);
 
-    const location = useLocation();
-    const { pathname } = location;
+    const location = useLocation();  
   
     const updateActivityById = (id) => {
       let dataShape = "";

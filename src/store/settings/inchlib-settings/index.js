@@ -1,0 +1,41 @@
+import shadows from '@mui/material/styles/shadows';
+import { createSlice } from '@reduxjs/toolkit';
+
+
+const initialState = {    
+  color_scale: {
+    start: { r: 33, g: 113, b: 181 },
+    middle: { r: 255, g: 255, b: 255 },
+    end: { r: 215, g: 25, b: 28 },
+  },
+  width_ratio: '0.9',
+  draw_row_ids: 'True',
+  show_row_dendogram: 'True', 
+  show_column_dendrogram: 'False',  
+  color_percentile: {minValue:-1, maxValue:1},
+  max_column_width:'100',
+  max_row_height: '25', 
+    show_column_names: 'True',
+  max_dendrogram_width: '200',
+  max_dendrogram_height: '200',
+  dendrogram_line_width: '2',
+};
+
+export const inchlibSettingsSlice = createSlice({
+  name: 'inchlib',
+  initialState,
+  reducers: {
+    inchlibSettingsChanged: (state, action) => {
+      const { settingName, newValue } = action.payload;
+      state[settingName] = newValue;
+    }
+  },
+});
+
+export const {
+  inchlibSettingsChanged,
+} = inchlibSettingsSlice.actions;
+
+const inchlibSettingsReducer = inchlibSettingsSlice.reducer;
+
+export { inchlibSettingsReducer };

@@ -2,9 +2,7 @@ import React from "react";
 import { ROUTES } from "../../../common/routes";
 import { Settings } from "./settings";
 import { CoreSettings } from "./core-settings";
-import { GraphMapSettings } from "./graphmap-settings";
 import { TsneSettings } from "./tsne-settings";
-import { BiClusteringSettings } from "./bi-clustering-settings";
 import { GeneRegulationSettings } from "./gene-regulation-core-settings";
 import { CorrelationSettings } from "./correlation-settings";
 import { GeneSignatureSettings } from "./genesignature-settings";
@@ -14,6 +12,7 @@ import { PcaSettings } from "./pca-settings";
 import { UmapSettings } from "./umap-settings";
 import { MdeSettings } from "./mde-settings";
 import { HeatMapSettings } from "./heatmap-settings";
+import { InchlibSettings } from "./inchlib-settings";
 import { PathFinderSettings } from "./pathfinder-settings";
 import { ScatterPlotSettings } from "./scatterplot-settings";
 import { SettingsTypes } from "./enums";
@@ -44,6 +43,10 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CORRELATION_SETTINGS,
         settings: <CorrelationSettings />,
+      },
+      {
+        settingsName: SettingsTypes.INCHLIB_SETTINGS,
+        settings: <InchlibSettings />,
       },
     ],
     [ROUTES.PCA]: [
