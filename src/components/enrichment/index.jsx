@@ -11,10 +11,7 @@ import {
   Heading,
   TextArea,
   Modal,
-  Dialog,
-  InputGroup,
   Flex,
-  Label,
   Toggle,
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
@@ -812,23 +809,18 @@ const GeneSetEnrichmentTable = ({
       });
 
       setGeneListOptions(tempx);
-      if (tempx.length > 0 && selectedCluster === tempx[0].value) {
-        performEnrichmentNow(tempx[0].genes);
-      }
-      if (tempx.length > 0) setselectedCluster(tempx[0].value);
-      //performEnrichmentNow(genesets[Object.keys(genesets)[0]]);
-    }
 
-    // setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");
-    // performEnrichmentNow(clusters[Object.keys(clusters)[0]]);
-  }, [genesets]);
+      if (tempx.length > 0 && selectedCluster !== tempx[0].value)
+        setselectedCluster(tempx[0].value);
+    }
+  }, [genesets, selectedCluster]);
 
   useEffect(() => {
     let genesToEnrich = genelistOptions.find(
       (item) => item.value === selectedCluster
     )?.genes;
     genesToEnrich && performEnrichmentNow(genesToEnrich);
-  }, [selectedCluster]);
+  }, [selectedCluster, genelistOptions]);
 
   const handleSaveGeneList = () => {
     let genesString = selectedCluster
@@ -1062,7 +1054,6 @@ const mapStateToProps = ({ settings, calcResults }) => ({
 
 const mapDispatchToProps = {
   genesetEnrichmentSettingsChanged,
-  performEnrichment,
 };
 
 const MainContainer = connect(

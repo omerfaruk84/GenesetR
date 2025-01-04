@@ -59,6 +59,12 @@ const HeatMap = ({ graphData, correlationSettings, inchlibSettings }) => {
     []
   );
 
+  const genesets = useMemo(() => {
+    return selectedGenes.length > 0
+      ? { "Selected Genes": selectedGenes.join(", ") }
+      : {};
+  }, [selectedGenes]);
+
   const heatmapWidth = useMemo(() => {
     if (graphData) {
       return Math.min(
@@ -396,29 +402,47 @@ const HeatMap = ({ graphData, correlationSettings, inchlibSettings }) => {
         className={styles.mainContent}
         style={{ display: selectedView === 0 ? "flex" : "none" }}
       >
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.125}
-          maxScale={4}
-          initialPositionX={0} // Align to left
-          initialPositionY={0} // Align to top
-          limitToBounds={false}
-          ref={transformWrapperRef}
-          wheel={{ step: 0.1 }}
-          doubleClick={{ disabled: true }}
-          pinch={{ step: 0.1 }}
-          zoomAnimation={{ disabled: true }}
-          className={styles.transformWrapper}
-        >
-          {({ zoomIn, zoomOut, resetTransform, fitToBounds }) => (
-            <React.Fragment>
-              <TransformComponent>
-                <div id="heatmap" ref={heatmapRef}></div>
-              </TransformComponent>
-            </React.Fragment>
-          )}
-        </TransformWrapper>
+        <div
+          className={styles.mainContent}
+          style={{
+            display: "block",
 
+            width: "100%",
+            overflow: "auto",
+            marginBottom: "10px",
+          }}
+        >
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.125}
+            maxScale={4}
+            initialPositionX={0} // Align to left
+            initialPositionY={0} // Align to top
+            limitToBounds={false}
+            ref={transformWrapperRef}
+            wheel={{ step: 0.1 }}
+            doubleClick={{ disabled: true }}
+            pinch={{ step: 0.1 }}
+            zoomAnimation={{ disabled: true }}
+            className={styles.transformWrapper}
+          >
+            {({ zoomIn, zoomOut, resetTransform, fitToBounds }) => (
+              <React.Fragment>
+                <TransformComponent>
+                  <div
+                    id="heatmap"
+                    style={{
+                      height: "calc(100vh + 100px)",
+                      minHeight: "800px",
+                      marginBottom: "10px",
+                    }}
+                    ref={heatmapRef}
+                  ></div>
+                </TransformComponent>
+              </React.Fragment>
+            )}
+          </TransformWrapper>
+        </div>
         {/* Protein Div */}
         <div
           id="protein_div"
@@ -442,9 +466,7 @@ const HeatMap = ({ graphData, correlationSettings, inchlibSettings }) => {
 
           {selectedGenes.length > 3 && (
             <div className={styles.enrichmentTableContainer}>
-              <GeneSetEnrichmentTable
-                genesets={{ "Selected Genes": selectedGenes.join(", ") }}
-              />
+              <GeneSetEnrichmentTable genesets={genesets} />
             </div>
           )}
         </div>

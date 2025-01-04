@@ -34,20 +34,6 @@ const CoreSettings = ({
 }) => {
   const childRef = React.useRef();
 
-  const cellLineOptions = [
-    {
-      label: "K562-Whole Genome",
-      value: "K562gwps",
-    },
-    {
-      label: "K562-Essential",
-      value: "K562essential",
-    },
-    {
-      label: "RPE1-Essential",
-      value: "RPE1essential",
-    },
-  ];
   const dataTypeOptions = [
     {
       label: "Perturbation",
@@ -111,7 +97,6 @@ const CoreSettings = ({
   }
 
   var location = useLocation().pathname;
-  const { pathname } = location;
 
   const setPerturbationList = useCallback(
     (value) => {
@@ -145,12 +130,12 @@ const CoreSettings = ({
         <DatasetSelector
           ref={childRef}
           onlyMain={
-            pathname === ROUTES.CORRELATION || pathname === ROUTES.HEATMAP
+            location === ROUTES.CORRELATION || location === ROUTES.HEATMAP
           }
         />{" "}
         <Spacer height={5} />
       </div>
-      {graphData ? (
+      {graphData && location === ROUTES.DR ? (
         <>
           <Button
             colored="success"
@@ -176,7 +161,6 @@ const CoreSettings = ({
       ) : (
         ""
       )}
-
       <div style={{ display: showdataTypeOptions === true ? "block" : "none" }}>
         <Field
           label="Data Type"
@@ -197,7 +181,6 @@ const CoreSettings = ({
           />
         </Field>
       </div>
-
       <div
         style={{ display: showPerturbationList === true ? "block" : "none" }}
       >
@@ -208,7 +191,6 @@ const CoreSettings = ({
           isPerturbationList={coreSettings?.dataType === "pert"}
         />
       </div>
-
       <div style={{ display: showGeneList === true ? "block" : "none" }}>
         <Genelist
           textTooltip={helpText2}
@@ -218,7 +200,6 @@ const CoreSettings = ({
           isGeneSignature={isGeneSignature}
         />
       </div>
-
       <div
         style={{ display: showgraphTypeOptions === true ? "block" : "none" }}
       >
