@@ -62,6 +62,15 @@ const DatasetSelector = forwardRef(
         parent: 0,
         active: false,
         resultShape: "1514 8811",  //Cols vs Rows Perturbations vs Genes
+      },   
+      {
+        droppable: true,
+        id: "SC00015",
+        name: "Calu-3 SARS-CoV-2 host factors",
+        onClick: () => updateActivityById("SC00015"),
+        parent: 0,
+        active: false,
+        resultShape: "175 11486",  //Cols vs Rows Perturbations vs Genes
       },
     ]);
 
