@@ -678,11 +678,12 @@ function InCHlib(settings) {
       opacity: 0,
     }),
 
-    heatmap_value: new Kinetic.Text({
+    heatmap_value: new Kinetic.Text({     
       fontFamily: self.settings.font,
       fill: self.settings.heatmap_font_color,
       fontStyle: "bold",
       listening: false,
+          align: "center",
     }),
     
 
@@ -2071,11 +2072,12 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
         text = self.objects_ref.heatmap_value.clone({
           x: self._hack_round(
             (x1 + x2) / 2 -
-              ("" + text_value).length * (self.value_font_size / 4)
+              ("" + text_value).length * (self.value_font_size / 3)
           ),
           y: self._hack_round(y1 - self.value_font_size / 2),
-          fontSize: self.value_font_size+2,
+          fontSize: self.value_font_size+4,
           text: text_value,
+          
           opacity: self.settings.current_draw_values,
         });
         cell_values.add(text);
@@ -4900,12 +4902,13 @@ InCHlib.prototype.setCellValueVisibility = function (visibility) {
 };
 
 InCHlib.prototype.setColumnDendrogramVisibility = function (visibility) {
+  const self = this;
     if (typeof visibility !== "boolean" || self.column_dendrogram_layer === undefined) {
         console.error("Visibility must be a boolean value.");
         return;
     }
     
-    const self = this;
+    
    // self.settings.column_dendrogram = visibility;
     if (visibility) {
         self.column_dendrogram_layer.show();

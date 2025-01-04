@@ -322,14 +322,12 @@ const getBlackList = async (body) => {
 
 const updateGeneLists = async (dataType) => {
   try {
-    console.log("Trying to update gene lists!");
     // Check if perturb already exists in DB
     const perturbVal = await get("geneList_" + dataType + "_perturb");
     const genesVal = await get("geneList_" + dataType + "_genes");
     if (perturbVal && perturbVal.size > 0 && genesVal && genesVal.size > 0)
       return;
 
-    console.log("Still Trying to update gene lists!");
     // If genes do not exist, download and save them
     const response = await Axios.post(SERVER_ADRESS + "/getData", {
       headers: {
@@ -344,11 +342,11 @@ const updateGeneLists = async (dataType) => {
     if (response && response.data) {
       set(
         "geneList_" + dataType + "_perturb",
-        new Set(response.data.result.perturbations)
+        new Set(response.data.result.perturbations.map((x) => x.split("_")[0].toUpperCase()))
       );
       set(
         "geneList_" + dataType + "_genes",
-        new Set(response.data.result.genes)
+        new Set(response.data.result.genes.map((x) => x.split("_")[0].toUpperCase()))
       );
     } else {
       console.log("Something is wornge cant get genes", response);

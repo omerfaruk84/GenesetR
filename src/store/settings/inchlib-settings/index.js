@@ -10,15 +10,16 @@ const initialState = {
   },
   width_ratio: '0.9',
   draw_row_ids: 'True',
-  show_row_dendogram: 'True', 
-  show_column_dendrogram: 'False',  
+  show_row_dendrogram: 'True', 
+  show_column_dendrogram: 'Ture',  
   color_percentile: {minValue:-1, maxValue:1},
   max_column_width:'100',
   max_row_height: '25', 
-    show_column_names: 'True',
+  show_column_names: 'True',
   max_dendrogram_width: '200',
   max_dendrogram_height: '200',
   dendrogram_line_width: '2',
+  show_cell_values: 'False',
 };
 
 export const inchlibSettingsSlice = createSlice({
