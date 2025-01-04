@@ -40,6 +40,11 @@ const VennDiagramSelection = (props) => {
 
 const GenelistCompare = ({ genelistcompareSettings }) => {
   const [genelists, setGeneLists] = useState([]);
+  const genesets = useMemo(() => {
+    return genelists && genelists?.elems && genelists?.elems.length > 2
+      ? { "Selected Genes": genelists?.elems?.map((x) => x.name).join(", ") }
+      : {};
+  }, [genelists]);
 
   useEffect(() => {
     if (genelistcompareSettings.genelists) {
@@ -234,9 +239,7 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
 
         {genelists && genelists?.elems && genelists?.elems.length > 2 ? (
           <>
-            <GeneSetEnrichmentTable
-              genesets={{ Genes: genelists?.elems?.map((x) => x.name).join() }}
-            />
+            <GeneSetEnrichmentTable genesets={genesets} />
           </>
         ) : (
           genelists &&

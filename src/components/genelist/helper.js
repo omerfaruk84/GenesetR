@@ -76,9 +76,9 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
   let notFound = [];
   let notExist = [];
   let notInPerturbSeq = [];
-  let found = []
+  //let found = []
   let suggestions =[]
-  let query = []
+  //let query = []
   
 
   let extension =  "_perturb";
@@ -94,9 +94,10 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
       else
         genes = currentGenes.replace(/^\\n+|\\n+$/g, '').split("\n").filter(gene => gene.trim().length>0);
       
-      console.log("genes" , genes)
+     
       notFound = genes.filter(gene => !perturbDict.has(gene));
-      found = genes.filter(gene => perturbDict.has(gene));
+      //found = genes.filter(gene => perturbDict.has(gene));
+ 
   
       
       let allGenes = await get("allHugoGenes");
