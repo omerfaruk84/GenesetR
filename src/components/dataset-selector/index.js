@@ -93,7 +93,7 @@ const DatasetSelector = forwardRef(
       {
         droppable: true,
         id: "SC00039",
-        name: "THP1 - immune response to LPS",
+        name: "THP1 - immune response to LPS CRISPRi",
         onClick: () => updateActivityById("SC00039", 623, 11690, true),
         parent: 0,
         active: false,
@@ -101,11 +101,23 @@ const DatasetSelector = forwardRef(
         perturbationCount: 623,
         geneCount: 11690,
         isMixscape: true
-      },       
+      },  
+      {
+        droppable: true,
+        id: "SC00038",
+        name: "THP1 - immune response to LPS CRISPR-KO",
+        onClick: () => updateActivityById("SC00038", 634, 10930, true),
+        parent: 0,
+        active: false,
+        resultShape: "634 10930",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 634,
+        geneCount: 10930,
+        isMixscape: true
+      },      
       {
         droppable: true, //Crispra
         id: "SC00016",
-        name: "iPSC induced neurons",
+        name: "iPSC induced neurons-CRISPRa",
         onClick: () => updateActivityById("SC00016", 100, 10634, true),
         parent: 0,
         active: false,
@@ -113,18 +125,65 @@ const DatasetSelector = forwardRef(
         perturbationCount: 100,
         geneCount: 10634,
         isMixscape: true
-      }
-      ,       
+      },   
+      {
+        droppable: true, //Crispra
+        id: "sc00017",
+        name: "iPSC induced neurons-CRISPRi",
+        onClick: () => updateActivityById("sc00017", 186, 11401, true),
+        parent: 0,
+        active: false,
+        resultShape: "186 11401",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 186,
+        geneCount: 11401,
+        isMixscape: true
+      },          
       {
         droppable: true, //Crispra
         id: "SC00048",
         name: "Transcription Factor Atlas - MixScape",
-        onClick: () => updateActivityById("SC00016", 142, 11796, true),
+        onClick: () => updateActivityById("SC00048", 142, 11796, true),
         parent: 0,
         active: false,
         resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
         perturbationCount: 142,
         geneCount: 11796,
+        isMixscape: true
+      },
+      {
+        droppable: true, //Crispra
+        id: "SC00047",
+        name: "Transcription Factor Atlas - ShareSeq",
+        onClick: () => updateActivityById("SC00047", 185, 12221, true),
+        parent: 0,
+        active: false,
+        resultShape: "185 12221",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 185,
+        geneCount: 12221,
+        isMixscape: true
+      },     
+      {
+        droppable: true, 
+        id: "SC00037",
+        name: "HEK293-idCas9",
+        onClick: () => updateActivityById("SC00037", 237, 9410, true),
+        parent: 0,
+        active: false,
+        resultShape: "237 9410",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 237,
+        geneCount: 9410,
+        isMixscape: true
+      },     
+      {
+        droppable: true, 
+        id: "SC00063",
+        name: "Jurkat - TCR signaling",
+        onClick: () => updateActivityById("SC00063", 32, 9949, true),
+        parent: 0,
+        active: false,
+        resultShape: "32 9949",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 32,
+        geneCount: 9949,
         isMixscape: true
       },
          /*

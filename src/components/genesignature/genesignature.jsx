@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import {
-  Table,
   Spacer,
   ButtonGroup,
   Tabs,
@@ -438,18 +437,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
         .map((gene) => gene.Gene);
 
       const temp = {};
-      temp["Upregulated"] = upreg.join();
-      temp["Downregulated"] = dowreg.join();
-      temp["Top 20 Upregulated"] = topGenes.slice(0, 20).join();
-      temp["Top 50 Upregulated"] = topGenes.slice(0, 50).join();
-      temp["Top 100 Upregulated"] = topGenes.slice(0, 100).join();
-      temp["Top 20 Downregulated"] = bottomGenes
+      temp["Increases Gene Signature"] = upreg.join();
+      temp["Decreasing Gene Signature"] = dowreg.join();
+      temp["Top 20 Increasing"] = topGenes.slice(0, 20).join();
+      temp["Top 50 Increasing"] = topGenes.slice(0, 50).join();
+      temp["Top 100 Increasing"] = topGenes.slice(0, 100).join();
+      temp["Top 20 Decreasing"] = bottomGenes
         .slice(Math.max(bottomGenes.length - 20, 0))
         .join();
-      temp["Top 50 Downregulated"] = bottomGenes
+      temp["Top 50 Decreasing"] = bottomGenes
         .slice(Math.max(bottomGenes.length - 50, 0))
         .join();
-      temp["Top 100 Downregulated"] = bottomGenes.join();
+      temp["Top 100 Decreasing"] = bottomGenes.join();
 
       setGeneLists(temp);
 
@@ -476,9 +475,39 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
           type: "value",
           //max:pointData.length>0?Math.ceil(pointData[0][0] + 0.1):2,
           //min:pointData.length>0?Math.floor(pointData[pointData.length-1][0] - 0.1):-2
+          axisLine: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          axisLabel: {
+            color: "black",
+            fontSize: 16,
+          },
+          axisTick: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          name: "Signature Score (Averaged Z-Score)",
+          nameTextStyle: {
+            fontSize: 16,
+            color: "black",
+          },
+          nameGap: 38,
+          nameLocation: "middle",
         },
       ],
-      yAxis: {},
+      grid: [
+        {
+          left: 50,
+          top: 20,
+          bottom: 100,
+        },
+      ],
+      yAxis: {
+        show: false,
+      },
       dataZoom: [
         {
           type: "slider",

@@ -91,7 +91,9 @@ const AboutPage = () => {
               height: 1,
             }}
           />
-
+          <span className={styles.updateDate}>2025-01-20</span>
+          <p>5 more datasets are added to GeneSetR. Several bugs are fixed.</p>
+          <hr style={{ height: 1 }} />
           <span className={styles.updateDate}>2025-01-14</span>
           <p>
             We have added several new datasets to GeneSetR. And several other
@@ -302,6 +304,95 @@ const AboutPage = () => {
                 <td>Calu-3</td>
                 <td>175</td>
                 <td>11,486</td>
+              </tr>
+              <tr>
+                <td>THP1 - immune response to LPS CRISPRi</td>
+                <td>
+                  Compressed Perturb-seq: highly efficient screens for
+                  regulatory circuits using random composite perturbations
+                </td>
+                <td>CRISPRi</td>
+                <td>THP1</td>
+                <td>623</td>
+                <td>11,690</td>
+              </tr>
+              <tr>
+                <td>THP1 - immune response to LPS CRISPR-KO</td>
+                <td>
+                  Compressed Perturb-seq: highly efficient screens for
+                  regulatory circuits using random composite perturbations
+                </td>
+                <td>CRISPRKO</td>
+                <td>THP1</td>
+                <td>634</td>
+                <td>10,930</td>
+              </tr>
+              <tr>
+                <td>iPSC induced neurons-CRISPRa</td>
+                <td>
+                  Genome-wide CRISPRi/a screens in human neurons link lysosomal
+                  failure to ferroptosis
+                </td>
+                <td>CRISPRa</td>
+                <td>iPSC induced neurons</td>
+                <td>100</td>
+                <td>10,634</td>
+              </tr>
+              <tr>
+                <td>iPSC induced neurons-CRISPRi</td>
+                <td>
+                  Genome-wide CRISPRi/a screens in human neurons link lysosomal
+                  failure to ferroptosis
+                </td>
+                <td>CRISPRi</td>
+                <td>iPSC induced neurons</td>
+                <td>186</td>
+                <td>11,401</td>
+              </tr>
+              <tr>
+                <td>Transcription Factor Atlas - MixScape analyses</td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>142</td>
+                <td>11,796</td>
+              </tr>
+              <tr>
+                <td>
+                  Transcription Factor Atlas - ShareSeq (MixScape analyses)
+                </td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>185</td>
+                <td>12,221</td>
+              </tr>
+              <tr>
+                <td>HEK293-idCas9</td>
+                <td>
+                  PerturbSci-Kinetics: Dissecting key regulators of
+                  transcriptome kinetics through scalable single-cell 2 RNA
+                  profiling of pooled CRISPR screens
+                </td>
+                <td>CRISPRi</td>
+                <td>HEK293</td>
+                <td>237</td>
+                <td>9,410</td>
+              </tr>
+              <tr>
+                <td>"Jurkat - TCR signaling</td>
+                <td>
+                  Pooled CRISPR screening with single-cell transcriptome
+                  read-out
+                </td>
+                <td>CRISPRi</td>
+                <td>Jurkat</td>
+                <td>32</td>
+                <td>9,949</td>
               </tr>
             </tbody>
           </table>

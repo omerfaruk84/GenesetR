@@ -403,8 +403,6 @@ const ExpressionAnalyzer = ({
         setSelectedProbe(0);
     }
 
-    console.log(selectedData, selectedProbe);
-
     if (
       selectedData &&
       Object.keys(selectedData).length > 0 &&
@@ -629,9 +627,7 @@ const ExpressionAnalyzer = ({
 
   //Set graph options
   useEffect(() => {
-    //console.log("Here we go #3");
     if (!data.geneRegulationResults) return;
-    //console.log("Here we go #4");
     setOptions({
       tooltip: {
         formatter: function (params) {
@@ -641,13 +637,40 @@ const ExpressionAnalyzer = ({
       xAxis: [
         {
           type: "value",
+          axisLine: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          axisLabel: {
+            color: "black",
+            fontSize: 16,
+          },
+          axisTick: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          name:
+            selectedInnerTab.value === 0
+              ? "Z-Score"
+              : "Correlation Coefficient",
+          nameTextStyle: {
+            fontSize: 16,
+            color: "black",
+          },
+          nameGap: 38,
+          nameLocation: "middle",
         },
       ],
-      yAxis: {},
+      yAxis: {
+        show: false,
+      },
       dataZoom: [
         {
           type: "slider",
           show: true,
+
           realtime: true,
           xAxisIndex: [0],
         },
@@ -656,11 +679,19 @@ const ExpressionAnalyzer = ({
         feature: {
           dataZoom: {
             yAxisIndex: "none",
+            slider: { endValue: 0.5 },
           },
           restore: {},
           saveAsImage: {},
         },
       },
+      grid: [
+        {
+          left: 50,
+          top: 20,
+          bottom: 100,
+        },
+      ],
 
       series: [
         {
@@ -740,7 +771,12 @@ const ExpressionAnalyzer = ({
         },
       ],
     });
-  }, [pointData, data.geneRegulationResults, pointDistribution]);
+  }, [
+    pointData,
+    data.geneRegulationResults,
+    pointDistribution,
+    selectedInnerTab.value,
+  ]);
 
   return (
     <>
