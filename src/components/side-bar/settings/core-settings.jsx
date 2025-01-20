@@ -1,8 +1,10 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
 import { connect } from "react-redux";
 import {
   Field,
   Select,
+  CheckBox,
+  Flex,
   Button,
   Spacer,
 } from "@oliasoft-open-source/react-ui-library";
@@ -117,6 +119,10 @@ const CoreSettings = ({
     },
     [coreSettingsChanged]
   );
+  var isMixscape = coreSettings?.cellLine.isMixscape;
+  useEffect(() => {
+    isMixscape = coreSettings?.cellLine.isMixscape;
+  }, [coreSettings?.cellLine.isMixscape]);
 
   var graphData = undefined;
   if (coreSettings?.currentModule === "tsne") graphData = tsneResults;
@@ -175,11 +181,52 @@ const CoreSettings = ({
                 newValue: value,
               })
             }
-            disabled={coreSettings?.cellLine[0]?.length > 27}
+            disabled={coreSettings?.cellLine.id?.length > 27}
             options={dataTypeOptions}
             value={coreSettings?.dataType}
           />
         </Field>
+      </div>
+      <div
+        style={{
+          display: isMixscape === true ? "block" : "none",
+        }}
+      >
+        {console.log(coreSettings?.cellLine.isMixscape)}
+        <Flex gap="35px">
+          <Field
+            labelLeft
+            label="Perturbed Cells"
+            helpText="Mean experssion based on cells identified as perturbed in Mixscape analyses (GeneSymbol_P)."
+          >
+            <CheckBox
+              small
+              onChange={({ target: { checked } }) =>
+                coreSettingsChanged({
+                  settingName: CoreSettingsTypes.MIXSCAPE_PERTURBED,
+                  newValue: checked,
+                })
+              }
+              checked={coreSettings?.mixscapePerturbed}
+            />
+          </Field>
+          <Field
+            labelLeft
+            label="All Cells"
+            helpText="Mean experssion based on all cells (GeneSymbol_All)."
+          >
+            <CheckBox
+              small
+              onChange={({ target: { checked } }) =>
+                coreSettingsChanged({
+                  settingName: CoreSettingsTypes.MIXSCAPE_ALL,
+                  newValue: checked,
+                })
+              }
+              checked={coreSettings?.mixscapeAll}
+            />
+          </Field>
+        </Flex>
       </div>
       <div
         style={{ display: showPerturbationList === true ? "block" : "none" }}

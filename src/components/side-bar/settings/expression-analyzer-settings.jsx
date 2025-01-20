@@ -44,7 +44,7 @@ const ExpressionAnalyzerSettings = ({
   useEffect(() => {
     async function fetchDataAndPopulate() {
       let check = new Set();
-      let cellline = coreSettings.cellLine[0];
+      let cellline = coreSettings.cellLine.id;
 
       try {
         await updateGeneLists(cellline);
@@ -79,7 +79,7 @@ const ExpressionAnalyzerSettings = ({
     };
 
     fetchDataAndPopulate();
-  }, [coreSettings.cellLine]);
+  }, [coreSettings.cellLine.id]);
   return (
     <>
       <Field label="Select a gene">

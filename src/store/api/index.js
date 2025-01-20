@@ -77,7 +77,7 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     numcomponents: pca.numberOfComponents,
     min_cluster_size: clustering.minimumClusterSize,
     clusteringMetric: clustering.clusteringMetric,
@@ -98,7 +98,7 @@ const runMdeGraphCalc = async (core, mde, clustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: mde.numcomponents,
     PreprocessingMethod: mde.preprocessingMethod,
@@ -125,7 +125,7 @@ const runUMAPGraphCalc = async (core, umap, clustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: umap.numcomponents,
     n_neighbors: umap.n_neighbors,
@@ -151,7 +151,7 @@ const runtSNEGraphCalc = async (core, tsne, clustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: tsne.numcomponents,
     earlyExaggeration: tsne.earlyExaggeration,
@@ -179,7 +179,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     n_clusters: biClustering.n_clusters, //Anyway to set this to default value is number of genes divided by 20
     n_init: biClustering.n_init,
@@ -199,7 +199,7 @@ const runPathFinderCalc = async (core, pathfinder) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cellLine: core.cellLine[0],
+    cellLine: core.cellLine.id,
 
     upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -225,7 +225,7 @@ const runCorrCalc = async (core, corr) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     targetList: core.targetGeneList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -248,7 +248,7 @@ const runCorrCalc = async (core, corr) => {
 const runHeatMap = async (core, heatMap) => {
   const body = {
     //dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     geneList: core.peturbationList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -284,7 +284,7 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
 const runGeneSignature = async (core) => {
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     request: "calcGeneSignature",
   };
   return await getData(body);
@@ -294,7 +294,7 @@ const runGeneExp = async (core, geneExp) => {
   const body = {
     gene: geneExp.selectedGene,
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     targetList: geneExp.targetList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")

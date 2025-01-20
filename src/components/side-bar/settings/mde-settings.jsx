@@ -1,87 +1,91 @@
-import React from 'react';
-import { connect } from 'react-redux';
-import { Field, Select,  Slider } from '@oliasoft-open-source/react-ui-library';
-import { mdeSettingsChanged } from '../../../store/settings/mde-settings';
-import { MdeSettingsTypes } from './enums';
-import styles from './settings.module.scss';
+import React from "react";
+import { connect } from "react-redux";
+import { Field, Select, Slider } from "@oliasoft-open-source/react-ui-library";
+import { mdeSettingsChanged } from "../../../store/settings/mde-settings";
+import { MdeSettingsTypes } from "./enums";
+import styles from "./settings.module.scss";
 
-const MdeSettings = ({
-  mdeSettings,coreSettings,
-  mdeSettingsChanged,
-}) => {
+const MdeSettings = ({ mdeSettings, coreSettings, mdeSettingsChanged }) => {
   const mdePreProcessingOptions = [
     {
-      label: 'Preserve Neighbours',
-      value: 'preserve_neighbors',
+      label: "Preserve Neighbours",
+      value: "preserve_neighbors",
     },
     {
-      label: 'Preserve Distances',
-      value: 'preserve_distances',
-    }
+      label: "Preserve Distances",
+      value: "preserve_distances",
+    },
   ];
   const mdeConstraintOptions = [
     {
-      label: 'Standardized',
-      value: 'Standardized',
+      label: "Standardized",
+      value: "Standardized",
     },
     {
-      label: 'Centered',
-      value: 'Centered',
+      label: "Centered",
+      value: "Centered",
     },
     {
-      label: 'None',
-      value: 'None',
-    }
+      label: "None",
+      value: "None",
+    },
   ];
 
   return (
     <>
-      
-      <Field label='Dimension Count'>
+      <Field label="Dimension Count">
         <div className={styles.inputRange}>
-            <Slider
+          <Slider
             label={mdeSettings?.numcomponents}
-            max={Math.min(200, coreSettings.cellLine[1]?.split(" ")[1])}
+            max={Math.min(200, coreSettings.cellLine.geneCount)}
             min={3}
             value={mdeSettings?.numcomponents}
-            onChange={({ target: { value } }) => mdeSettingsChanged({
-              settingName: MdeSettingsTypes.NUMBER_OF_COMPONENTS,
-              newValue: value,
-            })}
+            onChange={({ target: { value } }) =>
+              mdeSettingsChanged({
+                settingName: MdeSettingsTypes.NUMBER_OF_COMPONENTS,
+                newValue: value,
+              })
+            }
           />
         </div>
       </Field>
-      <Field label='Preprocessing Method'>
+      <Field label="Preprocessing Method">
         <Select
-          onChange={({ target: { value } }) => mdeSettingsChanged({
-            settingName: MdeSettingsTypes.PREPROCESSING_METHOD,
-            newValue: value,
-          })}
+          onChange={({ target: { value } }) =>
+            mdeSettingsChanged({
+              settingName: MdeSettingsTypes.PREPROCESSING_METHOD,
+              newValue: value,
+            })
+          }
           options={mdePreProcessingOptions}
           value={mdeSettings?.preprocessingMethod}
         />
       </Field>
-      <Field label='MDE Constraint'>
+      <Field label="MDE Constraint">
         <Select
-          onChange={({ target: { value } }) => mdeSettingsChanged({
-            settingName: MdeSettingsTypes.MDE_CONTRSAINT,
-            newValue: value,
-          })}
+          onChange={({ target: { value } }) =>
+            mdeSettingsChanged({
+              settingName: MdeSettingsTypes.MDE_CONTRSAINT,
+              newValue: value,
+            })
+          }
           options={mdeConstraintOptions}
           value={mdeSettings?.pyMdeConstraint}
         />
       </Field>
-      <Field label='Repulsive Fraction'>
-        <div className={styles.inputRange}>         
+      <Field label="Repulsive Fraction">
+        <div className={styles.inputRange}>
           <Slider
             label={mdeSettings?.repulsiveFraction}
             max={20}
             min={0}
             value={mdeSettings?.repulsiveFraction * 20}
-            onChange={({ target: { value } }) => mdeSettingsChanged({
-              settingName: MdeSettingsTypes.REPULSIVE_FRACTION,
-              newValue: value / 20,
-            })}
+            onChange={({ target: { value } }) =>
+              mdeSettingsChanged({
+                settingName: MdeSettingsTypes.REPULSIVE_FRACTION,
+                newValue: value / 20,
+              })
+            }
           />
         </div>
       </Field>

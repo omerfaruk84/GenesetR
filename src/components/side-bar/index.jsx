@@ -61,42 +61,54 @@ const SideBar = ({
     isDisabled = false;
 
   return (
-    <Drawer
-      border
-      button
-      closedWidth={10}
-      open
-      width={sideBarWith}
-      onResize={handleSideBarResize}
-    >
-      {pathname !== ROUTES.GENELISTCOMPARE &&
-        pathname !== ROUTES.GENE_REGULATION && (
-          <>
-            <Spacer />
-            <Flex justifyContent="center">
-              <Button
-                label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
-                colored
-                width="90%"
-                disabled={isCalcRunning || isDisabled}
-                onClick={() => {
-                  runCalculation(pathname);
-                  coreSettingsChanged({
-                    settingName: CoreSettingsTypes.SHOW_HELP,
-                    newValue: false,
-                  });
-                }}
-              />
-            </Flex>
-          </>
-        )}
-      <Spacer />
-      {pathname === ROUTES.DR ? (
-        <SettingsSelector pathname={"/" + coreSettings.currentModule} />
-      ) : (
-        <SettingsSelector pathname={pathname} />
-      )}
-    </Drawer>
+    <div>
+      <Drawer
+        border
+        button
+        closedWidth={10}
+        open
+        width={sideBarWith}
+        onResize={handleSideBarResize}
+      >
+        {pathname !== ROUTES.GENELISTCOMPARE &&
+          pathname !== ROUTES.GENE_REGULATION && (
+            <>
+              <Spacer />
+              <Flex justifyContent="center">
+                <Button
+                  label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
+                  colored
+                  width="90%"
+                  disabled={isCalcRunning || isDisabled}
+                  onClick={() => {
+                    runCalculation(pathname);
+                    coreSettingsChanged({
+                      settingName: CoreSettingsTypes.SHOW_HELP,
+                      newValue: false,
+                    });
+                  }}
+                />
+              </Flex>
+            </>
+          )}
+        <Spacer />
+        <div
+          id="scrollableDiv"
+          style={{
+            height: "calc(100vh - 140px)",
+            overflowY: "auto",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#a63648 transparent",
+          }}
+        >
+          {pathname === ROUTES.DR ? (
+            <SettingsSelector pathname={"/" + coreSettings.currentModule} />
+          ) : (
+            <SettingsSelector pathname={pathname} />
+          )}
+        </div>
+      </Drawer>
+    </div>
   );
 };
 

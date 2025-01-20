@@ -62,7 +62,7 @@ const Genelist = ({
     fetchHugoGenes();
 
     //if gene and perturbation list was not downloaded before, download it.
-    updateGeneLists(coreSettings?.cellLine[0]);
+    updateGeneLists(coreSettings?.cellLine.id);
 
     if (genes?.length > 1) genesChanged(genes);
   }, []);
@@ -77,8 +77,6 @@ const Genelist = ({
   const location = useLocation();
   const [isGeneSignaturePopupOpen, setGeneSignaturePopupOpen] = useState(false);
   const { pathname } = location;
-
-  console.log("location", location);
 
   const replaceGene = useCallback(
     (oldSymbols, newSymbols) => {
@@ -284,7 +282,7 @@ const Genelist = ({
   useEffect(() => {
     setPerturbationList(currentGenes);
     debouncedChangeHandler(currentGenes);
-  }, [currentGenes, coreSettings.cellLine]);
+  }, [currentGenes, coreSettings.cellLine.id]);
 
   function genesChanged(value) {
     value = value.toUpperCase();
@@ -327,7 +325,7 @@ const Genelist = ({
         checkGenes(
           genes,
           isPerturbationList,
-          coreSettings?.cellLine[0],
+          coreSettings?.cellLine.id,
           isGeneSignature
         ).then((prop) => {
           prop["replaceGene"] = replaceGene;
@@ -338,7 +336,7 @@ const Genelist = ({
       props,
       checkGenes,
       isPerturbationList,
-      coreSettings?.cellLine[0],
+      coreSettings?.cellLine.id,
       isGeneSignature,
     ]
   );
@@ -365,7 +363,7 @@ const Genelist = ({
                         let extension = "_perturb";
                         if (!isPerturbationList) extension = "_genes";
                         let genes = await get(
-                          "geneList_" + coreSettings?.cellLine[0] + extension
+                          "geneList_" + coreSettings?.cellLine.id + extension
                         );
 
                         genes = [...genes];

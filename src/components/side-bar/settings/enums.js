@@ -44,6 +44,8 @@ const CoreSettingsTypes = {
   GRAPH_TYPE: "graphType",
   DATASETLIST: "datasetList",
   CURRENT_MODULE: "currentModule",
+  MIXSCAPE_PERTURBED: "mixscapePerturbed",
+  MIXSCAPE_ALL: "mixscapeAll",
 };
 
 const GraphmapSettingsTypes = {

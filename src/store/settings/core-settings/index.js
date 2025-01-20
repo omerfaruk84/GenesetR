@@ -88,7 +88,16 @@ const defaultGeneList = `TAF1C
 
 const initialState = {
   currentModule: "pca",
-  cellLine: ["K562gwps", "11258 8248"],
+  cellLine: {       
+        id: "K562gwps",
+        name: "K562 Whole Genome",
+        parent: 0,
+        active: true,
+        resultShape: "11258 8248",
+        perturbationCount: 11258,
+        geneCount: 8248,
+        isMixscape: false
+      },
   dataType: "pert",
   peturbationList: defaultGeneList,
   targetGeneList: "",
@@ -117,6 +126,8 @@ const initialState = {
       parent: 0,
     },
   ],
+  mixscapePerturbed: true,
+  mixscapeAll: true,
 };
 
 export const coreSettingsSlice = createSlice({

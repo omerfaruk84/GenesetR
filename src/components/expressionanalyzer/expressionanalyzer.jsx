@@ -113,15 +113,13 @@ const ExpressionAnalyzer = ({
   const location = useLocation();
   const { pathname } = location;
 
-  //console.log(coreSettings.cellLine);
-
   useEffect(() => {
     runCalculation(pathname);
     coreSettingsChanged({
       settingName: CoreSettingsTypes.SHOW_HELP,
       newValue: false,
     });
-  }, [coreSettings.cellLine[0]]);
+  }, [coreSettings.cellLine.id]);
 
   useEffect(() => {
     setisRunning(
@@ -796,7 +794,7 @@ const ExpressionAnalyzer = ({
               <>
                 <Text success>
                   Which perturbations show similar effects to
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
                     : " perturbation "}
                   of
@@ -809,7 +807,7 @@ const ExpressionAnalyzer = ({
               <>
                 <Text success>
                   Which genes are up or down regulated upon{" "}
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
                     : " perturbation "}{" "}
                   of
@@ -821,11 +819,11 @@ const ExpressionAnalyzer = ({
             {selectedInnerTab.value === 0 && selectedTab.value === 1 && (
               <>
                 <Text success>
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " Overexpression "
                     : " Perturbation "}{" "}
                   of which{" "}
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " transcription factors "
                     : " genes "}{" "}
                   up or down regulate

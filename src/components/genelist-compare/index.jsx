@@ -51,14 +51,16 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
       let geneMap = {};
       let genelists = genelistcompareSettings.genelists;
       genelists.forEach((genelist) => {
-        genelist.genes.forEach((gene) => {
-          if (gene) {
-            if (!geneMap[gene]) {
-              geneMap[gene] = [];
+        if (genelist.checked) {
+          genelist.genes.forEach((gene) => {
+            if (gene) {
+              if (!geneMap[gene]) {
+                geneMap[gene] = [];
+              }
+              geneMap[gene].push(genelist.name);
             }
-            geneMap[gene].push(genelist.name);
-          }
-        });
+          });
+        }
       });
 
       let elems = Object.keys(geneMap).map((gene) => ({
