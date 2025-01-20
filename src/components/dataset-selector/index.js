@@ -435,7 +435,7 @@ const DatasetSelector = forwardRef(
       <>
         <div
           className={styles._itemHeader_1fhdv_401}
-          style={{ border: "1px solid black" }}
+          style={{ border: "1px solid black",height: "250px", overflow: "auto", scrollbarWidth: "thin" }}
         >
           <Tree
             list={{

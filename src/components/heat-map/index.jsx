@@ -247,6 +247,7 @@ const HeatMap = ({ graphData, correlationSettings, inchlibSettings }) => {
         });
         inchlib.redraw();
       }
+      handleFitToScreen();
 
       // Attach Event Handlers
       inchlib.events.row_onclick = function (ids) {

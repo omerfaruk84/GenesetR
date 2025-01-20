@@ -102,7 +102,7 @@ const TopBar = () => {
         }))}
         title={{
           onClick: () => navigate(ROUTES.HOME),
-          version: "V1.0.5",
+          version: "V1.6.0",
           logo: <img alt="logo" src="/images/logo.png" />,
         }}
         contentRight={undefined}

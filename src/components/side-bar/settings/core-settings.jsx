@@ -7,6 +7,7 @@ import {
   Flex,
   Button,
   Spacer,
+  Text,
 } from "@oliasoft-open-source/react-ui-library";
 import { coreSettingsChanged } from "../../../store/settings/core-settings";
 import { CoreSettingsTypes } from "./enums";
@@ -167,7 +168,12 @@ const CoreSettings = ({
       ) : (
         ""
       )}
-      <div style={{ display: showdataTypeOptions === true ? "block" : "none" }}>
+      <div
+        style={{
+          marginTop: "10px",
+          display: showdataTypeOptions === true ? "block" : "none",
+        }}
+      >
         <Field
           label="Data Type"
           labelLeft
@@ -193,13 +199,14 @@ const CoreSettings = ({
         }}
       >
         {console.log(coreSettings?.cellLine.isMixscape)}
-        <Flex gap="35px">
+        <Flex gap="35px" marginBottom="10px">
           <Field
             labelLeft
             label="Perturbed Cells"
             helpText="Mean experssion based on cells identified as perturbed in Mixscape analyses (GeneSymbol_P)."
           >
             <CheckBox
+              disabled={true}
               small
               onChange={({ target: { checked } }) =>
                 coreSettingsChanged({
@@ -217,6 +224,7 @@ const CoreSettings = ({
           >
             <CheckBox
               small
+              disabled={true}
               onChange={({ target: { checked } }) =>
                 coreSettingsChanged({
                   settingName: CoreSettingsTypes.MIXSCAPE_ALL,
@@ -227,6 +235,14 @@ const CoreSettings = ({
             />
           </Field>
         </Flex>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Text warning center>
+            Some of the datasets were anlyzed using Mixscape method. In these
+            datasets, cells are grouped as either "_P" (pertubed) or "_All" (all
+            cells whether identifed perturbed or not). Check boxes above are
+            currently disabled, but will be enabled in the near future.
+          </Text>
+        </div>
       </div>
       <div
         style={{ display: showPerturbationList === true ? "block" : "none" }}
