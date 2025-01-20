@@ -21,126 +21,221 @@ const DatasetSelector = forwardRef(
         droppable: true,
         id: "K562gwps",
         name: "K562 Whole Genome",
-        onClick: () => updateActivityById("K562gwps"),
+        onClick: () => updateActivityById("K562gwps", 11258, 8248, false),
         parent: 0,
         active: true,
         resultShape: "11258 8248",
+        perturbationCount: 11258,
+        geneCount: 8248,
+        isMixscape: false
       },
       {
         droppable: true,
         id: "K562essential",
         name: "K562 Essential",
         //details: 'Main',
-        onClick: () => updateActivityById("K562essential"),
+        onClick: () => updateActivityById("K562essential", 2285, 8563, false),
         parent: 0,
         active: false,
         resultShape: "2285 8563",
+        perturbationCount: 2285,
+        geneCount: 8563,
+        isMixscape: false
       },
       {
         droppable: true,
         id: "RPE1essential",
         name: "RPE1 Essential",
-        onClick: () => updateActivityById("RPE1essential"),
+        onClick: () => updateActivityById("RPE1essential", 2679, 8749, false),
         parent: 0,
         active: false,
         resultShape: "2679 8749",
+        perturbationCount: 2679,
+        geneCount: 8749,
+        isMixscape: false
       },
       {
         droppable: true,
         id: "TFAtlas",
         name: "Transcription Factor Atlas",
-        onClick: () => updateActivityById("TFAtlas"),
+        onClick: () => updateActivityById("TFAtlas", 3367, 37528, false),
         parent: 0,
         active: false,
         resultShape: "3367 37528",
+        perturbationCount: 3367,
+        geneCount: 37528,
+        isMixscape: false
       },      
       {
         droppable: true,
         id: "SC00066",
         name: "Jurkat Essential",
-        onClick: () => updateActivityById("SC00066"),
+        onClick: () => updateActivityById("SC00066", 1514, 8811, true),
         parent: 0,
         active: false,
         resultShape: "1514 8811",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 1514,
+        geneCount: 8811,
+        isMixscape: true
       },   
       {
         droppable: true,
         id: "SC00015",
         name: "Calu-3 SARS-CoV-2 host factors",
-        onClick: () => updateActivityById("SC00015"),
+        onClick: () => updateActivityById("SC00015", 175, 11486, true),
         parent: 0,
         active: false,
         resultShape: "175 11486",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 175,
+        geneCount: 11486,
+        isMixscape: true
+      }      ,   
+      {
+        droppable: true,
+        id: "SC00039",
+        name: "THP1 - immune response to LPS",
+        onClick: () => updateActivityById("SC00039", 623, 11690, true),
+        parent: 0,
+        active: false,
+        resultShape: "623 11690",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 623,
+        geneCount: 11690,
+        isMixscape: true
+      },       
+      {
+        droppable: true, //Crispra
+        id: "SC00016",
+        name: "iPSC induced neurons",
+        onClick: () => updateActivityById("SC00016", 100, 10634, true),
+        parent: 0,
+        active: false,
+        resultShape: "100 10634",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 100,
+        geneCount: 10634,
+        isMixscape: true
+      }
+      ,       
+      {
+        droppable: true, //Crispra
+        id: "SC00048",
+        name: "Transcription Factor Atlas - MixScape",
+        onClick: () => updateActivityById("SC00016", 142, 11796, true),
+        parent: 0,
+        active: false,
+        resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 142,
+        geneCount: 11796,
+        isMixscape: true
       },
+         /*
+      {
+        droppable: true,
+        id: "SC00065",
+        name: "HepG2 Essential",
+        onClick: () => updateActivityById("SC00065", 623, 11690, true),
+        parent: 0,
+        active: false,
+        resultShape: "623 11690",  //Cols vs Rows Perturbations vs Genes Need to fix
+        perturbationCount: 623,
+        geneCount: 11690,
+        isMixscape: true
+      },*/
     ]);
 
     const location = useLocation();  
   
-    const updateActivityById = (id) => {
-      let dataShape = "";
-      let dataType = "";
-      setDatasetList((prevDatasetList) => {
-        const arr = [];
-        for (const e in prevDatasetList) {
-          var itemx = prevDatasetList[e];
-          console.log(itemx);
-          var actionsNew = [];
-          if (itemx?.actions !== undefined && itemx.id.length > 17) {
-            actionsNew = [
-              {
-                icon: itemx?.actions[0]?.icon,
-                label: itemx?.actions[0]?.label,
-                onClick: (
-                  (id) => () =>
-                    deleteItemAndChildren(id)
-                )(itemx.id),
-              },
-            ];
-          }
-          var newItem = {
-            droppable: false,
-            id: itemx.id,
-            name: itemx?.name,
-            resultShape: itemx?.resultShape,
-            dataType: itemx?.dataType,
-            parent: itemx?.parent,
-            onClick: (
-              (id) => () =>
-                updateActivityById(id)
-            )(itemx.id),
-            actions: actionsNew,
-            active: itemx?.id === id,
-          };
-          if (itemx?.id === id) {
-            dataShape = itemx?.resultShape;
-            dataType = itemx?.dataType;
-          }
 
-          arr.push(newItem);
-        }
+    const updateActivityById = (id, perturbationCount, geneCount, isMixscape) => {
+  setDatasetList((prevDatasetList) => {
+    let dataType = "";
 
-        if (dataType && dataType !== "")
-          coreSettingsChanged({
-            settingName: CoreSettingsTypes.DATA_TYPE,
-            newValue: dataType,
-          });
+    // Build a new dataset list with updated fields
+    const newDatasetList = prevDatasetList.map((item) => {
+      // Copy the old item
+      const newItem = { ...item };
 
-        coreSettingsChanged({
-          settingName: CoreSettingsTypes.CELL_LINE,
-          newValue: [id, dataShape],
-        });
-        return arr;
+      // If actions exist and ID is longer than 17, rebuild them (like you did)
+      let actionsNew = [];
+      if (newItem.actions && newItem.id.length > 17) {
+        actionsNew = [
+          {
+            icon: newItem.actions[0]?.icon,
+            label: newItem.actions[0]?.label,
+            onClick: ((itemId) => () => deleteItemAndChildren(itemId))(
+              newItem.id
+            ),
+          },
+        ];
+      }
+      newItem.actions = actionsNew;
+
+      // If this is the clicked dataset, update fields
+      if (newItem.id === id) {
+        newItem.active = true;
+        newItem.perturbationCount = perturbationCount;
+        newItem.geneCount = geneCount;
+        newItem.isMixscape = isMixscape;
+        newItem.resultShape = `${perturbationCount} ${geneCount}`;
+
+        // Capture dataType if needed
+        dataType = newItem.dataType ?? "";
+
+        // Ensure onClick passes fresh values back to updateActivityById
+        newItem.onClick = (
+          (clickedId, pCount, gCount, mix) => () =>
+            updateActivityById(clickedId, pCount, gCount, mix)
+        )(id, perturbationCount, geneCount, isMixscape);
+      } else {
+        // Not the clicked one => un-activate it, but keep existing shape
+        newItem.active = false;
+        newItem.onClick = (
+          (clickedId, pCount, gCount, mix) => () =>
+            updateActivityById(clickedId, pCount, gCount, mix)
+        )(
+          newItem.id,
+          newItem.perturbationCount,
+          newItem.geneCount,
+          newItem.isMixscape
+        );
+      }
+
+      return newItem;
+    });
+
+    // If we have a dataType for the selected dataset, update Redux
+    if (dataType && dataType !== "") {
+      coreSettingsChanged({
+        settingName: CoreSettingsTypes.DATA_TYPE,
+        newValue: dataType,
       });
+    }
 
-      //coreSettingsChanged({settingName: CoreSettingsTypes.DATASETLIST, newValue: arr})
-    };
+    // Also update the CELL_LINE portion of your Redux state
+    coreSettingsChanged({
+      settingName: CoreSettingsTypes.CELL_LINE,
+      newValue: {
+        id,
+        perturbationCount,
+        geneCount,
+        isMixscape,
+      },
+    });
+
+    return newDatasetList;
+  });
+};
+
 
     const deleteItemAndChildren = (id) => {
       let parent = "";
 
       datasetList.forEach((item, index) => {
         if (item.id.toString() === id) {
-          parent = [item.parent, item?.resultShape];
+          parent =   {id: item.id, 
+            perturbationCount: item.perturbationCount,
+        geneCount: item.geneCount,
+        isMixscape:  item.isMixscape,
+        };
         }
       });
 
@@ -175,6 +270,7 @@ const DatasetSelector = forwardRef(
       saveDataset: (newID, name, parentID, dataShape, dataType) => {
         setDatasetList((prevDatasetList) => {
           let arr = [];
+          var isParentMixscape = false;
 
           for (var e in prevDatasetList) {
             var itemx = prevDatasetList[e];
@@ -193,8 +289,12 @@ const DatasetSelector = forwardRef(
                 },
               ];
             }
+            if(itemx.id === parentID) isParentMixscape = itemx.isMixscape;
             var newItem = {
               resultShape: itemx?.resultShape,
+              perturbationCount: itemx?.resultShape.split(" ")[0],
+              geneCount:  itemx?.resultShape.split(" ")[1],
+              isMixscape: itemx.isMixscape,              
               droppable: false,
               isOpen: itemx.id === parentID,
               id: itemx.id,
@@ -202,8 +302,8 @@ const DatasetSelector = forwardRef(
               name: itemx?.name,
               parent: itemx?.parent,
               onClick: (
-                (id) => () =>
-                  updateActivityById(id)
+                (id, perturbationCount, geneCount, isMixscape) => () =>
+                  updateActivityById(id, perturbationCount, geneCount, isMixscape)
               )(itemx.id),
               actions: actionsNew,
               active: false,
@@ -213,6 +313,9 @@ const DatasetSelector = forwardRef(
 
           var newItem = {
             resultShape: dataShape,
+            perturbationCount: dataShape.split(" ")[0],
+            geneCount:  dataShape.split(" ")[1],
+            isMixscape: isParentMixscape,
             dataType: dataType,
             droppable: false,
             isOpen: true,
@@ -220,8 +323,8 @@ const DatasetSelector = forwardRef(
             name: name,
             parent: parentID,
             onClick: (
-              (id) => () =>
-                updateActivityById(id)
+              (id, perturbationCount, geneCount, isMixscape) => () =>
+                updateActivityById(id, perturbationCount, geneCount, isMixscape)
             )(newID),
             actions: [
               {
@@ -239,7 +342,11 @@ const DatasetSelector = forwardRef(
           //Save the settings
           coreSettingsChanged({
             settingName: CoreSettingsTypes.CELL_LINE,
-            newValue: [newID, dataShape],
+            newValue:   {id: newItem.id, 
+            perturbationCount: newItem.perturbationCount,
+        geneCount: newItem.geneCount,
+        isMixscape:  newItem.isMixscape,
+        },
           });
 
           return arr;
@@ -249,16 +356,19 @@ const DatasetSelector = forwardRef(
 
     useEffect(() => {
       //console.log(coreSettings.cellLine
-      updateGeneLists(coreSettings.cellLine[0]);
-    }, [coreSettings.cellLine]);
+      updateGeneLists(coreSettings.cellLine.id);
+    }, [coreSettings.cellLine.id]);
 
     useEffect(() => {
       if (
         location.pathname === ROUTES.CORRELATION ||
-        location.pathname === ROUTES.HEATMAP
+        location.pathname === ROUTES.HEATMAP ||
+        location.pathname === ROUTES.GENE_REGULATION||
+        location.pathname === ROUTES.EXPRESSIONANALYZER || 
+        location.pathname === ROUTES.GENESIGNATURE
       ) {
-        if (coreSettings.cellLine[0].length > 17)
-          updateActivityById("K562gwps");
+        if (coreSettings.cellLine.id.length > 17)
+          updateActivityById("K562gwps", 11258, 8248, false);
       }
     }, [location.pathname]);
 
@@ -271,8 +381,7 @@ const DatasetSelector = forwardRef(
           <Tree
             list={{
               items:
-                location.pathname === ROUTES.CORRELATION ||
-                location.pathname === ROUTES.HEATMAP
+                location.pathname !== ROUTES.DR
                   ? datasetList.filter((x) => x.id.length < 17)
                   : datasetList,
               name: "Dataset Selection",
