@@ -92,6 +92,42 @@ const AboutPage = () => {
             }}
           />
 
+          <span className={styles.updateDate}>2025-01-14</span>
+          <p>
+            We have added several new datasets to GeneSetR. And several other
+            ones will be coming very soon.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2025-01-10</span>
+          <p>
+            Several bugs are fixed. Now, left settings menu can be scrolled
+            independently form the main view.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-11-25</span>
+          <p>
+            Now in gene signature module it is possible to search online gene
+            signatures from the MSigDB, and add your own gene signature to our
+            gene signarue database.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-11-14</span>
+          <p>
+            Genelist module is updated. Now it is easier to manage your gene
+            lists.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-06-15</span>
+          <p>
+            We have updated Heat Map component. Now the texts are more readable,
+            row names are more visible, and zooming is easier.
+          </p>
+          <hr style={{ height: 1 }} />
+
           <span className={styles.updateDate}>2024-03-11</span>
           <p>
             We have done several improvements and fixed various bugs. For
@@ -187,6 +223,91 @@ const AboutPage = () => {
           </p>
         </div>
       </div>
+
+      <div className={styles.box}>
+        <h1> DATASETS </h1>
+        <div className={styles.tableContainer}>
+          <table>
+            <thead>
+              <tr>
+                <th>Dataset Name</th>
+                <th>Publication</th>
+                <th>Type</th>
+                <th>Cell Line</th>
+                <th>Number of Perturbations</th>
+                <th>Number of Detected Genes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>K562 Whole Genome</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>11,258</td>
+                <td>8,248</td>
+              </tr>
+              <tr>
+                <td>K562 Essential</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>2,285</td>
+                <td>8,563</td>
+              </tr>
+              <tr>
+                <td>RPE1 Essential</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>RPE1</td>
+                <td>2,679</td>
+                <td>8,749</td>
+              </tr>
+              <tr>
+                <td>Transcription Factor Atlas</td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF overexpression</td>
+                <td>hESCs</td>
+                <td>3,367</td>
+                <td>37,528</td>
+              </tr>
+              <tr>
+                <td>Jurkat Essential</td>
+                <td>
+                  Decoding Heterogenous Single-cell Perturbation Responses
+                </td>
+                <td>CRISPRi</td>
+                <td>Jurkat</td>
+                <td>1,514</td>
+                <td>8,811</td>
+              </tr>
+              <tr>
+                <td>Calu-3 SARS-CoV-2 host factors</td>
+                <td>
+                  Systematic functional interrogation of SARS-CoV-2 host factors
+                  using Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>Calu-3</td>
+                <td>175</td>
+                <td>11,486</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className={styles.box}>
         <h1> CONTACT US </h1>
         <div className={styles.contactBody}>
