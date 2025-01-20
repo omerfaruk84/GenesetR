@@ -1,9 +1,33 @@
 .mainView {
   display: flex;
-  margin-top: 60px;
-  width: 100%;
-  justify-content: center;
-  height: fit-content;
-  min-height: 50vh;
+ 
+ // width: 100vw;
+ justify-content: center;
+  //height: fit-content;
+  //min-height: 50vh;
+  overflow: hidden;
+}
+
+.contentWrapper { /* Added to style routes with SideBar */
+  display: flex;
+   margin-top: 60px;
+  flex: 1; // Take up remaining height after TopBar and Spacer
+  overflow: hidden;  // Prevent the content wrapper from scrolling
+}
+
+.flexContainer { // Added class to make the router's content flexible
+  display: flex;
+  height: 100%;
   
+}
+
+
+.routeContent { // To enable scrolling for the main content
+    flex: 1; // Ensures this div takes remaining horizontal space
+    height: calc(100vh - 60px); // Allow content to take up all vertical space
+    overflow-y: auto; // Enable vertical scroll
+    background-color: white;
+    padding: 20px; // or whatever padding you need
+    width: 80vw;
+
 }

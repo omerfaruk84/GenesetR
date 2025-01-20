@@ -1,7 +1,10 @@
 .mainView {
   padding: 25px;
   width: 70%;
-
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #a63648 transparent;
   margin-right: 15%;
   margin-left: 15%;
 }
@@ -106,3 +109,41 @@
     text-align: center;
   }
 }
+
+.tableContainer {
+  border-top: 3px solid #000000;
+  margin: 0px;
+  font-family: Arial, sans-serif;
+  background: #dacfcf;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0px 0;
+    font-size: 1rem;
+    text-align: left;
+
+    th, td {
+      padding: 6px;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: rgb(188, 190, 190);
+    }
+
+    tbody {
+      tr {
+        &:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+
+        &:hover {
+          background-color: #f1f1f1;
+        }
+      }
+    }
+  }
+
+  
+}
+
