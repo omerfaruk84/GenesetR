@@ -286,14 +286,23 @@ const GeneSetEnrichmentTable = ({
     sorts
   );
 
-  const ClusterInfoForm = ({ title, value, value2 }) => (
+  const ClusterInfoForm = ({ title, subtitle, value, value2 }) => (
     <>
       <div style={{ width: "400px", height: "100%" }}>
-        <Card heading={<Heading top> {title} </Heading>}>
+        <Card
+          heading={
+            <div>
+              <Heading marginBottom={0} top>
+                {title}
+              </Heading>
+              <div style={{ color: "green" }}>{subtitle}</div>
+            </div>
+          }
+        >
           <Field label="Enriched Genes">
             <TextArea value={value} cols={100} rows={5} />
           </Field>
-          <Field label="Missing Genes">
+          <Field label="Missing Genes (in the cluster but not annotated in this process)">
             <TextArea value={value2} cols={100} rows={5} />
           </Field>
         </Card>
@@ -307,13 +316,16 @@ const GeneSetEnrichmentTable = ({
       ? genelistOptions
           .find((item) => item?.value === selectedCluster)
           .genes?.replaceAll("_2", "")
+          .replaceAll(" ", "")
           .split(",")
       : [];
+  allGenes = [...new Set(allGenes)];
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
       .map((dataRow) => {
         const datasetName = dataRow["Dataset"];
+        const subdatasetName = dataRow["Term name"];
         const rowsCells = Object.entries(dataRow).map(([key, value]) =>
           key === "GC"
             ? {
@@ -324,11 +336,10 @@ const GeneSetEnrichmentTable = ({
                 content: (
                   <ClusterInfoForm
                     title={datasetName}
+                    subtitle={subdatasetName}
                     value={value.join(", ")}
                     value2={allGenes
-                      .filter(
-                        (x) => !value.includes(x) && !value.includes(x + "_2")
-                      )
+                      .filter((x) => !value.includes(x.trim()))
                       .join(", ")}
                   />
                 ),
