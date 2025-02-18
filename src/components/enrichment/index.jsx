@@ -805,33 +805,42 @@ const GeneSetEnrichmentTable = ({
   }, [keyedData]);
 
   const [options2, setOptions2] = useState({});
-  //In the first run set the selected cluter to cluster 0
+
+  // Update gene list options only when genesets changes
   useEffect(() => {
     if (Object.keys(genesets).length > 0) {
       let tempx = [];
       Object.keys(genesets).forEach((gl) => {
-        if (genesets[gl].trim(",").split(",").length > 2)
+        if (genesets[gl].trim(",").split(",").length > 2) {
           tempx.push({
-            label:
-              gl + " (" + genesets[gl].trim(",").split(",").length + " genes)",
+            label: `${gl} (${genesets[gl].trim(",").split(",").length} genes)`,
             value: gl,
             genes: genesets[gl],
           });
+        }
       });
-
       setGeneListOptions(tempx);
-
-      if (tempx.length > 0 && selectedCluster !== tempx[0].value)
+      // Only set selectedCluster if it's not already set or if the current one isn’t in the new list.
+      if (
+        tempx.length > 0 &&
+        !tempx.some((item) => item.value === selectedCluster)
+      ) {
         setselectedCluster(tempx[0].value);
+      }
     }
-  }, [genesets, selectedCluster]);
+  }, [genesets]); // Notice: selectedCluster is no longer in the dependency array here
 
+  // Call performEnrichmentNow only when selectedCluster changes
   useEffect(() => {
-    let genesToEnrich = genelistOptions.find(
-      (item) => item.value === selectedCluster
-    )?.genes;
-    genesToEnrich && performEnrichmentNow(genesToEnrich);
-  }, [selectedCluster, genelistOptions]);
+    if (selectedCluster) {
+      const geneItem = genelistOptions.find(
+        (item) => item.value === selectedCluster
+      );
+      if (geneItem && geneItem.genes) {
+        performEnrichmentNow(geneItem.genes);
+      }
+    }
+  }, [selectedCluster]); // Only selectedCluster is tracked here
 
   const handleSaveGeneList = () => {
     let genesString = selectedCluster
@@ -994,6 +1003,7 @@ const GeneSetEnrichmentTable = ({
                         ? genelistOptions
                             .find((item) => item.value === selectedCluster)
                             .genes.replaceAll("_2", "")
+                            .replaceAll(" ", "")
                             .split(",")
                             .filter(
                               (gene) => !gene.trim().startsWith("non-targeting")

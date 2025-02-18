@@ -18,7 +18,6 @@ import { ROUTES, isActiveTab } from "../../common/routes";
 import { TabNames } from "./enums";
 //import styles from "./top-bar.module.scss";
 import styles from "./top-bar.module.scss";
-import loadingicon from "../../common/loading.gif";
 import heatmapicon from "../../common/images/heatmap.png";
 import clusteringicon from "../../common/images/clustering.png";
 //import generegicon from "../../common/images/generegulation.png";
@@ -102,7 +101,7 @@ const TopBar = () => {
         }))}
         title={{
           onClick: () => navigate(ROUTES.HOME),
-          version: "V1.6.0",
+          version: "V1.6.5",
           logo: <img alt="logo" src="/images/logo.png" />,
         }}
         contentRight={undefined}

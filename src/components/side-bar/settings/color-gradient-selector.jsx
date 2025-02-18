@@ -133,14 +133,20 @@ function ColorGradientSelector({ colorScale, onChange }) {
     const newIndex =
       (currentIndex - 1 + gradientKeys.length) % gradientKeys.length;
     setCurrentIndex(newIndex);
-    onChange(gradientKeys[newIndex]);
+    onChange({
+      color: gradientKeys[newIndex],
+      values: colorGradients[gradientKeys[newIndex]],
+    });
   };
 
   // Go right
   const handleRight = () => {
     const newIndex = (currentIndex + 1) % gradientKeys.length;
     setCurrentIndex(newIndex);
-    onChange(gradientKeys[newIndex]);
+    onChange({
+      color: gradientKeys[newIndex],
+      values: colorGradients[gradientKeys[newIndex]],
+    });
   };
 
   // Toggle dropdown
@@ -152,7 +158,10 @@ function ColorGradientSelector({ colorScale, onChange }) {
   const handlePick = (idx) => {
     setCurrentIndex(idx);
     setDropdownOpen(false);
-    onChange(gradientKeys[idx]);
+    onChange({
+      color: gradientKeys[idx],
+      values: colorGradients[gradientKeys[idx]],
+    });
   };
 
   // Some basic inline styles:

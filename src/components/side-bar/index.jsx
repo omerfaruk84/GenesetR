@@ -19,7 +19,7 @@ const SideBar = ({
   coreSettings,
   coreSettingsChanged,
 }) => {
-  const [sideBarWith, setSideBarWith] = useState(350);
+  const [sideBarWith, setSideBarWith] = useState(300);
   const handleSideBarResize = (size) => {
     if (size > 500 || size < 250) {
       return;

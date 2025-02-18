@@ -5,8 +5,8 @@ import PQueue from "p-queue";
 // Initialize a queue with limited concurrency & optional rate limit
 const queue = new PQueue({
   concurrency: 1, // up to 3 concurrent API calls
-  interval: 200, // each "window" is 1 second
-  intervalCap: 2, // max 5 requests per 1 second window
+  interval: 300, // each "window" is 1 second
+  intervalCap: 1, // max 5 requests per 1 second window
 });
 
 // Optional in-flight request cache so the same (geneList+datasets)
@@ -187,7 +187,7 @@ function runEnrichr(genes) {
             type: "Error",
             icon: true,
             heading: "Enrichr",
-            content: "Sorry. Enrichr servers are not responding.",
+            content: "Sorry. Enrichr servers are not responding." + error,
           },
           autoClose: 2000,
         });

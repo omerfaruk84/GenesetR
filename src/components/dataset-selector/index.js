@@ -44,6 +44,18 @@ const DatasetSelector = forwardRef(
       },
       {
         droppable: true,
+        id: "SC00003",
+        name: "K562 Essential-mixscape",       
+        onClick: () => updateActivityById("SC00003", 3300, 8425, true),
+        parent: 0,
+        active: false,
+        resultShape: "3300 8425",
+        perturbationCount: 3300,
+        geneCount: 8425,
+        isMixscape: true
+      },
+      {
+        droppable: true,
         id: "RPE1essential",
         name: "RPE1 Essential",
         onClick: () => updateActivityById("RPE1essential", 2679, 8749, false),
@@ -56,17 +68,29 @@ const DatasetSelector = forwardRef(
       },
       {
         droppable: true,
-        id: "TFAtlas",
-        name: "Transcription Factor Atlas",
-        onClick: () => updateActivityById("TFAtlas", 3367, 37528, false),
+        id: "SC00004",
+        name: "RPE1 Essential-mixscape",
+        onClick: () => updateActivityById("SC00004", 3939, 8688, true),
         parent: 0,
         active: false,
-        resultShape: "3367 37528",
-        perturbationCount: 3367,
-        geneCount: 37528,
-        isMixscape: false
-      },      
+        resultShape: "3939 8688",
+        perturbationCount: 3939,
+        geneCount: 8688,
+        isMixscape: true
+      },
       {
+        droppable: true,
+        id: "SC00065",
+        name: "HepG2 Essential",
+        onClick: () => updateActivityById("SC00065", 3667, 9503, true),
+        parent: 0,
+        active: false,
+        resultShape: "3667 9503",  //Cols vs Rows Perturbations vs Genes Need to fix
+        perturbationCount: 3667,
+        geneCount: 9503,
+        isMixscape: true
+      },
+       {
         droppable: true,
         id: "SC00066",
         name: "Jurkat Essential",
@@ -77,7 +101,56 @@ const DatasetSelector = forwardRef(
         perturbationCount: 1514,
         geneCount: 8811,
         isMixscape: true
-      },   
+      }, 
+      /*
+      {
+        droppable: true,
+        id: "TFAtlas",
+        name: "Transcription Factor Atlas",
+        onClick: () => updateActivityById("TFAtlas", 3367, 19603, false),
+        parent: 0,
+        active: false,
+        resultShape: "3367 19603",
+        perturbationCount: 3367,
+        geneCount: 19603,
+        isMixscape: false
+      }, */
+       {
+        droppable: true, //Crispra
+        id: "SC00048",
+        name: "Transcription Factor Atlas - MixScape",
+        onClick: () => updateActivityById("SC00048", 142, 11796, true),
+        parent: 0,
+        active: false,
+        resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 142,
+        geneCount: 11796,
+        isMixscape: true
+      },
+      {
+        droppable: true, //Crispra
+        id: "SC00047",
+        name: "Transcription Factor Atlas - ShareSeq",
+        onClick: () => updateActivityById("SC00047", 185, 12221, true),
+        parent: 0,
+        active: false,
+        resultShape: "185 12221",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 185,
+        geneCount: 12221,
+        isMixscape: true
+      },           
+      {
+        droppable: true,
+        id: "SC00001",
+        name: "THP1 - regulators of immune check points",
+        onClick: () => updateActivityById("SC00001", 36, 9873, true),
+        parent: 0,
+        active: false,
+        resultShape: "36 9873",  //Cols vs Rows Perturbations vs Genes
+        perturbationCount: 36,
+        geneCount: 9873,
+        isMixscape: true
+      }, 
       {
         droppable: true,
         id: "SC00015",
@@ -138,30 +211,7 @@ const DatasetSelector = forwardRef(
         geneCount: 11401,
         isMixscape: true
       },          
-      {
-        droppable: true, //Crispra
-        id: "SC00048",
-        name: "Transcription Factor Atlas - MixScape",
-        onClick: () => updateActivityById("SC00048", 142, 11796, true),
-        parent: 0,
-        active: false,
-        resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 142,
-        geneCount: 11796,
-        isMixscape: true
-      },
-      {
-        droppable: true, //Crispra
-        id: "SC00047",
-        name: "Transcription Factor Atlas - ShareSeq",
-        onClick: () => updateActivityById("SC00047", 185, 12221, true),
-        parent: 0,
-        active: false,
-        resultShape: "185 12221",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 185,
-        geneCount: 12221,
-        isMixscape: true
-      },     
+         
       {
         droppable: true, 
         id: "SC00037",
@@ -185,20 +235,8 @@ const DatasetSelector = forwardRef(
         perturbationCount: 32,
         geneCount: 9949,
         isMixscape: true
-      },
-         /*
-      {
-        droppable: true,
-        id: "SC00065",
-        name: "HepG2 Essential",
-        onClick: () => updateActivityById("SC00065", 623, 11690, true),
-        parent: 0,
-        active: false,
-        resultShape: "623 11690",  //Cols vs Rows Perturbations vs Genes Need to fix
-        perturbationCount: 623,
-        geneCount: 11690,
-        isMixscape: true
-      },*/
+      },         
+      
     ]);
 
     const location = useLocation();  

@@ -3,16 +3,18 @@ import { createSlice } from '@reduxjs/toolkit';
 
 
 const initialState = {    
-  color_scale: {
+  color_scale: {color: "BuWhRd",
+  values: {
     start: { r: 33, g: 113, b: 181 },
     middle: { r: 255, g: 255, b: 255 },
     end: { r: 215, g: 25, b: 28 },
-  },
+  }},
   width_ratio: '0.9',
   draw_row_ids: 'True',
   show_row_dendrogram: 'True', 
   show_column_dendrogram: 'Ture',  
-  color_percentile: {minValue:-1, maxValue:1},
+  color_percentile_min: -1, 
+  color_percentile_max: 1,  
   max_column_width:'100',
   max_row_height: '25', 
   show_column_names: 'True',

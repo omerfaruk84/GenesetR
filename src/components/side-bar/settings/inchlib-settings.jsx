@@ -44,8 +44,8 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
   useEffect(() => {
     // Safety check in case color_scale is missing or invalid
     if (
-      !inchlibSettings.color_scale?.start ||
-      !inchlibSettings.color_scale?.end
+      !inchlibSettings.color_scale?.values?.start ||
+      !inchlibSettings.color_scale?.values?.end
     ) {
       return;
     }
@@ -53,13 +53,14 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
     // Query the slider DOM node (assuming only ONE slider on this page;
     // if multiple, you'd need something more specific, like a ref or a custom class)
     const sliderEl = document.querySelector(".multi-range-slider");
+
     if (!sliderEl) return;
 
     // 3) Compute your colors from the color scale
     const colorScale = inchlibSettings.color_scale;
-    const startColor = rgbString(colorScale.start);
-    const endColor = rgbString(colorScale.end);
-    const gradient = get3StopGradient(colorScale); // 2 or 3-stop gradient
+    const startColor = rgbString(colorScale.values?.start);
+    const endColor = rgbString(colorScale.values?.end);
+    const gradient = get3StopGradient(colorScale.values); // 2 or 3-stop gradient
 
     // 4) Grab the relevant child elements
     const barLeft = sliderEl.querySelector(".bar-left");
@@ -72,7 +73,11 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
     if (barLeft) barLeft.style.background = startColor;
     if (barRight) barRight.style.background = endColor;
     if (barInner) barInner.style.background = gradient;
-  }, [inchlibSettings.color_scale]);
+  }, [
+    inchlibSettings.color_scale.values,
+    inchlibSettings.color_percentile_max,
+    inchlibSettings.color_percentile_min,
+  ]);
 
   return (
     <>
@@ -114,8 +119,12 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
           subSteps={1}
           onInput={(e) => {
             inchlibSettingsChanged({
-              settingName: InchlibSettingsTypes.COLOR_PERCENTILE,
-              newValue: e,
+              settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MIN,
+              newValue: e.minValue,
+            });
+            inchlibSettingsChanged({
+              settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MAX,
+              newValue: e.maxValue,
             });
           }}
         />

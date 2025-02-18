@@ -86,11 +86,22 @@ const AboutPage = () => {
             🎺 GeneSetR will push the heatmap limits to over 1000 X 1000,
             significantly larger than the current ~300 X 300 size limit.
           </p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-14</span>
+          <p>A major bug leading to memory leak and crashes has been fixed.</p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-07</span>
+          <p>
+            We have added three new datasets to GeneSetR. And some small bugs
+            are fixed.
+          </p>
+
           <hr
             style={{
               height: 1,
             }}
           />
+
           <span className={styles.updateDate}>2025-01-20</span>
           <p>5 more datasets are added to GeneSetR. Several bugs are fixed.</p>
           <hr style={{ height: 1 }} />
@@ -264,6 +275,17 @@ const AboutPage = () => {
                 <td>8,563</td>
               </tr>
               <tr>
+                <td>K562 Essential - Mixscape</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>3,300</td>
+                <td>8,425</td>
+              </tr>
+              <tr>
                 <td>RPE1 Essential</td>
                 <td>
                   Mapping information-rich genotype-phenotype landscapes with
@@ -275,14 +297,25 @@ const AboutPage = () => {
                 <td>8,749</td>
               </tr>
               <tr>
-                <td>Transcription Factor Atlas</td>
+                <td>RPE1 Essential - Mixscape</td>
                 <td>
-                  A transcription factor atlas of directed differentiation
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
                 </td>
-                <td>ORF overexpression</td>
-                <td>hESCs</td>
-                <td>3,367</td>
-                <td>37,528</td>
+                <td>CRISPRi</td>
+                <td>RPE1</td>
+                <td>3,939</td>
+                <td>8,688</td>
+              </tr>
+              <tr>
+                <td>HepG2 Essential</td>
+                <td>
+                  Transcriptome-wide characterization of genetic perturbations
+                </td>
+                <td>CRISPRi</td>
+                <td>HepG2</td>
+                <td>3,667</td>
+                <td>9,503</td>
               </tr>
               <tr>
                 <td>Jurkat Essential</td>
@@ -293,6 +326,39 @@ const AboutPage = () => {
                 <td>Jurkat</td>
                 <td>1,514</td>
                 <td>8,811</td>
+              </tr>
+              <tr>
+                <td>Transcription Factor Atlas - MixScape analyses</td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>142</td>
+                <td>11,796</td>
+              </tr>
+              <tr>
+                <td>
+                  Transcription Factor Atlas - ShareSeq (MixScape analyses)
+                </td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>185</td>
+                <td>12,221</td>
+              </tr>
+              <tr>
+                <td>THP1 - regulators of immune check points</td>
+                <td>
+                  Characterizing the molecular regulation of inhibitory immune
+                  checkpoints with multimodal single-cell screens
+                </td>
+                <td>CRISPR KO</td>
+                <td>THP1</td>
+                <td>36</td>
+                <td>9873</td>
               </tr>
               <tr>
                 <td>Calu-3 SARS-CoV-2 host factors</td>
@@ -348,28 +414,6 @@ const AboutPage = () => {
                 <td>iPSC induced neurons</td>
                 <td>186</td>
                 <td>11,401</td>
-              </tr>
-              <tr>
-                <td>Transcription Factor Atlas - MixScape analyses</td>
-                <td>
-                  A transcription factor atlas of directed differentiation
-                </td>
-                <td>ORF Overexpression</td>
-                <td>hESCs</td>
-                <td>142</td>
-                <td>11,796</td>
-              </tr>
-              <tr>
-                <td>
-                  Transcription Factor Atlas - ShareSeq (MixScape analyses)
-                </td>
-                <td>
-                  A transcription factor atlas of directed differentiation
-                </td>
-                <td>ORF Overexpression</td>
-                <td>hESCs</td>
-                <td>185</td>
-                <td>12,221</td>
               </tr>
               <tr>
                 <td>HEK293-idCas9</td>
