@@ -231,6 +231,11 @@ const GenelistCompareSettingsTypes = {
   DOTPADDING: "dotpadding",
   CHARTFONTSIZE: "chartfontsize",
   LABELFONTSIZE: "labelfontsize",
+  SETLABELFONTSIZE: "setlabelfontsize", // New: specific font size for set labels
+  VENNDIAGRAMFONTSIZE: "venndiagramfontsize", // New: font size for Venn diagram text
+  FONTFAMILY: "fontfamily", // New: font family setting
+  FONTWEIGHT: "fontweight", // New: font weight setting
+  FONTSTYLE: "fontstyle", // New: font style setting
   SETHEIGHTRATIO: "setheightratio",
   SETWIDTHRATIO: "setwidthtratio",
   SETTOLABEL: "settolabel",

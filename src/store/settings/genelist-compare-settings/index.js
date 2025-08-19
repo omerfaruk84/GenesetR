@@ -13,6 +13,11 @@ const initialState = {
   dotpadding: 0.7,
   chartfontsize: 15,
   labelfontsize: 15,
+  setlabelfontsize: 14, // New: specific font size for set labels
+  venndiagramfontsize: 16, // New: font size for Venn diagram text
+  fontfamily: "Arial, sans-serif", // New: font family setting
+  fontweight: "normal", // New: font weight setting
+  fontstyle: "normal", // New: font style setting
   setheightratio: 0.6,
   setwidthtratio: 0.7,
   settolabel: 0.3,

@@ -43,3 +43,56 @@
 .wait_message {
   margin-top: 20px;
 }
+
+// CSS to ensure font settings are applied to SVG elements
+:global(.upsetjs) {
+  svg {
+    text {
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      font-style: inherit !important;
+    }
+  }
+}
+
+:global(.venndiagram) {
+  svg {
+    text {
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      font-style: inherit !important;
+    }
+    // Target only Venn diagram content text with specific font size
+    .valueTextStyle-venndiagram,
+    .setTextStyle-venndiagram,
+    .titleTextStyle-venndiagram,
+    .descTextStyle-venndiagram,
+    .legendTextStyle-venndiagram {
+      font-size: var(--venn-font-size, 16px) !important;
+    }
+    // Keep export buttons at their original size
+    .exportTextStyle-venndiagram {
+      font-size: 10px !important;
+    }
+  }
+}
+
+:global(.upsetjs) {
+  svg {
+    text {
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      font-style: inherit !important;
+      font-size: inherit !important;
+    }
+    // Exclude export buttons from font size inheritance
+    .exportButtons text,
+    .exportButton text,
+    .exportTextStyle,
+    .exportButtons-venndiagram text,
+    .exportButton-venndiagram text,
+    .exportTextStyle-venndiagram {
+      font-size: 12px !important;
+    }
+  }
+}

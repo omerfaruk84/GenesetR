@@ -477,6 +477,138 @@ const GenelistCompareSettings = ({
         </div>
       </Field>
 
+      <Field //setlabelfontsize
+        label="Set Label Font Size"
+        labelLeft
+        labelWidth={150}
+        helpText="Set font size for set labels specifically"
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            label={genelistcompareSettings?.setlabelfontsize}
+            max={100}
+            min={5}
+            value={genelistcompareSettings?.setlabelfontsize}
+            onChange={({ target: { value } }) =>
+              genelistcompareSettingsChanged({
+                settingName: GenelistCompareSettingsTypes.SETLABELFONTSIZE,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
+
+      <Field //venndiagramfontsize
+        label="Venn Diagram Font Size"
+        labelLeft
+        labelWidth={150}
+        helpText="Set font size for Venn diagram text"
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            label={genelistcompareSettings?.venndiagramfontsize}
+            max={100}
+            min={5}
+            value={genelistcompareSettings?.venndiagramfontsize}
+            onChange={({ target: { value } }) =>
+              genelistcompareSettingsChanged({
+                settingName: GenelistCompareSettingsTypes.VENNDIAGRAMFONTSIZE,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
+
+      <Field //fontfamily
+        label="Font Family"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font family for all text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTFAMILY,
+              newValue: value,
+            })
+          }
+          options={[
+            "Arial, sans-serif",
+            "Helvetica, sans-serif", 
+            "Times New Roman, serif",
+            "Georgia, serif",
+            "Verdana, sans-serif",
+            "Tahoma, sans-serif",
+            "Trebuchet MS, sans-serif",
+            "Courier New, monospace",
+            "Lucida Console, monospace",
+            "Impact, sans-serif"
+          ]}
+          value={genelistcompareSettings?.fontfamily}
+        />
+      </Field>
+
+      <Field //fontweight
+        label="Font Weight"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font weight for text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTWEIGHT,
+              newValue: value,
+            })
+          }
+          options={[
+            "normal",
+            "bold",
+            "bolder",
+            "lighter",
+            "100",
+            "200", 
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ]}
+          value={genelistcompareSettings?.fontweight}
+        />
+      </Field>
+
+      <Field //fontstyle
+        label="Font Style"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font style for text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTSTYLE,
+              newValue: value,
+            })
+          }
+          options={[
+            "normal",
+            "italic",
+            "oblique"
+          ]}
+          value={genelistcompareSettings?.fontstyle}
+        />
+      </Field>
+
+
+
       <Field //setheightratio
         label="Combination to Set Height Ratio"
         labelLeft

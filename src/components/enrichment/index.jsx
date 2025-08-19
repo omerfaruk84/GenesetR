@@ -95,6 +95,8 @@ const onChange = (currentNode, selectedNodes) => {
   checkNode(data, currentNode.path, currentNode.checked);
 };
 
+
+
 /*
 Container component manages state and configuration of table
         */
@@ -150,7 +152,10 @@ const GeneSetEnrichmentTable = ({
   const performEnrichmentNow = function (genes) {
     let selectedDatasets = [];
 
-    for (let obj of data) {
+    // Use tempData if available (for modal preview), otherwise use original data
+    const dataToUse = tempData || data;
+    
+    for (let obj of dataToUse) {
       selectedDatasets = selectedDatasets.concat(findCheckedLeaves(obj));
     }
 
@@ -212,6 +217,67 @@ const GeneSetEnrichmentTable = ({
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [datasetVisible, setdatasetVisible] = useState(false);
+  const [tempData, setTempData] = useState(null); // Store temporary dataset changes
+  const [searchTerm, setSearchTerm] = useState(""); // Search term for filtering
+
+  // Function to handle dataset changes in the modal
+  const handleDatasetChange = (currentNode, selectedNodes) => {
+    // Create a deep copy of the data for temporary changes
+    const dataCopy = JSON.parse(JSON.stringify(tempData || data));
+    
+    // Update the specific node that was clicked
+    checkNode(dataCopy, currentNode.path, currentNode.checked);
+    
+    // If it's a parent node, also update all children
+    if (currentNode.children && currentNode.children.length > 0) {
+      const updateChildren = (node, checked) => {
+        if (node.children) {
+          node.children.forEach(child => {
+            child.checked = checked;
+            updateChildren(child, checked);
+          });
+        }
+      };
+      updateChildren(currentNode, currentNode.checked);
+    }
+    
+    setTempData(dataCopy);
+  };
+
+  // Function to filter data based on search term
+  const filterData = (data, searchTerm) => {
+    if (!searchTerm || !Array.isArray(data)) return data;
+    
+    const filterNode = (node) => {
+      if (!node || !node.label) return null;
+      
+      const matchesSearch = node.label.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (node.children && Array.isArray(node.children)) {
+        const filteredChildren = node.children.map(filterNode).filter(Boolean);
+        if (filteredChildren.length > 0 || matchesSearch) {
+          return { ...node, children: filteredChildren, expanded: true };
+        }
+        return null;
+      }
+      
+      return matchesSearch ? node : null;
+    };
+    
+    return data.map(filterNode).filter(Boolean);
+  };
+
+  // Function to ensure all nodes are expanded
+  const ensureExpanded = (data) => {
+    if (!Array.isArray(data)) {
+      return data;
+    }
+    return data.map(node => ({
+      ...node,
+      expanded: true,
+      children: node.children ? ensureExpanded(node.children) : undefined
+    }));
+  };
 
   useEffect(() => {
     setSelectedPage(1);
@@ -855,6 +921,32 @@ const GeneSetEnrichmentTable = ({
     }
   };
 
+  // Handle accepting dataset changes
+  const handleAcceptDatasets = () => {
+    if (tempData) {
+      // Apply the temporary changes to the original data
+      Object.assign(data, tempData);
+      setTempData(null);
+    }
+    setdatasetVisible(false);
+    
+    // Refresh enrichment with new datasets
+    if (selectedCluster) {
+      const geneItem = genelistOptions.find(
+        (item) => item.value === selectedCluster
+      );
+      if (geneItem && geneItem.genes) {
+        performEnrichmentNow(geneItem.genes);
+      }
+    }
+  };
+
+  // Handle canceling dataset changes
+  const handleCancelDatasets = () => {
+    setTempData(null);
+    setdatasetVisible(false);
+  };
+
   return (
     <>
       <div
@@ -893,48 +985,125 @@ const GeneSetEnrichmentTable = ({
               }}
             >
               <Modal centered={true} visible={datasetVisible}>
-                <Flex flex direction={"column"}>
+                <div
+                  style={{
+                    backgroundColor: "white",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    minWidth: "600px",
+                    maxWidth: "800px",
+                    maxHeight: "80vh",
+                    overflow: "auto",
+                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
                   <div
                     style={{
-                      backgroundColor: "white",
-                      border: "solid",
-                      borderColor: "orange",
-                      alignItems: "flex-end",
                       display: "flex",
-                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      borderBottom: "1px solid #f3f4f6",
+                      paddingBottom: "12px",
                     }}
                   >
-                    <div
-                      style={{
-                        backgroundColor: "white",
-                        alignItems: "flex-end",
-                        display: "flex",
-                        padding: "2px",
-                      }}
-                    >
-                      <Button
-                        padding
-                        colored
-                        round
-                        small
-                        margin-top={20}
-                        onClick={() => {
-                          setdatasetVisible(false);
+                    <Heading size="medium" style={{ color: "#1f2937", margin: 0 }}>
+                      Select Datasets for Enrichment
+                    </Heading>
+                    <Button
+                      padding
+                      colored
+                      round
+                      small
+                      onClick={handleCancelDatasets}
+                      icon={<FaTimesCircle />}
+                      style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
+                    />
+                  </div>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <div style={{ marginBottom: "8px" }}>
+                      <input
+                        type="text"
+                        placeholder="Search datasets..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          color: "#374151",
+                          backgroundColor: "white",
+                          outline: "none",
+                          transition: "border-color 0.2s ease, box-shadow 0.2s ease",
                         }}
-                        icon={<FaTimesCircle />}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#3b82f6";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#e5e7eb";
+                          e.target.style.boxShadow = "none";
+                        }}
                       />
                     </div>
                     <DropdownTreeSelect
-                      data={data}
-                      onChange={onChange}
-                      //onAction={onAction}
+                      data={ensureExpanded(filterData(tempData || data, searchTerm)) || []}
+                      onChange={handleDatasetChange}
                       showDropdown="always"
                       className="mdl-demo"
-                      //keepChildrenOnSearch={true}
-                      //keepOpenOnSelect ={true}
+                      keepOpenOnSelect={true}
+                      keepChildrenOnSearch={true}
+                      mode="multiSelect"
+                      showDropdownButton={false}
+                      keepTreeOnSearch={true}
                     />
                   </div>
-                </Flex>
+                  
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "12px",
+                      marginTop: "16px",
+                      borderTop: "1px solid #f3f4f6",
+                      paddingTop: "12px",
+                    }}
+                  >
+                    <Button
+                      label="Cancel"
+                      small
+                      onClick={handleCancelDatasets}
+                      style={{ 
+                        backgroundColor: "#f3f4f6", 
+                        color: "#374151",
+                        border: "1px solid #d1d5db",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        fontWeight: "500"
+                      }}
+                    />
+                    <Button
+                      label="Accept"
+                      colored
+                      small
+                      onClick={handleAcceptDatasets}
+                      style={{ 
+                        backgroundColor: "#3b82f6", 
+                        color: "white",
+                        border: "1px solid #2563eb",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        fontWeight: "500"
+                      }}
+                    />
+                  </div>
+                </div>
               </Modal>
 
               <Button
@@ -943,6 +1112,8 @@ const GeneSetEnrichmentTable = ({
                 small
                 width={80}
                 onClick={() => {
+                  // Initialize tempData with current data when opening modal
+                  setTempData(JSON.parse(JSON.stringify(data)));
                   setdatasetVisible(true);
                 }}
                 icon={<FaDatabase />}

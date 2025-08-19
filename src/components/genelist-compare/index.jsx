@@ -181,6 +181,39 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
   useEffect(() => {
     console.log('genelists changed:', genelists);
   }, [genelists]);
+
+  // Effect to update Venn diagram font sizes when settings change
+  useEffect(() => {
+    if (genelistcompareSettings?.showvenn && sets.length > 0) {
+      // Small delay to ensure SVG is fully rendered
+      const timer = setTimeout(() => {
+        const vennContainer = document.querySelector('.venndiagram svg');
+        if (vennContainer) {
+          const fontSize = (genelistcompareSettings?.venndiagramfontsize || 16) + "px";
+          
+          // Update combination numbers (inside circles)
+          const valueTexts = vennContainer.querySelectorAll('.valueTextStyle-venndiagram');
+          valueTexts.forEach(text => {
+            text.style.fontSize = fontSize;
+          });
+          
+          // Update set labels (outside circles)
+          const setTexts = vennContainer.querySelectorAll('.setTextStyle-venndiagram');
+          setTexts.forEach(text => {
+            text.style.fontSize = fontSize;
+          });
+          
+          // Keep export buttons at original size
+          const exportTexts = vennContainer.querySelectorAll('.exportTextStyle-venndiagram');
+          exportTexts.forEach(text => {
+            text.style.fontSize = '10px';
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [genelistcompareSettings?.venndiagramfontsize, genelistcompareSettings?.showvenn, sets.length]);
   
   function mergeColors(colors) {
     if (colors.length === 0) {
@@ -295,9 +328,11 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
             marginBottom: "20px",
             alignItems: "center",
             flexWrap: "wrap",
-
             background:
               genelistcompareSettings?.theme === "Dark" ? "black" : "white",
+            fontFamily: genelistcompareSettings?.fontfamily || "Arial, sans-serif",
+            fontWeight: genelistcompareSettings?.fontweight || "normal",
+            fontStyle: genelistcompareSettings?.fontstyle || "normal",
           }}
         >
           <SelectionContext.Provider value={{ selection, setSelection }}>
@@ -305,45 +340,57 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
               <>
                 {genelistcompareSettings?.showcomparison && (
                   <>
-                    <UpSetSelection
-                      sets={sets}
-                      onClick={handleSelection}
-                      combinations={combinations.filter((x) => {
-                        return (
-                          x.elems.length > (genelistcompareSettings?.minsetmember || 0)
-                        );
-                      })}
-                      width={Math.min(
-                        document.getElementById("maincontainer")?.offsetWidth -
-                          50,
-                        sets ? sets.length * 120 + 150 : 300
-                      )}
-                      height={350}
-                      barPadding={genelistcompareSettings?.barpadding || 0}
-                      theme={genelistcompareSettings?.theme?.toLowerCase()}
-                      dotPadding={genelistcompareSettings?.dotpadding || 0}
-                      widthRatios={genelistcompareSettings?.widthRatios}
-                      heightRatios={[genelistcompareSettings?.setheightratio || 1]}
-                      fontSizes={{
-                        chartLabel:
-                          (genelistcompareSettings?.chartfontsize || 12) + "px",
-                        setLabel: (genelistcompareSettings?.labelfontsize || 12) + "px",
-                        axisTick: (genelistcompareSettings?.chartfontsize || 12) + "px",
-                        barLabel: (genelistcompareSettings?.chartfontsize || 12) + "px",
-                      }}
-                      //barLabelOffset={genelistcompareSettings.dotpadding}
-                      //fontSizes={genelistcompareSettings.chartfontsize}
-                      //setNameAxisOffset={genelistcompareSettings.settolabel}
+                    <div className="upsetjs">
+                      <UpSetSelection
+                                                                   
+                        sets={sets}
+                        onClick={handleSelection}
+                        combinations={combinations.filter((x) => {
+                          return (
+                            x.elems.length > (genelistcompareSettings?.minsetmember || 0)
+                          );
+                        })}
+                        width={Math.min(
+                          document.getElementById("maincontainer")?.offsetWidth -
+                            50,
+                          sets ? sets.length * 120 + 150 : 300
+                        )}
+                        height={350}
+                        
+                        barPadding={genelistcompareSettings?.barpadding || 0}
+                        theme={genelistcompareSettings?.theme?.toLowerCase()}
+                        dotPadding={genelistcompareSettings?.dotpadding || 0}
+                        widthRatios={genelistcompareSettings?.widthRatios}
+                        heightRatios={[genelistcompareSettings?.setheightratio || 1]}
+                        fontSizes={{
+                          chartLabel:
+                            (genelistcompareSettings?.chartfontsize || 12) + "px",
+                          setLabel: (genelistcompareSettings?.setlabelfontsize || genelistcompareSettings?.labelfontsize || 12) + "px",
+                          axisTick: (genelistcompareSettings?.chartfontsize || 12) + "px",
+                          barLabel: (genelistcompareSettings?.chartfontsize || 12) + "px",
+                        }}
+                        fontFamily={genelistcompareSettings?.fontfamily || "Arial, sans-serif"}
+                        fontWeight={genelistcompareSettings?.fontweight || "normal"}
+                        fontStyle={genelistcompareSettings?.fontstyle || "normal"}
+                      />
+                    </div>
+                      {/* barLabelOffset={genelistcompareSettings.dotpadding}
+                      fontSizes={genelistcompareSettings.chartfontsize}
+                      setNameAxisOffset={genelistcompareSettings.settolabel}
 
-                      //minsetmember
-                      //labelfontsize
-                    />
+                      minsetmember
+                      labelfontsize */}
                   </>
                 )}
                 {genelistcompareSettings?.showvenn && (
                   <>
                     <Spacer height={30} />
-                    <div>
+                    <div 
+                      className="venndiagram"
+                      style={{
+                        '--venn-font-size': (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
+                      }}
+                    >
                       <VennDiagramSelection
                         onClick={handleSelection}
                         sets={sets}
@@ -360,6 +407,15 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
                         height={250}
                         settings={genelistcompareSettings}
                         theme={genelistcompareSettings?.theme?.toLowerCase()}
+                        fontFamily={genelistcompareSettings?.fontfamily || "Arial, sans-serif"}
+                        fontWeight={genelistcompareSettings?.fontweight || "normal"}
+                        fontStyle={genelistcompareSettings?.fontstyle || "normal"}
+                        fontSizes={{
+                          setLabel: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
+                          combinationLabel: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
+                          combinationSize: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
+                        }}
+                        combinationFontSize={(genelistcompareSettings?.venndiagramfontsize || 16) + "px"}
                       />
                     </div>
                   </>
