@@ -7,7 +7,7 @@
   align-items: center;
   min-height: 100vh;
   justify-items: center;
-  margin-top: 1em;
+  margin-top: 40px;
   margin-bottom: 20px;
   margin-left: auto;
   margin-right: auto;
@@ -16,10 +16,77 @@
 
 .parentOfMainView {
   display: flex;
-  margin-left: 25vw;
-  width: 50vw;
-  justify-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
 
+@media (max-width: 900px) {
+  .parentOfMainView {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .parentOfMainView {
+    display: block;
+    padding: 0 2px;
+  }
+  .mainView {
+    max-width: 100%;
+    padding: 4px;
+    margin-top: 20px;
+  }
+  .infoSection {
+    font-size: 0.95em;
+    margin-bottom: 12px;
+  }
+  .glass-panel {
+    padding: 8px;
+  }
+  .glass-panel h2 {
+    font-size: 1.1em;
+  }
+  .glass-button {
+    font-size: 14px;
+    padding: 8px 6px;
+    height: auto;
+    min-height: 38px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+  .mainView h1 {
+    font-size: 1.3em !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .mainView {
+    padding: 2px;
+    margin-top: 10px;
+  }
+  .infoSection {
+    font-size: 0.85em;
+  }
+  .glass-panel {
+    padding: 4px;
+  }
+  .glass-panel h2 {
+    font-size: 1em;
+  }
+  .glass-button {
+    font-size: 12px;
+    padding: 6px 3px;
+    min-height: 32px;
+  }
+  .mainView h1 {
+    font-size: 1.1em !important;
+  }
 }
 
 .cookie_consent_container {

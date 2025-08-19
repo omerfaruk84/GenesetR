@@ -21,118 +21,122 @@ const MainView = () => {
     <Router>
       <div className={styles.mainView}>
         <TopBar />
-        <div className={styles.contentWrapper}>
-          {/* Flexbox container */}
-          <Spacer />
-          <Routes>
-            {/* Home page route without SideBar */}
-            <Route exact path={ROUTES.HOME} element={<MainPage />} />
-            <Route exact path={ROUTES.ABOUTUS} element={<AboutPage />} />
-            {/* Other page routes with SideBar */}
-            <Route
-              path="*"
-              element={
-                <>
-                  <div className={styles.flexContainer}>
-                    {/* Route Wrapper with flex */}
-                    <SideBar />
-                    <div className={styles.routeContent}>
-                      {" "}
-                      {/* Scrollable content area */}
-                      <Routes>
-                        <Route
-                          exact
-                          path={ROUTES.DR}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.DR + "/pca"}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.PCA}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.MDE}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.UMAP}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.TSNE}
-                          element={<DimReductionPage />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.CORRELATION}
-                          element={
-                            <CorrelationPage path={ROUTES.CORRELATION} />
-                          }
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.PATHFINDER}
-                          element={<PathFinderPage path={ROUTES.PATHFINDER} />}
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.GENESIGNATURE}
-                          element={
-                            <GeneSignaturePage path={ROUTES.GENESIGNATURE} />
-                          }
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.EXPRESSIONANALYZER}
-                          element={
-                            <ExpressionAnalyzerPage
-                              path={ROUTES.EXPRESSIONANALYZER}
-                            />
-                          }
-                        />
-                        <Route
-                          exact
-                          path={ROUTES.HEATMAP}
-                          element={<HeatMapPage path={ROUTES.HEATMAP} />}
-                        />
-                        {
-                          <Route
-                            exact
-                            path={ROUTES.GENELISTCOMPARE}
-                            element={
-                              <GenelistCompare path={ROUTES.GENELISTCOMPARE} />
-                            }
+        <Routes>
+          {/* Home page route without SideBar */}
+          <Route
+            exact
+            path={ROUTES.HOME}
+            element={
+              <div className={styles.homeContentWrapper}>
+                <MainPage />
+              </div>
+            }
+          />
+          <Route exact path={ROUTES.ABOUTUS} element={<AboutPage />} />
+          {/* Other page routes with SideBar */}
+          <Route
+            path="*"
+            element={
+              <div className={styles.contentWrapper}>
+                <Spacer />
+                {/* Flexbox container */}
+                <div className={styles.flexContainer}>
+                  {/* Route Wrapper with flex */}
+                  <SideBar />
+                  <div className={styles.routeContent}>
+                    {/* Scrollable content area */}
+                    <Routes>
+                      <Route
+                        exact
+                        path={ROUTES.DR}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.DR + "/pca"}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.PCA}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.MDE}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.UMAP}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.TSNE}
+                        element={<DimReductionPage />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.CORRELATION}
+                        element={
+                          <CorrelationPage path={ROUTES.CORRELATION} />
+                        }
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.PATHFINDER}
+                        element={<PathFinderPage path={ROUTES.PATHFINDER} />}
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.GENESIGNATURE}
+                        element={
+                          <GeneSignaturePage path={ROUTES.GENESIGNATURE} />
+                        }
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.EXPRESSIONANALYZER}
+                        element={
+                          <ExpressionAnalyzerPage
+                            path={ROUTES.EXPRESSIONANALYZER}
                           />
                         }
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.HEATMAP}
+                        element={<HeatMapPage path={ROUTES.HEATMAP} />}
+                      />
+                      {
                         <Route
                           exact
-                          path={ROUTES.GENE_REGULATION}
+                          path={ROUTES.GENELISTCOMPARE}
                           element={
-                            <GeneRegulationPage path={ROUTES.GENE_REGULATION} />
+                            <GenelistCompare path={ROUTES.GENELISTCOMPARE} />
                           }
                         />
+                      }
+                      <Route
+                        exact
+                        path={ROUTES.GENE_REGULATION}
+                        element={
+                          <GeneRegulationPage path={ROUTES.GENE_REGULATION} />
+                        }
+                      />
 
-                        <Route path="*" element={<NotFoundPage />} />
-                      </Routes>
-                    </div>{" "}
-                    {/* End of routeContent */}
-                  </div>{" "}
-                </>
-              }
-            />
-          </Routes>
-        </div>{" "}
-        {/* End of contentWrapper */}
-      </div>{" "}
-      {/* End of mainView */}
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Routes>
+                  </div>
+                  {/* End of routeContent */}
+                </div>
+                {/* End of flexContainer */}
+              </div>
+            }
+          />
+        </Routes>
+      </div>
     </Router>
   );
 };

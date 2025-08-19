@@ -15,16 +15,31 @@ import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { LoadingPage } from "../loading-page";
 import { throttle } from "lodash";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+const moduleDescription = {
+  title: "Interactive Heatmap Visualization",
+  description: "This module creates heatmaps from the selected perturbation data, allowing you to input lists of genes and perturbations to render gene expression data with customizable clustering on both rows and columns.",
+  features: [
+    "Customizable clustering parameters for rows and columns",
+    "Interactive zoom and pan functionality", 
+    "Color scale adjustments and percentile controls",
+    "One-click gene list creation from clusters",
+    "Integrated gene set enrichment analysis (GSEA)"
+  ],  
+};
 
 const HeatMap = ({
   graphData,
   correlationSettings,
   inchlibSettings,
   calcResults,
+  showDescription = true,
 }) => {
   const [selectedGenes, setSelectedGenes] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
-  const [keyedData, setKeyedData] = useState([]);
+  //const [keyedData, setKeyedData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const heatmapContainerRef = useRef(null);
@@ -32,6 +47,8 @@ const HeatMap = ({
   const inchlibInstance = useRef(null);
   const transformWrapperRef = useRef(null);
   const resizeObserverRef = useRef(null);
+  const instanceIdRef = useRef(0);
+  const isMountedRef = useRef(false);
 
   const columns = useMemo(
     () => [
@@ -90,34 +107,171 @@ const HeatMap = ({
   }, [graphData]);
 
   useEffect(() => {
-    if (graphData?.data?.nodes) {
-      const tableInfo = [];
-      for (let i in graphData.data.nodes) {
-        if (graphData.data.nodes[i].count === 1) {
-          let gene1 = graphData.data.nodes[i].objects[0];
-          for (let j in graphData.data.nodes[i].features) {
-            const value = graphData.data.nodes[i].features[j];
-            if (
-              graphData.data.feature_names[j] !== gene1 &&
-              (value > 0.05 || value < -0.05)
-            ) {
-              tableInfo.push({
-                "Gene 1": gene1,
-                "Gene 2": graphData.data.feature_names[j],
-                "Corr R": value,
-              });
-            }
-          }
-        } else {
-          break;
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      transformWrapperRef.current?.resetTransform();
+    transformWrapperRef.current = null;
+    };
+  }, []);
+
+const keyedData = useMemo(() => {
+  if (!graphData?.data?.nodes) return [];
+
+  const tableInfo = [];
+  for (let i in graphData.data.nodes) {
+    if (graphData.data.nodes[i].count === 1) {
+      let gene1 = graphData.data.nodes[i].objects[0];
+      for (let j in graphData.data.nodes[i].features) {
+        const value = graphData.data.nodes[i].features[j];
+        if (
+          graphData.data.feature_names[j] !== gene1 &&
+          (value > 0.05 || value < -0.05)
+        ) {
+          tableInfo.push({
+            "Gene 1": gene1,
+            "Gene 2": graphData.data.feature_names[j],
+            "Corr R": value,
+          });
         }
       }
-      setKeyedData(tableInfo);
+    } else break;
+  }
+  return tableInfo;
+}, [graphData]);
+
+
+  const logMemoryUsage = useCallback((label) => {
+    if (performance.memory) {
+      const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
+      console.log(`${label} - Memory Usage:`, {
+        used: `${(usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+        total: `${(totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+        percentage: `${((usedJSHeapSize / totalJSHeapSize) * 100).toFixed(1)}%`
+      });
     }
-  }, [graphData]);
+  }, []);
+
+  const forceGarbageCollection = useCallback(() => {
+    // Log memory before cleanup
+    logMemoryUsage('Before GC');
+    
+    // Force garbage collection if available (dev tools or specific browsers)
+    if (window.gc && typeof window.gc === 'function') {
+      setTimeout(() => {
+        window.gc();
+        logMemoryUsage('After GC');
+        console.log('Forced garbage collection');
+      }, 100);
+    }
+    
+    // Alternative method to encourage garbage collection
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(() => {
+        // Create and immediately discard some objects to trigger GC
+        for (let i = 0; i < 100; i++) {
+          const temp = new Array(1000).fill(Math.random());
+        }
+        logMemoryUsage('After manual GC attempt');
+      });
+    }
+  }, [logMemoryUsage]);
+
+  const destroyInchlibInstance = useCallback(() => {
+    if (inchlibInstance.current) {
+      try {
+        // Use the comprehensive cleanup method from InCHlib
+        if (typeof inchlibInstance.current.cleanup === 'function') {
+          inchlibInstance.current.cleanup();
+        }
+        
+        // Clear the container
+        if (heatmapRef.current) {
+          heatmapRef.current.innerHTML = '';
+        }
+        
+        // Break all references
+        inchlibInstance.current = null;
+        
+        // Force garbage collection
+        forceGarbageCollection();
+      } catch (e) {
+        console.error("Error destroying InCHlib instance:", e);
+      }
+    }
+  }, [forceGarbageCollection]);
+
+  const handleResetZoom = useCallback(() => {
+    transformWrapperRef.current?.resetTransform();
+  }, []);
+
+  const handleFitToScreen = useCallback(() => {
+    const container = heatmapContainerRef.current;
+    const heatmap = heatmapRef.current;
+
+    if (container && heatmap && transformWrapperRef.current) {
+      // Wait for next frame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        try {
+          const containerWidth = container.offsetWidth - 50;
+          const heatmapWidth = heatmap.offsetWidth;
+          
+          // Ensure we have valid dimensions
+          if (containerWidth > 0 && heatmapWidth > 0) {
+            const scale = Math.min(containerWidth / heatmapWidth, 1); // Don't scale up beyond 100%
+            transformWrapperRef.current?.setTransform(0, 0, scale);
+            console.log(`Auto-fit applied: container=${containerWidth}px, heatmap=${heatmapWidth}px, scale=${scale.toFixed(3)}`);
+          } else {
+            console.warn('Invalid dimensions for auto-fit:', { containerWidth, heatmapWidth });
+            // Retry after a short delay if dimensions aren't ready
+            setTimeout(() => handleFitToScreen(), 100);
+          }
+        } catch (error) {
+          console.error('Error in handleFitToScreen:', error);
+        }
+      });
+    }
+  }, []);
+
+  const handleManualFitToScreen = useCallback(() => {
+    console.log('Manual fit to screen triggered');
+    // Force a fit even if dimensions seem invalid
+    const container = heatmapContainerRef.current;
+    const heatmap = heatmapRef.current;
+
+    if (container && heatmap && transformWrapperRef.current) {
+      // Wait a bit longer for manual fit to ensure everything is ready
+      setTimeout(() => {
+        try {
+          const containerWidth = container.offsetWidth - 50;
+          const heatmapWidth = heatmap.offsetWidth;
+          
+          console.log('Manual fit dimensions:', { containerWidth, heatmapWidth });
+          
+          if (containerWidth > 0 && heatmapWidth > 0) {
+            const scale = Math.min(containerWidth / heatmapWidth, 1);
+            transformWrapperRef.current?.setTransform(0, 0, scale);
+            console.log(`Manual fit applied: scale=${scale.toFixed(3)}`);
+          } else {
+            console.warn('Invalid dimensions for manual fit, trying with force...');
+            // If dimensions are still invalid, try with a default scale
+            transformWrapperRef.current?.setTransform(0, 0, 0.5);
+          }
+        } catch (error) {
+          console.error('Error in manual fit to screen:', error);
+        }
+      }, 150);
+    } else {
+      console.warn('Missing references for manual fit:', { 
+        container: !!container, 
+        heatmap: !!heatmap, 
+        transform: !!transformWrapperRef.current 
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.updateCellColors(
         inchlibSettings.color_scale.color
       );
@@ -125,7 +279,7 @@ const HeatMap = ({
   }, [inchlibSettings.color_scale]);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setDendrogramWidth(
         inchlibSettings.max_dendrogram_width
       );
@@ -133,7 +287,7 @@ const HeatMap = ({
   }, [inchlibSettings.max_dendrogram_width]);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.updateCellColorsPercentile({
         minValue: inchlibSettings.color_percentile_min,
         maxValue: inchlibSettings.color_percentile_max,
@@ -146,13 +300,13 @@ const HeatMap = ({
   ]);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setRowIdsVisibility(inchlibSettings.draw_row_ids);
     }
   }, [inchlibSettings.draw_row_ids]);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setColumnIdsVisibility(
         inchlibSettings.show_column_names
       );
@@ -160,41 +314,37 @@ const HeatMap = ({
   }, [inchlibSettings.show_column_names]);
 
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setCellValueVisibility(
         inchlibSettings.show_cell_values
       );
     }
   }, [inchlibSettings.show_cell_values]);
 
-  // Update width ratio
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setWidthRatio(inchlibSettings.width_ratio);
     }
   }, [inchlibSettings.width_ratio]);
 
-  // Update row dendrogram visibility
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setDendrogramVisibility(
         inchlibSettings.show_row_dendrogram
       );
     }
   }, [inchlibSettings.show_row_dendrogram]);
 
-  // Update column dendrogram visibility
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setColumnDendrogramVisibility(
         inchlibSettings.show_column_dendrogram
       );
     }
   }, [inchlibSettings.show_column_dendrogram]);
 
-  // Update column dendrogram visibility
   useEffect(() => {
-    if (inchlibInstance.current) {
+    if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.updateDendrogramLineWidth(
         inchlibSettings.dendrogram_line_width
       );
@@ -202,211 +352,241 @@ const HeatMap = ({
   }, [inchlibSettings.dendrogram_line_width]);
 
   useEffect(() => {
-    if (inchlibInstance.current) return;
-    // Only run if we haven't already created an instance
-    if (!inchlibInstance.current && heatmapRef.current) {
-      var inchlib = new InCHlib({
-        target: "heatmap", // Corrected target as a string selector
-        metadata: false,
-        column_metadata: true,
-        heatmap_header: true,
-        column_dendrogram: true,
-        max_height: heatmapWidth,
-        dendrogram: true,
-        width: heatmapWidth,
-        heatmap_colors: inchlibSettings.color_scale.color ?? "BuWhRd",
-        metadata_colors: "Reds",
-        independent_columns: false,
-        draw_row_ids:
-          (graphData?.data?.nodes?.length ?? 0) > 120 ? false : true,
-        heatmap_part_width: 0.95,
-        max_column_width: 20,
-        max_row_height: 20,
-        heatmap: false,
-        fixed_row_id_size: (graphData?.data?.nodes?.length ?? 0) > 120 ? 0 : 14,
-      });
-
-      inchlibInstance.current = inchlib;
-
-      inchlib.events.row_onclick = function (ids) {
-        if (ids.length === 1) {
-          inchlib.highlight_rows(ids);
-          inchlib.unhighlight_cluster();
-        }
-      };
-
-      inchlib.events.column_dendrogram_node_onclick = function (
-        column_indexes
-      ) {
-        const selectedGenesTemp = Object.keys(column_indexes).map(
-          (gene) => inchlib.data?.feature_names[gene].split("_")[0]
-        );
-
-        if (selectedGenesTemp.length > 3) setSelectedGenes(selectedGenesTemp);
-      };
-
-      inchlib.events.dendrogram_node_onclick = function (object_ids) {
-        setSelectedGenes(object_ids.map((gene) => gene.split("_")[0]));
-        inchlib.highlight_rows([]);
-      };
-
-      inchlib.events.empty_space_onclick = function () {
-        inchlib.highlight_rows([]);
-        inchlib.unhighlight_cluster();
-      };
-
-      return () => {
-        // Clean up event handlers
-        if (inchlibInstance.current) {
-          inchlibInstance.current.events.row_onclick = null;
-          inchlibInstance.current.events.column_dendrogram_node_onclick = null;
-          inchlibInstance.current.events.dendrogram_node_onclick = null;
-          inchlibInstance.current.events.empty_space_onclick = null;
-          inchlibInstance.current = null;
-        }
-      };
-    }
-  }, []);
-
-  useEffect(() => {
     setLoading(calcResults?.["corrCluster"]?.running);
   }, [calcResults?.["corrCluster"]?.running]);
 
-  // Initialize InCHlib when graphData changes
   useEffect(() => {
-    if (!graphData || !inchlibInstance.current) return;
+    if (!graphData) return;
+    
+    // Increment instance ID
+    const currentInstanceId = ++instanceIdRef.current;
+    
+    // Destroy previous instance with proper cleanup
+    destroyInchlibInstance();
+    
+    // Create container for new instance
+    const containerId = `heatmap-${currentInstanceId}`;
+    if (heatmapRef.current) {
+      heatmapRef.current.id = containerId;
+    }
+    
+    // Create new InCHlib instance
+    const inchlib = new InCHlib({
+      target: containerId,
+      metadata: false,
+      column_metadata: true,
+      heatmap_header: true,
+      column_dendrogram: true,
+      max_height: heatmapWidth,
+      dendrogram: true,
+      width: heatmapWidth,
+      heatmap_colors: inchlibSettings.color_scale.color ?? "BuWhRd",
+      metadata_colors: "Reds",
+      independent_columns: false,
+      draw_row_ids: (graphData?.data?.nodes?.length ?? 0) > 120 ? false : true,
+      heatmap_part_width: 0.95,
+      max_column_width: 20,
+      max_row_height: 20,
+      heatmap: false,
+      fixed_row_id_size: (graphData?.data?.nodes?.length ?? 0) > 120 ? 0 : 14,
+    });
+    
+    inchlibInstance.current = inchlib;
 
-    const drawHeatmap = () => {
-      setLoading(true);
-
-      const instance = inchlibInstance.current;
-      instance.read_data(graphData);
-      instance.update_settings({
-        width: heatmapWidth,
-        heatmap: true,
-        max_height: heatmapWidth,
-        heatmap_header: true,
-      });
-      instance.draw();
-
-      // If same order is required
-      if (correlationSettings?.row_col_sameorder) {
-        let coordinates = Object.entries(instance.leaves_y_coordinates).sort(
-          (a, b) => a[1] - b[1]
-        );
-
-        /*const valueKeyMap = new Map();
-        for (const [key, value] of Object.entries(instance.objects2leaves)) {
-          valueKeyMap.set(value, key);
-        }
-          
-        */
-        const valueKeyMap = new Map(
-          Object.entries(instance.objects2leaves).map(([k, v]) => [v, k])
-        );
-
-        /*
-        let genesInRows = [];
-        for (let key in coordinates) {
-          genesInRows.push(valueKeyMap.get(coordinates[key][0]));
-        }
-
-        for (let key in graphData.data.feature_names) {
-          valueKeyMap.set(graphData.data.feature_names[key], key);
-        }
-
-        let columnOrder = [];
-        for (let key in genesInRows) {
-          columnOrder.push(valueKeyMap.get(genesInRows[key]));
-        }
-        */
-
-        const columnOrder = coordinates
-          .map(([key]) => valueKeyMap.get(key))
-          .reverse()
-          .map((gene) =>
-            graphData.data.feature_names.findIndex((f) => f === gene)
-          );
-
-        instance.update_settings({
-          columns_order: columnOrder.reverse(),
-          column_dendrogram: true,
-          heatmap: true,
-          //column_dendrogram: false,
-        });
-        instance.redraw();
+    // Set event handlers
+    inchlib.events.row_onclick = function (ids) {
+      if (ids.length === 1) {
+        inchlib.highlight_rows(ids);
+        inchlib.unhighlight_cluster();
       }
-      handleFitToScreen();
-      setLoading(false);
     };
 
-    drawHeatmap();
-  }, [graphData, correlationSettings?.row_col_sameorder, heatmapWidth]);
-
-  // Handle zoom reset and fit to screen via react-zoom-pan-pinch
-  const handleResetZoom = useCallback(() => {
-    transformWrapperRef.current?.resetTransform();
-  }, []);
-
-  /*
-  const handleFitToScreen = () => {
-    if (transformWrapperRef.current) {
-      const container = heatmapContainerRef.current;
-      if (container && heatmapRef.current) {
-        const containerRect = container.getBoundingClientRect();
-        const heatmapRect = heatmapRef.current.getBoundingClientRect();
-        // Calculate scale factors based on container size
-        const scaleX =
-          (containerRect.width - 50) / heatmapRef.current.clientWidth;
-        //const scaleY = containerRect.height / heatmapRef.current.clientHeight;
-
-        // Choose the smaller scale to fit both dimensions
-        //const newScale = Math.min(scaleX, scaleY);
-
-        // Align to the left and top
-
-        // Apply the transformation
-        transformWrapperRef.current.setTransform(0, 0, scaleX);
+    inchlib.events.column_dendrogram_node_onclick = function (column_indexes) {
+      const selectedGenesTemp = Object.keys(column_indexes).map(
+        (gene) => inchlib.data?.feature_names[gene].split("_")[0]
+      );
+      if (selectedGenesTemp.length > 3 && isMountedRef.current) {
+        setSelectedGenes(selectedGenesTemp);
       }
+    };
+
+    inchlib.events.dendrogram_node_onclick = function (object_ids) {
+      if (isMountedRef.current) {
+        setSelectedGenes(object_ids.map((gene) => gene.split("_")[0]));
+      }
+      inchlib.highlight_rows([]);
+    };
+
+    inchlib.events.empty_space_onclick = function () {
+      inchlib.highlight_rows([]);
+      inchlib.unhighlight_cluster();
+    };
+
+    // Draw heatmap
+    setLoading(true);
+    inchlib.read_data(graphData);
+    inchlib.update_settings({
+      width: heatmapWidth,
+      heatmap: true,
+      max_height: heatmapWidth,
+      heatmap_header: true,
+    });
+    inchlib.draw();
+
+    // Apply same order if needed
+    if (correlationSettings?.row_col_sameorder) {
+      let coordinates = Object.entries(inchlib.leaves_y_coordinates).sort(
+        (a, b) => a[1] - b[1]
+      );
+
+      const valueKeyMap = new Map(
+        Object.entries(inchlib.objects2leaves).map(([k, v]) => [v, k])
+      );
+
+      const columnOrder = coordinates
+        .map(([key]) => valueKeyMap.get(key))
+        .reverse()
+        .map((gene) =>
+          graphData.data.feature_names.findIndex((f) => f === gene)
+        );
+
+      inchlib.update_settings({
+        columns_order: columnOrder.reverse(),
+        column_dendrogram: true,
+        heatmap: true,
+      });
+      inchlib.redraw();
     }
-  };
-  */
-
-  const handleFitToScreen = useCallback(() => {
-    const container = heatmapContainerRef.current;
-    const heatmap = heatmapRef.current;
-
-    if (container && heatmap) {
-      const containerWidth = container.offsetWidth - 50;
-      const scale = containerWidth / heatmap.offsetWidth;
-      transformWrapperRef.current?.setTransform(0, 0, scale);
+    
+    if (isMountedRef.current && currentInstanceId === instanceIdRef.current) {
+      setLoading(false);
+      // Use requestAnimationFrame for smoother rendering
+      requestAnimationFrame(() => {
+        if (isMountedRef.current && currentInstanceId === instanceIdRef.current) {
+          handleFitToScreen();
+        }
+      });
     }
-  }, []);
 
-  // Resize observer for responsive adjustments
+    // Cleanup function
+    return () => {
+      if (inchlibInstance.current) {
+        destroyInchlibInstance();
+      }
+    };
+  }, [graphData, correlationSettings?.row_col_sameorder, heatmapWidth, destroyInchlibInstance, handleFitToScreen]);
+
+  // Resize observer
   useEffect(() => {
     if (!heatmapContainerRef.current) return;
 
     resizeObserverRef.current = new ResizeObserver(
-      throttle(() => handleFitToScreen(), 200)
+      throttle(() => {
+        // Only auto-fit if not currently loading
+        if (!loading && inchlibInstance.current) {
+          handleFitToScreen();
+        }
+      }, 200)
     );
 
     resizeObserverRef.current.observe(heatmapContainerRef.current);
-    return () => resizeObserverRef.current?.disconnect();
-  }, [handleFitToScreen]);
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+    };
+  }, [handleFitToScreen, loading]);
+
+  // Comprehensive cleanup
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      
+      // Destroy InCHlib instance first
+      destroyInchlibInstance();
+      
+      // Clean up ResizeObserver
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      
+      // Reset transform wrapper
+      if (transformWrapperRef.current) {
+        transformWrapperRef.current.resetTransform();
+        transformWrapperRef.current = null;
+      }
+      
+      // Clear all refs
+      heatmapRef.current = null;
+      inchlibInstance.current = null;
+      heatmapContainerRef.current = null;
+      instanceIdRef.current = 0;
+      
+      // Force garbage collection
+      forceGarbageCollection();
+    };
+  }, [destroyInchlibInstance, forceGarbageCollection]);
 
   return (
     <>
       {loading && <LoadingPage />}
       <>
+        {showDescription && (
+          <Accordion
+            sx={{
+              marginBottom: '14px',
+              backgroundColor: '#f8f9fa', 
+              border: '1px solid #e9ecef',
+              borderRadius: '8px',
+              '&:before': {
+                display: 'none',
+              },
+              '& .MuiAccordionSummary-root': {
+                minHeight: '30px',
+                height: '30px',
+              },
+              '& .MuiAccordionSummary-root.Mui-expanded': {
+                minHeight:  '30px',
+                height: '30px',
+              }
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ 
+                backgroundColor: '#f5f5f5',
+                borderBottom: '1px solid #e0e0e0',
+                minHeight: '30px',
+                '&.Mui-expanded': {
+                  minHeight: '30px'
+                }
+              }}
+            >
+              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '0 14px 5px' }}>
+              <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+                {moduleDescription.description}
+              </p>
+              <div style={{ fontSize: '13px', color: '#424242' }}>
+                <strong>Key Features:</strong>
+                <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
+                  {moduleDescription.features.map((capability, index) => (
+                    <li key={index} style={{ marginBottom: '2px' }}>{capability}</li>
+                  ))}
+                </ul>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         <div
           style={{ visibility: loading ? "hidden" : "visible" }}
           className={styles.mainView}
           ref={heatmapContainerRef}
         >
-          {/* Control Bar */}
           <div className={styles.controlBar}>
-            {/* ButtonGroup for Chart and Table */}
             <ButtonGroup
               items={[
                 {
@@ -424,15 +604,10 @@ const HeatMap = ({
               value={selectedView}
             />
 
-            {/* Instructional Text and Zoom Buttons */}
-
             <div
               className={styles.controlGroup}
               style={{
-                visibility:
-                  selectedView === 0 && loading === false
-                    ? "visible"
-                    : "hidden",
+                visibility: selectedView === 0 && !loading ? "visible" : "hidden",
               }}
             >
               <div className={styles.zoomControls}>
@@ -444,7 +619,7 @@ const HeatMap = ({
                   RESET ZOOM
                 </button>
                 <button
-                  onClick={handleFitToScreen}
+                  onClick={handleManualFitToScreen}
                   className={styles.zoomButton}
                   aria-label="Fit to Screen"
                 >
@@ -453,15 +628,15 @@ const HeatMap = ({
               </div>
             </div>
           </div>
-          {/* Spacer */}
+          
           <Spacer height={5} />
-          {/* Conditional Rendering for Table View */}
+          
           {keyedData && selectedView === 1 && (
             <div className={styles.geneTable}>
               <EnrichmentTable data={keyedData} columns={columns} />
             </div>
           )}
-          {/* Heatmap and Protein Div */}
+          
           <div
             className={styles.mainContent}
             style={{ display: selectedView === 0 ? "flex" : "none" }}
@@ -470,18 +645,18 @@ const HeatMap = ({
               className={styles.mainContent}
               style={{
                 display: "block",
-
                 width: "100%",
                 overflow: "auto",
                 marginBottom: "10px",
               }}
             >
               <TransformWrapper
+                key="fixed-wrapper"
                 initialScale={1}
                 minScale={0.125}
                 maxScale={4}
-                initialPositionX={0} // Align to left
-                initialPositionY={0} // Align to top
+                initialPositionX={0}
+                initialPositionY={0}
                 limitToBounds={false}
                 ref={transformWrapperRef}
                 wheel={{ step: 0.1 }}
@@ -490,24 +665,20 @@ const HeatMap = ({
                 zoomAnimation={{ disabled: true }}
                 className={styles.transformWrapper}
               >
-                {({ zoomIn, zoomOut, resetTransform, fitToBounds }) => (
-                  <React.Fragment>
-                    <TransformComponent>
-                      <div
-                        id="heatmap"
-                        style={{
-                          height: "calc(100vh + 100px)",
-                          minHeight: "800px",
-                          marginBottom: "10px",
-                        }}
-                        ref={heatmapRef}
-                      ></div>
-                    </TransformComponent>
-                  </React.Fragment>
-                )}
+                <TransformComponent>
+                  <div
+                    id={`heatmap-${instanceIdRef.current}`}
+                    style={{
+                      height: "calc(100vh + 100px)",
+                      minHeight: "800px",
+                      marginBottom: "10px",
+                    }}
+                    ref={heatmapRef}
+                  ></div>
+                </TransformComponent>
               </TransformWrapper>
             </div>
-            {/* Protein Div */}
+            
             <div
               id="protein_div"
               style={{

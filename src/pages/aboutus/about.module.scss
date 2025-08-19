@@ -1,5 +1,6 @@
 .mainView {
   padding: 25px;
+  padding-top: 10px;
   width: 70%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -145,5 +146,76 @@
   }
 
   
+}
+
+@media (max-width: 900px) {
+  .mainView {
+    width: 96%;
+    margin-left: 2%;
+    margin-right: 2%;
+    padding: 10px;
+  }
+  .box {
+    margin: 10px 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .mainView {
+    width: 100%;
+    margin: 0;
+    padding: 4px;
+  }
+  .box {
+    margin: 6px 0;
+    padding: 0;
+    width: 100%;
+  }
+  .updateBody, .contactBody, .helpBody {
+    padding: 8px;
+    font-size: 0.98em;
+  }
+  .updateDate {
+    font-size: 1em;
+    padding: 1px 4px;
+    margin-right: 6px;
+  }
+  .nameAndMail {
+    font-size: 1em;
+    float: none;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .box h1 {
+    font-size: 1.2em;
+  }
+  .updateBody p, .contactBody p, .helpBody p {
+    font-size: 1em;
+  }
+  .tableContainer {
+    overflow-x: auto;
+    width: 100%;
+  }
+  .tableContainer table {
+    font-size: 0.95em;
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 400px) {
+  .mainView {
+    padding: 2px;
+  }
+  .box h1 {
+    font-size: 1em;
+  }
+  .updateBody p, .contactBody p, .helpBody p {
+    font-size: 0.92em;
+  }
+  .updateDate {
+    font-size: 0.9em;
+    padding: 1px 2px;
+  }
 }
 

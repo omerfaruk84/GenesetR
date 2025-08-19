@@ -5,8 +5,14 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { Box, Rating, Typography } from "@mui/material";
-import { Button } from "@oliasoft-open-source/react-ui-library";
+import { 
+  Box, 
+  Rating, 
+  Typography, 
+  Chip,
+  Divider,
+  Button
+} from "@mui/material";
 import axios from "axios";
 import {
   Dialog,
@@ -14,6 +20,8 @@ import {
   DialogTitle,
   TextField,
   DialogActions,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import _ from "lodash";
 // ... other imports
@@ -22,355 +30,501 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
   const [isError, setIsError] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [rowCount, setRowCount] = useState(0);
-  const [show, setShow] = useState(false);
+  
   //table state
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 20,
-  });
 
   const [geneSignatures, setGeneSignatures] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedGeneSignature, setSelectedgeneSignature] = useState();
+  const [selectedGeneSignature, setSelectedGeneSignature] = useState(null);
 
+  // Form state for suggesting new gene signatures
+  const [showSuggestionForm, setShowSuggestionForm] = useState(false);
   const [name, setName] = useState("");
   const [genes, setGenes] = useState("");
   const [source, setSource] = useState("");
-  const [nodes, setNodes] = useState(0);
+  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Notification state
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+
   let SERVER_ADRESS = "https://genesetr.uio.no/api";
   if (process.env.NODE_ENV !== "production") {
-    console.log("WORKING IN PRODUCTION MODE");
-    SERVER_ADRESS = "https://b74f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
+    console.log("WORKING IN DEVELOPMENT MODE");
     SERVER_ADRESS = "http://localhost:8443";
   }
 
-  const handleSubmit = useCallback(() => {
+  // Process gene input to handle different formats (+ - comma ; newline)
+  const processGeneInput = (input) => {
+    return input
+      .replace(/[+\-,;\n\r]/g, ';') // Replace all separators with semicolon
+      .split(';')
+      .map(gene => gene.trim())
+      .filter(gene => gene.length > 0)
+      .join(';');
+  };
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
     setIsSubmitting(true);
 
-    fetch(`${SERVER_ADRESS}/gene-signature/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name,
-        genes,
-        source,
-        nodes,
-      }),
-    })
-      .then((response) => {
-        response.json();
+    try {
+      const processedGenes = processGeneInput(genes);
+      
+      const response = await fetch(`${SERVER_ADRESS}/gene-signature/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          genes: processedGenes,
+          source: source.trim(),
+          notes: notes.trim(),
+        }),
+      });
+
+      if (response.ok) {
         setName("");
         setGenes("");
         setSource("");
-        setNodes(0);
-        setIsSubmitting(false);
-        alert(
-          "Thank you for your gene signature suggestion. We will add the submitted gene signature to our database after verifying it."
-        );
-      }) // Assuming the server responds with JSON
-      .then((data) => console.log(data))
-      .catch((error) => {
-        console.error("Error:", error);
-        setIsSubmitting(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    //getGeneSignatures();
-  }, []);
-
-  const getGeneSignatures = useCallback(
-    () => {
-      // Function implementation remains the same...
-
-      // Function to handle response or error from the debounced function
-      function handleResponse(error, data) {
-        if (error) {
-          console.error("API call failed:", error);
-          return;
-        }
-        console.log("API call succeeded:", data);
-        data != null ? setRowCount(data.length) : setRowCount(0);
-        setGeneSignatures(data);
-        setIsError(false);
-        setIsLoading(false);
-        setIsRefetching(false);
-        return data;
-        // You can store the data in a variable here or perform other actions
+        setNotes("");
+        setShowSuggestionForm(false);
+        setNotification({
+          open: true,
+          message: "Thank you for your gene signature suggestion! We will review and add it to our database.",
+          severity: "success"
+        });
+        getGeneSignatures(); // Refresh the list
+      } else {
+        const errorData = await response.text();
+        throw new Error(`Failed to submit gene signature: ${response.status} ${errorData}`);
       }
-
-      const params = new URLSearchParams({
-        //skip: pagination.pageIndex * pagination.pageSize, // Assuming you have pagination state
-        //limit: pagination.pageSize,
-        list_name: "", //globalFilter ?? "", // Assuming globalFilter is your search term for list_name
-        //source: columnFilters.source ?? "", // Adjust according to how you manage column filters
-        //sorting: sorting ?? [],
-        //globalFilter: globalFilter ?? "",
-        //filters: columnFilters ?? [],
+    } catch (error) {
+      console.error("Error:", error);
+      setNotification({
+        open: true,
+        message: `Error submitting gene signature: ${error.message}. Please make sure the backend server is running.`,
+        severity: "error"
       });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [name, genes, source, notes, SERVER_ADRESS]);
 
-      const url = `${SERVER_ADRESS}/gene-signatures/?${params.toString()}`;
+  const handleCancelSuggestion = () => {
+    // Reset form and go back to main view
+    setName("");
+    setGenes("");
+    setSource("");
+    setNotes("");
+    setShowSuggestionForm(false);
+  };
 
-      // Trigger the debounced function
-      debouncedFetchGeneSignatures(url, handleResponse);
-    },
-    [
-      //pagination.pageIndex,
-      //pagination.pageSize,
-      //globalFilter,
-      // columnFilters,
-      // sorting,
-    ]
-  );
+  const getGeneSignatures = useCallback(() => {
+    function handleResponse(error, data) {
+      if (error) {
+        console.error("API call failed:", error);
+        setIsError(true);
+        setNotification({
+          open: true,
+          message: "Failed to load gene signatures. Please check if the backend server is running.",
+          severity: "error"
+        });
+        return;
+      }
+      console.log("API call succeeded:", data);
+      data != null ? setRowCount(data.length) : setRowCount(0);
+      setGeneSignatures(data);
+      setIsError(false);
+      setIsLoading(false);
+      setIsRefetching(false);
+    }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const params = new URLSearchParams({
+      list_name: globalFilter ?? "",
+    });
 
-  // Debounce the function. The debounced function returns a promise.
+    const url = `${SERVER_ADRESS}/gene-signatures/?${params.toString()}`;
+    debouncedFetchGeneSignatures(url, handleResponse);
+  }, [globalFilter, SERVER_ADRESS]);
+
   const debouncedFetchGeneSignatures = _.debounce(async (url, callback) => {
     try {
-      const result = await sendPostRequest(url);
-      callback(null, result); // Call callback with no error and result
+      setIsLoading(true);
+      const result = await sendGetRequest(url);
+      callback(null, result);
     } catch (error) {
       console.log(error);
-      //callback(error); // Call callback with error
+      callback(error);
     }
-  }, 100); // 500 ms wait time
+  }, 300);
 
-  async function sendPostRequest(url) {
+  async function sendGetRequest(url) {
     try {
       const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
       });
+      
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
       }
 
       const json = await response.json();
-      // setData(json);
       console.log("Success:", json);
       return json;
     } catch (error) {
       setIsError(true);
       console.error("Error:", error);
+      
+      // More specific error messages
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        throw new Error('Cannot connect to server. Please ensure the backend is running on the correct port.');
+      }
       throw error;
     }
   }
 
-  useEffect(
-    () => {
+  useEffect(() => {
+    if (open) {
       getGeneSignatures();
-    },
-    [
-      //columnFilters, //re-fetch when column filters change
-      //globalFilter, //re-fetch when global filter changes
-      //pagination.pageIndex, //re-fetch when page index changes
-      // pagination.pageSize, //re-fetch when page size changes
-      //sorting, //re-fetch when sorting changes
-      //getGeneSignatures,
-    ]
-  );
+    }
+  }, [open, getGeneSignatures]);
 
-  //column definitions - strongly typed if you are using TypeScript (optional, but recommended)
+  useEffect(() => {
+    getGeneSignatures();
+  }, [globalFilter]);
+
+  const handleRowClick = (row) => {
+    setSelectedGeneSignature(row.original);
+  };
+
+  const handleSelect = async () => {
+    if (!selectedGeneSignature) return;
+    
+    try {
+      // Increase popularity when selected
+      await axios.post(
+        `${SERVER_ADRESS}/gene-signature/${selectedGeneSignature.id}/increase-popularity`,
+        {},
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          }
+        }
+      );
+      
+      // Pass the gene list to parent component
+      onGeneListSelect(selectedGeneSignature.genes);
+      onClose();
+    } catch (error) {
+      console.error("Error increasing popularity:", error);
+      setNotification({
+        open: true,
+        message: "Error selecting gene signature. Please try again.",
+        severity: "error"
+      });
+    }
+  };
+
+  //column definitions
   const columns = useMemo(
     () => [
       {
-        accessorKey: "name", //simple recommended way to define a column
+        accessorKey: "name",
         header: "Gene Signature",
-        muiTableHeadCellProps: { style: { color: "green" } }, //custom props
-        enableHiding: false, //disable a feature for this column
+        muiTableHeadCellProps: { style: { color: "green" } },
+        enableHiding: false,
         enablePinning: true,
-        maxSize: 500,
-        minSize: 400,
+        maxSize: 300,
+        minSize: 200,
         enableColumnFilter: false,
       },
-
       {
         enableColumnFilter: false,
-        accessorKey: "geneCount", // Using 'id' since this is a computed column, not directly an accessor for data
+        accessorKey: "geneCount",
         Cell: ({ row }) => {
-          // Assuming genes are in the format "gene1-gene2+gene3" and you want to replace all '-' with '+'
-          const geneCount = row.original.genes
-            .replace(/-/g, "+")
-            .split("+").length;
-          return <span>{geneCount}</span>;
-        },
-        header: "",
-        enableHiding: false, //disable a feature for this column
+          // Handle all possible gene separator formats that might exist in the database
+          const genesString = row.original.genes || "";
+          const geneCount = genesString
+            ? genesString
+                .replace(/[+\-,;\n\r\t]/g, ';') // Replace all separators with semicolon
+                .split(';')
+                .map(gene => gene.trim())
+                .filter(gene => gene.length > 0).length
+            : 0;
+          return (
+            <Box display="flex" justifyContent="center" alignItems="center" width="100%">
+              <Chip label={geneCount} size="small" color="primary" />
+            </Box>
+          );
+        },         
+        header: "Genes",
+        enableHiding: false,
         maxSize: 80,
-        Header: () => (
-          <div style={{ whiteSpace: "normal", lineHeight: "normal" }}>
-            Gene
-            <br />
-            Count
-          </div>
-        ),
+        minSize: 50,
+        size: 50,
         enableColumnActions: false,
+        muiTableBodyCellProps: {
+          align: 'center'
+        }
       },
       {
         enableColumnFilter: false,
-        accessorKey: "source", //simple recommended way to define a column
+        accessorKey: "source",
         header: "Source",
-        muiTableHeadCellProps: { style: { color: "green" } }, //custom props
-        enableHiding: false, //disable a feature for this column
-        maxSize: 500,
-        minSize: 300,
+        muiTableHeadCellProps: { style: { color: "green" } },
+        enableHiding: false,
+        maxSize: 250,
+        minSize: 120,
+        size:150,
+        Cell: ({ cell }) => (
+          <Typography variant="body2" noWrap title={cell.getValue()}>
+            {cell.getValue() || "N/A"}
+          </Typography>
+        ),
       },
       {
         enableColumnFilter: false,
-        accessorKey: "popularity", //simple recommended way to define a column
+        accessorKey: "popularity",
         header: "Popularity",
-        enableHiding: false, //disable a feature for this column
+        enableHiding: false,
         maxSize: 100,
+        minSize: 60,
+        size:60,
         enableColumnActions: false,
+        Cell: ({ cell }) => (
+          <Chip label={cell.getValue() || 0} size="small" variant="outlined" />
+        ),
       },
+      {
+        enableColumnFilter: false,
+        accessorKey: "notes",
+        header: "Notes",
+        enableHiding: false,
+        maxSize: 200,
+        minSize: 100,
+        Cell: ({ cell }) => (
+          <Typography variant="body2" noWrap title={cell.getValue()}>
+            {cell.getValue() || ""}
+          </Typography>
+        ),
+      },      
     ],
     []
   );
 
-  //pass table options to useMaterialReactTable
   const table = useMaterialReactTable({
     columns,
-    data: geneSignatures ? geneSignatures : [],
+    data: geneSignatures || [],
     muiTableBodyRowProps: ({ row }) => ({
-      onClick: () => {
-        setSelectedgeneSignature(row.original.id);
-        //getADataset(row.original.Datasetid);
-      },
-      onDoubleClick: () => {
-        handleRowDoubleClick(row.original);
+      onClick: () => handleRowClick(row),
+      sx: {
+        cursor: 'pointer',
+        backgroundColor: selectedGeneSignature?.id === row.original.id ? '#e3f2fd' : 'inherit',
+        '&:hover': {
+          backgroundColor: selectedGeneSignature?.id === row.original.id ? '#bbdefb' : '#f5f5f5',
+        },
       },
     }),
-    //data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
-
     enableColumnFilters: false,
     enableHiding: false,
-    enableRowSelection: false, //enable some features
-    enableColumnOrdering: false, //enable a feature for all columns
-    enableGlobalFilter: true, //turn off a feature
+    enableRowSelection: false,
+    enableColumnOrdering: false,
+    enableGlobalFilter: true,
     enableEditing: false,
     enableColumnFilterModes: false,
     positionGlobalFilter: "left",
-    enablePagination: true,
+    // Virtualization settings
+    enablePagination: false, // Disable pagination
+    enableRowVirtualization: true, // Enable row virtualization
+    muiTableContainerProps: {
+      sx: {
+        maxHeight: '300px', // Reduced height to fit better in modal
+        minHeight: '300px', // Set consistent height
+      },
+    },
     initialState: {
-      pagination: { pageSize: 10, pageIndex: 0 },
       showGlobalFilter: true,
-
       density: "compact",
     },
-    //layoutMode: "grid",
-    // manualFiltering: true,
-    //manualPagination: true,
-    //manualSorting: true,
     muiToolbarAlertBannerProps: isError
       ? {
           color: "error",
-          children: "Error loading data",
+          children: "Error loading data - please check if the backend server is running",
         }
       : undefined,
-    //onColumnFiltersChange: setColumnFilters,
-    //onGlobalFilterChange: setGlobalFilter,
-    //onPaginationChange: setPagination,
-    //onSortingChange: setSorting,
-    rowCount,
+    onGlobalFilterChange: setGlobalFilter,
+    rowCount: geneSignatures?.length || 0,
     state: {
-      //columnFilters,
-      //globalFilter,
+      globalFilter,
       isLoading,
-      pagination: { pageSize: 10, pageIndex: 0 },
       showAlertBanner: isError,
       showProgressBars: isRefetching,
       sorting,
     },
   });
 
-  const handleRowDoubleClick = async (rowData) => {
-    console.log("Clicked", rowData);
-    try {
-      // Update the SERVER_ADDRESS and endpoint as necessary
-      const response = await axios.post(
-        `${SERVER_ADRESS}/gene-signature/${rowData.id}/increase-popularity`
-      );
-      console.log(response.data.message);
-
-      // Optionally refresh the list to show the updated popularity count
-      getGeneSignatures();
-    } catch (error) {
-      console.error("Error increasing popularity:", error);
-      // Handle error (e.g., show an error message)
-    }
-    onGeneListSelect(rowData.genes);
-    onClose();
-  };
-
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          minWidth: "80%", // Sets minimum width of the Paper component
-        },
-      }}
-    >
-      <DialogTitle>Search Gene Signatures</DialogTitle>
-      <DialogContent sx={{ height: "70vh" }}>
-        <MaterialReactTable table={table} />
-        <Button
-          label="Suggest New Gene List"
-          variant="contained"
-          onClick={() => {}}
-        />
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: "72vh",
+            maxHeight: "72vh",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="h6">
+                {showSuggestionForm ? "Suggest New Gene Signature" : "Gene Signatures"}
+              </Typography>
+              {selectedGeneSignature && !showSuggestionForm && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Selected: <strong>{selectedGeneSignature.name}</strong>
+                </Typography>
+              )}
+            </Box>
+            {!showSuggestionForm && (
+              <Button
+                variant="contained"
+                onClick={() => setShowSuggestionForm(true)}
+                sx={{ 
+                  backgroundColor: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: '#45a049',
+                  },
+                  color: 'white'
+                }}
+                size="small"
+              >
+                Suggest Gene Signature
+              </Button>
+            )}
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pb: 1 }}>
+          {showSuggestionForm ? (
+            // Suggestion Form View
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                label="Name *"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                fullWidth
+                required
+                variant="outlined"
+                size="small"
+              />
+              
+              <TextField
+                label="Genes *"
+                value={genes}
+                onChange={(e) => setGenes(e.target.value)}
+                fullWidth
+                required
+                multiline
+                rows={4}
+                variant="outlined"
+                size="small"
+                helperText="Enter genes separated by +, -, comma, semicolon, or new lines"
+              />
+              
+              <TextField
+                label="Source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                fullWidth
+                variant="outlined"
+                size="small"
+                helperText="e.g., PubMed ID, DOI, URL, or paper citation"
+              />
+              
+              <TextField
+                label="Notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                size="small"
+                helperText="Additional information about this gene signature"
+              />
+            </Box>
+          ) : (
+            // Main Table View
+            <MaterialReactTable table={table} />
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          {showSuggestionForm ? (
+            // Suggestion Form Actions
+            <>
+              <Button onClick={handleCancelSuggestion} variant="outlined">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                variant="contained" 
+                disabled={isSubmitting || !name.trim() || !genes.trim()}
+                color="primary"
+              >
+                {isSubmitting ? "Submitting..." : "Submit"}
+              </Button>
+            </>
+          ) : (
+            // Main View Actions
+            <>
+              <Button onClick={onClose} variant="outlined">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSelect} 
+                variant="contained" 
+                disabled={!selectedGeneSignature}
+                color="primary"
+              >
+                Select
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            margin="dense"
-            label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Genes (comma-separated)"
-            value={genes}
-            onChange={(e) => setGenes(e.target.value)}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Source"
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Nodes"
-            type="number"
-            value={nodes}
-            onChange={(e) => setNodes(e.target.value)}
-            fullWidth
-          />
-          <DialogActions>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              Submit
-            </Button>
-          </DialogActions>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 

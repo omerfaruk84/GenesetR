@@ -32,6 +32,22 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+// Add module description for Dimensionality Reduction
+const moduleDescription = {
+  title: "Dimensionality Reduction & Clustering Module",
+  description: "High dimensionality in large datasets makes visualization challenging and increases computational burden. This module reduces the number of features while preserving original information, then applies clustering to identify patterns in gene perturbation data.",
+  features: [
+    "PCA: Linear method using variance threshold to determine minimum components needed",
+    "t-SNE, UMAP, MDE: Non-linear methods that preserve complex feature relationships", 
+    "HDBSCAN clustering: Identifies clusters of varied shapes and sizes without specifying cluster number",
+    "Gene Set Enrichment Analysis (GSEA) on identified clusters using EnrichR API",
+    "Interactive visualizations with customizable parameters for optimization",
+    "Filtering options for cluster size, sample numbers, and clustering metrics"
+  ]
+};
 
 echarts.use([
   TitleComponent,
@@ -240,6 +256,14 @@ const DimReductionPage = ({
                 research.
               </span>
             </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform t-SNE analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The t-SNE results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+            </p>
           </div>
           <img alt="MDE" src="/images/correlation.png" />
         </div>{" "}
@@ -274,6 +298,14 @@ const DimReductionPage = ({
                 representations when the goal is to uncover the broader
                 relationships in the data.
               </span>
+            </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform UMAP analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The UMAP results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
             </p>
           </div>
 
@@ -323,6 +355,14 @@ const DimReductionPage = ({
               clustering, PCA-MDE integration appears to be the most efficient
               approach in our tests.
             </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform MDE analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The MDE results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+            </p>
           </div>
           <img
             style={{ objectFit: "scale-down" }}
@@ -334,6 +374,7 @@ const DimReductionPage = ({
     );
   } else if (selectedTab.value === "pca") {
     content = (
+
       <div className={styles.submainView}>
         {pcaResults ? (
           <>
@@ -372,40 +413,85 @@ const DimReductionPage = ({
               successively maximize variance from the original matrix and
               graphically simplify the identification of trends, clusters, and
               correlation among the subjects to analysis.
-              <p style={{ color: "DodgerBlue" }}>
-                {" "}
-                <a
-                  href="https://en.wikipedia.org/wiki/Principal_component_analysis"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Read More
-                </a>{" "}
-              </p>
+              <br />
+              <br />
+              <strong>To perform PCA analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The PCA results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+
             </p>
           </div>
         )}
+         
       </div>
+     
+
     );
   }
 
   return (
     <div className={styles.mainView}>
+      {/* Module Description */}
+      <Accordion defaultExpanded={!tsneResults && !umapResults && !mdeResults && !pcaResults}
+       sx={{
+         marginBottom: '14px',
+         backgroundColor: '#f8f9fa', 
+         border: '1px solid #e9ecef',
+         borderRadius: '8px',
+         '&:before': {
+           display: 'none',
+         },
+         '& .MuiAccordionSummary-root': {
+           minHeight: '30px',
+           height: '30px',
+         },
+         '& .MuiAccordionSummary-root.Mui-expanded': {
+           minHeight: '30px',
+           height: '30px',
+         }
+       }}
+      >
+        <AccordionSummary 
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+        </AccordionSummary>
+        <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
+          <div style={{fontSize: '13px', marginBottom: '0px' }}>
+            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
+            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
+            <ul style={{ marginBottom: '0px', paddingLeft: '20px' }}>
+              {moduleDescription.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+        </AccordionDetails>
+      </Accordion>
+      {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
+        <div style={{ 
+          padding: '12px', 
+          backgroundColor: '#e3f2fd', 
+          borderLeft: '4px solid #1976d2',
+          borderRadius: '4px',
+          color: '#1565c0',
+          marginBottom: '8px',
+          fontSize: '13px'
+        }}>
+          💡 To start, please eneter your gene list to the input box at the left menu, and click the <strong>"Run Calculation"</strong> button.
+        </div>
+      )}
       {graphdata === null ? (
-        /*<div >
-      <h2><strong>Dimensionality Reduction and Clustering Module</strong></h2>
-      <p>Handling high-dimensional data can complicate visualization and increase the computational load. <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Dimensionality_reduction"><strong>Dimensionality reduction</strong></a></span> (DR) techniques address this issue by minimizing the number of features while preserving most of the original information. Two main types of DR algorithms exist:</p>
-      <ul>
-      <li>Linear DR algorithms, such as <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Principal_component_analysis"><strong>Principal Component Analysis</strong></a></span> (PCA), create linear combinations of the original features.</li>
-      </ul>
-      <ul>
-      <li>Non-linear DR methods, such as <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding"><strong>t-Distributed Stochastic Neighbor Embedding</strong></a></span> (tSNE), <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction#Uniform_manifold_approximation_and_projection"><strong>Uniform Manifold Approximation and Projection</strong></a></span> (UMAP), and <span style={{color: "black"}}><a target="_blank" href="https://web.stanford.edu/~boyd/papers/pdf/min_dist_emb.pdf"><strong>Minimum-Distortion Embedding</strong></a></span> (MDE), can capture more complex relationships and preserve non-linear relationships.</li>
-      </ul>
-      <p>After dimensionality reduction, GeneSetR uses <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">the HDBSCAN</a> algorithm to cluster the data. This method generates clusters of different shapes, sizes, and densities without prior knowledge of the data, making it advantageous for high-dimensional data with complex cluster shapes. <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">HDBSCAN</a> does not require the user to specify the number of clusters, however, users still need to adjust certain parameters, such as<strong> minimum cluster size</strong>, <strong>minimum number of samples per cluster</strong>, and<strong> clustering metric</strong>, to find the optimal number of clusters.</p>
-      
-      */
         <>
-          <VideoHelpPage videoFile={helpVideo} />
+          
           <div>
             <h4>
               <span style={{ color: "black" }}>
@@ -418,6 +504,7 @@ const DimReductionPage = ({
               </span>
             </h4>
           </div>
+          
         </>
       ) : null}
       <Tabs
@@ -430,11 +517,14 @@ const DimReductionPage = ({
         }}
       />
 
-      {console.log("graphdata", graphdata)}
-      {console.log("content", content)}
       <Spacer />
       {selectedTab.value === "pca" || graphdata === null ? (
-        content
+        <>
+        {content}
+        <VideoHelpPage videoFile={helpVideo} />
+        
+        </>
+        
       ) : (
         <ScatterPlot graphData={graphdata} />
       )}

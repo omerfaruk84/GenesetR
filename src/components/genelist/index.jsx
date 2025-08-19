@@ -54,19 +54,6 @@ const Genelist = ({
   showSavedGeneLists = true,
   newListName = undefined,
 }) => {
-  useEffect(() => {
-    //When page loaded refresh genelist
-    refreshList();
-
-    //check whether  all gene list exists if not download the all gene list
-    fetchHugoGenes();
-
-    //if gene and perturbation list was not downloaded before, download it.
-    updateGeneLists(coreSettings?.cellLine.id);
-
-    if (genes?.length > 1) genesChanged(genes);
-  }, []);
-
   const [currentGenes, setGenes] = useState(""); //sets the current genes in textarea
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
   const [selectedGeneList, setSelectedGeneList] = useState(); //sets the currently selected gene list in the select box
@@ -77,6 +64,21 @@ const Genelist = ({
   const location = useLocation();
   const [isGeneSignaturePopupOpen, setGeneSignaturePopupOpen] = useState(false);
   const { pathname } = location;
+
+  let geneListNames = new Set();
+  get("geneListNames").then((val) => {
+    if (val) geneListNames = val;
+    else geneListNames = new Set();
+  });
+
+  const saveGeneListNames = () => {
+    set("geneListNames", geneListNames);
+  };
+
+  // Get all available genelists from the database
+  const getAllGenelists = () => {
+    return get("geneListNames");
+  };
 
   const replaceGene = useCallback(
     (oldSymbols, newSymbols) => {
@@ -95,7 +97,7 @@ const Genelist = ({
                 newSymbol
                   .trim()
                   .replace(/^\s+|\s+$/g, "")
-                  .replace(/[ \+]+/g, " ")
+                  .replace(/[ +]+/g, " ")
                   .toUpperCase()
             );
           });
@@ -112,7 +114,7 @@ const Genelist = ({
                 newSymbol
                   .trim()
                   .replace(/^\s+|\s+$/g, "")
-                  .replace(/[ \+]+/g, " ")
+                  .replace(/[ +]+/g, " ")
                   .toUpperCase()
             );
           });
@@ -137,26 +139,9 @@ const Genelist = ({
     },
     [isGeneSignature]
   );
-  let geneListNames = new Set();
-  get("geneListNames").then((val) => {
-    if (val) geneListNames = val;
-    else geneListNames = new Set();
-  });
-
-  const numberOfGenesEntered = currentGenes
-    ? currentGenes
-        .trim()
-        .replace(/\s+|,|;|\+|\-|\n+/g, "\n")
-        .split("\n")
-        .reduce((prev, step) => (step.trim() ? prev + 1 : prev), 0)
-    : 0;
-
-  const saveGeneListNames = () => {
-    set("geneListNames", geneListNames);
-  };
 
   //Retrieves local genelists from database
-  const refreshList = () => {
+  const refreshList = useCallback(() => {
     return new Promise((resolve, reject) => {
       getAllGenelists()
         .then((genelists) => {
@@ -184,7 +169,95 @@ const Genelist = ({
           reject(error);
         });
     });
+  }, []);
+
+  const genesChanged = useCallback((value) => {
+    value = value.toUpperCase();
+    if (newGeneListName === selectedGeneList && !saveListChecked)
+      setsaveListChecked(true);
+    if (isGeneSignature)
+      value = value
+        ?.replaceAll(/\s+|,|\n+|;/g, "+")
+        .replaceAll(/\++/g, "+")
+        .replaceAll(/-+/g, "-")
+        .trimStart("+");
+    else console.log(value);
+    value = value
+      ?.toUpperCase()
+      .replaceAll(/NON-TARGETING_\d+/g, "")
+      .replaceAll(/\s+|,|;/g, "\n")
+      .replaceAll(/\n+/g, "\n")
+      .trimStart("\n")
+      .split("\n")
+      .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
+      .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
+      .join("\n"); // Join back into a string separated by newlines
+
+    setGenes(value, () => {
+      setProps(() => ({
+        validatingGenes: true,
+        replaceGene: replaceGene,
+        genes: {
+          found: [],
+          suggestions: [],
+        },
+        currentGenes: value,
+      }));
+    });
+  }, [newGeneListName, selectedGeneList, saveListChecked, isGeneSignature, replaceGene]);
+
+  // Get a genelist from the database based on ID
+  const getGenelistById = (id) => {
+    return get("genelist_" + id);
   };
+
+  const debouncedChangeHandler = useCallback(
+    debounce((genes) => {
+      if (genes.length > 0)
+        checkGenes(
+          genes,
+          isPerturbationList,
+          coreSettings?.cellLine.id,
+          isGeneSignature
+        ).then((prop) => {
+          prop["replaceGene"] = replaceGene;
+          setProps(prop);
+        });
+    }, 1000),
+    [
+      checkGenes,
+      isPerturbationList,
+      coreSettings?.cellLine.id,
+      isGeneSignature,
+      replaceGene,
+    ]
+  );
+
+  useEffect(() => {
+    setPerturbationList(currentGenes);
+    debouncedChangeHandler(currentGenes);
+  }, [currentGenes, coreSettings.cellLine.id, setPerturbationList, debouncedChangeHandler]);
+
+  useEffect(() => {
+    //When page loaded refresh genelist
+    refreshList();
+
+    //check whether  all gene list exists if not download the all gene list
+    fetchHugoGenes();
+
+    //if gene and perturbation list was not downloaded before, download it.
+    updateGeneLists(coreSettings?.cellLine.id);
+
+    if (genes?.length > 1) genesChanged(genes);
+  }, [coreSettings?.cellLine.id, genes, genesChanged, refreshList]);
+
+  const numberOfGenesEntered = currentGenes
+    ? currentGenes
+        .trim()
+        .replace(/\s+|,|;|[+-]|\n+/g, "\n")
+        .split("\n")
+        .reduce((prev, step) => (step.trim() ? prev + 1 : prev), 0)
+    : 0;
 
   // Insert a new genelist into the database
   const addGenelist = (genelistID, geneList) => {
@@ -232,11 +305,6 @@ const Genelist = ({
       });
   };
 
-  // Get all available genelists from the database
-  const getAllGenelists = () => {
-    return get("geneListNames");
-  };
-
   // Remove a genelist from the database based on ID
   const removeGenelistById = (id) => {
     del("genelist_" + id).then(() => {
@@ -273,73 +341,6 @@ const Genelist = ({
       });
     });
   };
-
-  // Get a genelist from the database based on ID
-  const getGenelistById = (id) => {
-    return get("genelist_" + id);
-  };
-
-  useEffect(() => {
-    setPerturbationList(currentGenes);
-    debouncedChangeHandler(currentGenes);
-  }, [currentGenes, coreSettings.cellLine.id]);
-
-  function genesChanged(value) {
-    value = value.toUpperCase();
-    if (newGeneListName === selectedGeneList && !saveListChecked)
-      setsaveListChecked(true);
-    if (isGeneSignature)
-      value = value
-        ?.replaceAll(/\s+|,|\n+|;/g, "+")
-        .replaceAll(/\++/g, "+")
-        .replaceAll(/-+/g, "-")
-        .trimStart("+");
-    else console.log(value);
-    value = value
-      ?.toUpperCase()
-      .replaceAll(/NON-TARGETING_\d+/g, "")
-      .replaceAll(/\s+|,|;/g, "\n")
-      .replaceAll(/\n+/g, "\n")
-      .trimStart("\n")
-      .split("\n")
-      .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
-      .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
-      .join("\n"); // Join back into a string separated by newlines
-
-    setGenes(value, () => {
-      setProps(() => ({
-        validatingGenes: true,
-        replaceGene: replaceGene,
-        genes: {
-          found: [],
-          suggestions: [],
-        },
-        currentGenes: value,
-      }));
-    });
-  }
-
-  const debouncedChangeHandler = useCallback(
-    debounce((genes) => {
-      if (genes.length > 0)
-        checkGenes(
-          genes,
-          isPerturbationList,
-          coreSettings?.cellLine.id,
-          isGeneSignature
-        ).then((prop) => {
-          prop["replaceGene"] = replaceGene;
-          setProps(prop);
-        });
-    }, 1000),
-    [
-      props,
-      checkGenes,
-      isPerturbationList,
-      coreSettings?.cellLine.id,
-      isGeneSignature,
-    ]
-  );
 
   return (
     <>

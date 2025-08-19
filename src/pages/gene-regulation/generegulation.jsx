@@ -28,7 +28,23 @@ import {
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
 import { getBlackList } from "../../store/api";
-import { geneRegulationCoreSettingsSlice } from "../../store/settings/gene-regulation-core-settings";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+// Add module description for Gene Regulation
+const moduleDescription = {
+  title: "Gene Regulation Module",
+  description: "This module constructs a network centered around a Gene of Interest (GOI). It identifies upstream regulators and downstream targets based on user-specified z-score thresholds, then analyzes connections for biological consistency between different regulatory groups.",
+  features: [
+    "Upstream Positive/Negative Regulators: Genes whose perturbations affect the GOI (UPR/UNR)",
+    "Downstream Positively/Negatively Regulated genes: Genes affected by knockdown of the GOI (DPR/DNR)", 
+    "Logical interaction analysis: UPR should positively influence DPR and negatively affect DNR",
+    "Network filtering options: interaction strength thresholds, minimum connections, isolated gene removal",
+    "Blacklist filtering: Remove genes with abnormal expression patterns or technical biases",
+    "Interactive network visualization with correlation data between perturbations"
+  ]
+  
+};
 
 echarts.use([
   TitleComponent,
@@ -187,7 +203,6 @@ const GeneRegulation = ({
     getBlackList().then((result) => {
       const genesUp = {};
       const genesDown = {};
-      console.log(result.blacklist);
 
       for (const gene in result.blacklist.ZS) {
         if (result.blacklist.ZS[gene] > 0) {
@@ -196,8 +211,7 @@ const GeneRegulation = ({
           genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
         }
       }
-      console.log("setblackListDown", genesDown);
-      console.log("setblackListUp", genesUp);
+ 
       setblackListDown(genesDown);
       setblackListUp(genesUp);
 
@@ -216,20 +230,16 @@ const GeneRegulation = ({
       }
 
       setblackListExpDown(genesDownExp);
-      setblackListExpUp(genesUpExp);
-      //console.log("setblackListExpDown",genesDownExp )
-      //console.log("setblackListExpUp",genesUpExp )
+      setblackListExpUp(genesUpExp); 
     });
   }, []);
 
   useEffect(() => {
-    //console.log("USe effect")
     if (
       geneRegulationGraph &&
       geneRegulationGraph.nodes &&
       geneRegulationGraph.nodes.length > 0
     ) {
-      //console.log("geneRegulationGraph",geneRegulationGraph)
 
       var edges = [];
       var nodes = [];
@@ -942,6 +952,12 @@ const GeneRegulation = ({
       temp["DNR"] = temp["DNR"].join();
       temp["UPSTREAM"] = temp["UPSTREAM"].join();
       temp["DOWNSTREAM"] = temp["DOWNSTREAM"].join();
+      //remove the empty ones
+      for (const key in temp) {
+        if (temp[key].length === 0) {
+          delete temp[key];
+        }
+      }
       setGeneLists(temp);
 
       if (geneRegulationCoreSettings.layout === "none") {
@@ -1100,6 +1116,79 @@ const GeneRegulation = ({
 
   return (
     <>
+      <Accordion
+      sx={{
+         marginBottom: '14px',
+              backgroundColor: '#f8f9fa', 
+              border: '1px solid #e9ecef',
+
+              borderRadius: '8px',
+              '&:before': {
+                display: 'none',
+              },
+        '& .MuiAccordionSummary-root': {
+          minHeight: '30px',
+          height: '30px',
+        },
+        '& .MuiAccordionSummary-root.Mui-expanded': {
+          minHeight: '30px',
+          height: '30px',
+        }
+      }}
+      >
+        <AccordionSummary 
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+           
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+        </AccordionSummary>
+        <AccordionDetails sx={{ backgroundColor: '#fafafa', padding: '16px' }}>
+          <div style={{ marginBottom: '0px' }}>
+            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
+            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
+            <ul style={{ marginBottom: '0px', paddingLeft: '20px' }}>
+              {moduleDescription.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
+              ))}
+            </ul> 
+
+
+
+
+
+
+          </div>
+        </AccordionDetails>
+      </Accordion>
+      {!geneRegulationCoreSettings?.selectedGene && (
+  <div style={{ 
+    padding: '12px', 
+    backgroundColor: '#e3f2fd', 
+    borderLeft: '4px solid #1976d2',
+    borderRadius: '4px',
+    color: '#1565c0',
+    marginBottom: '8px'
+  }}>
+    💡 To start, please select a gene from the left menu.
+  </div>
+)}
+{geneRegulationCoreSettings?.selectedGene && keyedData?.length === 0 && (
+  <div style={{ 
+    padding: '12px', 
+    backgroundColor: '#fff3e0', 
+    borderLeft: '4px solid #ff9800',
+    borderRadius: '4px',
+    color: '#e65100',
+    marginBottom: '8px'
+  }}>
+    ⚠️ No nodes are visible with current filter settings. Try relaxing the filters to see more connections.
+  </div>
+)}
       <ButtonGroup
         items={[
           {
@@ -1116,8 +1205,8 @@ const GeneRegulation = ({
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
-
-      {keyedData && selectedView === 1 && (
+     
+      {keyedData && keyedData.length > 1 && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
       )}
       {selectedView === 0 && (
@@ -1134,6 +1223,7 @@ const GeneRegulation = ({
         </>
       )}
       <Spacer height={70} />
+      {console.log(genelists)}
       {genelists && Object.keys(genelists).length > 0 && (
         <>
           <GeneSetEnrichmentTable genesets={genelists} />

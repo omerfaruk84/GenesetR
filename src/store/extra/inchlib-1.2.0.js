@@ -167,6 +167,267 @@ function InCHlib(settings) {
   var target_width = self.target_element.width();
   self.target_element.css({ position: "relative" });
 
+  // Add comprehensive cleanup method for complete destruction
+  self.cleanup = function() {
+    try {
+      // Clear all event listeners
+      if (self.events) {
+        Object.keys(self.events).forEach(key => {
+          self.events[key] = function() { return; };
+        });
+      }
+
+      // Properly cleanup KineticJS stage and all its components
+      if (self.stage) {
+        // First remove all event listeners from the stage itself
+        if (typeof self.stage.off === 'function') {
+          self.stage.off(); // Remove all event listeners from stage
+        }
+        
+        // Get all layers and clean them up properly
+        if (self.stage.getLayers) {
+          const layers = self.stage.getLayers();
+          layers.forEach(layer => {
+            if (layer) {
+              // Remove all event listeners from the layer
+              if (typeof layer.off === 'function') {
+                layer.off(); // This removes ALL event listeners including transformation ones
+              }
+              
+              // Recursively clean up all children (nodes, shapes, etc.)
+              if (layer.getChildren) {
+                const cleanupNode = (node) => {
+                  if (node && typeof node.off === 'function') {
+                    node.off(); // Remove all event listeners from this node
+                  }
+                  if (node && node.getChildren) {
+                    node.getChildren().forEach(cleanupNode);
+                  }
+                };
+                layer.getChildren().forEach(cleanupNode);
+              }
+              
+              // Now safely destroy the layer
+              if (typeof layer.destroy === 'function') {
+                layer.destroy();
+              }
+            }
+          });
+        }
+        
+        // Clean up individual layer references
+        const layerRefs = [
+          'cluster_layer', 'dendrogram_hover_layer', 'dendrogram_layer', 
+          'stage_layer', 'column_dendrogram_layer', 'heatmap_layer', 
+          'cell_value_layer', 'heatmap_overlay', 'row_id_layer', 
+          'highlighted_rows_layer', 'header_layer', 'navigation_layer'
+        ];
+        
+        layerRefs.forEach(layerRef => {
+          if (self[layerRef]) {
+            if (typeof self[layerRef].off === 'function') {
+              self[layerRef].off();
+            }
+            if (typeof self[layerRef].destroy === 'function') {
+              self[layerRef].destroy();
+            }
+            self[layerRef] = null;
+          }
+        });
+        
+        // Clean up group references
+        const groupRefs = ['row_cluster_group', 'column_cluster_group'];
+        groupRefs.forEach(groupRef => {
+          if (self[groupRef]) {
+            if (typeof self[groupRef].off === 'function') {
+              self[groupRef].off();
+            }
+            if (typeof self[groupRef].destroy === 'function') {
+              self[groupRef].destroy();
+            }
+            self[groupRef] = null;
+          }
+        });
+        
+        // Finally destroy the stage itself
+        if (typeof self.stage.destroy === 'function') {
+          self.stage.destroy();
+        }
+        self.stage = null;
+      }
+
+      // Clear all stored data (only for complete cleanup)
+      self.data = null;
+      self.metadata = null;
+      self.column_metadata = null;
+      self.dendrogram = null;
+      self.column_dendrogram = null;
+      self.leaves_y_coordinates = null;
+      self.objects2leaves = null;
+      self.leaves2objects = null;
+      self.column_leaves_x_coordinates = null;
+      self.column_objects2leaves = null;
+      self.column_leaves2objects = null;
+
+      // Clear any cached data
+      self.cached_data = null;
+      self.cached_metadata = null;
+      self.cached_column_metadata = null;
+
+      // Clear any stored settings
+      self.settings = null;
+      self.user_settings = null;
+
+      // Clear the target element
+      if (self.target_element && self.target_element.length) {
+        // Clean up jQuery event listeners first
+        self.target_element.find('.color_scale').off();
+        self.target_element.find('.color_scales').off(); 
+        self.target_element.off(); // Remove all event listeners from target element
+        self.target_element.empty();
+      }
+
+      // Clear any timers or intervals
+      if (self._timers) {
+        Object.values(self._timers).forEach(timer => {
+          if (timer) {
+            clearTimeout(timer);
+            clearInterval(timer);
+          }
+        });
+        self._timers = {};
+      }
+
+      // Clear any stored references
+      self._refs = {};
+      
+      // Force garbage collection hint (browser may ignore this)
+      if (window.gc && typeof window.gc === 'function') {
+        setTimeout(() => window.gc(), 100);
+      }
+      
+    } catch (error) {
+      console.warn('Error during InCHlib cleanup:', error);
+    }
+  };
+
+  // Add partial cleanup method for redrawing (preserves data)
+  self.cleanupUI = function() {
+    try {
+      // Properly cleanup KineticJS stage and all its components but preserve data
+      if (self.stage) {
+        // First remove all event listeners from the stage itself
+        if (typeof self.stage.off === 'function') {
+          self.stage.off(); // Remove all event listeners from stage
+        }
+        
+        // Get all layers and clean them up properly
+        if (self.stage.getLayers) {
+          const layers = self.stage.getLayers();
+          layers.forEach(layer => {
+            if (layer) {
+              // Remove all event listeners from the layer
+              if (typeof layer.off === 'function') {
+                layer.off(); // This removes ALL event listeners including transformation ones
+              }
+              
+              // Recursively clean up all children (nodes, shapes, etc.)
+              if (layer.getChildren) {
+                const cleanupNode = (node) => {
+                  if (node && typeof node.off === 'function') {
+                    node.off(); // Remove all event listeners from this node
+                  }
+                  if (node && node.getChildren) {
+                    node.getChildren().forEach(cleanupNode);
+                  }
+                };
+                layer.getChildren().forEach(cleanupNode);
+              }
+              
+              // Now safely destroy the layer
+              if (typeof layer.destroy === 'function') {
+                layer.destroy();
+              }
+            }
+          });
+        }
+        
+        // Clean up individual layer references
+        const layerRefs = [
+          'cluster_layer', 'dendrogram_hover_layer', 'dendrogram_layer', 
+          'stage_layer', 'column_dendrogram_layer', 'heatmap_layer', 
+          'cell_value_layer', 'heatmap_overlay', 'row_id_layer', 
+          'highlighted_rows_layer', 'header_layer', 'navigation_layer'
+        ];
+        
+        layerRefs.forEach(layerRef => {
+          if (self[layerRef]) {
+            if (typeof self[layerRef].off === 'function') {
+              self[layerRef].off();
+            }
+            if (typeof self[layerRef].destroy === 'function') {
+              self[layerRef].destroy();
+            }
+            self[layerRef] = null;
+          }
+        });
+        
+        // Clean up group references
+        const groupRefs = ['row_cluster_group', 'column_cluster_group'];
+        groupRefs.forEach(groupRef => {
+          if (self[groupRef]) {
+            if (typeof self[groupRef].off === 'function') {
+              self[groupRef].off();
+            }
+            if (typeof self[groupRef].destroy === 'function') {
+              self[groupRef].destroy();
+            }
+            self[groupRef] = null;
+          }
+        });
+        
+        // Finally destroy the stage itself
+        if (typeof self.stage.destroy === 'function') {
+          self.stage.destroy();
+        }
+        self.stage = null;
+      }
+
+      // Clean up jQuery event listeners from target element (but don't clear data)
+      if (self.target_element && self.target_element.length) {
+        self.target_element.find('.color_scale').off();
+        self.target_element.find('.color_scales').off(); 
+        // Don't clear the target element itself for redraw
+      }
+
+      // Clear any timers or intervals
+      if (self._timers) {
+        Object.values(self._timers).forEach(timer => {
+          if (timer) {
+            clearTimeout(timer);
+            clearInterval(timer);
+          }
+        });
+        self._timers = {};
+      }
+      
+    } catch (error) {
+      console.warn('Error during InCHlib UI cleanup:', error);
+    }
+  };
+
+  // Add cleanup method
+  self.destroy = function() {
+    // Remove all event listeners
+    self.events = {};
+    // Clear any references to DOM elements
+    self.target_element = null;
+    // Clear any timers or intervals
+    if (self._timer) {
+      clearTimeout(self._timer);
+    }
+  }
+
   /**
    * Default values for the settings
    * @name InCHlib#settings
@@ -1272,7 +1533,12 @@ InCHlib.prototype._reorder_heatmap = function (column_index) {
 InCHlib.prototype.draw = function () {
   var self = this;
   // Add a settings panel above the heatmap
-  
+    // Add this cleanup block
+  if (self.stage) {
+    self.stage.destroy(); // Properly destroy previous stage
+    self.stage = null;
+  }
+
   self.stage?.destroyChildren();
   self.zoomed_clusters = { row: [], column: [] };
   self.last_highlighted_cluster = null;
@@ -4547,7 +4813,8 @@ InCHlib.prototype.update_settings = function (settings_object) {
  */
 InCHlib.prototype.redraw = function () {
   var self = this;
-  self._delete_all_layers();
+  // Use UI cleanup instead of full cleanup to preserve data
+  self.cleanupUI();
   self.draw();
 };
 
@@ -4556,6 +4823,9 @@ InCHlib.prototype.redraw = function () {
  */
 InCHlib.prototype.redraw_heatmap = function () {
   var self = this;
+  [self.heatmap_layer, self.heatmap_overlay, self.highlighted_rows_layer, self.header_layer].forEach(layer => {
+    if (layer) layer.destroy();
+  });
   self._delete_layers([
     self.heatmap_layer,
     self.heatmap_overlay,

@@ -87,6 +87,17 @@ const AboutPage = () => {
             significantly larger than the current ~300 X 300 size limit.
           </p>
           <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-15</span>
+          <p>
+            We've made significant improvements to enhance your GeneSetR experience:
+            <br />
+            🔧 Fixed a severe bug that was causing memory leaks and freezing during heatmap plotting, ensuring smoother and more stable performance.
+            <br />
+            📱 Enhanced application responsiveness across different screen sizes for better accessibility on various devices.
+            <br />
+            🎨 Improved user interface with comprehensive guidelines for each module, making navigation and usage more intuitive.
+          </p>
+          <hr style={{ height: 1 }} />
           <span className={styles.updateDate}>2025-02-14</span>
           <p>A major bug leading to memory leak and crashes has been fixed.</p>
           <hr style={{ height: 1 }} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Select, Spacer, Slider, Text, Flex } from '@oliasoft-open-source/react-ui-library';
+import { Field, Select, Spacer, Slider } from '@oliasoft-open-source/react-ui-library';
 import { ClusteringSettingsTypes } from './enums';
 import { clusteringSettingsChanged } from '../../../store/settings/clustering-settings';
 import styles from './settings.module.scss';

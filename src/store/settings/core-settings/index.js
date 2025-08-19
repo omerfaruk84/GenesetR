@@ -1,6 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { CoreSettingsTypes } from "../../../components/side-bar/settings/enums";
-import { connect } from "react-redux";
 const defaultGeneList = `TAF1C
   ACTR5
   UTP6

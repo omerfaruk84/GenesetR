@@ -12,7 +12,7 @@
       > a > span {
         white-space: "pre-wrap";
         text-overflow: clip;
-        line-height: 1em;
+        line-height: 1.3em;
         font-size: 0.8em;
         margin-top: 3px;
       }
@@ -62,4 +62,183 @@
       }
     }
   }
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    margin-top: 15px;
+    padding: 0 4px;
+    font-size: 0.95em;
+    
+    div > div:nth-child(2) {
+      margin-right: 0;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    ul {
+      flex-wrap: wrap;
+      gap: 2px;
+      li a {
+        padding: 6px 4px;
+      }
+    }
+    div > div > a > span {
+      font-size: 0.7em;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .topBar {
+    margin-top: 8px;
+    padding: 0 2px;
+    font-size: 0.85em;
+    
+    div > div:nth-child(2) {
+      gap: 2px;
+    }
+    ul {
+      gap: 1px;
+      li a {
+        padding: 4px 2px;
+      }
+    }
+    div > div > a > span {
+      font-size: 0.6em;
+    }
+    img, svg {
+      max-width: 22px !important;
+      max-height: 22px !important;
+    }
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 601px) {
+  .topBar {
+    margin-top: 12px;
+    padding: 0 2px;
+    font-size: 0.92em;
+    
+    div > div:nth-child(2) {
+      gap: 8px;
+      margin-right: 0;
+    }
+    ul {
+      gap: 6px;
+      li a {
+        padding: 7px 4px;
+      }
+    }
+    div > div > a > span {
+      font-size: 0.75em;
+      max-width: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      line-height: 1.3;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+    img, svg {
+      max-width: 26px !important;
+      max-height: 26px !important;
+    }
+  }
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin-left: 8px;
+  z-index: 1201;
+}
+
+@media (max-width: 600px) {
+  .topBar > *:not(.hamburger):not(.drawerOverlay) {
+    display: none !important;
+  }
+  .hamburger {
+    display: block;
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 1300;
+  }
+}
+
+.drawerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.4);
+  z-index: 1200;
+  display: flex;
+}
+
+.drawer {
+  background: #fff;
+  width: 240px;
+  max-width: 80vw;
+  height: 100vh;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  padding: 24px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1201;
+  animation: slideInLeft 0.2s;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.drawerClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 2em;
+  cursor: pointer;
+}
+
+.drawerNavLink {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 1.1em;
+  color: #222;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.drawerNavLink:hover {
+  background: #f0f0f0;
+}
+
+.drawerNavLink img, .drawerNavLink svg {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px;
+  min-height: 28px;
+  margin-right: 12px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.drawerNavLink span {
+  vertical-align: middle;
+  display: inline-block;
 }

@@ -1,15 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TopBar as TopBarCmp } from "@oliasoft-open-source/react-ui-library";
-import { FaHome } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes } from "react-icons/fa";
 import {
   FcMindMap,
   FcScatterPlot,
-  FcGrid,
-  FcLineChart,
   FcSerialTasks,
   FcAbout,
-  FcSignature,
   FcElectricalSensor,
   FcWorkflow,
   FcTodoList,
@@ -25,6 +22,7 @@ const TopBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { pathname } = location;
+  const [menuOpen, setMenuOpen] = useState(false);
   const navLinks = [
     {
       icon: () => <FaHome size={"2em"} />,
@@ -40,7 +38,7 @@ const TopBar = () => {
       icon: () => (
         <img
           src={clusteringicon}
-          style={{ width: 35, marginLeft: 15, marginRight: 15 }}
+          style={{ width: 28 }}
           alt="Dimensionality Reduction and Clustering"
         />
       ),
@@ -61,7 +59,7 @@ const TopBar = () => {
       icon: () => (
         <img
           src={heatmapicon}
-          style={{ width: 33, marginLeft: 15, marginRight: 15 }}
+          style={{ width: 28 }}
           alt="Heatmap"
         />
       ),
@@ -89,9 +87,26 @@ const TopBar = () => {
       toLink: ROUTES.ABOUTUS,
     },
   ];
+
+  // Drawer nav for mobile
+  const handleNavClick = (toLink) => {
+    setMenuOpen(false);
+    navigate(toLink);
+  };
+
   return (
     <div className={styles.topBar}>
+      {/* Hamburger icon for mobile */}
+      <button
+        className={styles.hamburger}
+        aria-label="Open menu"
+        onClick={() => setMenuOpen(true)}
+      >
+        <FaBars size={28} />
+      </button>
+      {/* Regular nav for desktop/tablet */}
       <TopBarCmp
+        height={60}
         content={navLinks.map(({ icon, name, toLink }) => ({
           icon: icon(),
           label: name,
@@ -106,6 +121,33 @@ const TopBar = () => {
         }}
         contentRight={undefined}
       />
+      {/* Drawer overlay and menu */}
+      {menuOpen && (
+        <div className={styles.drawerOverlay} onClick={() => setMenuOpen(false)}>
+          <nav
+            className={styles.drawer}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Mobile navigation"
+          >
+            <button
+              className={styles.drawerClose}
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+            >
+              <FaTimes />
+            </button>
+            {navLinks.map(({ icon, name, toLink }) => (
+              <button
+                key={name}
+                className={styles.drawerNavLink}
+                onClick={() => handleNavClick(toLink)}
+              >
+                {icon()} <span style={{ marginLeft: 12 }}>{name}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
     </div>
   );
 };

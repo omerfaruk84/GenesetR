@@ -167,7 +167,7 @@ const GenelistCompareSettings = ({
             startIcon={<AddIcon />}
             onClick={() => setNewListVisible(true)}
           >
-            Add Genelist
+            Add List
           </Button>
           <Button
             variant="outlined"

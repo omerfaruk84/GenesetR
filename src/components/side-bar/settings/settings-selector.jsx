@@ -147,6 +147,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.HEAT_MAP,
         settings: <HeatMapSettings />,
       },
+      {
+        settingsName: SettingsTypes.INCHLIB_SETTINGS,
+        settings: <InchlibSettings />,
+      },
     ],
     [ROUTES.PATHFINDER]: [
       {

@@ -17,6 +17,22 @@ import { CanvasRenderer } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
 import styles from "./pathfinder.module.scss";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+
+// Add module description for PathFinder (Pathway Explorer)
+const moduleDescription = {
+  title: "Pathway Explorer",
+  description: "This module maps pathways among submitted genes using GWPS data, particularly useful for RNA-seq data analyses. It examines down-regulated genes to determine which genes are up- or down-regulated following perturbation, creating pathway networks that reveal key regulatory relationships and interactions.",
+  description2: "Interactive network shows regulatory relationships. Node sizes reflect the number of interaction partners (neighbours), node opacity shows knockdown efficiency, and edge width/color indicate effect strength (e.g a green arrow from gene A to gene B indicates that knockdown of gene A leads to down-regulation of gene B).",
+  features: [
+    "Maps regulatory pathways between submitted genes",
+    "Identifies key nodes that mediate observed phenotypes", 
+    "Visualizes gene-gene interactions with effect sizes",
+    "Integrates correlation data from GWPS",
+    "Integrates protein-protein interaction data from BioGRID"
+  ],  
+};
 
 echarts.use([
   TitleComponent,
@@ -499,6 +515,57 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
 
   return (
     <>
+      {/* Add module description header */}
+      <Accordion 
+        sx={{
+          marginBottom: '14px',
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #e9ecef',
+          borderRadius: '8px',
+          '&:before': {
+            display: 'none',
+          },
+              '& .MuiAccordionSummary-root': {
+        minHeight: '30px',
+        height: '30px',
+      }
+      , '& .MuiAccordionSummary-root.Mui-expanded': {
+        minHeight:  '30px',
+        height: '30px',
+      }
+        }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+            '&.Mui-expanded': {
+              minHeight: '30px'
+            }
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+        </AccordionSummary>
+        <AccordionDetails sx={{ padding: '6px 14px 5px' }}>
+          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+            {moduleDescription.description}
+          </p>
+          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+            {moduleDescription.description2}
+          </p>
+          <div style={{ fontSize: '13px', color: '#424242' }}>
+            <strong>Key Features:</strong>
+            <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
+              {moduleDescription.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '2px' }}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+        </AccordionDetails>
+      </Accordion>
+
       <ButtonGroup
         items={[
           {

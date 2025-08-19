@@ -820,11 +820,8 @@ const GeneSetEnrichmentTable = ({
         }
       });
       setGeneListOptions(tempx);
-      // Only set selectedCluster if it's not already set or if the current one isn’t in the new list.
-      if (
-        tempx.length > 0 &&
-        !tempx.some((item) => item.value === selectedCluster)
-      ) {
+      // Always update selectedCluster when genesets change to trigger enrichment analysis
+      if (tempx.length > 0) {
         setselectedCluster(tempx[0].value);
       }
     }
