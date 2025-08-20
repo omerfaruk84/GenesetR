@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Row, Column, Spacer, Heading } from '@oliasoft-open-source/react-ui-library';
 import { GeneSignature } from '../../components/genesignature/genesignature';
@@ -8,6 +8,8 @@ import VideoHelpPage from '../../components/video-help';
 import helpVideo from '../../common/videos/6.webm'
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { getBlackList } from "../../store/api";
+
 const moduleDescription = {
   title: "Gene Signature Analysis",
   description: "This module identifies genes that induce specific phenotypes upon their perturbation by applying mathematical expressions to z-score normalized data. It helps to identify sets of genes responsible for specific phenotypic changes (e.g. genes that regulate ER stress, cholesterol biosynthesis, etc).",
@@ -17,14 +19,45 @@ const moduleDescription = {
     similarGenes: "This table lists genes that show similar expression patterns to your gene signature and may be considered for inclusion in the signature to enhance its specificity. Higher similarity scores indicate stronger correlation with your signature."
   }
 };
+
 const GeneSignaturePage = (geneRegulationResults) => {
-  
+  const [blacklistData, setBlacklistData] = useState(null);
+  const [blacklistLoading, setBlacklistLoading] = useState(true);
+
+  // Load blacklist data immediately when the page loads
+  useEffect(() => {
+    getBlackList().then((result) => {
+      const genesUp = {};
+      const genesDown = {};
+
+      for (const gene in result.blacklist.ZS) {
+        if (result.blacklist.ZS[gene] > 0) {
+          genesUp[gene] = result.blacklist.ZS[gene];
+        } else {
+          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+        }
+      }
+
+      setBlacklistData({
+        blackListDown: genesDown,
+        blackListUp: genesUp,
+      });
+      setBlacklistLoading(false);
+    }).catch((error) => {
+      console.error("Failed to load blacklist data:", error);
+      setBlacklistData({
+        blackListDown: {},
+        blackListUp: {},
+      });
+      setBlacklistLoading(false);
+    });
+  }, []);
 
   return (
     
     <div className={styles.mainView}>
       {geneRegulationResults.geneRegulationResults !== null ? (      
-          <GeneSignature data = {geneRegulationResults}/>
+          <GeneSignature data={geneRegulationResults} blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
           ) : (
             <div>  
             <Accordion defaultExpanded={true}
@@ -47,7 +80,7 @@ const GeneSignaturePage = (geneRegulationResults) => {
     }}}>
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
-               sx={{ 
+              sx={{ 
             backgroundColor: '#f5f5f5',
             borderBottom: '1px solid #e0e0e0',
             minHeight: '30px',

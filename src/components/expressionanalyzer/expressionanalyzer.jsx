@@ -22,7 +22,7 @@ import * as echarts from "echarts/core";
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
-import { getBlackList } from "../../store/api";
+
 import {
   GridComponent,
   TooltipComponent,
@@ -81,6 +81,8 @@ const ExpressionAnalyzer = ({
   data,
   calcResults,
   coreSettingsChanged,
+  blacklistData,
+  blacklistLoading,
 }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
@@ -98,8 +100,7 @@ const ExpressionAnalyzer = ({
     value: 0,
   });
   const [genelists, setGeneLists] = useState([]);
-  const [blackListDown, setblackListDown] = useState({});
-  const [blackListUp, setblackListUp] = useState({});
+
   const [downstream, setdownStream] = useState({});
   const [upstream, setupStream] = useState({});
   const [pertCorr, setpertCorr] = useState({});
@@ -301,24 +302,7 @@ const ExpressionAnalyzer = ({
     return { mean: mean, std: std };
   }
 
-  useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
 
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
-      ////console.log("setblackListDown", genesDown);
-      ////console.log("setblackListUp", genesUp);
-      setblackListDown(genesDown);
-      setblackListUp(genesUp);
-    });
-  }, []);
 
   function calculateZscore(data) {
     var results = trimmedMean(data, 0.2);
@@ -375,7 +359,7 @@ const ExpressionAnalyzer = ({
   }
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !blacklistData || blacklistLoading) return;
     let highlightList = new Set(
       expressionanalyzerSettings?.genesTolabel
         .replaceAll(/[,\s;]+/g, "\n")
@@ -457,16 +441,16 @@ const ExpressionAnalyzer = ({
         if (
           expressionanalyzerSettings.filter &&
           xValues[i] < 0 &&
-          blackListDown[labels[i]] !== undefined &&
-          blackListDown[labels[i]] >
+          blacklistData.blackListDown[labels[i]] !== undefined &&
+          blacklistData.blackListDown[labels[i]] >
             expressionanalyzerSettings.filterBlackListed
         )
           continue;
         else if (
           expressionanalyzerSettings.filter &&
           xValues[i] > 0 &&
-          blackListUp[labels[i]] !== undefined &&
-          blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
+          blacklistData.blackListUp[labels[i]] !== undefined &&
+          blacklistData.blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
         )
           continue;
 
@@ -642,6 +626,8 @@ const ExpressionAnalyzer = ({
     data.geneRegulationResults,
     downstream,
     selectedProbe,
+    blacklistData,
+    blacklistLoading,
   ]);
 
   //Set graph options
@@ -974,6 +960,18 @@ const ExpressionAnalyzer = ({
               onSelected={(key) => setSelectedView(key)}
               value={selectedView}
             />
+            {blacklistLoading && (
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#e8f5e8', 
+                borderLeft: '4px solid #4caf50',
+                borderRadius: '4px',
+                color: '#2e7d32',
+                marginBottom: '8px'
+              }}>
+                🔄 Loading blacklist data for filtering...
+              </div>
+            )}
             {keyedData && selectedView === 1 && (
               <>
                 <EnrichmentTable

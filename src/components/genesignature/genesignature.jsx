@@ -15,7 +15,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
-import { getBlackList } from "../../store/api";
+
 import {
   GridComponent,
   TooltipComponent,
@@ -68,7 +68,7 @@ const moduleDescription = {
   }
 };
 
-const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
+const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistData, blacklistLoading }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
@@ -80,8 +80,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
     value: "gsea",
   });
   const [genelists, setGeneLists] = useState([]);
-  const [blackListDown, setblackListDown] = useState({});
-  const [blackListUp, setblackListUp] = useState({});
+
 
   const columns = useMemo(
     () => [
@@ -268,25 +267,27 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
   }
 
   useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
+    // getBlackList().then((result) => {
+    //   const genesUp = {};
+    //   const genesDown = {};
 
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
-      console.log("setblackListDown", genesDown);
-      console.log("setblackListUp", genesUp);
-      setblackListDown(genesDown);
-      setblackListUp(genesUp);
-    });
+    //   for (const gene in result.blacklist.ZS) {
+    //     if (result.blacklist.ZS[gene] > 0) {
+    //       genesUp[gene] = result.blacklist.ZS[gene];
+    //     } else {
+    //       genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+    //     }
+    //   }
+    //   console.log("setblackListDown", genesDown);
+    //   console.log("setblackListUp", genesUp);
+    //   setblackListDown(genesDown);
+    //   setblackListUp(genesUp);
+    // });
   }, []);
 
   useEffect(() => {
+    if (!blacklistData || blacklistLoading) return;
+    
     let signatureGenes = coreSettings.targetGeneList
       .replaceAll(/[,\s;]+/g, "+")
       .replaceAll(/\++|\-+/g, "+")
@@ -378,15 +379,15 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
         if (
           genesignatureSettings.filter &&
           xValues[i] < 0 &&
-          blackListDown[labels[i]] !== undefined &&
-          blackListDown[labels[i]] > genesignatureSettings.filterBlackListed
+          blacklistData.blackListDown[labels[i]] !== undefined &&
+          blacklistData.blackListDown[labels[i]] > genesignatureSettings.filterBlackListed
         )
           continue;
         else if (
           genesignatureSettings.filter &&
           xValues[i] > 0 &&
-          blackListUp[labels[i]] !== undefined &&
-          blackListUp[labels[i]] > genesignatureSettings.filterBlackListed
+          blacklistData.blackListUp[labels[i]] !== undefined &&
+          blacklistData.blackListUp[labels[i]] > genesignatureSettings.filterBlackListed
         )
           continue;
 
@@ -471,7 +472,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
       console.log("pointData", pointData);
       setPointData(pointData);
     }
-  }, [data, coreSettings.targetGeneList, genesignatureSettings]);
+  }, [data, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading]);
 
   console.log(pointData);
   useEffect(() => {
@@ -681,6 +682,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data }) => {
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
+      {blacklistLoading && (
+        <div style={{ 
+          padding: '12px', 
+          backgroundColor: '#e8f5e8', 
+          borderLeft: '4px solid #4caf50',
+          borderRadius: '4px',
+          color: '#2e7d32',
+          marginBottom: '8px'
+        }}>
+          🔄 Loading blacklist data for filtering...
+        </div>
+      )}
       <Spacer height={5} />
       {keyedData && selectedView === 1 && (
         <>
