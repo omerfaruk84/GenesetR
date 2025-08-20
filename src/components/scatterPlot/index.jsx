@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 
@@ -61,27 +61,33 @@ const ScatterPlot = ({
 }) => {
   const [options, setOptions] = useState({});
 
-  const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
-  const genes = scatterplotSettings.genesTolabel
-    .replaceAll(/\s+|,\s+|,/g, ";")
-    ?.split(";");
-  const genesTolabel = new Set(genes);
-  var pieces = [];
-  const clusterData = [];
-  const minandmax = [0, 0, 0, 0, 0, 0];
+  // Memoize expensive gene processing
+  const genesTolabel = useMemo(() => {
+    const genes = scatterplotSettings.genesTolabel
+      .replaceAll(/\s+|,\s+|,/g, ";")
+      ?.split(";");
+    return new Set(genes);
+  }, [scatterplotSettings.genesTolabel]);
 
-  //const [clusters, setClusters] = useState();
+  // Memoize data processing
+  const processedData = useMemo(() => {
+    const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
+    var pieces = [];
+    const clusterData = [];
+    const minandmax = [0, 0, 0, 0, 0, 0];
+    const clusters = {};
 
-  const clusters = {};
+    let graphdata = graphData;
+    if (
+      !graphdata ||
+      !graphdata["PC1"] ||
+      !graphdata["PC2"] ||
+      !graphdata["GeneSymbols"]
+    ) {
+      return { data, pieces, clusterData, minandmax, clusters };
+    }
 
-  let graphdata = graphData;
-  if (
-    graphdata &&
-    graphdata["PC1"] &&
-    graphdata["PC2"] &&
-    graphdata["GeneSymbols"]
-  ) {
-    // There's no real number bigger than plus Infinity
+    // Calculate min/max for PC1
     var lowest = Number.POSITIVE_INFINITY;
     var highest = Number.NEGATIVE_INFINITY;
     var tmp;
@@ -94,6 +100,7 @@ const ScatterPlot = ({
     minandmax[0] = lowest;
     minandmax[1] = highest;
 
+    // Calculate min/max for PC2
     lowest = Number.POSITIVE_INFINITY;
     highest = Number.NEGATIVE_INFINITY;
     for (let i = graphdata["PC2"].length - 1; i >= 0; i--) {
@@ -101,32 +108,36 @@ const ScatterPlot = ({
       if (tmp < lowest) lowest = tmp;
       if (tmp > highest) highest = tmp;
     }
+
     minandmax[2] = lowest;
     minandmax[3] = highest;
 
-    lowest = Number.POSITIVE_INFINITY;
-    highest = Number.NEGATIVE_INFINITY;
-    for (let i = graphdata["PC3"].length - 1; i >= 0; i--) {
-      tmp = graphdata["PC3"][i];
-      if (tmp < lowest) lowest = tmp;
-      if (tmp > highest) highest = tmp;
+    // Calculate min/max for PC3 if exists
+    if (graphdata["PC3"]) {
+      lowest = Number.POSITIVE_INFINITY;
+      highest = Number.NEGATIVE_INFINITY;
+      for (let i = graphdata["PC3"].length - 1; i >= 0; i--) {
+        tmp = graphdata["PC3"][i];
+        if (tmp < lowest) lowest = tmp;
+        if (tmp > highest) highest = tmp;
+      }
+      minandmax[4] = lowest;
+      minandmax[5] = highest;
     }
-    minandmax[4] = lowest;
-    minandmax[5] = highest;
 
+    // Process cluster data and build data array
     if (graphdata["clusterCount"] > 0) {
       let arrayOfArrays = Array.from(
         Array(graphdata["clusterCount"]),
         () => []
       );
-      console.log("arrayOfArrays empty", arrayOfArrays);
+      
       for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
         //collect the clusters
         if (graphdata["clusterLabels"][i] > -1) {
           arrayOfArrays[graphdata["clusterLabels"][i]].push(
             graphdata["GeneSymbols"][i]
           );
-          //console.log(i, arrayOfArrays)
         }
 
         data.push([
@@ -140,12 +151,9 @@ const ScatterPlot = ({
       }
 
       //clusters = {}
-      console.log("arrayOfArrays", arrayOfArrays);
       for (let i = 0; i < arrayOfArrays.length; i++) {
         clusters["Cluster" + (i + 1)] = arrayOfArrays[i].join();
       }
-
-      console.log("clusters", clusters);
     } else {
       for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
         data.push([
@@ -218,18 +226,28 @@ const ScatterPlot = ({
         color: COLOR_ALL[1],
       });
     }
-  }
+
+    return { data, pieces, clusterData, minandmax, clusters, COLOR_ALL };
+  }, [graphData, scatterplotSettings.symbolSize]);
+
+  const data = processedData.data;
+  const pieces = processedData.pieces;
+  const clusterData = processedData.clusterData;
+  const minandmax = processedData.minandmax;
+  const clusters = processedData.clusters;
+  const COLOR_ALL = processedData.COLOR_ALL;
+
   useEffect(() => {
     function renderItem(params, api) {
       var curIndex = api.value(0) * 10000;
 
       const points = [];
-      if (graphdata["x" + curIndex]) {
-        for (var i = 0; i < graphdata["x" + curIndex].length; i++) {
+      if (graphData["x" + curIndex]) {
+        for (var i = 0; i < graphData["x" + curIndex].length; i++) {
           points.push(
             api.coord([
-              graphdata["x" + curIndex][i],
-              graphdata["y" + curIndex][i],
+              graphData["x" + curIndex][i],
+              graphData["y" + curIndex][i],
             ])
           );
         }
@@ -615,7 +633,7 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings, scatterplotSettings, graphdata]);
+  }, [coreSettings, scatterplotSettings, graphData]);
 
   return (
     /*<EchartsReact

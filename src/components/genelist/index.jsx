@@ -65,15 +65,24 @@ const Genelist = ({
   const [isGeneSignaturePopupOpen, setGeneSignaturePopupOpen] = useState(false);
   const { pathname } = location;
 
-  let geneListNames = new Set();
-  get("geneListNames").then((val) => {
-    if (val) geneListNames = val;
-    else geneListNames = new Set();
-  });
+  // Optimize geneListNames loading with useEffect
+  const [geneListNames, setGeneListNames] = useState(new Set());
 
-  const saveGeneListNames = () => {
+  useEffect(() => {
+    let isMounted = true;
+    get("geneListNames").then((val) => {
+      if (isMounted) {
+        setGeneListNames(val || new Set());
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const saveGeneListNames = useCallback(() => {
     set("geneListNames", geneListNames);
-  };
+  }, [geneListNames]);
 
   // Get all available genelists from the database
   const getAllGenelists = () => {

@@ -4,6 +4,7 @@ import React, {
   useState,
   useImperativeHandle,
   forwardRef,
+  useCallback,
 } from "react";
 import { connect } from "react-redux";
 import { FaTrash } from "react-icons/fa";
@@ -16,7 +17,25 @@ import { updateGeneLists } from "../../store/api";
 
 const DatasetSelector = forwardRef(
   ({ coreSettingsChanged, coreSettings }, ref, onlyMain) => {
-    const [datasetList, setDatasetList] = useState([
+    const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
+      setDatasetList(prevList => 
+        prevList.map(item => ({
+          ...item,
+          active: item.id === id
+        }))
+      );
+      coreSettingsChanged({
+        settingName: CoreSettingsTypes.CELL_LINE,
+        newValue: {
+          id,
+          perturbationCount,
+          geneCount,
+          isMixscape,
+        },
+      });
+    }, [coreSettingsChanged]);
+
+    const [datasetList, setDatasetList] = useState(() => [
       {
         droppable: true,
         id: "K562gwps",
@@ -33,7 +52,6 @@ const DatasetSelector = forwardRef(
         droppable: true,
         id: "K562essential",
         name: "K562 Essential",
-        //details: 'Main',
         onClick: () => updateActivityById("K562essential", 2285, 8563, false),
         parent: 0,
         active: false,
@@ -241,87 +259,6 @@ const DatasetSelector = forwardRef(
 
     const location = useLocation();  
   
-
-    const updateActivityById = (id, perturbationCount, geneCount, isMixscape) => {
-  setDatasetList((prevDatasetList) => {
-    let dataType = "";
-
-    // Build a new dataset list with updated fields
-    const newDatasetList = prevDatasetList.map((item) => {
-      // Copy the old item
-      const newItem = { ...item };
-
-      // If actions exist and ID is longer than 17, rebuild them (like you did)
-      let actionsNew = [];
-      if (newItem.actions && newItem.id.length > 17) {
-        actionsNew = [
-          {
-            icon: newItem.actions[0]?.icon,
-            label: newItem.actions[0]?.label,
-            onClick: ((itemId) => () => deleteItemAndChildren(itemId))(
-              newItem.id
-            ),
-          },
-        ];
-      }
-      newItem.actions = actionsNew;
-
-      // If this is the clicked dataset, update fields
-      if (newItem.id === id) {
-        newItem.active = true;
-        newItem.perturbationCount = perturbationCount;
-        newItem.geneCount = geneCount;
-        newItem.isMixscape = isMixscape;
-        newItem.resultShape = `${perturbationCount} ${geneCount}`;
-
-        // Capture dataType if needed
-        dataType = newItem.dataType ?? "";
-
-        // Ensure onClick passes fresh values back to updateActivityById
-        newItem.onClick = (
-          (clickedId, pCount, gCount, mix) => () =>
-            updateActivityById(clickedId, pCount, gCount, mix)
-        )(id, perturbationCount, geneCount, isMixscape);
-      } else {
-        // Not the clicked one => un-activate it, but keep existing shape
-        newItem.active = false;
-        newItem.onClick = (
-          (clickedId, pCount, gCount, mix) => () =>
-            updateActivityById(clickedId, pCount, gCount, mix)
-        )(
-          newItem.id,
-          newItem.perturbationCount,
-          newItem.geneCount,
-          newItem.isMixscape
-        );
-      }
-
-      return newItem;
-    });
-
-    // If we have a dataType for the selected dataset, update Redux
-    if (dataType && dataType !== "") {
-      coreSettingsChanged({
-        settingName: CoreSettingsTypes.DATA_TYPE,
-        newValue: dataType,
-      });
-    }
-
-    // Also update the CELL_LINE portion of your Redux state
-    coreSettingsChanged({
-      settingName: CoreSettingsTypes.CELL_LINE,
-      newValue: {
-        id,
-        perturbationCount,
-        geneCount,
-        isMixscape,
-      },
-    });
-
-    return newDatasetList;
-  });
-};
-
 
     const deleteItemAndChildren = (id) => {
       let parent = "";

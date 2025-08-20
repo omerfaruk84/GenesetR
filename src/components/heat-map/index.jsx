@@ -220,9 +220,7 @@ const keyedData = useMemo(() => {
           if (containerWidth > 0 && heatmapWidth > 0) {
             const scale = Math.min(containerWidth / heatmapWidth, 1); // Don't scale up beyond 100%
             transformWrapperRef.current?.setTransform(0, 0, scale);
-            console.log(`Auto-fit applied: container=${containerWidth}px, heatmap=${heatmapWidth}px, scale=${scale.toFixed(3)}`);
           } else {
-            console.warn('Invalid dimensions for auto-fit:', { containerWidth, heatmapWidth });
             // Retry after a short delay if dimensions aren't ready
             setTimeout(() => handleFitToScreen(), 100);
           }
@@ -234,7 +232,6 @@ const keyedData = useMemo(() => {
   }, []);
 
   const handleManualFitToScreen = useCallback(() => {
-    console.log('Manual fit to screen triggered');
     // Force a fit even if dimensions seem invalid
     const container = heatmapContainerRef.current;
     const heatmap = heatmapRef.current;
@@ -246,14 +243,10 @@ const keyedData = useMemo(() => {
           const containerWidth = container.offsetWidth - 50;
           const heatmapWidth = heatmap.offsetWidth;
           
-          console.log('Manual fit dimensions:', { containerWidth, heatmapWidth });
-          
           if (containerWidth > 0 && heatmapWidth > 0) {
             const scale = Math.min(containerWidth / heatmapWidth, 1);
             transformWrapperRef.current?.setTransform(0, 0, scale);
-            console.log(`Manual fit applied: scale=${scale.toFixed(3)}`);
           } else {
-            console.warn('Invalid dimensions for manual fit, trying with force...');
             // If dimensions are still invalid, try with a default scale
             transformWrapperRef.current?.setTransform(0, 0, 0.5);
           }
@@ -261,12 +254,6 @@ const keyedData = useMemo(() => {
           console.error('Error in manual fit to screen:', error);
         }
       }, 150);
-    } else {
-      console.warn('Missing references for manual fit:', { 
-        container: !!container, 
-        heatmap: !!heatmap, 
-        transform: !!transformWrapperRef.current 
-      });
     }
   }, []);
 

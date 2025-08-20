@@ -139,7 +139,7 @@ const ExpressionAnalyzer = ({
       settingName: CoreSettingsTypes.SHOW_HELP,
       newValue: false,
     });
-  }, [coreSettings.cellLine.id]);
+  }, [coreSettings.cellLine.id, runCalculation, pathname, coreSettingsChanged]);
 
   useEffect(() => {
     setisRunning(
@@ -149,7 +149,6 @@ const ExpressionAnalyzer = ({
 
   useEffect(() => {
     if (!isCalcRunning && data && data.geneRegulationResults) {
-      //console.log("Updating");
       if (data.geneRegulationResults.downstream.length > 0) {
         const newTabs2 = tabOptions;
         newTabs2[0].disabled = false;
@@ -358,8 +357,10 @@ const ExpressionAnalyzer = ({
     return { min, binSize, bins, pointDistribution, data };
   }
 
-  useEffect(() => {
-    if (!data || !blacklistData || blacklistLoading) return;
+  // Memoize expensive calculations
+  const processedData = useMemo(() => {
+    if (!data || !blacklistData || blacklistLoading) return null;
+    
     let highlightList = new Set(
       expressionanalyzerSettings?.genesTolabel
         .replaceAll(/[,\s;]+/g, "\n")
@@ -367,7 +368,6 @@ const ExpressionAnalyzer = ({
         .split("\n")
     );
     highlightList = new Set([...highlightList]);
-    //console.log("highlightList", highlightList);
 
     let selectedData;
     var zScoreConv = false;
@@ -397,226 +397,198 @@ const ExpressionAnalyzer = ({
           break;
       }
     }
-    //console.log("selectedData", selectedData, upstream, expCorr);
 
-    if (Object.keys(selectedData).length > 0) {
-      setProbes(Object.keys(selectedData));
-
-      if (Object.keys(selectedData).length === 1 && selectedProbe > 0)
-        setSelectedProbe(0);
+    if (!selectedData || Object.keys(selectedData).length === 0) {
+      return { geneLists: {}, keyedData: [], pointData: [], pointDistribution: [], probes: [] };
     }
 
-    if (
-      selectedData &&
-      Object.keys(selectedData).length > 0 &&
-      Object.keys(selectedData).length > selectedProbe &&
-      selectedData[Object.keys(selectedData)[selectedProbe]]
-    ) {
-      //const chart = echarts.init(chartRef.current);
-      let xValues = Object.values(
-        selectedData[Object.keys(selectedData)[selectedProbe]]
-      );
-      const labels = Object.keys(
-        selectedData[Object.keys(selectedData)[selectedProbe]]
-      );
+    const probesData = Object.keys(selectedData);
+    const currentProbe = selectedProbe < probesData.length ? selectedProbe : 0;
+    
+    if (!selectedData[probesData[currentProbe]]) {
+      return { geneLists: {}, keyedData: [], pointData: [], pointDistribution: [], probes: probesData };
+    }
 
-      console.log(xValues, labels);
+    let xValues = Object.values(selectedData[probesData[currentProbe]]);
+    const labels = Object.keys(selectedData[probesData[currentProbe]]);
 
-      let tableInfo = [];
-      //setkeyedData(tableInfo);
-      const pointData2 = [];
+    let tableInfo = [];
+    const pointData2 = [];
 
-      let zScores = xValues;
-      let binSize = 0.01;
-      if (zScoreConv) {
-        binSize = 0.05;
-        zScores = calculateZscore(xValues);
+    let zScores = xValues;
+    let binSize = 0.01;
+    if (zScoreConv) {
+      binSize = 0.05;
+      zScores = calculateZscore(xValues);
+    }
+
+    var result = calculateDataDistribution(zScores, binSize);
+    
+    for (let i = 0; i < xValues.length; i++) {
+      if (
+        expressionanalyzerSettings.filter &&
+        xValues[i] < 0 &&
+        blacklistData.blackListDown[labels[i]] !== undefined &&
+        blacklistData.blackListDown[labels[i]] >
+          expressionanalyzerSettings.filterBlackListed
+      )
+        continue;
+      else if (
+        expressionanalyzerSettings.filter &&
+        xValues[i] > 0 &&
+        blacklistData.blackListUp[labels[i]] !== undefined &&
+        blacklistData.blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
+      )
+        continue;
+
+      if (
+        ((zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
+          (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1)) &&
+        !highlightList.has(labels[i])
+      ) {
+        let randomNum = Math.floor(Math.random() * 10) + 1;
+        if (randomNum < 7) continue;
       }
 
-      var result = calculateDataDistribution(zScores, binSize);
-      console.log(result);
-      //findNearestIndex(distX,distY, xValues[i])
-      for (let i = 0; i < xValues.length; i++) {
-        //if (!zScoreConv && xValues[i] === 1) continue;
-        if (
-          expressionanalyzerSettings.filter &&
-          xValues[i] < 0 &&
-          blacklistData.blackListDown[labels[i]] !== undefined &&
-          blacklistData.blackListDown[labels[i]] >
-            expressionanalyzerSettings.filterBlackListed
-        )
-          continue;
-        else if (
-          expressionanalyzerSettings.filter &&
-          xValues[i] > 0 &&
-          blacklistData.blackListUp[labels[i]] !== undefined &&
-          blacklistData.blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
-        )
-          continue;
+      let index = Math.floor((zScores[i] - result.min) / result.binSize);
+      if (index >= result.bins.length) index = result.bins.length - 1;
 
-        //For sgRNAs that are not significant we dont need to show all.
-        if (
-          ((zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
-            (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1)) &&
-          !highlightList.has(labels[i])
-        ) {
-          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
-          if (randomNum < 7) continue;
-        }
+      let binLoc = result.bins[Math.max(0, index)].count;
+      let histY = Math.random() * 2 * binLoc - binLoc;
+      pointData2.push([
+        zScores[i],
+        histY,
+        labels[i],
+        xValues[i],
+        highlightList.has(labels[i]),
+      ]);
 
-        console.log(
-          zScores[i],
-          result.min,
-          result.binSize,
-          Math.floor((zScores[i] - result.min) / result.binSize),
-          result
-        );
-
-        let index = Math.floor((zScores[i] - result.min) / result.binSize);
-        if (index >= result.bins.length) index = result.bins.length - 1;
-
-        let binLoc = result.bins[Math.max(0, index)].count;
-        let histY = Math.random() * 2 * binLoc - binLoc;
-        pointData2.push([
-          zScores[i],
-          histY,
-          labels[i],
-          xValues[i],
-          highlightList.has(labels[i]),
-        ]);
-
-        if (zScoreConv) {
-          tableInfo.push({
-            Gene: labels[i],
-            Effect:
-              zScores[i] > 2
+      if (zScoreConv) {
+        tableInfo.push({
+          Gene: labels[i],
+          Effect:
+            zScores[i] > 2
+              ? selectedTab.value === 0
+                ? "UPREGULATED"
+                : "UPREGULATES"
+              : zScores[i] < -2
                 ? selectedTab.value === 0
-                  ? "UPREGULATED"
-                  : "UPREGULATES"
-                : zScores[i] < -2
-                  ? selectedTab.value === 0
-                    ? "DOWN REGULATED"
-                    : "DOWN REGULATES"
-                  : "NO CHANGE",
-            Score: xValues[i],
-            "Z-Score": roundToThree(zScores[i]),
-          });
-        } else {
-          tableInfo.push({
-            Gene: labels[i],
-            Effect:
-              xValues[i] > 0.8
-                ? "STRONG POSITIVE CORR"
-                : xValues[i] > 0.5
-                  ? "POSITIVE CORR"
-                  : xValues[i] > 0.1
-                    ? "WEAK POSITIVE CORR"
-                    : xValues[i] < -0.8
-                      ? "STRONG NEGATIVE CORR"
-                      : xValues[i] < -0.5
-                        ? "NEGATIVE CORR"
-                        : xValues[i] < -0.1
-                          ? "WEAK NEGATIVE CORR"
-                          : "NO CORR",
-            Score: xValues[i],
-          });
-        }
-      }
-
-      if (zScoreConv) {
-        tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]);
-      } else {
-        tableInfo.sort((geneA, geneB) => geneB["Score"] - geneA["Score"]);
-      }
-
-      const temp = {};
-
-      if (selectedInnerTab.value === 0) {
-        const genesLength = tableInfo.length;
-        const upreg = [];
-        const dowreg = [];
-        // First pass to categorize genes based on upregulation or downregulation
-        tableInfo.forEach((gene, index) => {
-          if (gene.Effect.startsWith("UP")) {
-            upreg.push(gene.Gene);
-          } else if (gene.Effect.startsWith("DOWN")) {
-            dowreg.push(gene.Gene);
-          }
-          // For top and bottom genes, since it's based on position, no need to process here.
+                  ? "DOWN REGULATED"
+                  : "DOWN REGULATES"
+                : "NO CHANGE",
+          Score: xValues[i],
+          "Z-Score": roundToThree(zScores[i]),
         });
-        // Assigning top and bottom gene slices
-        const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
-        const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
-        const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
-        const bottom20 = tableInfo
-          .slice(Math.max(genesLength - 20, 0))
-          .map((gene) => gene.Gene);
-        const bottom50 = tableInfo
-          .slice(Math.max(genesLength - 50, 0))
-          .map((gene) => gene.Gene);
-        const bottom100 = tableInfo
-          .slice(Math.max(genesLength - 100, 0))
-          .map((gene) => gene.Gene);
-
-        if (upreg.length > 3) temp["Upregulated"] = upreg.join();
-        if (dowreg.length > 3) temp["Downregulated"] = dowreg.join();
-        if (top20.length > 3) temp["Top 20 Upregulated"] = top20.join();
-        if (top50.length > 3) temp["Top 50 Upregulated"] = top50.join();
-        if (top100.length > 3) temp["Top 100 Upregulated"] = top100.join();
-        if (bottom20.length > 3) temp["Top 20 Downregulated"] = bottom20.join();
-        if (bottom50.length > 3) temp["Top 50 Downregulated"] = bottom50.join();
-        if (bottom100.length > 3)
-          temp["Top 100 Downregulated"] = bottom100.join();
       } else {
-        // Since correlation calculations are separate, process them individually
-        const strongPosCorr = [];
-        const posCorr = [];
-        const weakPosCorr = [];
-        const strongNegCorr = [];
-        const negCorr = [];
-        const weakNegCorr = [];
-
-        tableInfo.forEach((gene) => {
-          const score = gene.Score;
-          const geneName = gene.Gene;
-          if (score > 0.8) {
-            strongPosCorr.push(geneName);
-          } else if (score > 0.5) {
-            posCorr.push(geneName);
-          } else if (score > 0.1) {
-            weakPosCorr.push(geneName);
-          } else if (score < -0.8) {
-            strongNegCorr.push(geneName);
-          } else if (score < -0.5) {
-            negCorr.push(geneName);
-          } else if (score < -0.1) {
-            weakNegCorr.push(geneName);
-          }
+        tableInfo.push({
+          Gene: labels[i],
+          Effect:
+            xValues[i] > 0.8
+              ? "STRONG POSITIVE CORR"
+              : xValues[i] > 0.5
+                ? "POSITIVE CORR"
+                : xValues[i] > 0.1
+                  ? "WEAK POSITIVE CORR"
+                  : xValues[i] < -0.8
+                    ? "STRONG NEGATIVE CORR"
+                    : xValues[i] < -0.5
+                      ? "NEGATIVE CORR"
+                      : xValues[i] < -0.1
+                        ? "WEAK NEGATIVE CORR"
+                        : "NO CORR",
+          Score: xValues[i],
         });
-
-        if (strongPosCorr.length > 3)
-          temp["STRONG POSITIVE CORR"] = strongPosCorr.join();
-        if (posCorr.length > 3) temp["POSITIVE CORR"] = posCorr.join();
-        if (weakPosCorr.length > 3)
-          temp["WEAK POSITIVE CORR"] = weakPosCorr.join();
-        if (strongNegCorr.length > 3)
-          temp["STRONG NEGATIVE CORR"] = strongNegCorr.join();
-        if (negCorr.length > 3) temp["NEGATIVE CORR"] = negCorr.join();
-        if (weakNegCorr.length > 3)
-          temp["WEAK NEGATIVE CORR"] = weakNegCorr.join();
       }
-
-      //console.log("Here we go #2");
-
-      setGeneLists(temp);
-      setPointDistribution(result.pointDistribution);
-
-      setkeyedData(tableInfo);
-
-      pointData2.sort((a, b) => b[0] - a[0]);
-
-      setPointData(pointData2);
     }
+
+    if (zScoreConv) {
+      tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]);
+    } else {
+      tableInfo.sort((geneA, geneB) => geneB["Score"] - geneA["Score"]);
+    }
+
+    const temp = {};
+
+    if (selectedInnerTab.value === 0) {
+      const genesLength = tableInfo.length;
+      const upreg = [];
+      const dowreg = [];
+      tableInfo.forEach((gene) => {
+        if (gene.Effect.startsWith("UP")) {
+          upreg.push(gene.Gene);
+        } else if (gene.Effect.startsWith("DOWN")) {
+          dowreg.push(gene.Gene);
+        }
+      });
+      const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
+      const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
+      const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
+      const bottom20 = tableInfo
+        .slice(Math.max(genesLength - 20, 0))
+        .map((gene) => gene.Gene);
+      const bottom50 = tableInfo
+        .slice(Math.max(genesLength - 50, 0))
+        .map((gene) => gene.Gene);
+      const bottom100 = tableInfo
+        .slice(Math.max(genesLength - 100, 0))
+        .map((gene) => gene.Gene);
+
+      if (upreg.length > 3) temp["Upregulated"] = upreg.join();
+      if (dowreg.length > 3) temp["Downregulated"] = dowreg.join();
+      if (top20.length > 3) temp["Top 20 Upregulated"] = top20.join();
+      if (top50.length > 3) temp["Top 50 Upregulated"] = top50.join();
+      if (top100.length > 3) temp["Top 100 Upregulated"] = top100.join();
+      if (bottom20.length > 3) temp["Top 20 Downregulated"] = bottom20.join();
+      if (bottom50.length > 3) temp["Top 50 Downregulated"] = bottom50.join();
+      if (bottom100.length > 3)
+        temp["Top 100 Downregulated"] = bottom100.join();
+    } else {
+      const strongPosCorr = [];
+      const posCorr = [];
+      const weakPosCorr = [];
+      const strongNegCorr = [];
+      const negCorr = [];
+      const weakNegCorr = [];
+
+      tableInfo.forEach((gene) => {
+        const score = gene.Score;
+        const geneName = gene.Gene;
+        if (score > 0.8) {
+          strongPosCorr.push(geneName);
+        } else if (score > 0.5) {
+          posCorr.push(geneName);
+        } else if (score > 0.1) {
+          weakPosCorr.push(geneName);
+        } else if (score < -0.8) {
+          strongNegCorr.push(geneName);
+        } else if (score < -0.5) {
+          negCorr.push(geneName);
+        } else if (score < -0.1) {
+          weakNegCorr.push(geneName);
+        }
+      });
+
+      if (strongPosCorr.length > 3)
+        temp["STRONG POSITIVE CORR"] = strongPosCorr.join();
+      if (posCorr.length > 3) temp["POSITIVE CORR"] = posCorr.join();
+      if (weakPosCorr.length > 3)
+        temp["WEAK POSITIVE CORR"] = weakPosCorr.join();
+      if (strongNegCorr.length > 3)
+        temp["STRONG NEGATIVE CORR"] = strongNegCorr.join();
+      if (negCorr.length > 3) temp["NEGATIVE CORR"] = negCorr.join();
+      if (weakNegCorr.length > 3)
+        temp["WEAK NEGATIVE CORR"] = weakNegCorr.join();
+    }
+
+    pointData2.sort((a, b) => b[0] - a[0]);
+
+    return {
+      geneLists: temp,
+      keyedData: tableInfo,
+      pointData: pointData2,
+      pointDistribution: result.pointDistribution,
+      probes: probesData
+    };
   }, [
     data,
     coreSettings.targetGeneList,
@@ -625,15 +597,32 @@ const ExpressionAnalyzer = ({
     selectedInnerTab.value,
     data.geneRegulationResults,
     downstream,
+    upstream,
+    pertCorr,
+    expCorr,
     selectedProbe,
     blacklistData,
     blacklistLoading,
   ]);
 
-  //Set graph options
   useEffect(() => {
-    if (!data.geneRegulationResults) return;
-    setOptions({
+    if (processedData) {
+      setGeneLists(processedData.geneLists);
+      setkeyedData(processedData.keyedData);
+      setPointData(processedData.pointData);
+      setPointDistribution(processedData.pointDistribution);
+      setProbes(processedData.probes);
+      if (processedData.probes.length === 1 && selectedProbe > 0) {
+        setSelectedProbe(0);
+      }
+    }
+  }, [processedData, selectedProbe]);
+
+  //Set graph options
+  const chartOptions = useMemo(() => {
+    if (!data.geneRegulationResults || !pointData.length) return {};
+    
+    return {
       tooltip: {
         formatter: function (params) {
           return params.data[2] + "<br> Score: " + params.data[0]?.toFixed(2);
@@ -675,7 +664,6 @@ const ExpressionAnalyzer = ({
         {
           type: "slider",
           show: true,
-
           realtime: true,
           xAxisIndex: [0],
         },
@@ -697,7 +685,6 @@ const ExpressionAnalyzer = ({
           bottom: 100,
         },
       ],
-
       series: [
         {
           name: "Series 2",
@@ -707,7 +694,7 @@ const ExpressionAnalyzer = ({
           lineStyle: {
             width: 0,
           },
-          xAxisIndex: 0, // use the second x-axis for this series
+          xAxisIndex: 0,
           data: pointDistribution.map(function (x) {
             return [x[0], x[1]];
           }),
@@ -718,32 +705,31 @@ const ExpressionAnalyzer = ({
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return "rgba(216, 245, 39, 0.5)"; //yellow
+                return "rgba(216, 245, 39, 0.5)";
               else if (params.data[4] === true) {
                 return "rgba(39, 96, 245, 0.7)";
-              } //blue highlight
+              }
               else if (
                 (selectedInnerTab.value === 0 && params.data[0] > 2) ||
                 (selectedInnerTab.value === 1 && params.data[0] > 0.5)
               ) {
-                return "rgba(39, 245, 55, 0.7)"; //green
+                return "rgba(39, 245, 55, 0.7)";
               } else if (
                 (selectedInnerTab.value === 0 && params.data[0] < -2) ||
                 (selectedInnerTab.value === 1 && params.data[0] < -0.5)
               ) {
-                return "rgba(245, 55, 39, 0.7)"; //red
+                return "rgba(245, 55, 39, 0.7)";
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] > 0.15
               ) {
-                return "rgba(39, 245, 55, 0.4)"; //green
+                return "rgba(39, 245, 55, 0.4)";
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] < -0.5
               ) {
-                return "rgba(245, 55, 39, 0.4)"; //red
+                return "rgba(245, 55, 39, 0.4)";
               } else {
-                //if( params.data[3]> -2 &&params.data[3]<2 )
                 return (
                   "rgba(200, 200, 200," +
                   String((Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185) +
@@ -775,13 +761,17 @@ const ExpressionAnalyzer = ({
           type: "scatter",
         },
       ],
-    });
+    };
   }, [
     pointData,
     data.geneRegulationResults,
     pointDistribution,
     selectedInnerTab.value,
   ]);
+
+  useEffect(() => {
+    setOptions(chartOptions);
+  }, [chartOptions]);
 
   return (
     <>
