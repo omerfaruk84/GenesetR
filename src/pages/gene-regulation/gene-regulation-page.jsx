@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { Row, Column } from "@oliasoft-open-source/react-ui-library";
 import { GeneRegulation } from "./generegulation";
@@ -8,6 +8,8 @@ import VideoHelpPage from "../../components/video-help";
 import helpVideo from "../../common/videos/3.webm";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { getBlackList } from "../../store/api";
+
 const moduleDescription = {
   title: "Gene Regulation Network Analysis",
   description: "This module identifies and visualizes upstream and downstream regulators of a gene of interest (GOI) by constructing regulatory networks based on gene expression neighbors. The network reveals how genes regulate each other and helps understand the functional relationships within cellular pathways.",
@@ -20,11 +22,62 @@ const moduleDescription = {
   ],
  
 };
+
 const GeneRegulationPage = (geneRegulationResults) => {
+  const [blacklistData, setBlacklistData] = useState(null);
+  const [blacklistLoading, setBlacklistLoading] = useState(true);
+
+  // Load blacklist data immediately when the page loads
+  useEffect(() => {
+    getBlackList().then((result) => {
+      const genesUp = {};
+      const genesDown = {};
+
+      for (const gene in result.blacklist.ZS) {
+        if (result.blacklist.ZS[gene] > 0) {
+          genesUp[gene] = result.blacklist.ZS[gene];
+        } else {
+          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+        }
+      }
+
+      const genesUpExp = {};
+      const genesDownExp = {};
+      for (const gene in result.blacklistExp.ZS) {
+        if (result.blacklistExp.ZS[gene] > 0) {
+          genesUpExp[gene] = result.blacklistExp.ZS[gene];
+        } else {
+          genesDownExp[gene] = Math.abs(result.blacklistExp.ZS[gene]);
+        }
+      }
+
+      setBlacklistData({
+        blackListDown: genesDown,
+        blackListUp: genesUp,
+        blackListExpDown: genesDownExp,
+        blackListExpUp: genesUpExp,
+        blackListPCount: result.blacklist.C,
+        blackListECount: result.blacklistExp.C,
+      });
+      setBlacklistLoading(false);
+    }).catch((error) => {
+      console.error("Failed to load blacklist data:", error);
+      setBlacklistData({
+        blackListDown: {},
+        blackListUp: {},
+        blackListExpDown: {},
+        blackListExpUp: {},
+        blackListPCount: {},
+        blackListECount: {},
+      });
+      setBlacklistLoading(false);
+    });
+  }, []);
+
   return (
     <div className={styles.mainView}>
       {geneRegulationResults.geneRegulationResults !== null ? (
-        <GeneRegulation />
+        <GeneRegulation blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
       ) : (
         <div>
           <Accordion defaultExpanded

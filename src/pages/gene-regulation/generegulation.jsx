@@ -27,7 +27,6 @@ import {
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
-import { getBlackList } from "../../store/api";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
@@ -60,6 +59,8 @@ echarts.use([
 const GeneRegulation = ({
   geneRegulationCoreSettings,
   geneRegulationGraph,
+  blacklistData,
+  blacklistLoading,
 }) => {
   const columns = useMemo(
     () => [
@@ -190,55 +191,15 @@ const GeneRegulation = ({
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [keyedData, setkeyedData] = useState([{}]);
-  const [blackListDown, setblackListDown] = useState({});
-  const [blackListUp, setblackListUp] = useState({});
-  const [blackListExpDown, setblackListExpDown] = useState({});
-  const [blackListExpUp, setblackListExpUp] = useState({});
-  const [blackListPCount, setblackListPCount] = useState({});
-  const [blackListECount, setblackListECount] = useState({});
   const [genelists, setGeneLists] = useState([]);
-
-  //console.log("Start of the page")
-  useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
-
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
- 
-      setblackListDown(genesDown);
-      setblackListUp(genesUp);
-
-      setblackListPCount(result.blacklist.C);
-      setblackListECount(result.blacklistExp.C);
-
-      console.log("blacklistExp", result.blacklistExp);
-      const genesUpExp = {};
-      const genesDownExp = {};
-      for (const gene in result.blacklistExp.ZS) {
-        if (result.blacklistExp.ZS[gene] > 0) {
-          genesUpExp[gene] = result.blacklistExp.ZS[gene];
-        } else {
-          genesDownExp[gene] = Math.abs(result.blacklistExp.ZS[gene]);
-        }
-      }
-
-      setblackListExpDown(genesDownExp);
-      setblackListExpUp(genesUpExp); 
-    });
-  }, []);
 
   useEffect(() => {
     if (
       geneRegulationGraph &&
       geneRegulationGraph.nodes &&
-      geneRegulationGraph.nodes.length > 0
+      geneRegulationGraph.nodes.length > 0 &&
+      blacklistData &&
+      !blacklistLoading
     ) {
 
       var edges = [];
@@ -331,8 +292,8 @@ const GeneRegulation = ({
               edges[m].type === "UPR_UPR" ||
               edges[m].type === "DPR_DPR" ||
               edges[m].type === "DNR_DNR") &&
-            blackListDown[edges[m].source] !== undefined &&
-            blackListDown[edges[m].source] >
+            blacklistData.blackListDown[edges[m].source] !== undefined &&
+            blacklistData.blackListDown[edges[m].source] >
               geneRegulationCoreSettings.filterBlackListed
           )
             continue;
@@ -344,8 +305,8 @@ const GeneRegulation = ({
               edges[m].type === "UNR_UPR" ||
               edges[m].type === "DPR_DNR" ||
               edges[m].type === "DNR_DPR") &&
-            blackListUp[edges[m].source] !== undefined &&
-            blackListUp[edges[m].source] >
+            blacklistData.blackListUp[edges[m].source] !== undefined &&
+            blacklistData.blackListUp[edges[m].source] >
               geneRegulationCoreSettings.filterBlackListed
           )
             continue;
@@ -362,8 +323,8 @@ const GeneRegulation = ({
               edges[m].type === "UPR_UPR" ||
               edges[m].type === "DPR_DPR" ||
               edges[m].type === "DNR_DNR") &&
-            blackListExpDown[edges[m].target] !== undefined &&
-            blackListExpDown[edges[m].target] >
+            blacklistData.blackListExpDown[edges[m].target] !== undefined &&
+            blacklistData.blackListExpDown[edges[m].target] >
               geneRegulationCoreSettings.filterBlackListedExp
           )
             continue;
@@ -374,8 +335,8 @@ const GeneRegulation = ({
               edges[m].type === "UNR_UPR" ||
               edges[m].type === "DPR_DNR" ||
               edges[m].type === "DNR_DPR") &&
-            blackListExpUp[edges[m].target] !== undefined &&
-            blackListExpUp[edges[m].target] >
+            blacklistData.blackListExpUp[edges[m].target] !== undefined &&
+            blacklistData.blackListExpUp[edges[m].target] >
               geneRegulationCoreSettings.filterBlackListedExp
           )
             continue;
@@ -387,22 +348,22 @@ const GeneRegulation = ({
         ) {
           if (edges[m].source !== geneRegulationCoreSettings.selectedGene) {
             if (
-              (blackListUp[edges[m].source] !== undefined &&
-                blackListUp[edges[m].source] >
+              (blacklistData.blackListUp[edges[m].source] !== undefined &&
+                blacklistData.blackListUp[edges[m].source] >
                   geneRegulationCoreSettings.filterBlackListed) ||
-              (blackListDown[edges[m].source] !== undefined &&
-                blackListDown[edges[m].source] >
+              (blacklistData.blackListDown[edges[m].source] !== undefined &&
+                blacklistData.blackListDown[edges[m].source] >
                   geneRegulationCoreSettings.filterBlackListed)
             )
               continue;
           }
           if (edges[m].target !== geneRegulationCoreSettings.selectedGene) {
             if (
-              (blackListUp[edges[m].target] !== undefined &&
-                blackListUp[edges[m].target] >
+              (blacklistData.blackListUp[edges[m].target] !== undefined &&
+                blacklistData.blackListUp[edges[m].target] >
                   geneRegulationCoreSettings.filterBlackListed) ||
-              (blackListDown[edges[m].target] !== undefined &&
-                blackListDown[edges[m].target] >
+              (blacklistData.blackListDown[edges[m].target] !== undefined &&
+                blacklistData.blackListDown[edges[m].target] >
                   geneRegulationCoreSettings.filterBlackListed)
             )
               continue;
@@ -415,22 +376,22 @@ const GeneRegulation = ({
         ) {
           if (edges[m].target !== geneRegulationCoreSettings.selectedGene) {
             if (
-              (blackListExpUp[edges[m].target] !== undefined &&
-                blackListExpUp[edges[m].target] >
+              (blacklistData.blackListExpUp[edges[m].target] !== undefined &&
+                blacklistData.blackListExpUp[edges[m].target] >
                   geneRegulationCoreSettings.filterBlackListed) ||
-              (blackListExpDown[edges[m].target] !== undefined &&
-                blackListExpDown[edges[m].target] >
+              (blacklistData.blackListExpDown[edges[m].target] !== undefined &&
+                blacklistData.blackListExpDown[edges[m].target] >
                   geneRegulationCoreSettings.filterBlackListed)
             )
               continue;
           }
           if (edges[m].source !== geneRegulationCoreSettings.selectedGene) {
             if (
-              (blackListExpUp[edges[m].source] !== undefined &&
-                blackListExpUp[edges[m].source] >
+              (blacklistData.blackListExpUp[edges[m].source] !== undefined &&
+                blacklistData.blackListExpUp[edges[m].source] >
                   geneRegulationCoreSettings.filterBlackListed) ||
-              (blackListExpDown[edges[m].source] !== undefined &&
-                blackListExpDown[edges[m].source] >
+              (blacklistData.blackListExpDown[edges[m].source] !== undefined &&
+                blacklistData.blackListExpDown[edges[m].source] >
                   geneRegulationCoreSettings.filterBlackListed)
             )
               continue;
@@ -439,14 +400,14 @@ const GeneRegulation = ({
 
         if (geneRegulationCoreSettings.filter3Enabled) {
           if (
-            blackListPCount[edges[m].source] !== undefined &&
-            blackListPCount[edges[m].source] >
+            blacklistData.blackListPCount[edges[m].source] !== undefined &&
+            blacklistData.blackListPCount[edges[m].source] >
               geneRegulationCoreSettings.filterCount1
           )
             continue;
           if (
-            blackListPCount[edges[m].target] !== undefined &&
-            blackListPCount[edges[m].target] >
+            blacklistData.blackListPCount[edges[m].target] !== undefined &&
+            blacklistData.blackListPCount[edges[m].target] >
               geneRegulationCoreSettings.filterCount1
           )
             continue;
@@ -454,14 +415,14 @@ const GeneRegulation = ({
 
         if (geneRegulationCoreSettings.filter4Enabled) {
           if (
-            blackListECount[edges[m].source] !== undefined &&
-            blackListECount[edges[m].source] >
+            blacklistData.blackListECount[edges[m].source] !== undefined &&
+            blacklistData.blackListECount[edges[m].source] >
               geneRegulationCoreSettings.filterCount2
           )
             continue;
           if (
-            blackListECount[edges[m].target] !== undefined &&
-            blackListECount[edges[m].target] >
+            blacklistData.blackListECount[edges[m].target] !== undefined &&
+            blacklistData.blackListECount[edges[m].target] >
               geneRegulationCoreSettings.filterCount2
           )
             continue;
@@ -578,46 +539,46 @@ const GeneRegulation = ({
         (node) =>
           node.id === geneRegulationCoreSettings.selectedGene ||
           (((node.category === 0 &&
-            (blackListDown[node.id] === undefined ||
+            (blacklistData.blackListDown[node.id] === undefined ||
               !geneRegulationCoreSettings.filter1Enabled ||
               geneRegulationCoreSettings.filter1Directional ||
-              blackListDown[node.id] <=
+              blacklistData.blackListDown[node.id] <=
                 geneRegulationCoreSettings.filterBlackListed)) ||
             (node.category === 1 &&
-              (blackListUp[node.id] === undefined ||
+              (blacklistData.blackListUp[node.id] === undefined ||
                 !geneRegulationCoreSettings.filter1Enabled ||
                 geneRegulationCoreSettings.filter1Directional ||
-                blackListUp[node.id] <=
+                blacklistData.blackListUp[node.id] <=
                   geneRegulationCoreSettings.filterBlackListed)) ||
             (node.category === 3 &&
-              (blackListExpDown[node.id] === undefined ||
+              (blacklistData.blackListExpDown[node.id] === undefined ||
                 !geneRegulationCoreSettings.filter2Enabled ||
                 geneRegulationCoreSettings.filter2Directional ||
-                blackListExpDown[node.id] <=
+                blacklistData.blackListExpDown[node.id] <=
                   geneRegulationCoreSettings.filterBlackListedExp)) ||
             (node.category === 2 &&
-              (blackListExpUp[node.id] === undefined ||
+              (blacklistData.blackListExpUp[node.id] === undefined ||
                 !geneRegulationCoreSettings.filter2Enabled ||
                 geneRegulationCoreSettings.filter2Directional ||
-                blackListExpUp[node.id] <=
+                blacklistData.blackListExpUp[node.id] <=
                   geneRegulationCoreSettings.filterBlackListedExp))) &&
             ((node.category !== 0 && node.category === 1) ||
               !geneRegulationCoreSettings.filter1Enabled ||
               geneRegulationCoreSettings.filter1Directional ||
-              (blackListDown[node.id] === undefined &&
-                blackListUp[node.id] === undefined)) &&
+              (blacklistData.blackListDown[node.id] === undefined &&
+                blacklistData.blackListUp[node.id] === undefined)) &&
             ((node.category !== 2 && node.category === 3) ||
               !geneRegulationCoreSettings.filter2Enabled ||
               geneRegulationCoreSettings.filter2Directional ||
-              (blackListExpDown[node.id] === undefined &&
-                blackListExpUp[node.id] === undefined)) &&
+              (blacklistData.blackListExpDown[node.id] === undefined &&
+                blacklistData.blackListExpUp[node.id] === undefined)) &&
             (!geneRegulationCoreSettings.filter3Enabled ||
-              blackListPCount[node.id] === undefined ||
-              blackListPCount[node.id] <=
+              blacklistData.blackListPCount[node.id] === undefined ||
+              blacklistData.blackListPCount[node.id] <=
                 geneRegulationCoreSettings.filterCount1) &&
             (!geneRegulationCoreSettings.filter4Enabled ||
-              blackListECount[node.id] === undefined ||
-              blackListECount[node.id] <=
+              blacklistData.blackListECount[node.id] === undefined ||
+              blacklistData.blackListECount[node.id] <=
                 geneRegulationCoreSettings.filterCount2))
       );
 
@@ -1112,7 +1073,7 @@ const GeneRegulation = ({
         ],
       });
     }
-  }, [geneRegulationGraph, geneRegulationCoreSettings]);
+  }, [geneRegulationGraph, geneRegulationCoreSettings, blacklistData, blacklistLoading]);
 
   return (
     <>
@@ -1177,7 +1138,19 @@ const GeneRegulation = ({
     💡 To start, please select a gene from the left menu.
   </div>
 )}
-{geneRegulationCoreSettings?.selectedGene && keyedData?.length === 0 && (
+{geneRegulationCoreSettings?.selectedGene && blacklistLoading && (
+  <div style={{ 
+    padding: '12px', 
+    backgroundColor: '#e8f5e8', 
+    borderLeft: '4px solid #4caf50',
+    borderRadius: '4px',
+    color: '#2e7d32',
+    marginBottom: '8px'
+  }}>
+    🔄 Loading blacklist data for filtering...
+  </div>
+)}
+{geneRegulationCoreSettings?.selectedGene && !blacklistLoading && keyedData?.length === 0 && (
   <div style={{ 
     padding: '12px', 
     backgroundColor: '#fff3e0', 
