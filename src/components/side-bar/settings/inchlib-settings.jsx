@@ -81,7 +81,7 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
 
   return (
     <>
-      <Field label="Color Scale">
+      <Field label="Color Scale" helpText="Configure the color gradient and range for the heatmap visualization. Adjust the slider to set the data range that will be mapped to colors.">
         <ColorGradientSelector
           colorScale={inchlibSettings.color_scale}
           onChange={(value) =>
@@ -130,7 +130,7 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
         />
       </Field>
 
-      <Field labelLeft>
+      <Field labelLeft helpText="Display options for heatmap cells and labels.">
         <Flex direction="row" gap={15}>
           <CheckBox
             onChange={({ target: { checked } }) =>
@@ -188,7 +188,7 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
           />
         </Flex>
       </Field>
-      <Field label="Dendrogram Line Width" labelLeft labelWidth="130px">
+      <Field label="Dendrogram Line Width" labelLeft labelWidth="130px" helpText="Thickness of lines in the dendrogram visualization. Thicker lines are easier to see but may clutter the display.">
         <Slider
           max={8}
           min={1}
@@ -201,7 +201,7 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
           }
         />
       </Field>
-      <Field label="Dendrogram Width" labelLeft labelWidth="130px">
+      <Field label="Dendrogram Width" labelLeft labelWidth="130px" helpText="Maximum width allocated for dendrogram display. Larger values provide more detail but reduce space for the heatmap.">
         <Slider
           max={300}
           min={50}

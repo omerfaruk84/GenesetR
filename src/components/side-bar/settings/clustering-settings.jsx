@@ -73,7 +73,7 @@ const ClusteringSettings = ({
         </div>
       </Field>
       
-      <Field labelLeft  labelWidth="130px" label='Clustering Metric'>
+      <Field labelLeft  labelWidth="130px" label='Clustering Metric' helpText="Distance metric used for clustering. Euclidean works well for most data, Manhattan is robust to outliers, Jaccard is good for binary data.">
         <Select
           onChange={({ target: { value } }) => clusteringSettingsChanged({
             settingName: ClusteringSettingsTypes.CLUSTERING_METRIC,
@@ -83,7 +83,7 @@ const ClusteringSettings = ({
           value={clusteringSettings?.clusteringMetric}
         />
       </Field>
-      <Field labelLeft labelWidth="130px" label='Clustering Method'>
+      <Field labelLeft labelWidth="130px" label='Clustering Method' helpText="Cluster selection method. EOM (Excess of Mass) is more stable, LEAF allows for more fine-grained cluster extraction.">
         <Select
           onChange={({ target: { value } }) => clusteringSettingsChanged({
             settingName: ClusteringSettingsTypes.CLUSTERING_METHOD,
@@ -94,7 +94,7 @@ const ClusteringSettings = ({
         />
       </Field>
       
-      <Field labelLeft labelWidth="130px" label='Cluster Selection Epsilon'>
+      <Field labelLeft labelWidth="130px" label='Cluster Selection Epsilon' helpText="Distance threshold for merging clusters. Higher values result in fewer, larger clusters. Set to 0 for automatic selection.">
         <div className={styles.inputRange}>          
           <Slider
             label={clusteringSettings?.clusterSelectionEpsilon}

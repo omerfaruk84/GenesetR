@@ -19,7 +19,7 @@ const UmapSettings = ({ umapSettings, coreSettings, umapSettingsChanged }) => {
 
   return (
     <>
-      <Field label="Dimesion Count">
+      <Field label="Dimesion Count" helpText="Number of dimensions in the output embedding. 2-3 dimensions are recommended for visualization, higher dimensions preserve more structure.">
         <div className={styles.inputRange}>
           <Slider
             label={umapSettings?.numcomponents}
@@ -36,7 +36,7 @@ const UmapSettings = ({ umapSettings, coreSettings, umapSettingsChanged }) => {
         </div>
       </Field>
 
-      <Field label="Distance Metric">
+      <Field label="Distance Metric" helpText="Method for calculating distances between data points. Euclidean works well for most data, correlation is useful for gene expression patterns.">
         <Select
           onChange={({ target: { value } }) =>
             umapSettingsChanged({
@@ -49,7 +49,7 @@ const UmapSettings = ({ umapSettings, coreSettings, umapSettingsChanged }) => {
         />
       </Field>
 
-      <Field label="Minimum Distance">
+      <Field label="Minimum Distance" helpText="Controls how tightly points are packed in the output. Lower values create tighter clusters, higher values preserve more global structure.">
         <div className={styles.inputRange}>
           <Slider
             label={umapSettings?.min_dist}
@@ -66,7 +66,7 @@ const UmapSettings = ({ umapSettings, coreSettings, umapSettingsChanged }) => {
         </div>
       </Field>
 
-      <Field label="Number of Neighbours">
+      <Field label="Number of Neighbours" helpText="Balances local vs global structure preservation. Lower values focus on local patterns, higher values preserve global structure. Typical range: 5-50.">
         <div className={styles.inputRange}>
           <Slider
             label={umapSettings?.n_neighbors}

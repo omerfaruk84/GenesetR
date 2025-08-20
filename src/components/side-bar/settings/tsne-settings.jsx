@@ -19,7 +19,7 @@ const TsneSettings = ({ tsneSettings, coreSettings, tsneSettingsChanged }) => {
 
   return (
     <>
-      <Field label="Dimesion Count">
+      <Field label="Dimesion Count" helpText="Number of dimensions in the output embedding. Higher values preserve more information but may be harder to visualize (2-3 dimensions recommended for visualization).">
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.numcomponents}
@@ -36,7 +36,7 @@ const TsneSettings = ({ tsneSettings, coreSettings, tsneSettingsChanged }) => {
         </div>
       </Field>
 
-      <Field label="Distance Metric">
+      <Field label="Distance Metric" helpText="Method for calculating distances between data points. Euclidean works well for most cases, while correlation is useful for gene expression data.">
         <Select
           onChange={({ target: { value } }) =>
             tsneSettingsChanged({
@@ -49,7 +49,7 @@ const TsneSettings = ({ tsneSettings, coreSettings, tsneSettingsChanged }) => {
         />
       </Field>
 
-      <Field label="Perplexity">
+      <Field label="Perplexity" helpText="Balances attention between local and global aspects of data. Lower values focus on local structure, higher values on global structure. Typical range: 5-50.">
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.perplexity}
@@ -66,7 +66,7 @@ const TsneSettings = ({ tsneSettings, coreSettings, tsneSettingsChanged }) => {
         </div>
       </Field>
 
-      <Field label="Learning Rate">
+      <Field label="Learning Rate" helpText="Step size for gradient descent optimization. Higher values may cause instability, lower values slow convergence. Typical range: 10-1000.">
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.learning_rate}
@@ -83,7 +83,7 @@ const TsneSettings = ({ tsneSettings, coreSettings, tsneSettingsChanged }) => {
         </div>
       </Field>
 
-      <Field label="Number Of Iterations">
+      <Field label="Number Of Iterations" helpText="Maximum number of optimization iterations. More iterations may improve quality but increase computation time. Typical range: 1000-5000.">
         <div className={styles.inputRange}>
           <Slider
             label={tsneSettings?.n_iter}

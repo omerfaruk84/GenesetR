@@ -83,7 +83,7 @@ const GeneRegulationSettings = ({
 
   return (
     <>
-      <Field label="Select a gene">
+      <Field label="Select a gene" helpText="Choose a gene to analyze its regulatory network and discover which genes it regulates or is regulated by.">
         <Select
           onChange={({ target: { value } }) => {
             geneRegulationCoreSettingsChanged({

@@ -86,7 +86,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
     />
      </Field>
      <Divider align="left"> Label Settings </Divider>
-    <Field label='Location' labelLeft labelWidth="130px">
+    <Field label='Location' labelLeft labelWidth="130px" helpText="Position of gene labels relative to data points on the plot.">
         <Select
           onChange={({ target: { value } }) => scatterplotSettingsChanged({
             settingName: ScatterPlotSettingsTypes.LABEL_LOC,
@@ -96,7 +96,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
           value={scatterplotSettings?.labelLoc}
         /></Field>
          
-    <Field label='Show All' labelLeft labelWidth="130px">
+    <Field label='Show All' labelLeft labelWidth="130px" helpText="Display labels for all genes or only for highlighted/selected genes.">
          <Toggle          
           onChange={({ target: { checked } }) => scatterplotSettingsChanged({
             settingName: ScatterPlotSettingsTypes.SHOW_LABELS,
@@ -105,7 +105,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
           checked={scatterplotSettings?.showLabels}
         />         
     </Field>
-    <Field label='Size' labelLeft labelWidth="130px">             
+    <Field label='Size' labelLeft labelWidth="130px" helpText="Font size of gene labels displayed on the plot.">             
           <div className={styles.inputRange}> 
           <Slider
             label={scatterplotSettings?.labelSize}
@@ -121,7 +121,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
       </Field>
   <Divider align="left"> 3D Scatter Settings </Divider>
 
-    <Field label='Autorotate' labelLeft labelWidth="130px">
+    <Field label='Autorotate' labelLeft labelWidth="130px" helpText="Automatically rotate the 3D plot for better visualization of data from different angles.">
       <Toggle         
           onChange={({ target: { checked } }) => scatterplotSettingsChanged({
             settingName: ScatterPlotSettingsTypes.AUTOROTATE,
@@ -130,7 +130,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
           checked={scatterplotSettings?.autorotate}
         /> 
         </Field>   
-        <Field label='Autorotation Speed' labelLeft labelWidth="130px">
+        <Field label='Autorotation Speed' labelLeft labelWidth="130px" helpText="Speed of automatic rotation for 3D plots. Higher values rotate faster.">
          <div className={styles.inputRange}>         
           <Slider
             label={scatterplotSettings?.rotationSpeed}
@@ -144,7 +144,7 @@ const ScatterPlotSettings = ({scatterplotSettings,
           />
         </div>
         </Field>
-        <Field label='Orthogonal Projection' labelLeft labelWidth="130px">   
+        <Field label='Orthogonal Projection' labelLeft labelWidth="130px" helpText="Use orthogonal projection instead of perspective projection for 3D visualization. Orthogonal projection preserves relative sizes.">   
         <Toggle      
         onChange={({ target: { checked } }) => scatterplotSettingsChanged({
         settingName: ScatterPlotSettingsTypes.PROJECTION,

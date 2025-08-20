@@ -33,7 +33,7 @@ const MdeSettings = ({ mdeSettings, coreSettings, mdeSettingsChanged }) => {
 
   return (
     <>
-      <Field label="Dimension Count">
+      <Field label="Dimension Count" helpText="Number of dimensions in the output embedding. 2-3 dimensions are recommended for visualization, higher dimensions preserve more information.">
         <div className={styles.inputRange}>
           <Slider
             label={mdeSettings?.numcomponents}
@@ -49,7 +49,7 @@ const MdeSettings = ({ mdeSettings, coreSettings, mdeSettingsChanged }) => {
           />
         </div>
       </Field>
-      <Field label="Preprocessing Method">
+      <Field label="Preprocessing Method" helpText="Determines the embedding objective. 'Preserve Neighbors' maintains local structure, 'Preserve Distances' maintains global distances.">
         <Select
           onChange={({ target: { value } }) =>
             mdeSettingsChanged({
@@ -61,7 +61,7 @@ const MdeSettings = ({ mdeSettings, coreSettings, mdeSettingsChanged }) => {
           value={mdeSettings?.preprocessingMethod}
         />
       </Field>
-      <Field label="MDE Constraint">
+      <Field label="MDE Constraint" helpText="Data preprocessing constraint. 'Standardized' normalizes data, 'Centered' centers around zero, 'None' applies no preprocessing.">
         <Select
           onChange={({ target: { value } }) =>
             mdeSettingsChanged({
@@ -73,7 +73,7 @@ const MdeSettings = ({ mdeSettings, coreSettings, mdeSettingsChanged }) => {
           value={mdeSettings?.pyMdeConstraint}
         />
       </Field>
-      <Field label="Repulsive Fraction">
+      <Field label="Repulsive Fraction" helpText="Controls the balance between attractive and repulsive forces. Higher values increase repulsion between distant points.">
         <div className={styles.inputRange}>
           <Slider
             label={mdeSettings?.repulsiveFraction}

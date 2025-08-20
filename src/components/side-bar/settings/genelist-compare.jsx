@@ -329,6 +329,7 @@ const GenelistCompareSettings = ({
 
       <CheckBox
         label="Comparison Graph"
+        helpText="Display a comparison graph showing relationships between gene lists."
         onChange={({ target: { checked } }) =>
           genelistcompareSettingsChanged({
             settingName: GenelistCompareSettingsTypes.SHOW,
@@ -340,6 +341,7 @@ const GenelistCompareSettings = ({
       <Spacer width={20} />
       <CheckBox
         label="Venn Diagram"
+        helpText="Display a Venn diagram showing overlaps between gene lists (works best with 2-3 lists)."
         onChange={({ target: { checked } }) =>
           genelistcompareSettingsChanged({
             settingName: GenelistCompareSettingsTypes.SHOWVENN,
@@ -353,7 +355,7 @@ const GenelistCompareSettings = ({
         label="Minimum number of set members"
         labelLeft
         labelWidth={150}
-        helpText="Set the threshold for minimum number od"
+        helpText="Set the threshold for minimum number of genes required in an intersection to be displayed in the comparison."
       >
         <div className={styles.inputRange}>
           <Slider
@@ -375,7 +377,7 @@ const GenelistCompareSettings = ({
         label="Theme"
         labelLeft
         labelWidth={150}
-        helpText="Set the color theme."
+        helpText="Set the color theme for the comparison visualization."
       >
         <Select
           small
@@ -394,7 +396,7 @@ const GenelistCompareSettings = ({
         label="Bar Padding"
         labelLeft
         labelWidth={150}
-        //helpText="Set the threshold for maximum number set members for the visibility of the set / intersection"
+        helpText="Adjust spacing between bars in the comparison chart. Higher values create more space between elements."
       >
         <div className={styles.inputRange}>
           <Slider
