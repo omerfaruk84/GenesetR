@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { connect } from "react-redux";
 import {
   Row,
@@ -11,40 +11,8 @@ import styles from "./expression-analyzer.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
 import VideoHelpPage from "../../components/video-help";
 import helpVideo from "../../common/videos/6.webm";
-import { getBlackList } from "../../store/api";
 
-const ExpressionAnalyzerPage = (geneRegulationResults) => {
-  const [blacklistData, setBlacklistData] = useState(null);
-  const [blacklistLoading, setBlacklistLoading] = useState(true);
-
-  // Load blacklist data immediately when the page loads
-  useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
-
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
-
-      setBlacklistData({
-        blackListDown: genesDown,
-        blackListUp: genesUp,
-      });
-      setBlacklistLoading(false);
-    }).catch((error) => {
-      console.error("Failed to load blacklist data:", error);
-      setBlacklistData({
-        blackListDown: {},
-        blackListUp: {},
-      });
-      setBlacklistLoading(false);
-    });
-  }, []);
+const ExpressionAnalyzerPage = ({ geneRegulationResults, blacklistData, blacklistLoading }) => {
 
   return (
     <div className={styles.mainView}>
@@ -60,8 +28,10 @@ const ExpressionAnalyzerPage = (geneRegulationResults) => {
   );
 };
 
-const mapStateToProps = ({ calcResults }, { path }) => ({
+const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  blacklistData: blacklist?.data,
+  blacklistLoading: blacklist?.loading,
 });
 const mapDispatchToProps = {};
 

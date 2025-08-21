@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { connect } from "react-redux";
 import { Row, Column } from "@oliasoft-open-source/react-ui-library";
 import { GeneRegulation } from "./generegulation";
@@ -8,7 +8,6 @@ import VideoHelpPage from "../../components/video-help";
 import helpVideo from "../../common/videos/3.webm";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { getBlackList } from "../../store/api";
 import { LoadingPage } from "../../components/loading-page";
 
 const moduleDescription = {
@@ -24,56 +23,7 @@ const moduleDescription = {
  
 };
 
-const GeneRegulationPage = ({ geneRegulationResults, calcResults }) => {
-  const [blacklistData, setBlacklistData] = useState(null);
-  const [blacklistLoading, setBlacklistLoading] = useState(true);
-
-  // Load blacklist data immediately when the page loads
-  useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
-
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
-
-      const genesUpExp = {};
-      const genesDownExp = {};
-      for (const gene in result.blacklistExp.ZS) {
-        if (result.blacklistExp.ZS[gene] > 0) {
-          genesUpExp[gene] = result.blacklistExp.ZS[gene];
-        } else {
-          genesDownExp[gene] = Math.abs(result.blacklistExp.ZS[gene]);
-        }
-      }
-
-      setBlacklistData({
-        blackListDown: genesDown,
-        blackListUp: genesUp,
-        blackListExpDown: genesDownExp,
-        blackListExpUp: genesUpExp,
-        blackListPCount: result.blacklist.C,
-        blackListECount: result.blacklistExp.C,
-      });
-      setBlacklistLoading(false);
-    }).catch((error) => {
-      console.error("Failed to load blacklist data:", error);
-      setBlacklistData({
-        blackListDown: {},
-        blackListUp: {},
-        blackListExpDown: {},
-        blackListExpUp: {},
-        blackListPCount: {},
-        blackListECount: {},
-      });
-      setBlacklistLoading(false);
-    });
-  }, []);
+const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklistData, blacklistLoading }) => {
 
   // Check if gene regulation calculation is running
   const isCalculationRunning = calcResults?.["geneRegulationGraph"]?.running;
@@ -81,7 +31,7 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults }) => {
   return (
     <div className={styles.mainView}>
       {isCalculationRunning && <LoadingPage />}
-      {geneRegulationResults.geneRegulationResults !== null ? (
+      {geneRegulationResults ? (
         <GeneRegulation blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
       ) : (
         <div>
@@ -153,9 +103,12 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults }) => {
   );
 };
 
-const mapStateToProps = ({ calcResults }, { path }) => ({
+const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
   calcResults,
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  blacklistData: blacklist?.data,
+  blacklistLoading: blacklist?.loading,
+  path,
 });
 
 const MainContainer = connect(mapStateToProps)(GeneRegulationPage);
