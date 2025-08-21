@@ -10,6 +10,8 @@ const initialState = {
   write_original: true,
   corrType:"spearman",
   row_col_sameorder:true,
+  trimEnabled: false,
+  trimThreshold: 0.1,
 };
 
 export const correlationSettingsSlice = createSlice({

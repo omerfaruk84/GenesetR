@@ -339,7 +339,12 @@ const keyedData = useMemo(() => {
   }, [inchlibSettings.dendrogram_line_width]);
 
   useEffect(() => {
-    setLoading(calcResults?.["corrCluster"]?.running);
+    // Set loading based on calculation state
+    if (calcResults?.["corrCluster"]?.running) {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
   }, [calcResults?.["corrCluster"]?.running]);
 
   useEffect(() => {
@@ -410,7 +415,10 @@ const keyedData = useMemo(() => {
     };
 
     // Draw heatmap
-    setLoading(true);
+    // Only set loading if calculation is not running
+    if (!calcResults?.["corrCluster"]?.running) {
+      setLoading(true);
+    }
     inchlib.read_data(graphData);
     inchlib.update_settings({
       width: heatmapWidth,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
+import { safeJsonParse } from "../../utils/jsonUtils";
 
 import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
@@ -310,7 +311,7 @@ const ScatterPlot = ({
             )
               .done(function (content) {
                 let parsedContent =
-                  typeof content === "string" ? JSON.parse(content) : content;
+                  typeof content === "string" ? safeJsonParse(content, { defaultValue: {} }) : content;
                 console.log(content);
                 res =
                   '<span style="color: #e28743";> <b>' +
@@ -553,7 +554,7 @@ const ScatterPlot = ({
             )
               .done(function (content) {
                 let parsedContent =
-                  typeof content === "string" ? JSON.parse(content) : content;
+                  typeof content === "string" ? safeJsonParse(content, { defaultValue: {} }) : content;
                 console.log(content);
                 res =
                   '<span style="color: #e28743";> <b>' +

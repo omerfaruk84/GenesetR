@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   Table,
   Spacer,
@@ -154,7 +155,7 @@ const ExpressionAnalyzer = ({
         newTabs2[0].disabled = false;
         settabOptions(newTabs2);
         setSelectedTab(selectedTab);
-        setdownStream(JSON.parse(data.geneRegulationResults.downstream));
+        setdownStream(safeJsonParse(data.geneRegulationResults.downstream, { defaultValue: {} }));
       } else {
         setdownStream({});
         const newTabs = tabOptions;
@@ -164,15 +165,15 @@ const ExpressionAnalyzer = ({
       }
 
       if (data.geneRegulationResults.upstream.length > 0)
-        setupStream(JSON.parse(data.geneRegulationResults.upstream));
+        setupStream(safeJsonParse(data.geneRegulationResults.upstream, { defaultValue: {} }));
       else setupStream({});
 
       if (data.geneRegulationResults.pertCorr.length > 0)
-        setpertCorr(JSON.parse(data.geneRegulationResults.pertCorr));
+        setpertCorr(safeJsonParse(data.geneRegulationResults.pertCorr, { defaultValue: {} }));
       else setpertCorr({});
 
       if (data.geneRegulationResults.expCorr.length > 0)
-        setexpCorr(JSON.parse(data.geneRegulationResults.expCorr));
+        setexpCorr(safeJsonParse(data.geneRegulationResults.expCorr, { defaultValue: {} }));
       else setexpCorr({});
     }
   }, [data.geneRegulationResults?.upstream, isCalcRunning]);

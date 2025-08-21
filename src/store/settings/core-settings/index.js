@@ -126,6 +126,8 @@ const initialState = {
   ],
   mixscapePerturbed: true,
   mixscapeAll: true,
+  datasetAdded: false,
+  lastTaskID: null,
 };
 
 export const coreSettingsSlice = createSlice({

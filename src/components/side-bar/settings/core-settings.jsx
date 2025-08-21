@@ -131,6 +131,20 @@ const CoreSettings = ({
   else if (coreSettings?.currentModule === "pca") graphData = pcaResults;
   else if (coreSettings?.currentModule === "mde") graphData = mdeResults;
 
+  // Reset datasetAdded flag when a new calculation is made (different taskID)
+  useEffect(() => {
+    if (graphData?.taskID && graphData.taskID !== coreSettings?.lastTaskID) {
+      coreSettingsChanged({
+        settingName: CoreSettingsTypes.LAST_TASK_ID,
+        newValue: graphData.taskID,
+      });
+      coreSettingsChanged({
+        settingName: CoreSettingsTypes.DATASET_ADDED,
+        newValue: false,
+      });
+    }
+  }, [graphData?.taskID, coreSettings?.lastTaskID, coreSettingsChanged]);
+
   return (
     <>
       <div style={{ display: showcellLineOptions === true ? "block" : "none" }}>
@@ -142,7 +156,7 @@ const CoreSettings = ({
         />{" "}
         <Spacer height={5} />
       </div>
-      {graphData && location === ROUTES.DR ? (
+      {graphData && location === ROUTES.DR && !coreSettings?.datasetAdded ? (
         <>
           <Button
             colored="success"
@@ -157,8 +171,8 @@ const CoreSettings = ({
                 graphData.dataType
               );
               coreSettingsChanged({
-                settingName: CoreSettingsTypes.SHOW_HELP,
-                newValue: false,
+                settingName: CoreSettingsTypes.DATASET_ADDED,
+                newValue: true,
               });
             }}
             small

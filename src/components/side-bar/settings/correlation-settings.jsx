@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import {
   Field,
@@ -10,12 +10,71 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import { correlationSettingsChanged } from "../../../store/settings/correlation-settings";
 import { CorrelationSettingsTypes } from "./enums";
+import { useDebounce } from "../../../hooks/useDebounce";
 import styles from "./settings.module.scss";
 
 const CorrelationSettings = ({
   correlationSettings,
   correlationSettingsChanged,
 }) => {
+  // Local state for immediate slider updates
+  const [localTrimThreshold, setLocalTrimThreshold] = useState(
+    correlationSettings?.trimThreshold || 0.1
+  );
+
+  // Debounced value that will trigger API calls
+  const debouncedTrimThreshold = useDebounce(localTrimThreshold, 800);
+
+  // State to track when the slider is being adjusted
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [lastChangeTime, setLastChangeTime] = useState(0);
+
+  // Update local state when settings change from outside
+  useEffect(() => {
+    if (correlationSettings?.trimThreshold !== undefined) {
+      setLocalTrimThreshold(correlationSettings.trimThreshold);
+    }
+  }, [correlationSettings?.trimThreshold]);
+
+  // Trigger API call when debounced value changes
+  useEffect(() => {
+    if (debouncedTrimThreshold !== correlationSettings?.trimThreshold) {
+      setIsAdjusting(false);
+      correlationSettingsChanged({
+        settingName: CorrelationSettingsTypes.TRIM_THRESHOLD,
+        newValue: debouncedTrimThreshold,
+      });
+    }
+  }, [debouncedTrimThreshold, correlationSettings?.trimThreshold, correlationSettingsChanged]);
+
+  // Calculate remaining time for countdown
+  const getRemainingTime = () => {
+    if (!isAdjusting) return 0;
+    const elapsed = Date.now() - lastChangeTime;
+    const remaining = Math.max(0, 800 - elapsed);
+    return Math.ceil(remaining / 100);
+  };
+
+  // Update countdown timer
+  const [countdown, setCountdown] = useState(0);
+  
+  useEffect(() => {
+    if (!isAdjusting) {
+      setCountdown(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const remaining = getRemainingTime();
+      setCountdown(remaining);
+      
+      if (remaining <= 0) {
+        setIsAdjusting(false);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isAdjusting, lastChangeTime]);
   const linkageMethodOptions = [
     {
       label: "Single",
@@ -211,6 +270,60 @@ const CorrelationSettings = ({
           checked={correlationSettings?.row_col_sameorder}
         />
       </Field>
+      
+      <Spacer size={10} />
+      
+      <Field
+        labelLeft
+        labelWidth={165}
+        label="Trim Low Correlations"
+        helpText="Remove rows and columns that don't have any meaningful correlation values above the threshold. Ignores perfect correlations (±1) to focus on significant partial correlations and reduces heatmap size."
+      >
+        <CheckBox
+          small
+          onChange={({ target: { checked } }) =>
+            correlationSettingsChanged({
+              settingName: CorrelationSettingsTypes.TRIM_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={correlationSettings?.trimEnabled}
+        />
+      </Field>
+      
+      {correlationSettings?.trimEnabled && (
+        <Field
+          label="Trim Threshold"
+          labelLeft
+          labelWidth={150}
+          helpText={`Remove rows/columns with no meaningful correlations above ${localTrimThreshold.toFixed(2)} (excludes ±1 values). Range: 0.05 - 0.2`}
+        >
+          <div className={styles.inputRange}>
+            <Slider
+              label={localTrimThreshold.toFixed(2)}
+              max={40}
+              min={10}
+              value={localTrimThreshold * 200}
+              onChange={({ target: { value } }) => {
+                const newValue = value / 200;
+                setLocalTrimThreshold(newValue);
+                setIsAdjusting(true);
+                setLastChangeTime(Date.now());
+              }}
+            />
+            {isAdjusting && debouncedTrimThreshold !== localTrimThreshold && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                marginTop: '4px',
+                fontStyle: 'italic'
+              }}>
+                Updating in {countdown * 100}ms...
+              </div>
+            )}
+          </div>
+        </Field>
+      )}
     </>
   );
 };

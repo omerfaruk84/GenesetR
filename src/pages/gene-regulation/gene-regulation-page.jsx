@@ -9,6 +9,7 @@ import helpVideo from "../../common/videos/3.webm";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getBlackList } from "../../store/api";
+import { LoadingPage } from "../../components/loading-page";
 
 const moduleDescription = {
   title: "Gene Regulation Network Analysis",
@@ -23,7 +24,7 @@ const moduleDescription = {
  
 };
 
-const GeneRegulationPage = (geneRegulationResults) => {
+const GeneRegulationPage = ({ geneRegulationResults, calcResults }) => {
   const [blacklistData, setBlacklistData] = useState(null);
   const [blacklistLoading, setBlacklistLoading] = useState(true);
 
@@ -74,8 +75,12 @@ const GeneRegulationPage = (geneRegulationResults) => {
     });
   }, []);
 
+  // Check if gene regulation calculation is running
+  const isCalculationRunning = calcResults?.["geneRegulationGraph"]?.running;
+
   return (
     <div className={styles.mainView}>
+      {isCalculationRunning && <LoadingPage />}
       {geneRegulationResults.geneRegulationResults !== null ? (
         <GeneRegulation blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
       ) : (
@@ -149,6 +154,7 @@ const GeneRegulationPage = (geneRegulationResults) => {
 };
 
 const mapStateToProps = ({ calcResults }, { path }) => ({
+  calcResults,
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
 });
 

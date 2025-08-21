@@ -46,6 +46,8 @@ const CoreSettingsTypes = {
   CURRENT_MODULE: "currentModule",
   MIXSCAPE_PERTURBED: "mixscapePerturbed",
   MIXSCAPE_ALL: "mixscapeAll",
+  DATASET_ADDED: "datasetAdded",
+  LAST_TASK_ID: "lastTaskID",
 };
 
 const GraphmapSettingsTypes = {
@@ -66,6 +68,8 @@ const CorrelationSettingsTypes = {
   WRITE_ORGINAL: "write_original",
   CORRTYPE: "corrType",
   ROW_COL_SAMEORDER: "row_col_sameorder",
+  TRIM_ENABLED: "trimEnabled",
+  TRIM_THRESHOLD: "trimThreshold",
 };
 const InchlibSettingsTypes = {
   COLOR_SCALE: "color_scale",

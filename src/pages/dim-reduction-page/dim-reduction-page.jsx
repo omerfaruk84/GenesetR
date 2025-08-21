@@ -34,6 +34,8 @@ import {
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { LoadingPage } from "../../components/loading-page";
+
 
 // Add module description for Dimensionality Reduction
 const moduleDescription = {
@@ -74,6 +76,7 @@ const DimReductionPage = ({
   pcaResults,
   coreSettingsChanged,
   coreSettings,
+  calcResults,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -98,6 +101,13 @@ const DimReductionPage = ({
   ];
   const [selectedTab, setSelectedTab] = useState(options[0]);
   const [graphoptions, setOptions] = useState({});
+  
+  // Check if any DR calculation is running
+  const isAnyCalculationRunning = 
+    calcResults?.["pcaGraph"]?.running ||
+    calcResults?.["mdeGraph"]?.running ||
+    calcResults?.["tsneGraph"]?.running ||
+    calcResults?.["umapGraph"]?.running;
 
   useEffect(() => {
     //navigate("../dr/"+selectedTab.value)
@@ -476,6 +486,9 @@ const DimReductionPage = ({
           </div>
         </AccordionDetails>
       </Accordion>
+      
+      {isAnyCalculationRunning && <LoadingPage />}
+      
       {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
         <div style={{ 
           padding: '12px', 
@@ -533,6 +546,7 @@ const DimReductionPage = ({
 };
 //{selectedTab.value === "pca"? content : graphdata ? (<ScatterPlot graphData={graphdata} />):<></> }
 const mapStateToProps = ({ calcResults, settings }) => ({
+  calcResults,
   coreSettings: settings?.core ?? {},
   tsneResults: calcResults?.["tsneGraph"]?.result ?? null,
   mdeResults: calcResults?.["mdeGraph"]?.result ?? null,

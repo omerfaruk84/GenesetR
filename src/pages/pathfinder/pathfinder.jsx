@@ -8,6 +8,7 @@ import VideoHelpPage from '../../components/video-help';
 import helpVideo from '../../common/videos/5.webm'
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { LoadingPage } from '../../components/loading-page';
 const moduleDescription = {
   title: "Pathway Explorer",
   description: "This module maps pathways among submitted genes using GWPS data, particularly useful for RNA-seq data analyses. It examines down-regulated genes to determine which genes are up- or down-regulated following perturbation, creating pathway networks that reveal key regulatory relationships and interactions.",
@@ -20,11 +21,14 @@ const moduleDescription = {
     "Integrates protein-protein interaction data from BioGRID"
   ],  
 };
-const PathFinderPage = ({ pathfinderResults }) => {
+const PathFinderPage = ({ pathfinderResults, calcResults }) => {
+
+  // Check if pathfinder calculation is running
+  const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;
 
   return (
     <div className={styles.mainView}>
-     
+      {isCalculationRunning && <LoadingPage />}
       {pathfinderResults ? (
         <PathFinder graphData={pathfinderResults} /> 
       ): (
@@ -98,6 +102,7 @@ const PathFinderPage = ({ pathfinderResults }) => {
 };
 
 const mapStateToProps = ({ calcResults }, { path }) => ({
+  calcResults,
   pathfinderResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
 });
 

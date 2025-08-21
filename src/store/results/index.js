@@ -1,6 +1,7 @@
 import { ROUTES } from "../../common/routes";
 import { createSlice } from "@reduxjs/toolkit";
 import { toast } from "@oliasoft-open-source/react-ui-library";
+import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   runHeatMap,
   runPcaGraphCalc,
@@ -43,7 +44,10 @@ export const calculationResults = createSlice({
       //console.log(action);
       const { result, module } = action.payload;
       //console.log(result);
-      state[module].result = JSON.parse(result);
+      state[module].result = safeJsonParse(result, {
+        defaultValue: {},
+        throwOnError: false
+      });
       state[module].running = false;
     },
     calcRunningChanged: (state, action) => {
@@ -76,6 +80,8 @@ const runCalculation = (module) => async (dispatch, getState) => {
     pathfinder,
     expressionanalyzer,
   } = settings;
+
+
 
   /**
    * Will change the status of the running simulation for a specific module
