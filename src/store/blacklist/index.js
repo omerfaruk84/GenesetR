@@ -7,36 +7,44 @@ export const fetchBlacklistData = createAsyncThunk(
   async () => {
     const result = await getBlackList();
     
+
+    
     // Process the data similar to how it's done in the components
     const genesUp = {};
     const genesDown = {};
     const genesUpExp = {};
     const genesDownExp = {};
 
-    for (const gene in result.blacklist.ZS) {
-      if (result.blacklist.ZS[gene] > 0) {
-        genesUp[gene] = result.blacklist.ZS[gene];
-      } else {
-        genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+    if (result?.blacklist?.ZS) {
+      for (const gene in result.blacklist.ZS) {
+        if (result.blacklist.ZS[gene] > 0) {
+          genesUp[gene] = result.blacklist.ZS[gene];
+        } else {
+          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
+        }
       }
     }
 
-    for (const gene in result.blacklistExp.ZS) {
-      if (result.blacklistExp.ZS[gene] > 0) {
-        genesUpExp[gene] = result.blacklistExp.ZS[gene];
-      } else {
-        genesDownExp[gene] = Math.abs(result.blacklistExp.ZS[gene]);
+    if (result?.blacklistExp?.ZS) {
+      for (const gene in result.blacklistExp.ZS) {
+        if (result.blacklistExp.ZS[gene] > 0) {
+          genesUpExp[gene] = result.blacklistExp.ZS[gene];
+        } else {
+          genesDownExp[gene] = Math.abs(result.blacklistExp.ZS[gene]);
+        }
       }
     }
 
-    return {
+    const processedData = {
       blackListDown: genesDown,
       blackListUp: genesUp,
       blackListExpDown: genesDownExp,
       blackListExpUp: genesUpExp,
-      blackListPCount: result.blacklist.C,
-      blackListECount: result.blacklistExp.C,
+      blackListPCount: result?.blacklist?.C || {},
+      blackListECount: result?.blacklistExp?.C || {},
     };
+
+    return processedData;
   }
 );
 

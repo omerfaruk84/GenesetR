@@ -286,7 +286,22 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
   }, []);
 
   useEffect(() => {
-    if (!blacklistData || blacklistLoading) return;
+    console.log('GeneSignature - Data processing useEffect triggered:', {
+      hasData: !!data,
+      hasResults: !!(data?.results),
+      resultsLength: data?.results?.length || 0,
+      hasCorrelations: !!(data?.correlations),
+      correlationsKeys: data?.correlations ? Object.keys(data.correlations).length : 0,
+      targetGeneList: coreSettings.targetGeneList,
+      hasBlacklistData: !!blacklistData,
+      blacklistLoading
+    });
+    
+    // Don't return early if blacklist is loading - process data anyway
+    if (!data) {
+      console.log('GeneSignature - No data, returning early');
+      return;
+    }
     
     let signatureGenes = coreSettings.targetGeneList
       .replaceAll(/[,\s;]+/g, "+")
@@ -302,14 +317,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
     highlightList = new Set([...highlightList, ...signatureGenes]);
 
     if (
-      data.geneRegulationResults &&
-      data.geneRegulationResults.results &&
-      data.geneRegulationResults.results.length > 0
+      data.results &&
+      data.results.length > 0
     ) {
+      console.log('GeneSignature - Processing data with results:', {
+        resultsLength: data.results.length,
+        genesLength: data.genes?.length || 0,
+        correlationsCount: data.correlations ? Object.keys(data.correlations).length : 0
+      });
       //const chart = echarts.init(chartRef.current);
-      let xValues = data.geneRegulationResults.results;
-      const labels = data.geneRegulationResults.genes;
-      let similarGenes = data.geneRegulationResults.correlations;
+      let xValues = data.results;
+      const labels = data.genes;
+      let similarGenes = data.correlations;
 
       let tableInfo = [];
       let similarGenesTableInfo = [];
@@ -376,16 +395,21 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
 
       //findNearestIndex(distX,distY, xValues[i])
       for (let i = 0; i < xValues.length; i++) {
+        // Only apply blacklist filtering if blacklist data is available and filtering is enabled
         if (
           genesignatureSettings.filter &&
+          blacklistData &&
           xValues[i] < 0 &&
+          blacklistData.blackListDown &&
           blacklistData.blackListDown[labels[i]] !== undefined &&
           blacklistData.blackListDown[labels[i]] > genesignatureSettings.filterBlackListed
         )
           continue;
         else if (
           genesignatureSettings.filter &&
+          blacklistData &&
           xValues[i] > 0 &&
+          blacklistData.blackListUp &&
           blacklistData.blackListUp[labels[i]] !== undefined &&
           blacklistData.blackListUp[labels[i]] > genesignatureSettings.filterBlackListed
         )
@@ -464,19 +488,34 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
         .join();
       temp["Top 100 Decreasing"] = bottomGenes.join();
 
+      console.log('GeneSignature - Setting table and point data:', {
+        tableInfoLength: tableInfo.length,
+        pointDataLength: pointData.length,
+        sampleTableInfo: tableInfo.slice(0, 3),
+        samplePointData: pointData.slice(0, 3)
+      });
+      
       setGeneLists(temp);
-
       setkeyedData(tableInfo);
-
+      
       pointData.sort((a, b) => b[0] - a[0]);
-      console.log("pointData", pointData);
+      console.log("GeneSignature - Final pointData:", pointData.slice(0, 5));
       setPointData(pointData);
     }
   }, [data, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading]);
 
-  console.log(pointData);
+  console.log('GeneSignature - pointData state:', pointData);
   useEffect(() => {
-    if (!data.geneRegulationResults) return;
+    console.log('GeneSignature - Chart options useEffect triggered:', {
+      hasData: !!data,
+      pointDataLength: pointData?.length || 0,
+      pointDistributionLength: pointDistribution?.length || 0
+    });
+    
+    if (!data || !pointData || pointData.length === 0) {
+      console.log('GeneSignature - No data for chart options, returning early');
+      return;
+    }
 
     setOptions({
       tooltip: {

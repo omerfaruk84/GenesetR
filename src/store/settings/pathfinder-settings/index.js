@@ -17,6 +17,18 @@ const initialState = {
   minEdgeopacity:0.35,
   minNodeopacity:0.5,
   dagreSeperation:200,
+  // Noise filter settings - enabled by default
+  filterBlackListed: 2,
+  filterBlackListedExp: 2,
+  filterCount: 750,
+  filterCountExp: 750,
+  filter1Enabled: true,
+  filter2Enabled: true,
+  filter3Enabled: true,
+  filter4Enabled: true,
+  filter1Directional: false,
+  filter2Directional: false,
+  maxNodes: 1000, // Maximum number of nodes to display to prevent crashes
 };
 
 export const pathfinderSettingsSlice = createSlice({

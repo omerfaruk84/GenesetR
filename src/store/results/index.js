@@ -44,10 +44,34 @@ export const calculationResults = createSlice({
       //console.log(action);
       const { result, module } = action.payload;
       //console.log(result);
-      state[module].result = safeJsonParse(result, {
-        defaultValue: {},
-        throwOnError: false
+      
+    
+      
+            // Use the original JSON.parse approach with error handling
+      let parsedResult;
+      
+      try {
+        if (typeof result === 'string') {
+          parsedResult = JSON.parse(result);
+        } else if (typeof result === 'object' && result !== null) {
+          // Deep clone to avoid reference issues
+          parsedResult = JSON.parse(JSON.stringify(result));
+        } else {
+          parsedResult = {};
+        }
+      } catch (error) {
+        console.error(`JSON parsing failed for ${module}:`, error);
+        parsedResult = {};
+      }
+      
+      console.log(`Results store - Setting ${module} result:`, {
+        resultType: typeof result,
+        parsedType: typeof parsedResult,
+        hasResult: !!parsedResult,
+        resultKeys: parsedResult ? Object.keys(parsedResult) : []
       });
+      
+      state[module].result = parsedResult;
       state[module].running = false;
     },
     calcRunningChanged: (state, action) => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import { safeJsonParse } from "../../utils/jsonUtils";
+import { createGeneTooltipFormatter } from "../../utils/geneFunctionUtils";
 
 import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
@@ -79,12 +80,26 @@ const ScatterPlot = ({
     const clusters = {};
 
     let graphdata = graphData;
+    
+    // Debug logging
+    console.log('ScatterPlot - Received graphData:', graphdata);
+    console.log('ScatterPlot - Data structure check:', {
+      hasGraphData: !!graphdata,
+      hasPC1: !!graphdata?.["PC1"],
+      hasPC2: !!graphdata?.["PC2"],
+      hasGeneSymbols: !!graphdata?.["GeneSymbols"],
+      pc1Length: graphdata?.["PC1"]?.length,
+      pc2Length: graphdata?.["PC2"]?.length,
+      geneSymbolsLength: graphdata?.["GeneSymbols"]?.length,
+    });
+    
     if (
       !graphdata ||
       !graphdata["PC1"] ||
       !graphdata["PC2"] ||
       !graphdata["GeneSymbols"]
     ) {
+      console.log('ScatterPlot - Data validation failed, returning empty data');
       return { data, pieces, clusterData, minandmax, clusters };
     }
 
@@ -288,49 +303,23 @@ const ScatterPlot = ({
 
         tooltip: {
           position: "top",
-          extraCssText: "width:auto; white-space:pre-wrap;",
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#FFFFFF",
-            width: 100,
-            overflow: "break",
+            color: "#333333",
+            lineHeight: 1.4,
           },
-          formatter: function (params, ticket, callback) {
-            //console.log("Check", params)
-            var res = localStorage.getItem(params.data[3]);
-            if (res !== null) {
-              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
-              return localStorage.getItem(params.data[3]);
-            }
-
-            $.get(
-              "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3]
-            )
-              .done(function (content) {
-                let parsedContent =
-                  typeof content === "string" ? safeJsonParse(content, { defaultValue: {} }) : content;
-                console.log(content);
-                res =
-                  '<span style="color: #e28743";> <b>' +
-                  params.data[3] +
-                  "(" +
-                  parsedContent?.name +
-                  "): </b></span>" +
-                  parsedContent?.description;
-
-                localStorage.setItem(params.data[3], res);
-                callback(ticket, res);
-              })
-              .fail(function (jqXHR, textStatus, errorThrown) {
-                console.error(
-                  "Request failed: " + textStatus + ", " + errorThrown
-                );
-              });
-            return "Loading";
-          },
+          formatter: createGeneTooltipFormatter({
+            parseData: (params) => ({
+              geneSymbol: params.data[3],
+              cluster: params.data[4],
+              clusterProb: params.data[5]
+            })
+          }),
         },
         visualMap: {
           type: "piecewise",
@@ -531,49 +520,23 @@ const ScatterPlot = ({
           formatter: "{GeneSymbol}",
         },
         tooltip: {
-          extraCssText: "width:auto; white-space:pre-wrap;",
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#FFFFFF",
-            width: 100,
-            overflow: "break",
+            color: "#333333",
+            lineHeight: 1.4,
           },
-          formatter: function (params, ticket, callback) {
-            var res = localStorage.getItem(params.data[3]);
-            //console.log("Check", params)
-            if (res !== null) {
-              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
-              return localStorage.getItem(params.data[3]);
-            }
-
-            $.get(
-              "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3]
-            )
-              .done(function (content) {
-                let parsedContent =
-                  typeof content === "string" ? safeJsonParse(content, { defaultValue: {} }) : content;
-                console.log(content);
-                res =
-                  '<span style="color: #e28743";> <b>' +
-                  params.data[3] +
-                  "(" +
-                  parsedContent?.name +
-                  "): </b></span>" +
-                  parsedContent?.description;
-                localStorage.setItem(params.data[3], res);
-                callback(ticket, res);
-              })
-              .fail(function (jqXHR, textStatus, errorThrown) {
-                console.error(
-                  "Request failed: " + textStatus + ", " + errorThrown
-                );
-              });
-
-            return "Loading";
-          },
+          formatter: createGeneTooltipFormatter({
+            parseData: (params) => ({
+              geneSymbol: params.data[3],
+              cluster: params.data[4],
+              clusterProb: params.data[5]
+            })
+          }),
         },
         dataset: {
           dimensions: [

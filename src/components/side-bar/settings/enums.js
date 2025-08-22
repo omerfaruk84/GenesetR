@@ -181,6 +181,18 @@ const PathFinderSettingsTypes = {
   MINIMUM_EDGE_OPACITY: "minEdgeopacity",
   MINIMUM_NODE_OPACITY: "minNodeopacity",
   DAGRE_SEPERATION: "dagreSeperation",
+  // Noise filter settings
+  FILTER_BLACKLISTED: "filterBlackListed",
+  FILTER_BLACKLISTED_EXP: "filterBlackListedExp",
+  FILTER_COUNT: "filterCount",
+  FILTER_COUNT_EXP: "filterCountExp",
+  FILTER1_ENABLED: "filter1Enabled",
+  FILTER2_ENABLED: "filter2Enabled",
+  FILTER3_ENABLED: "filter3Enabled",
+  FILTER4_ENABLED: "filter4Enabled",
+  FILTER1_DIRECTIONAL: "filter1Directional",
+  FILTER2_DIRECTIONAL: "filter2Directional",
+  MAX_NODES: "maxNodes",
 };
 
 const ScatterPlotSettingsTypes = {
@@ -205,13 +217,11 @@ const GeneSetEnrichmentSettingsTypes = {
 
 const GeneSignatureSettingsTypes = {
   FILTER_BLACKLISTED: "filterBlackListed",
-  FILTER: "filter",
   GENES_TO_LABEL: "genesTolabel",
 };
 
 const ExpressionAnalyzerSettingsTypes = {
   FILTER_BLACKLISTED: "filterBlackListed",
-  FILTER: "filter",
   GENES_TO_LABEL: "genesTolabel",
   SELECTED_GENE: "selectedGene",
   CORRTYPE: "corrType",

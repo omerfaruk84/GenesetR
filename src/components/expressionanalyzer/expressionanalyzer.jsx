@@ -85,6 +85,12 @@ const ExpressionAnalyzer = ({
   blacklistData,
   blacklistLoading,
 }) => {
+  console.log('ExpressionAnalyzer - Component props:', {
+    hasData: !!data,
+    dataType: typeof data,
+    dataKeys: data ? Object.keys(data) : [],
+    dataPreview: data ? JSON.stringify(data).substring(0, 200) + '...' : null
+  });
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
@@ -149,13 +155,28 @@ const ExpressionAnalyzer = ({
   }, [calcResults?.[ModulePathNames["/expressionanalyzer"]]?.running]);
 
   useEffect(() => {
-    if (!isCalcRunning && data && data.geneRegulationResults) {
-      if (data.geneRegulationResults.downstream.length > 0) {
+    console.log('ExpressionAnalyzer - Data processing useEffect triggered:', {
+      hasData: !!data,
+      isCalcRunning,
+      dataKeys: data ? Object.keys(data) : [],
+      hasUpstream: !!(data?.upstream),
+      hasDownstream: !!(data?.downstream),
+      hasPertCorr: !!(data?.pertCorr),
+      hasExpCorr: !!(data?.expCorr)
+    });
+    
+    if (!isCalcRunning && data) {
+      // Process downstream data
+      if (data.downstream && data.downstream.length > 0) {
+        console.log('ExpressionAnalyzer - Processing downstream data:', {
+          downstreamType: typeof data.downstream,
+          downstreamLength: data.downstream.length
+        });
         const newTabs2 = tabOptions;
         newTabs2[0].disabled = false;
         settabOptions(newTabs2);
         setSelectedTab(selectedTab);
-        setdownStream(safeJsonParse(data.geneRegulationResults.downstream, { defaultValue: {} }));
+        setdownStream(safeJsonParse(data.downstream, { defaultValue: {} }));
       } else {
         setdownStream({});
         const newTabs = tabOptions;
@@ -164,19 +185,34 @@ const ExpressionAnalyzer = ({
         setSelectedTab(tabOptions[1]);
       }
 
-      if (data.geneRegulationResults.upstream.length > 0)
-        setupStream(safeJsonParse(data.geneRegulationResults.upstream, { defaultValue: {} }));
-      else setupStream({});
+      // Process upstream data
+      if (data.upstream && data.upstream.length > 0) {
+        console.log('ExpressionAnalyzer - Processing upstream data:', {
+          upstreamType: typeof data.upstream,
+          upstreamLength: data.upstream.length
+        });
+        setupStream(safeJsonParse(data.upstream, { defaultValue: {} }));
+      } else setupStream({});
 
-      if (data.geneRegulationResults.pertCorr.length > 0)
-        setpertCorr(safeJsonParse(data.geneRegulationResults.pertCorr, { defaultValue: {} }));
-      else setpertCorr({});
+      // Process pertCorr data
+      if (data.pertCorr && data.pertCorr.length > 0) {
+        console.log('ExpressionAnalyzer - Processing pertCorr data:', {
+          pertCorrType: typeof data.pertCorr,
+          pertCorrLength: data.pertCorr.length
+        });
+        setpertCorr(safeJsonParse(data.pertCorr, { defaultValue: {} }));
+      } else setpertCorr({});
 
-      if (data.geneRegulationResults.expCorr.length > 0)
-        setexpCorr(safeJsonParse(data.geneRegulationResults.expCorr, { defaultValue: {} }));
-      else setexpCorr({});
+      // Process expCorr data
+      if (data.expCorr && data.expCorr.length > 0) {
+        console.log('ExpressionAnalyzer - Processing expCorr data:', {
+          expCorrType: typeof data.expCorr,
+          expCorrLength: data.expCorr.length
+        });
+        setexpCorr(safeJsonParse(data.expCorr, { defaultValue: {} }));
+      } else setexpCorr({});
     }
-  }, [data.geneRegulationResults?.upstream, isCalcRunning]);
+  }, [data, isCalcRunning]);
 
   const columns = useMemo(
     () => [
@@ -360,7 +396,19 @@ const ExpressionAnalyzer = ({
 
   // Memoize expensive calculations
   const processedData = useMemo(() => {
-    if (!data || !blacklistData || blacklistLoading) return null;
+    console.log('ExpressionAnalyzer - Processing data:', {
+      hasData: !!data,
+      hasBlacklistData: !!blacklistData,
+      blacklistLoading,
+      selectedTab: selectedTab.value,
+      selectedInnerTab: selectedInnerTab.value,
+      downstream: !!downstream,
+      upstream: !!upstream,
+      pertCorr: !!pertCorr,
+      expCorr: !!expCorr
+    });
+    
+    if (!data) return null;
     
     let highlightList = new Set(
       expressionanalyzerSettings?.genesTolabel
@@ -428,16 +476,18 @@ const ExpressionAnalyzer = ({
     for (let i = 0; i < xValues.length; i++) {
       if (
         expressionanalyzerSettings.filter &&
+        blacklistData &&
         xValues[i] < 0 &&
-        blacklistData.blackListDown[labels[i]] !== undefined &&
+        blacklistData.blackListDown?.[labels[i]] !== undefined &&
         blacklistData.blackListDown[labels[i]] >
           expressionanalyzerSettings.filterBlackListed
       )
         continue;
       else if (
         expressionanalyzerSettings.filter &&
+        blacklistData &&
         xValues[i] > 0 &&
-        blacklistData.blackListUp[labels[i]] !== undefined &&
+        blacklistData.blackListUp?.[labels[i]] !== undefined &&
         blacklistData.blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
       )
         continue;
@@ -596,7 +646,6 @@ const ExpressionAnalyzer = ({
     expressionanalyzerSettings,
     selectedTab.value,
     selectedInnerTab.value,
-    data.geneRegulationResults,
     downstream,
     upstream,
     pertCorr,
@@ -621,7 +670,7 @@ const ExpressionAnalyzer = ({
 
   //Set graph options
   const chartOptions = useMemo(() => {
-    if (!data.geneRegulationResults || !pointData.length) return {};
+    if (!data || !pointData.length) return {};
     
     return {
       tooltip: {
@@ -765,7 +814,7 @@ const ExpressionAnalyzer = ({
     };
   }, [
     pointData,
-    data.geneRegulationResults,
+    data,
     pointDistribution,
     selectedInnerTab.value,
   ]);
@@ -1002,6 +1051,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   calcResults,
   coreSettings: settings?.core ?? {},
   expressionanalyzerSettings: settings?.expressionanalyzer ?? {},
+  // Note: data is passed as a prop from the parent page component
 });
 const mapDispatchToProps = {
   runCalculation,

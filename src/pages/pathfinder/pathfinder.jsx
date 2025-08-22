@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { PathFinder } from '../../components/pathfinder';
 import { ModulePathNames } from '../../store/results/enums';
@@ -9,6 +9,7 @@ import helpVideo from '../../common/videos/5.webm'
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';
+import { fetchBlacklistData } from '../../store/blacklist';
 const moduleDescription = {
   title: "Pathway Explorer",
   description: "This module maps pathways among submitted genes using GWPS data, particularly useful for RNA-seq data analyses. It examines down-regulated genes to determine which genes are up- or down-regulated following perturbation, creating pathway networks that reveal key regulatory relationships and interactions.",
@@ -21,17 +22,45 @@ const moduleDescription = {
     "Integrates protein-protein interaction data from BioGRID"
   ],  
 };
-const PathFinderPage = ({ pathfinderResults, calcResults }) => {
+const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blacklistLoading, pathfinderSettings, dispatch }) => {
+
+  // Fetch blacklist data if not already loaded
+  useEffect(() => {
+    if (!blacklistData || Object.keys(blacklistData).length === 0) {
+      console.log('PathFinderPage - Fetching blacklist data...');
+      dispatch(fetchBlacklistData());
+    }
+  }, [blacklistData, dispatch]);
+
+  // Debug: Log blacklist data
+  console.log('PathFinderPage - blacklistData received:', {
+    hasBlacklistData: !!blacklistData,
+    blacklistDataKeys: blacklistData ? Object.keys(blacklistData) : [],
+    blacklistDataStructure: blacklistData ? {
+      blackListDown: blacklistData.blackListDown ? Object.keys(blacklistData.blackListDown).length : 0,
+      blackListUp: blacklistData.blackListUp ? Object.keys(blacklistData.blackListUp).length : 0,
+      blackListExpDown: blacklistData.blackListExpDown ? Object.keys(blacklistData.blackListExpDown).length : 0,
+      blackListExpUp: blacklistData.blackListExpUp ? Object.keys(blacklistData.blackListExpUp).length : 0,
+      blackListPCount: blacklistData.blackListPCount ? Object.keys(blacklistData.blackListPCount).length : 0,
+      blackListECount: blacklistData.blackListECount ? Object.keys(blacklistData.blackListECount).length : 0
+    } : null,
+    sampleBlacklistEntries: blacklistData ? {
+      blackListDown: blacklistData.blackListDown ? Object.entries(blacklistData.blackListDown).slice(0, 3) : [],
+      blackListUp: blacklistData.blackListUp ? Object.entries(blacklistData.blackListUp).slice(0, 3) : []
+    } : null
+  });
 
   // Check if pathfinder calculation is running
   const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;
 
   return (
     <div className={styles.mainView}>
-      {isCalculationRunning && <LoadingPage />}
+      {(isCalculationRunning || blacklistLoading) && <LoadingPage />}
+
+      
       {pathfinderResults ? (
-        <PathFinder graphData={pathfinderResults} /> 
-      ): (
+        <PathFinder pathFinderGraph={pathfinderResults} blacklistData={blacklistData} pathfinderSettings={pathfinderSettings} /> 
+      ) : (
         <div>  
           <Accordion defaultExpanded={true}
         sx={{
@@ -101,9 +130,12 @@ const PathFinderPage = ({ pathfinderResults, calcResults }) => {
   );
 };
 
-const mapStateToProps = ({ calcResults }, { path }) => ({
+const mapStateToProps = ({ calcResults, blacklist, settings }, { path }) => ({
   calcResults,
   pathfinderResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  blacklistData: blacklist?.data,
+  blacklistLoading: blacklist?.loading,
+  pathfinderSettings: settings?.pathfinder ?? {},
 });
 
 const MainContainer = connect(mapStateToProps)(PathFinderPage);

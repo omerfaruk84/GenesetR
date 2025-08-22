@@ -531,15 +531,18 @@ const DimReductionPage = ({
       />
 
       <Spacer />
-      {selectedTab.value === "pca" || graphdata === null ? (
+      {selectedTab.value === "pca" ? (
         <>
         {content}
         <VideoHelpPage videoFile={helpVideo} />
-        
         </>
-        
-      ) : (
+      ) : graphdata !== null ? (
         <ScatterPlot graphData={graphdata} />
+      ) : (
+        <>
+        {content}
+        <VideoHelpPage videoFile={helpVideo} />
+        </>
       )}
     </div>
   );

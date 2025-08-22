@@ -965,13 +965,60 @@ const GeneRegulation = ({
 
       setOptions({
         tooltip: {
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px;",
+          confine: true,
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
+          textStyle: {
+            fontSize: 13,
+            color: "#333333",
+            lineHeight: 1.4,
+          },
           formatter: function (params) {
-            let kd = "";
-            if (params.data.kd) kd = kd + "<br>Knockdown: " + params.data.kd;
-
-            if (params.data.neighbourCount)
-              kd = kd + "<br>Neighbour Count: " + params.data.neighbourCount;
-            return params.data.name + kd;
+            const geneName = params.data.name;
+            const kd = params.data.kd;
+            const neighbourCount = params.data.neighbourCount;
+            const category = params.data.category;
+            
+            let categoryName = "";
+            switch(category) {
+              case 0:
+                categoryName = "Upstream Positive Regulator";
+                break;
+              case 1:
+                categoryName = "Upstream Negative Regulator";
+                break;
+              case 2:
+                categoryName = "Downstream Positively Regulated";
+                break;
+              case 3:
+                categoryName = "Downstream Negatively Regulated";
+                break;
+              default:
+                categoryName = "Unknown";
+            }
+            
+            let tooltipContent = `<div style="font-weight: bold; color: #1976d2; margin-bottom: 8px;">
+              ${geneName}
+            </div>
+            <div style="color: #666; font-size: 12px; margin-bottom: 8px;">
+              <strong>Type:</strong> ${categoryName}
+            </div>`;
+            
+            if (kd) {
+              tooltipContent += `<div style="color: #666; font-size: 12px; margin-bottom: 8px;">
+                <strong>Knockdown:</strong> ${kd}
+              </div>`;
+            }
+            
+            if (neighbourCount !== undefined) {
+              tooltipContent += `<div style="color: #666; font-size: 12px; margin-bottom: 8px;">
+                <strong>Neighbour Count:</strong> ${neighbourCount}
+              </div>`;
+            }
+            
+            return tooltipContent;
           },
         },
         legend: [

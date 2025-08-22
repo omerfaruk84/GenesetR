@@ -307,17 +307,15 @@ const runGeneExp = async (core, geneExp) => {
   return await getData(body);
 };
 
-const getBlackList = async (body) => {
+const getBlackList = async () => {
   const response = await Axios.get(SERVER_ADRESS + "/getBlackList", {
     headers: {
       "ngrok-skip-browser-warning": "69420",
     },
-    body: JSON.stringify(body),
   }).then((response) => response.data);
 
   if (response === "FAILURE") throw new Error(response);
-  console.log(response);
-  return response; //JSON.parse(response)
+  return response;
 };
 
 const updateGeneLists = async (dataType) => {
