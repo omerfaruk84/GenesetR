@@ -38,6 +38,7 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
 import { download } from "export-to-csv";
 import { ModulePathNames } from "../../store/results/enums";
 import { set } from "idb-keyval";
@@ -674,8 +675,147 @@ const ExpressionAnalyzer = ({
     
     return {
       tooltip: {
-        formatter: function (params) {
-          return params.data[2] + "<br> Score: " + params.data[0]?.toFixed(2);
+        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
+        confine: true,
+        backgroundColor: "#ffffff",
+        borderColor: "#e0e0e0",
+        borderWidth: 1,
+        formatter: function (params, ticket, callback) {
+          // params.data structure: [correlationScore, histY, geneSymbol, originalScore, isHighlighted]
+          const geneSymbol = params.data[2];
+          const correlationScore = params.data[0];
+          const originalScore = params.data[3];
+          const isHighlighted = params.data[4];
+          
+          if (!geneSymbol) return '';
+          
+          // Determine the analysis type and data interpretation based on current tab
+          const isCorrelationMode = selectedInnerTab.value === 1;
+          const score = params.data[0];
+          
+          let analysisType = "";
+          let analysisColor = "#666";
+          let scoreLabel = "";
+          
+          if (isCorrelationMode) {
+            // Correlation mode
+            scoreLabel = "Correlation Score";
+            if (score > 0.5) {
+              analysisType = "Strong Positive Correlation";
+              analysisColor = "#4caf50"; // green
+            } else if (score < -0.5) {
+              analysisType = "Strong Negative Correlation";
+              analysisColor = "#f44336"; // red
+            } else if (score > 0.2) {
+              analysisType = "Moderate Positive Correlation";
+              analysisColor = "#8bc34a"; // light green
+            } else if (score < -0.2) {
+              analysisType = "Moderate Negative Correlation";
+              analysisColor = "#ff5722"; // orange red
+            } else {
+              analysisType = "Weak Correlation";
+              analysisColor = "#9e9e9e"; // gray
+            }
+          } else {
+            // Expression mode
+            scoreLabel = "Expression Score";
+            if (score > 2) {
+              analysisType = "Strong Upregulation";
+              analysisColor = "#4caf50"; // green
+            } else if (score < -2) {
+              analysisType = "Strong Downregulation";
+              analysisColor = "#f44336"; // red
+            } else if (score > 0.5) {
+              analysisType = "Moderate Upregulation";
+              analysisColor = "#8bc34a"; // light green
+            } else if (score < -0.5) {
+              analysisType = "Moderate Downregulation";
+              analysisColor = "#ff5722"; // orange red
+            } else {
+              analysisType = "No Significant Change";
+              analysisColor = "#9e9e9e"; // gray
+            }
+          }
+          
+          // Create custom formatter with score information and gene data
+          const customFormatter = function(params, ticket, callback) {
+            // Create base tooltip with score information
+            let baseTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
+              ${geneSymbol}
+            </div>
+            <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
+              <strong>Analysis:</strong> ${analysisType}
+            </div>
+            <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+              <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
+            </div>`;
+            
+            if (originalScore !== undefined && originalScore !== score) {
+              baseTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
+              </div>`;
+            }
+            
+            if (isHighlighted) {
+              baseTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
+                <strong>★ Highlighted Gene</strong>
+              </div>`;
+            }
+            
+            // Add gene description placeholder
+            baseTooltip += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
+            
+            // Try to fetch gene information asynchronously
+            import('../../utils/geneFunctionUtils').then(({ fetchGeneInfo }) => {
+              fetchGeneInfo(geneSymbol).then(content => {
+                if (content) {
+                  let parsedContent;
+                  try {
+                    parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
+                  } catch (e) {
+                    parsedContent = { description: content };
+                  }
+                  
+                  // Update tooltip with gene information
+                  let enhancedTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
+                    ${geneSymbol}${parsedContent?.name ? ` (${parsedContent.name})` : ''}
+                  </div>
+                  <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
+                    <strong>Analysis:</strong> ${analysisType}
+                  </div>
+                  <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                    <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
+                  </div>`;
+                  
+                  if (originalScore !== undefined && originalScore !== score) {
+                    enhancedTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                      <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
+                    </div>`;
+                  }
+                  
+                  if (isHighlighted) {
+                    enhancedTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
+                      <strong>★ Highlighted Gene</strong>
+                    </div>`;
+                  }
+                  
+                  if (parsedContent?.description) {
+                    enhancedTooltip += `<div style="font-size:11px;color:#444;margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${parsedContent.description}</div>`;
+                  }
+                  
+                  callback(ticket, enhancedTooltip);
+                }
+              }).catch(() => {
+                // If gene info fetch fails, just show the base tooltip without the loading message
+                let finalTooltip = baseTooltip.replace('<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>', '');
+                callback(ticket, finalTooltip);
+              });
+            });
+            
+            return baseTooltip;
+          };
+          
+          return customFormatter(params, ticket, callback);
         },
       },
       xAxis: [
@@ -817,6 +957,7 @@ const ExpressionAnalyzer = ({
     data,
     pointDistribution,
     selectedInnerTab.value,
+    selectedTab.value,
   ]);
 
   useEffect(() => {

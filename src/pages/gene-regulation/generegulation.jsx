@@ -29,6 +29,7 @@ import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
 
 // Add module description for Gene Regulation
 const moduleDescription = {
@@ -965,60 +966,84 @@ const GeneRegulation = ({
 
       setOptions({
         tooltip: {
-          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px;",
+          extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
           confine: true,
           backgroundColor: "#ffffff",
           borderColor: "#e0e0e0",
           borderWidth: 1,
-          textStyle: {
-            fontSize: 13,
-            color: "#333333",
-            lineHeight: 1.4,
-          },
-          formatter: function (params) {
-            const geneName = params.data.name;
-            const kd = params.data.kd;
-            const neighbourCount = params.data.neighbourCount;
-            const category = params.data.category;
-            
-            let categoryName = "";
-            switch(category) {
-              case 0:
-                categoryName = "Upstream Positive Regulator";
-                break;
-              case 1:
-                categoryName = "Upstream Negative Regulator";
-                break;
-              case 2:
-                categoryName = "Downstream Positively Regulated";
-                break;
-              case 3:
-                categoryName = "Downstream Negatively Regulated";
-                break;
-              default:
-                categoryName = "Unknown";
+          formatter: function (params, ticket, callback) {
+            // Handle both node and edge tooltips
+            if (params.dataType === 'edge') {
+              // Edge tooltip - simple format to prevent overlapping
+              const edge = params.data;
+              if (!edge) return '';
+              
+              if (edge.id && edge.id.includes("+cor+")) {
+                const value = edge.value !== undefined ? edge.value.toFixed(3) : 'N/A';
+                const id = edge.id ? edge.id.replace("+cor+", " ~ ") : '';
+                const type = edge.type ? edge.type.replace("_", " to ") : '';
+                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Correlation</div>
+                <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>R:</strong> ${value}</div>
+                <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
+                <div style="line-height: 1.4; font-size: 12px;"><strong>Type:</strong> ${type}</div>`;
+              } else if (edge.id && edge.id.includes("+int+")) {
+                const id = edge.id ? edge.id.replace("+int+", " ¤ ") : '';
+                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Protein Interaction</div>
+                <div style="line-height: 1.4; font-size: 12px;"><strong>Proteins:</strong> ${id}</div>`;
+              } else {
+                const value = edge.value !== undefined ? edge.value.toFixed(3) : 'N/A';
+                const id = edge.id ? edge.id.replace("+exp+", " → ") : '';
+                const type = edge.type ? edge.type.replace("_", " to ") : '';
+                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Expression Effect</div>
+                <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Effect:</strong> ${value}</div>
+                <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
+                <div style="line-height: 1.4; font-size: 12px;"><strong>Type:</strong> ${type}</div>`;
+              }
+            } else {
+              // Node tooltip - use createGeneTooltipFormatter properly
+              const node = params.data;
+              if (!node) return '';
+              
+              const geneSymbol = node.name || node.id || 'Unknown';
+              const category = node.category;
+              const kd = node.kd;
+              const neighbourCount = node.neighbourCount;
+              
+              let categoryName = "";
+              switch(category) {
+                case 0:
+                  categoryName = "Upstream Positive Regulator";
+                  break;
+                case 1:
+                  categoryName = "Upstream Negative Regulator";
+                  break;
+                case 2:
+                  categoryName = "Downstream Positively Regulated";
+                  break;
+                case 3:
+                  categoryName = "Downstream Negatively Regulated";
+                  break;
+                default:
+                  categoryName = "Unknown";
+              }
+              
+              // Create a custom parseData function for the gene tooltip formatter
+              const parseData = (params) => ({
+                geneSymbol: geneSymbol,
+                geneType: categoryName,
+                knockdown: kd,
+                neighbourCount: neighbourCount
+              });
+              
+              // Use the createGeneTooltipFormatter with enhanced options
+              const geneTooltipFormatter = createGeneTooltipFormatter({
+                useCache: true,
+                parseData: parseData
+              });
+              
+              // Call the formatter with the callback properly
+              return geneTooltipFormatter(params, ticket, callback);
             }
-            
-            let tooltipContent = `<div style="font-weight: bold; color: #1976d2; margin-bottom: 8px;">
-              ${geneName}
-            </div>
-            <div style="color: #666; font-size: 12px; margin-bottom: 8px;">
-              <strong>Type:</strong> ${categoryName}
-            </div>`;
-            
-            if (kd) {
-              tooltipContent += `<div style="color: #666; font-size: 12px; margin-bottom: 8px;">
-                <strong>Knockdown:</strong> ${kd}
-              </div>`;
-            }
-            
-            if (neighbourCount !== undefined) {
-              tooltipContent += `<div style="color: #666; font-size: 12px; margin-bottom: 8px;">
-                <strong>Neighbour Count:</strong> ${neighbourCount}
-              </div>`;
-            }
-            
-            return tooltipContent;
           },
         },
         legend: [
