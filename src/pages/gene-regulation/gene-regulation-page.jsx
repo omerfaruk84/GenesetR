@@ -93,7 +93,7 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklis
     color: '#1565c0',
     marginBottom: '8px'
   }}>
-    💡 To start, please select a gene from the left menu.
+    💡 To start, select a dataset from the left sidebar, then choose a gene from the gene regulation settings.
   </div>
 
           <VideoHelpPage videoFile={helpVideo} />

@@ -199,7 +199,7 @@ const runPathFinderCalc = async (core, pathfinder) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cellLine: core.cellLine.id,
+    cell_line: core.cellLine.id,
 
     upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -276,6 +276,7 @@ const runHeatMap = async (core, heatMap) => {
 const runGeneRegulation = async (core, geneRegulationCore) => {
   const body = {
     gene: geneRegulationCore.selectedGene,
+    cell_line: core.cellLine.id,
     request: "expandGene",
   };
   return await getData(body);

@@ -34,6 +34,7 @@ const CoreSettings = ({
   geneListTitle = "Genes",
   perturbationListTitle = "Perturbations",
   source = "",
+  wholeGenomeOnly = false,
 }) => {
   const childRef = React.useRef();
 
@@ -153,6 +154,7 @@ const CoreSettings = ({
           onlyMain={
             location === ROUTES.CORRELATION || location === ROUTES.HEATMAP
           }
+          wholeGenomeOnly={wholeGenomeOnly}
         />{" "}
         <Spacer height={5} />
       </div>

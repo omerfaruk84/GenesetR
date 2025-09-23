@@ -94,7 +94,8 @@ const initialState = {
         resultShape: "11258 8248",
         perturbationCount: 11258,
         geneCount: 8248,
-        isMixscape: false
+        isMixscape: false,
+        isWholeGenome: true
       },
   dataType: "pert",
   peturbationList: defaultGeneList,
@@ -107,21 +108,38 @@ const initialState = {
       name: "K562 Whole Genome",
       parent: 0,
       active: true,
+      isWholeGenome: true,
     },
     {
       droppable: true,
       id: "K562essential",
       name: "K562 Essential",
       details: "Main",
-
       parent: 0,
+      isWholeGenome: false,
+    },
+    {
+      droppable: true,
+      id: "HCT116gwps",
+      name: "HCT116 Whole Genome",
+      details: "Main",
+      parent: 0,
+      isWholeGenome: true,
+    },
+    {
+      droppable: true,
+      id: "HEK293gwps",
+      name: "HEK293 Whole Genome",
+      details: "Main",
+      parent: 0,
+      isWholeGenome: true,
     },
     {
       droppable: true,
       id: "RPE1essential",
       name: "RPE1 Essential",
-
       parent: 0,
+      isWholeGenome: false,
     },
   ],
   mixscapePerturbed: true,

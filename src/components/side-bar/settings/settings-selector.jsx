@@ -124,8 +124,17 @@ const SettingsSelector = ({ pathname }) => {
     [ROUTES.GENE_REGULATION]: [
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
-        settings: <CoreSettings />,
-        hidden: true,
+        settings: (
+          <CoreSettings
+            source={"GENE_REGULATION"}
+            showcellLineOptions={true}
+            showPerturbationList={false}
+            showGeneList={false}
+            showdataTypeOptions={false}
+            showgraphTypeOptions={false}
+            wholeGenomeOnly={true}
+          />
+        ),
       },
       {
         settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
@@ -158,9 +167,12 @@ const SettingsSelector = ({ pathname }) => {
         settings: (
           <CoreSettings
             source={"PATHFINDER"}
-            showgraphTypeOptions={false}
-            showcellLineOptions={false}
+            showcellLineOptions={true}
+            showPerturbationList={true}
+            showGeneList={false}
             showdataTypeOptions={false}
+            showgraphTypeOptions={false}
+            wholeGenomeOnly={true}
           />
         ),
       },

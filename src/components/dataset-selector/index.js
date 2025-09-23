@@ -16,7 +16,7 @@ import { useLocation } from "react-router-dom";
 import { updateGeneLists } from "../../store/api";
 
 const DatasetSelector = forwardRef(
-  ({ coreSettingsChanged, coreSettings }, ref, onlyMain) => {
+  ({ coreSettingsChanged, coreSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
     const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
       setDatasetList(prevList => 
         prevList.map(item => ({
@@ -35,227 +35,285 @@ const DatasetSelector = forwardRef(
       });
     }, [coreSettingsChanged]);
 
-    const [datasetList, setDatasetList] = useState(() => [
-      {
-        droppable: true,
-        id: "K562gwps",
-        name: "K562 Whole Genome",
-        onClick: () => updateActivityById("K562gwps", 11258, 8248, false),
-        parent: 0,
-        active: true,
-        resultShape: "11258 8248",
-        perturbationCount: 11258,
-        geneCount: 8248,
-        isMixscape: false
-      },
-      {
-        droppable: true,
-        id: "K562essential",
-        name: "K562 Essential",
-        onClick: () => updateActivityById("K562essential", 2285, 8563, false),
-        parent: 0,
-        active: false,
-        resultShape: "2285 8563",
-        perturbationCount: 2285,
-        geneCount: 8563,
-        isMixscape: false
-      },
-      {
-        droppable: true,
-        id: "SC00003",
-        name: "K562 Essential-mixscape",       
-        onClick: () => updateActivityById("SC00003", 3300, 8425, true),
-        parent: 0,
-        active: false,
-        resultShape: "3300 8425",
-        perturbationCount: 3300,
-        geneCount: 8425,
-        isMixscape: true
-      },
-      {
-        droppable: true,
-        id: "RPE1essential",
-        name: "RPE1 Essential",
-        onClick: () => updateActivityById("RPE1essential", 2679, 8749, false),
-        parent: 0,
-        active: false,
-        resultShape: "2679 8749",
-        perturbationCount: 2679,
-        geneCount: 8749,
-        isMixscape: false
-      },
-      {
-        droppable: true,
-        id: "SC00004",
-        name: "RPE1 Essential-mixscape",
-        onClick: () => updateActivityById("SC00004", 3939, 8688, true),
-        parent: 0,
-        active: false,
-        resultShape: "3939 8688",
-        perturbationCount: 3939,
-        geneCount: 8688,
-        isMixscape: true
-      },
-      {
-        droppable: true,
-        id: "SC00065",
-        name: "HepG2 Essential",
-        onClick: () => updateActivityById("SC00065", 3667, 9503, true),
-        parent: 0,
-        active: false,
-        resultShape: "3667 9503",  //Cols vs Rows Perturbations vs Genes Need to fix
-        perturbationCount: 3667,
-        geneCount: 9503,
-        isMixscape: true
-      },
-       {
-        droppable: true,
-        id: "SC00066",
-        name: "Jurkat Essential",
-        onClick: () => updateActivityById("SC00066", 1514, 8811, true),
-        parent: 0,
-        active: false,
-        resultShape: "1514 8811",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 1514,
-        geneCount: 8811,
-        isMixscape: true
-      }, 
-      /*
-      {
-        droppable: true,
-        id: "TFAtlas",
-        name: "Transcription Factor Atlas",
-        onClick: () => updateActivityById("TFAtlas", 3367, 19603, false),
-        parent: 0,
-        active: false,
-        resultShape: "3367 19603",
-        perturbationCount: 3367,
-        geneCount: 19603,
-        isMixscape: false
-      }, */
-       {
-        droppable: true, //Crispra
-        id: "SC00048",
-        name: "Transcription Factor Atlas - MixScape",
-        onClick: () => updateActivityById("SC00048", 142, 11796, true),
-        parent: 0,
-        active: false,
-        resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 142,
-        geneCount: 11796,
-        isMixscape: true
-      },
-      {
-        droppable: true, //Crispra
-        id: "SC00047",
-        name: "Transcription Factor Atlas - ShareSeq",
-        onClick: () => updateActivityById("SC00047", 185, 12221, true),
-        parent: 0,
-        active: false,
-        resultShape: "185 12221",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 185,
-        geneCount: 12221,
-        isMixscape: true
-      },           
-      {
-        droppable: true,
-        id: "SC00001",
-        name: "THP1 - regulators of immune check points",
-        onClick: () => updateActivityById("SC00001", 36, 9873, true),
-        parent: 0,
-        active: false,
-        resultShape: "36 9873",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 36,
-        geneCount: 9873,
-        isMixscape: true
-      }, 
-      {
-        droppable: true,
-        id: "SC00015",
-        name: "Calu-3 SARS-CoV-2 host factors",
-        onClick: () => updateActivityById("SC00015", 175, 11486, true),
-        parent: 0,
-        active: false,
-        resultShape: "175 11486",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 175,
-        geneCount: 11486,
-        isMixscape: true
-      }      ,   
-      {
-        droppable: true,
-        id: "SC00039",
-        name: "THP1 - immune response to LPS CRISPRi",
-        onClick: () => updateActivityById("SC00039", 623, 11690, true),
-        parent: 0,
-        active: false,
-        resultShape: "623 11690",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 623,
-        geneCount: 11690,
-        isMixscape: true
-      },  
-      {
-        droppable: true,
-        id: "SC00038",
-        name: "THP1 - immune response to LPS CRISPR-KO",
-        onClick: () => updateActivityById("SC00038", 634, 10930, true),
-        parent: 0,
-        active: false,
-        resultShape: "634 10930",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 634,
-        geneCount: 10930,
-        isMixscape: true
-      },      
-      {
-        droppable: true, //Crispra
-        id: "SC00016",
-        name: "iPSC induced neurons-CRISPRa",
-        onClick: () => updateActivityById("SC00016", 100, 10634, true),
-        parent: 0,
-        active: false,
-        resultShape: "100 10634",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 100,
-        geneCount: 10634,
-        isMixscape: true
-      },   
-      {
-        droppable: true, //Crispra
-        id: "sc00017",
-        name: "iPSC induced neurons-CRISPRi",
-        onClick: () => updateActivityById("sc00017", 186, 11401, true),
-        parent: 0,
-        active: false,
-        resultShape: "186 11401",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 186,
-        geneCount: 11401,
-        isMixscape: true
-      },          
+    const [datasetList, setDatasetList] = useState(() => {
+      const allDatasets = [
+        {
+          droppable: true,
+          id: "K562gwps",
+          name: "K562 Whole Genome",
+          onClick: () => updateActivityById("K562gwps", 11258, 8248, false),
+          parent: 0,
+          active: true,
+          resultShape: "11258 8248",
+          perturbationCount: 11258,
+          geneCount: 8248,
+          isMixscape: false,
+          isWholeGenome: true
+        },
+        {
+          droppable: true,
+          id: "K562essential",
+          name: "K562 Essential",
+          onClick: () => updateActivityById("K562essential", 2285, 8563, false),
+          parent: 0,
+          active: false,
+          resultShape: "2285 8563",
+          perturbationCount: 2285,
+          geneCount: 8563,
+          isMixscape: false,
+          isWholeGenome: false
+        },
+        {
+          droppable: true,
+          id: "HCT116gwps",
+          name: "HCT116 Whole Genome",
+          onClick: () => updateActivityById("HCT116gwps", 18194, 12245, false),
+          parent: 0,
+          active: false,
+          resultShape: "18194 12245",
+          perturbationCount: 18194,
+          geneCount: 12245,
+          isMixscape: false,
+          isWholeGenome: true
+        },
+        {
+          droppable: true,
+          id: "HEK293gwps",
+          name: "HEK293 Whole Genome",
+          onClick: () => updateActivityById("HEK293gwps", 21918, 13422, false),
+          parent: 0,
+          active: false,
+          resultShape: "21918 13422",
+          perturbationCount: 21918,
+          geneCount: 13422,
+          isMixscape: false,
+          isWholeGenome: true
+        },
+        {
+          droppable: true,
+          id: "SC00003",
+          name: "K562 Essential-mixscape",       
+          onClick: () => updateActivityById("SC00003", 3300, 8425, true),
+          parent: 0,
+          active: false,
+          resultShape: "3300 8425",
+          perturbationCount: 3300,
+          geneCount: 8425,
+          isMixscape: true,
+          isWholeGenome: false
+        },
+        {
+          droppable: true,
+          id: "RPE1essential",
+          name: "RPE1 Essential",
+          onClick: () => updateActivityById("RPE1essential", 2679, 8749, false),
+          parent: 0,
+          active: false,
+          resultShape: "2679 8749",
+          perturbationCount: 2679,
+          geneCount: 8749,
+          isMixscape: false,
+          isWholeGenome: false
+        },
+        {
+          droppable: true,
+          id: "SC00004",
+          name: "RPE1 Essential-mixscape",
+          onClick: () => updateActivityById("SC00004", 3939, 8688, true),
+          parent: 0,
+          active: false,
+          resultShape: "3939 8688",
+          perturbationCount: 3939,
+          geneCount: 8688,
+          isMixscape: true,
+          isWholeGenome: false
+        },
+        {
+          droppable: true,
+          id: "SC00065",
+          name: "HepG2 Essential",
+          onClick: () => updateActivityById("SC00065", 3667, 9503, true),
+          parent: 0,
+          active: false,
+          resultShape: "3667 9503",  //Cols vs Rows Perturbations vs Genes Need to fix
+          perturbationCount: 3667,
+          geneCount: 9503,
+          isMixscape: true,
+          isWholeGenome: false
+        },
+         {
+          droppable: true,
+          id: "SC00066",
+          name: "Jurkat Essential",
+          onClick: () => updateActivityById("SC00066", 1514, 8811, true),
+          parent: 0,
+          active: false,
+          resultShape: "1514 8811",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 1514,
+          geneCount: 8811,
+          isMixscape: true,
+          isWholeGenome: false
+        }, 
+        /*
+        {
+          droppable: true,
+          id: "TFAtlas",
+          name: "Transcription Factor Atlas",
+          onClick: () => updateActivityById("TFAtlas", 3367, 19603, false),
+          parent: 0,
+          active: false,
+          resultShape: "3367 19603",
+          perturbationCount: 3367,
+          geneCount: 19603,
+          isMixscape: false
+        }, */
+         {
+          droppable: true, //Crispra
+          id: "SC00048",
+          name: "Transcription Factor Atlas - MixScape",
+          onClick: () => updateActivityById("SC00048", 142, 11796, true),
+          parent: 0,
+          active: false,
+          resultShape: "142 11796",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 142,
+          geneCount: 11796,
+          isMixscape: true,
+          isWholeGenome: false
+        },
+        {
+          droppable: true, //Crispra
+          id: "SC00047",
+          name: "Transcription Factor Atlas - ShareSeq",
+          onClick: () => updateActivityById("SC00047", 185, 12221, true),
+          parent: 0,
+          active: false,
+          resultShape: "185 12221",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 185,
+          geneCount: 12221,
+          isMixscape: true,
+          isWholeGenome: false
+        },           
+        {
+          droppable: true,
+          id: "SC00001",
+          name: "THP1 - regulators of immune check points",
+          onClick: () => updateActivityById("SC00001", 36, 9873, true),
+          parent: 0,
+          active: false,
+          resultShape: "36 9873",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 36,
+          geneCount: 9873,
+          isMixscape: true,
+          isWholeGenome: false
+        }, 
+        {
+          droppable: true,
+          id: "SC00015",
+          name: "Calu-3 SARS-CoV-2 host factors",
+          onClick: () => updateActivityById("SC00015", 175, 11486, true),
+          parent: 0,
+          active: false,
+          resultShape: "175 11486",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 175,
+          geneCount: 11486,
+          isMixscape: true,
+          isWholeGenome: false
+        }      ,   
+        {
+          droppable: true,
+          id: "SC00039",
+          name: "THP1 - immune response to LPS CRISPRi",
+          onClick: () => updateActivityById("SC00039", 623, 11690, true),
+          parent: 0,
+          active: false,
+          resultShape: "623 11690",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 623,
+          geneCount: 11690,
+          isMixscape: true,
+          isWholeGenome: false
+        },  
+        {
+          droppable: true,
+          id: "SC00038",
+          name: "THP1 - immune response to LPS CRISPR-KO",
+          onClick: () => updateActivityById("SC00038", 634, 10930, true),
+          parent: 0,
+          active: false,
+          resultShape: "634 10930",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 634,
+          geneCount: 10930,
+          isMixscape: true,
+          isWholeGenome: false
+        },      
+        {
+          droppable: true, //Crispra
+          id: "SC00016",
+          name: "iPSC induced neurons-CRISPRa",
+          onClick: () => updateActivityById("SC00016", 100, 10634, true),
+          parent: 0,
+          active: false,
+          resultShape: "100 10634",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 100,
+          geneCount: 10634,
+          isMixscape: true,
+          isWholeGenome: false
+        },   
+        {
+          droppable: true, //Crispra
+          id: "sc00017",
+          name: "iPSC induced neurons-CRISPRi",
+          onClick: () => updateActivityById("sc00017", 186, 11401, true),
+          parent: 0,
+          active: false,
+          resultShape: "186 11401",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 186,
+          geneCount: 11401,
+          isMixscape: true,
+          isWholeGenome: false
+        },          
          
-      {
-        droppable: true, 
-        id: "SC00037",
-        name: "HEK293-idCas9",
-        onClick: () => updateActivityById("SC00037", 237, 9410, true),
-        parent: 0,
-        active: false,
-        resultShape: "237 9410",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 237,
-        geneCount: 9410,
-        isMixscape: true
-      },     
-      {
-        droppable: true, 
-        id: "SC00063",
-        name: "Jurkat - TCR signaling",
-        onClick: () => updateActivityById("SC00063", 32, 9949, true),
-        parent: 0,
-        active: false,
-        resultShape: "32 9949",  //Cols vs Rows Perturbations vs Genes
-        perturbationCount: 32,
-        geneCount: 9949,
-        isMixscape: true
-      },         
+        {
+          droppable: true, 
+          id: "SC00037",
+          name: "HEK293-idCas9",
+          onClick: () => updateActivityById("SC00037", 237, 9410, true),
+          parent: 0,
+          active: false,
+          resultShape: "237 9410",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 237,
+          geneCount: 9410,
+          isMixscape: true,
+          isWholeGenome: false
+        },     
+        {
+          droppable: true, 
+          id: "SC00063",
+          name: "Jurkat - TCR signaling",
+          onClick: () => updateActivityById("SC00063", 32, 9949, true),
+          parent: 0,
+          active: false,
+          resultShape: "32 9949",  //Cols vs Rows Perturbations vs Genes
+          perturbationCount: 32,
+          geneCount: 9949,
+          isMixscape: true,
+          isWholeGenome: false
+        },         
+        
+      ];
       
-    ]);
+      // Filter for whole genome datasets if wholeGenomeOnly is true
+      if (wholeGenomeOnly) {
+        const filteredDatasets = allDatasets.filter(dataset => dataset.isWholeGenome === true);
+        // Ensure the first whole genome dataset is active if current selection is not in the filtered list
+        const hasActiveDataset = filteredDatasets.some(dataset => dataset.active);
+        if (!hasActiveDataset && filteredDatasets.length > 0) {
+          filteredDatasets[0].active = true;
+        }
+        return filteredDatasets;
+      }
+      
+      return allDatasets;
+    });
 
     const location = useLocation();  
   

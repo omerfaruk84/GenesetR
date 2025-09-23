@@ -10,6 +10,7 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';
 import { fetchBlacklistData } from '../../store/blacklist';
+
 const moduleDescription = {
   title: "Pathway Explorer",
   description: "This module maps pathways among submitted genes using GWPS data, particularly useful for RNA-seq data analyses. It examines down-regulated genes to determine which genes are up- or down-regulated following perturbation, creating pathway networks that reveal key regulatory relationships and interactions.",
@@ -119,7 +120,7 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
     color: '#1565c0',
     marginBottom: '8px'
   }}>
-    💡 To start, please eneter your gene list to the input box at the left menu.
+    💡 To start, select a dataset from the left sidebar, then enter your gene list in the perturbations field.
   </div>
        
         <VideoHelpPage videoFile={helpVideo}/>
