@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Spacer,
   ButtonGroup,
   Tabs,
+  Toggle,
+  Flex,
+  Text,
 } from "@oliasoft-open-source/react-ui-library";
-import { FaChartBar, FaTable } from "react-icons/fa";
+import { FaChartBar, FaTable, FaSortAmountUpAlt, FaSortAmountDownAlt } from "react-icons/fa";
 import styles from "../../pages/genesignature/gene-signature-page.module.scss";
 import { connect } from "react-redux";
 import { useEffect } from "react";
@@ -15,6 +18,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
+import { runMultiDatasetGeneSignature } from "../../store/results";
+import { runMultiDatasetGeneSignatureSimilar } from "../../store/results";
 
 import {
   GridComponent,
@@ -65,22 +70,32 @@ const moduleDescription = {
   tabs: {
     chart: "Graph showing perturbations ranked by their effect on the gene signature. Green dots indicate perturbations that increase the signature, red dots decrease it.",
     table: "Table of all perturbations showing their effect direction and z-scores based on the gene signature analysis.",
-    similarGenes: "This table lists genes that show similar expression patterns to your gene signature and may be considered for inclusion in the signature to enhance its specificity. Higher similarity scores indicate stronger correlation with your signature."
+    similarGenes: "This table lists genes that show similar expression patterns to your gene signature and may be considered for inclusion in the signature to enhance its specificity. Higher similarity scores indicate stronger correlation with your signature.",
+    multiDataset: "Cross-dataset analysis showing how your gene signature performs across multiple cell lines and conditions. Results are ranked by average z-score and filtered by minimum dataset presence. Use settings to control ranking and filtering parameters.",
+    multiDatasetSimilar: "Genes that correlate with your gene signature across multiple whole-genome datasets. Shows genes with similar perturbation effects based on average ranks across all datasets."
   }
 };
 
-const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistData, blacklistLoading }) => {
+const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData, similarLoading, blacklistData, blacklistLoading, dispatch }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
   const [pointDistribution, setPointDistribution] = useState([]);
   const [keyedData, setkeyedData] = useState([{}]);
   const [keyedData2, setkeyedData2] = useState([{}]);
+  const [keyedDataMulti, setkeyedDataMulti] = useState([{}]); // New state for multi-dataset data
+  const [keyedDataMultiSimilar, setkeyedDataMultiSimilar] = useState([]); // New state for multi-dataset similar genes
   const [selectedTab, setSelectedTab] = useState({
     label: "Geneset Enrichment",
     value: "gsea",
   });
   const [genelists, setGeneLists] = useState([]);
+  
+  // Multi-dataset local settings
+  const [showRanks, setShowRanks] = useState(false);
+  const [rankOrder, setRankOrder] = useState('desc');
+  const [multiDatasetLoading, setMultiDatasetLoading] = useState(false);
+  const [multiDatasetSimilarLoading, setMultiDatasetSimilarLoading] = useState(false);
 
 
   const columns = useMemo(
@@ -179,9 +194,563 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
     []
   );
 
+  const columnsMulti = useMemo(() => {
+    if (!data?.datasets) return [];
+    
+    console.log('GeneSignature - Creating columns with showRanks:', showRanks);
+    
+    const columns = [];
+    
+    // Gene column first
+    columns.push({
+      accessorKey: "gene",
+      header: "Gene",
+      size: 120,
+      filterVariant: "autocomplete",
+      muiFilterTextFieldProps: {
+        placeholder: "Symbol",
+        size: "small",
+      },
+    });
+    
+    // Dataset columns
+    data.datasets.forEach(dataset => {
+      const datasetName = dataset === 'K562gwps' ? 'K562' : 
+                         dataset === 'HCT116gwps' ? 'HCT116' : 
+                         dataset === 'HEK293gwps' ? 'HEK293' : dataset;
+      
+      columns.push({
+        accessorKey: showRanks ? `${dataset}_display` : dataset,
+        header: showRanks ? `${datasetName} Rank (Score)` : datasetName,
+        size: showRanks ? 140 : 100,
+        filterVariant: "text",
+        muiFilterTextFieldProps: {
+          placeholder: showRanks ? "Rank" : "Score",
+          size: "small",
+        },
+        Cell: ({ cell }) => {
+          const value = cell.getValue();
+          if (showRanks) {
+            return value || '';
+          } else {
+            return typeof value === 'number' ? value.toFixed(3) : (value || '');
+          }
+        },
+      });
+    });
+    
+    // Average column
+    columns.push({
+      accessorKey: showRanks ? "average_rank" : "average",
+      header: showRanks ? "Avg Rank" : "Average",
+      size: 90,
+      filterVariant: "range-slider",
+      muiFilterSliderProps: {
+        size: "small",
+        color: "primary",
+        step: showRanks ? 0.1 : 0.01,
+      },
+      Cell: ({ cell }) => {
+        const value = cell.getValue();
+        if (showRanks) {
+          return typeof value === 'number' ? value.toFixed(1) : '';
+        } else {
+          return typeof value === 'number' ? value.toFixed(3) : '';
+        }
+      },
+    });
+    
+    // Dataset count column
+    columns.push({
+      accessorKey: "dataset_count",
+      header: "Datasets",
+      size: 70,
+      filterVariant: "range-slider",
+      muiFilterSliderProps: {
+        size: "small",
+        color: "primary",
+        step: 1,
+      },
+    });
+    
+    return columns;
+  }, [data?.datasets, showRanks]);
+
+  const columnsMultiSimilar = useMemo(() => {
+    const ds = similarData?.datasets || data?.datasets || [];
+    if (!ds.length) return [];
+
+    const cols = [{
+      accessorKey: "Gene",
+      header: "Gene",
+      size: 120,
+      filterVariant: "autocomplete",
+      muiFilterTextFieldProps: { placeholder: "Symbol", size: "small" },
+    }];
+
+    ds.forEach(dataset => {
+      const datasetName =
+        dataset === 'K562gwps' ? 'K562' :
+        dataset === 'HCT116gwps' ? 'HCT116' :
+        dataset === 'HEK293gwps' ? 'HEK293' : dataset;
+
+      cols.push({
+        accessorKey: showRanks ? `${dataset}_display` : dataset,
+        header: showRanks ? `${datasetName} Rank (Similarity)` : `${datasetName} Similarity`,
+        size: showRanks ? 160 : 120,
+        filterVariant: showRanks ? "text" : "range-slider",
+        muiFilterTextFieldProps: showRanks ? { placeholder: "Rank", size: "small" } : undefined,
+        muiFilterSliderProps: showRanks ? undefined : { size: "small", color: "primary", step: 0.01 },
+        Cell: ({ cell }) => {
+          const v = cell.getValue();
+          if (showRanks) return v || '';
+          return typeof v === 'number' ? v.toFixed(3) : (v ?? '');
+        },
+      });
+    });
+
+    cols.push({
+      accessorKey: showRanks ? "average_rank" : "average",
+      header: showRanks ? "Avg Rank" : "Avg Similarity",
+      size: 100,
+       sortingFn: 'basic',
+      filterVariant: showRanks ? "text" : "range-slider",
+      muiFilterSliderProps: showRanks ? undefined : { size: "small", color: "primary", step: 0.01 },
+      Cell: ({ cell }) => {
+        const v = cell.getValue();
+        return typeof v === 'number' ? (showRanks ? v.toFixed(1) : v.toFixed(3)) : '';
+      },
+    });
+
+    cols.push({ accessorKey: "Datasets", header: "Datasets", size: 70, filterVariant: "range-slider",
+      muiFilterSliderProps: { size: "small", color: "primary", step: 1 },
+    });
+
+    cols.push({ accessorKey: "Included", header: "Included", size: 70, maxSize: 70,
+      filterVariant: "select", muiFilterTextFieldProps: { placeholder: "Select", size: "small" },
+    });
+
+    return cols;
+  }, [data?.datasets, similarData?.datasets, showRanks]);
+
   function roundToThree(num) {
     return +(Math.round(num + "e+3") + "e-3");
   }
+
+  // Function to trigger multi-dataset calculation
+  const triggerMultiDatasetCalculation = async () => {
+    if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 2) {
+      console.log('GeneSignature - Skipping multi-dataset calculation: no target gene list');
+      return;
+    }
+    
+    if (multiDatasetLoading) {
+      console.log('GeneSignature - Skipping multi-dataset calculation: already loading');
+      return;
+    }
+    
+    console.log('GeneSignature - Starting multi-dataset calculation');
+    setMultiDatasetLoading(true);
+    
+    const multiSettings = {
+      min_datasets: 1, // Always use 1 since we have table filters
+      ranking_order: rankOrder,
+    };
+    
+    try {
+      await dispatch(runMultiDatasetGeneSignature(multiSettings));
+      console.log('GeneSignature - Multi-dataset calculation completed');
+    } catch (error) {
+      console.error("Multi-dataset calculation failed:", error);
+    } finally {
+      setMultiDatasetLoading(false);
+    }
+  };
+
+  // Function to trigger multi-dataset similar genes calculation
+  const triggerMultiDatasetSimilarCalculation = async () => {
+    if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 2) {
+      console.log('GeneSignature - Skipping multi-dataset similar calculation: no target gene list');
+      return;
+    }
+    
+    if (multiDatasetSimilarLoading) {
+      console.log('GeneSignature - Skipping multi-dataset similar calculation: already loading');
+      return;
+    }
+    
+    console.log('GeneSignature - Starting multi-dataset similar genes calculation');
+    setMultiDatasetSimilarLoading(true);
+    
+    const multiSettings = {
+      ranking_order: rankOrder,
+    };
+    
+    try {
+      await dispatch(runMultiDatasetGeneSignatureSimilar(multiSettings));
+      console.log('GeneSignature - Multi-dataset similar genes calculation completed');
+    } catch (error) {
+      console.error("Multi-dataset similar genes calculation failed:", error);
+    } finally {
+      setMultiDatasetSimilarLoading(false);
+    }
+  };
+
+  // Handle tab selection
+  const handleTabSelection = (key) => {
+    setSelectedView(key);
+    
+    // If multi-dataset tab is selected and we don't have data yet, trigger calculation
+    if (key === 3 && (!data?.datasets || data?.datasets?.length === 0)) {
+      triggerMultiDatasetCalculation();
+    }
+    
+    // If multi-dataset similar genes tab is selected and we don't have correlations data yet, trigger calculation
+    if (key === 4 && !similarData?.correlations) {
+      triggerMultiDatasetSimilarCalculation();
+    }
+    
+    // Clear multi-dataset data when switching away from multi-dataset tabs
+    if (key < 3) {
+      setkeyedDataMulti([{}]);
+      setkeyedDataMultiSimilar([{}]);
+    }
+  };
+
+  // Function to process multi-dataset data on frontend
+  const processMultiDatasetData = useCallback((data, minDatasets = 1, blacklistData = null, genesignatureSettings = null) => {
+    console.log('GeneSignature - processMultiDatasetData called with:', {
+      showRanks,
+      rankOrder,
+      datasets: data?.datasets,
+      hasBlacklistData: !!blacklistData,
+      filterSettings: genesignatureSettings
+    });
+    
+    if (!data || !data.datasets) return [];
+
+    const datasets = data.datasets;
+    
+    // First, aggregate data from all datasets into comparison format
+    const aggregatedData = {};
+    
+    datasets.forEach(datasetId => {
+      const datasetData = data[datasetId];
+      if (!datasetData) return;
+      
+      // Aggregate the scores
+      Object.entries(datasetData).forEach(([gene, score]) => {
+        if (!aggregatedData[gene]) {
+          aggregatedData[gene] = {};
+        }
+        aggregatedData[gene][datasetId] = score;
+      });
+    });
+
+    // Filter genes by minimum dataset count and calculate averages/ranks
+    const filteredData = {};
+    Object.entries(aggregatedData).forEach(([gene, values]) => {
+      // Check which datasets have valid data for this gene
+      const validValues = datasets
+        .map(dataset => values[dataset])
+        .filter(val => val !== undefined && val !== null && typeof val === 'number' && !isNaN(val));
+      
+      if (validValues.length >= minDatasets) {
+        // Calculate average from valid values
+        const average = validValues.length > 0 
+          ? Math.round((validValues.reduce((sum, val) => sum + val, 0) / validValues.length) * 1000) / 1000
+          : null;
+        
+        // Apply blacklist filtering if enabled
+        let shouldInclude = true;
+        if (genesignatureSettings?.filter && blacklistData && average !== null) {
+          if (average < 0 && 
+              blacklistData.blackListDown && 
+              blacklistData.blackListDown[gene] !== undefined &&
+              blacklistData.blackListDown[gene] > genesignatureSettings.filterBlackListed) {
+            shouldInclude = false;
+          } else if (average > 0 && 
+                     blacklistData.blackListUp && 
+                     blacklistData.blackListUp[gene] !== undefined &&
+                     blacklistData.blackListUp[gene] > genesignatureSettings.filterBlackListed) {
+            shouldInclude = false;
+          }
+        }
+        
+        if (shouldInclude) {
+          // Create row with all dataset columns
+          const rowData = {};
+          datasets.forEach(dataset => {
+            rowData[dataset] = values[dataset]; // This might be undefined for some datasets
+          });
+          rowData.average = average;
+          rowData.dataset_count = validValues.length;
+          
+          filteredData[gene] = rowData;
+        }
+      }
+    });
+
+    // Calculate ranks for each dataset
+    const datasetRanks = {};
+    datasets.forEach(dataset => {
+      // Get all genes with valid scores for this dataset
+      const datasetScores = [];
+      Object.entries(filteredData).forEach(([gene, data]) => {
+        if (data[dataset] !== undefined && data[dataset] !== null) {
+          datasetScores.push([gene, data[dataset]]);
+        }
+      });
+      
+      // Sort by score (desc for gene signature - higher is better)
+      datasetScores.sort((a, b) => {
+        if (rankOrder === 'desc') {
+          return b[1] - a[1]; // Higher scores get better (lower) ranks
+        } else {
+          return a[1] - b[1]; // Lower scores get better (lower) ranks
+        }
+      });
+      
+      // Assign ranks
+      const ranks = {};
+      datasetScores.forEach(([gene, score], index) => {
+        ranks[gene] = index + 1;
+      });
+      
+      datasetRanks[dataset] = ranks;
+    });
+
+    // Calculate average ranks for each gene
+    Object.keys(filteredData).forEach(gene => {
+      const ranks = datasets
+        .map(dataset => datasetRanks[dataset]?.[gene])
+        .filter(rank => typeof rank === 'number');
+      
+      if (ranks.length > 0) {
+        filteredData[gene].average_rank = Math.round((ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length) * 10) / 10;
+      }
+    });
+
+    // Create final table data similar to multidataset-comparison
+    const processedData = Object.entries(filteredData).map(([gene, values]) => {
+      const row = { gene };
+      
+      // Add dataset columns
+      datasets.forEach(dataset => {
+        if (showRanks) {
+          const rank = datasetRanks[dataset]?.[gene];
+          const score = values[dataset];
+          if (rank !== undefined && score !== undefined) {
+            row[`${dataset}_display`] = `${rank} (${typeof score === 'number' ? score.toFixed(3) : score})`;
+          } else {
+            row[`${dataset}_display`] = '';
+          }
+        } else {
+          row[dataset] = values[dataset];
+        }
+      });
+      
+      // Add aggregate columns
+      if (values.average !== undefined) {
+        row.average = values.average;
+      }
+      if (showRanks && values.average_rank !== undefined) {
+        row.average_rank = values.average_rank;
+      }
+      row.dataset_count = values.dataset_count;
+      
+      return row;
+    });
+
+    console.log('GeneSignature - Processed data sample:', processedData.slice(0, 2));
+
+    // Sort by average rank or score
+    processedData.sort((a, b) => {
+      if (showRanks && a.average_rank !== undefined && b.average_rank !== undefined) {
+        return a.average_rank - b.average_rank; // Lower rank is better
+      } else {
+        // Sort by average score
+        const aScore = a.average || 0;
+        const bScore = b.average || 0;
+        if (rankOrder === 'desc') {
+          return bScore - aScore; // Higher scores first
+        } else {
+          return aScore - bScore; // Lower scores first
+        }
+      }
+    });
+
+    return processedData;
+  }, [showRanks, rankOrder]);
+
+  // Function to process multi-dataset similar genes from backend correlations
+  const processMultiDatasetSimilarGenes = useCallback((data, blacklistData = null, genesignatureSettings = null) => {
+    
+    if (!data || !data.correlations) {
+
+      return [];
+    }
+
+    const correlations = data.correlations; // Now this is per-dataset correlations
+    const datasets = data.datasets || [];
+    const signatureGenes = new Set(coreSettings.targetGeneList
+      .replaceAll(/[,\s;]+/g, "+")
+      .replaceAll(/\++|\-+/g, "+")
+      .trimStart("+")
+      .split("+"));
+
+    // Get all unique genes that have correlations in any dataset
+    const allGenesWithCorrelations = new Set();
+    datasets.forEach(dataset => {
+      if (correlations[dataset]) {
+        Object.keys(correlations[dataset]).forEach(gene => {
+          allGenesWithCorrelations.add(gene);
+        });
+      }
+    });
+
+    console.log('GeneSignature - Found genes with correlations:', {
+      totalGenes: allGenesWithCorrelations.size,
+      datasets: datasets,
+      sampleGenes: Array.from(allGenesWithCorrelations).slice(0, 5)
+    });
+
+    // Process each gene with correlations
+    const similarGenesData = Array.from(allGenesWithCorrelations)
+      .map((gene) => {
+        // Create row with individual dataset correlations
+        const rowData = { Gene: gene };
+        
+        // Add individual dataset correlations
+        let totalCorrelation = 0;
+        let datasetCount = 0;
+        
+        datasets.forEach(dataset => {
+          if (correlations[dataset] && correlations[dataset][gene] !== undefined) {
+            const correlation = correlations[dataset][gene];
+            rowData[dataset] = correlation;
+            totalCorrelation += correlation;
+            datasetCount++;
+          } else {
+            rowData[dataset] = null; // No correlation data for this gene in this dataset
+          }
+        });
+        
+        const avgCorrelation = datasetCount > 0 ? totalCorrelation / datasetCount : 0;
+        
+        // Skip genes that have no correlation data in any dataset
+        if (datasetCount === 0) {
+          console.log(`Skipping gene ${gene} - no correlation data in any dataset`);
+          return null;
+        }
+        
+        // Apply blacklist filtering if enabled
+        let shouldInclude = true;
+        if (genesignatureSettings?.filter && blacklistData && avgCorrelation !== null) {
+          if (avgCorrelation < 0 && 
+              blacklistData.blackListDown && 
+              blacklistData.blackListDown[gene] !== undefined &&
+              blacklistData.blackListDown[gene] > genesignatureSettings.filterBlackListed) {
+            shouldInclude = false;
+          } else if (avgCorrelation > 0 && 
+                     blacklistData.blackListUp && 
+                     blacklistData.blackListUp[gene] !== undefined &&
+                     blacklistData.blackListUp[gene] > genesignatureSettings.filterBlackListed) {
+            shouldInclude = false;
+          }
+        }
+        
+        if (shouldInclude) {
+          // Add summary columns
+          rowData.Similarity = avgCorrelation; // This is now the averaged correlation
+          rowData.average = avgCorrelation;
+          rowData.Datasets = datasetCount;
+          rowData.Included = signatureGenes.has(gene.split("_")[0]) ? "YES" : "";
+          
+          return rowData;
+        }
+        return null;
+      })
+      .filter(item => item !== null);
+
+    // Calculate ranks for each dataset if showRanks is true
+    if (showRanks) {
+      // Calculate ranks for each dataset
+      const datasetRanks = {};
+      datasets.forEach(dataset => {
+        // Get all genes with valid correlations for this dataset
+        const datasetCorrelations = [];
+        similarGenesData.forEach(gene => {
+          if (gene[dataset] !== undefined && gene[dataset] !== null) {
+            datasetCorrelations.push([gene.Gene, gene[dataset]]);
+          }
+        });
+        
+        // Sort by correlation (desc for similarity - higher is better)
+        datasetCorrelations.sort((a, b) => {
+          if (rankOrder === 'desc') {
+            return b[1] - a[1]; // Higher correlations get better (lower) ranks
+          } else {
+            return a[1] - b[1]; // Lower correlations get better (lower) ranks
+          }
+        });
+        
+        // Assign ranks
+        const ranks = {};
+        datasetCorrelations.forEach(([gene, correlation], index) => {
+          ranks[gene] = index + 1;
+        });
+        
+        datasetRanks[dataset] = ranks;
+      });
+
+      // Add rank display and calculate average ranks
+      similarGenesData.forEach(gene => {
+        // Add rank display for each dataset
+        datasets.forEach(dataset => {
+          const rank = datasetRanks[dataset]?.[gene.Gene];
+          const correlation = gene[dataset];
+          if (rank !== undefined && correlation !== undefined) {
+            gene[`${dataset}_display`] = `${rank} (${typeof correlation === 'number' ? correlation.toFixed(3) : correlation})`;
+          } else {
+            gene[`${dataset}_display`] = '';
+          }
+        });
+
+        // Calculate average rank
+        const ranks = datasets
+          .map(dataset => datasetRanks[dataset]?.[gene.Gene])
+          .filter(rank => typeof rank === 'number');
+        
+        if (ranks.length > 0) {
+          gene.average_rank = Math.round((ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length) * 10) / 10;
+        }
+      });
+    }
+
+    // Sort by average rank or correlation
+    similarGenesData.sort((a, b) => {
+      if (showRanks && a.average_rank !== undefined && b.average_rank !== undefined) {
+        return a.average_rank - b.average_rank; // Lower rank is better
+      } else {
+        // Sort by correlation
+       const av = (typeof a.average === 'number') ? a.average : Number.NEGATIVE_INFINITY;
+  const bv = (typeof b.average === 'number') ? b.average : Number.NEGATIVE_INFINITY;
+  return rankOrder === 'desc' ? (bv - av) : (av - bv); // score sort
+      }
+    });
+
+    console.log('GeneSignature - Processed similar genes:', {
+      totalGenes: allGenesWithCorrelations.size,
+      filteredGenes: similarGenesData.length,
+      sampleGenes: similarGenesData.slice(0, 3),
+      showRanks,
+      rankOrder,
+      genesWithNoData: similarGenesData.filter(g => g.Datasets === 0).map(g => g.Gene)
+    });
+
+    return similarGenesData;
+  }, [coreSettings.targetGeneList, showRanks, rankOrder]);
 
   //For tabs under the table
   const tabOptions = [
@@ -293,9 +862,16 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
       resultsLength: data?.results?.length || 0,
       hasCorrelations: !!(data?.correlations),
       correlationsKeys: data?.correlations ? Object.keys(data.correlations).length : 0,
+      hasMultiDatasetResults: !!(data?.multi_dataset_results),
+      multiDatasetResultsLength: data?.multi_dataset_results?.length || 0,
       targetGeneList: coreSettings.targetGeneList,
       hasBlacklistData: !!blacklistData,
-      blacklistLoading
+      blacklistLoading,
+      // Add similar data debugging
+      hasSimilarData: !!similarData,
+      similarDataKeys: similarData ? Object.keys(similarData) : [],
+      similarDataCorrelations: similarData?.correlations ? Object.keys(similarData.correlations) : [],
+      similarDataDatasets: similarData?.datasets
     });
     
     // Don't return early if blacklist is loading - process data anyway
@@ -317,15 +893,52 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
     );
     highlightList = new Set([...highlightList, ...signatureGenes]);
 
+    // Process multi-dataset results if available (new efficient format)
+    if (data.datasets && data.datasets.length > 0) {
+      console.log('GeneSignature - Processing multi-dataset results:', {
+        datasets: data.datasets,
+        processed_datasets: data.processed_datasets,
+        total_datasets: data.total_datasets
+      });
+      
+      const multiTableInfo = processMultiDatasetData(data, 1, blacklistData, genesignatureSettings);
+      
+      console.log('GeneSignature - Setting multi-dataset table data:', {
+        tableInfoLength: multiTableInfo.length,
+        sampleTableInfo: multiTableInfo.slice(0, 3),
+        showRanks,
+        rankOrder
+      });
+      
+      setkeyedDataMulti(multiTableInfo);
+      
+      // Also process multi-dataset similar genes from backend correlations
+      const multiSimilarInfo = processMultiDatasetSimilarGenes(data, blacklistData, genesignatureSettings);
+      setkeyedDataMultiSimilar(multiSimilarInfo);
+    } else if ((selectedView === 3 || selectedView === 4) && 
+               coreSettings.targetGeneList && 
+               coreSettings.targetGeneList.trim().length > 0 && 
+               (!data.datasets || data.datasets.length === 0)) {
+      // If we're on multi-dataset tabs but don't have multi-dataset data, trigger calculation
+      console.log('GeneSignature - Triggering multi-dataset calculation due to new data');
+      triggerMultiDatasetCalculation();
+    }
+
+    // Process multi-dataset similar genes if correlations data is available (separate API)
+    if (similarData && similarData.correlations && Object.keys(similarData.correlations).length > 0) {
+      
+      
+      const multiSimilarInfo = processMultiDatasetSimilarGenes(similarData, blacklistData, genesignatureSettings);
+      
+     
+      setkeyedDataMultiSimilar(multiSimilarInfo);
+    }
+
     if (
       data.results &&
       data.results.length > 0
     ) {
-      console.log('GeneSignature - Processing data with results:', {
-        resultsLength: data.results.length,
-        genesLength: data.genes?.length || 0,
-        correlationsCount: data.correlations ? Object.keys(data.correlations).length : 0
-      });
+   
       //const chart = echarts.init(chartRef.current);
       let xValues = data.results;
       const labels = data.genes;
@@ -503,7 +1116,24 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
       console.log("GeneSignature - Final pointData:", pointData.slice(0, 5));
       setPointData(pointData);
     }
-  }, [data, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading]);
+  }, [data, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading, showRanks, rankOrder, processMultiDatasetData]);
+
+  // Recalculate multi-dataset when settings change
+  useEffect(() => {
+    if ((selectedView === 3 || selectedView === 4) && data?.datasets?.length > 0) {
+      if (selectedView === 3) {
+        const multiTableInfo = processMultiDatasetData(data, 1, blacklistData, genesignatureSettings);
+        setkeyedDataMulti(multiTableInfo);
+      }
+      if (selectedView === 4) {
+        const source = (similarData && similarData.correlations) ? similarData : data;
+        const multiSimilarInfo = processMultiDatasetSimilarGenes(source, blacklistData, genesignatureSettings);
+        setkeyedDataMultiSimilar(multiSimilarInfo);
+      }
+    }
+  }, [showRanks, rankOrder, data, similarData, selectedView,
+    processMultiDatasetData, processMultiDatasetSimilarGenes,
+    blacklistData, genesignatureSettings]);
 
   console.log('GeneSignature - pointData state:', pointData);
   useEffect(() => {
@@ -624,7 +1254,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
                   <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
                     <strong>Signature Score:</strong> ${originalScore?.toFixed(3)}
                   </div>`;
-                  
                   if (isHighlighted) {
                     enhancedTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
                       <strong>★ Highlighted Gene</strong>
@@ -819,8 +1448,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
                <br/>
          <p style={{ margin: '0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
         {selectedView === 0 ?        
-            moduleDescription.tabs.chart: selectedView === 1 ? moduleDescription.tabs.table : moduleDescription.tabs.similarGenes
-         
+            moduleDescription.tabs.chart: 
+         selectedView === 1 ? moduleDescription.tabs.table : 
+         selectedView === 2 ? moduleDescription.tabs.similarGenes :
+         selectedView === 3 ? moduleDescription.tabs.multiDataset :
+         moduleDescription.tabs.multiDatasetSimilar
         }
          </p>        
              
@@ -844,8 +1476,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
             key: 2,
             label: "Similar Genes",
           },
+          {
+            icon: <FaTable />,
+            key: 3,
+            label: "Multi-Dataset",
+          },
+          {
+            icon: <FaTable />,
+            key: 4,
+            label: "Multi-Dataset Similar Genes",
+          },
         ]}
-        onSelected={(key) => setSelectedView(key)}
+        onSelected={handleTabSelection}
         value={selectedView}
       />
       {blacklistLoading && (
@@ -870,6 +1512,209 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, blacklistDat
       {keyedData2 && selectedView === 2 && (
         <>
           <EnrichmentTable data={keyedData2} columns={columns2} />
+        </>
+      )}
+
+      {selectedView === 3 && (
+        <>
+          
+
+          {/* Controls for ranks and ordering */}
+          <Flex justifyContent="flex-start" alignItems="left" gap="10px" style={{ marginBottom: '10px' }}>
+            {/* Toggle for showing ranks */}
+                       <Text muted style={{ marginBottom: '10px' }}>
+             Gene signature analysis across whole-genome datasets. Rankings show relative positions within each dataset. 
+             {genesignatureSettings?.filter && 'Blacklisted sgRNAs are filtered based on sidebar settings.'}
+           </Text>
+            <Flex justifyContent="flex-end" alignItems="center" gap="16px">
+              <Flex alignItems="center" gap="10px">
+                <Text size="small">Rank based average:</Text>
+                <Toggle
+                  checked={showRanks}
+                  onChange={(e) => {
+                    setShowRanks(e.target.checked);
+                  }}
+                />
+                {showRanks && (
+                  <Flex alignItems="center" gap="8px">
+                    <Text size="small">Rank order:</Text>
+                    <button
+                      onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        backgroundColor: '#f8f9fa',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#e9ecef';
+                        e.target.style.borderColor = '#adb5bd';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = '#f8f9fa';
+                        e.target.style.borderColor = '#ccc';
+                      }}
+                      title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
+                    >
+                      {rankOrder === 'asc' ? (
+                        <>
+                          <FaSortAmountUpAlt style={{ color: '#28a745' }} />
+                          <span>Low → High</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaSortAmountDownAlt style={{ color: '#dc3545' }} />
+                          <span>High → Low</span>
+                        </>
+                      )}
+                    </button>
+                  </Flex>
+                )}
+              </Flex>
+            </Flex>
+          </Flex>
+
+          {multiDatasetLoading && (
+            <div style={{ 
+              padding: '12px', 
+              backgroundColor: '#e8f5e8', 
+              borderLeft: '4px solid #4caf50',
+              borderRadius: '4px',
+              color: '#2e7d32',
+              marginBottom: '12px'
+            }}>
+              🔄 Calculating gene signature across multiple datasets...
+            </div>
+          )}
+
+         
+          
+          {keyedDataMulti && keyedDataMulti.length > 0 && (
+            <EnrichmentTable 
+              data={keyedDataMulti} 
+              columns={columnsMulti} 
+              key={`multi-table-${showRanks}-${rankOrder}`} // Force re-render when settings change
+            />
+          )}
+        </>
+      )}
+
+      {selectedView === 4 && (
+        <>
+          <Text muted style={{ marginBottom: '10px' }}>
+            Genes that correlate with your signature across multiple whole-genome datasets. 
+            {genesignatureSettings?.filter && 'Blacklisted sgRNAs are filtered based on sidebar settings.'}
+          </Text>
+          
+          {/* Controls for ranks and ordering */}
+          <Flex justifyContent="flex-start" alignItems="left" gap="10px" style={{ marginBottom: '10px' }}>
+            <Flex justifyContent="flex-end" alignItems="center" gap="16px">
+              <Flex alignItems="center" gap="10px">
+                <Text size="small">Rank based average:</Text>
+                <Toggle
+                  checked={showRanks}
+                  onChange={(e) => {
+                    console.log('GeneSignature - Toggle changed:', e.target.checked);
+                    setShowRanks(e.target.checked);
+                  }}
+                />
+                {showRanks && (
+                  <Flex alignItems="center" gap="8px">
+                    <Text size="small">Rank order:</Text>
+                    <button
+                      onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        backgroundColor: '#f8f9fa',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#e9ecef';
+                        e.target.style.borderColor = '#adb5bd';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = '#f8f9fa';
+                        e.target.style.borderColor = '#ccc';
+                      }}
+                      title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
+                    >
+                      {rankOrder === 'asc' ? (
+                        <>
+                          <FaSortAmountUpAlt style={{ color: '#28a745' }} />
+                          <span>Low → High</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaSortAmountDownAlt style={{ color: '#dc3545' }} />
+                          <span>High → Low</span>
+                        </>
+                      )}
+                    </button>
+                  </Flex>
+                )}
+              </Flex>
+            </Flex>
+          </Flex>
+
+          {(multiDatasetSimilarLoading || similarLoading) && (
+            <div style={{ 
+              padding: '12px', 
+              backgroundColor: '#e8f5e8', 
+              borderLeft: '4px solid #4caf50',
+              borderRadius: '4px',
+              color: '#2e7d32',
+              marginBottom: '12px'
+            }}>
+              🔄 Calculating gene signature correlations across multiple datasets...
+            </div>
+          )}
+
+          {keyedDataMultiSimilar && keyedDataMultiSimilar.length > 0 && (
+            <EnrichmentTable 
+              data={keyedDataMultiSimilar} 
+              columns={columnsMultiSimilar} 
+              key={`multi-similar-${showRanks}-${rankOrder}-${(similarData?.datasets || data?.datasets || []).length}`} 
+            />
+          )}
+          
+          {(!keyedDataMultiSimilar || keyedDataMultiSimilar.length === 0) && !multiDatasetSimilarLoading && data?.correlations && Object.keys(data.correlations).length > 0 && (
+            <Text muted>No similar genes found after filtering. Try adjusting your gene signature or filter settings.</Text>
+          )}
+          
+          {!data?.correlations && !multiDatasetSimilarLoading && selectedView === 4 && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Text muted style={{ marginBottom: '10px' }}>
+                Calculate gene signature correlations across multiple datasets to find similar genes.
+              </Text>
+              <button
+                onClick={triggerMultiDatasetSimilarCalculation}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Calculate Similar Genes
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -916,6 +1761,11 @@ const mapStateToProps = ({ settings }) => ({
   genesignatureSettings: settings?.genesignature ?? {},
 });
 
-const MainContainer = connect(mapStateToProps)(GeneSignature);
+const mapDispatchToProps = (dispatch) => ({
+  dispatch,
+});
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneSignature);
 
 export { MainContainer as GeneSignature };
+

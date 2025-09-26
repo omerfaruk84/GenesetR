@@ -291,6 +291,26 @@ const runGeneSignature = async (core) => {
   return await getData(body);
 };
 
+const runGeneSignatureMultiDataset = async (core, genesignatureSettings) => {
+  const body = {
+    formula: core.targetGeneList.trim("\n", " "),
+    min_datasets: genesignatureSettings.minDatasets,
+    ranking_enabled: genesignatureSettings.rankingEnabled,
+    ranking_order: genesignatureSettings.rankingOrder,
+    request: "calcGeneSignatureMultiDataset",
+  };
+  return await getData(body);
+};
+
+const runGeneSignatureMultiDatasetSimilar = async (core, genesignatureSettings) => {
+  const body = {
+    formula: core.targetGeneList.trim("\n", " "),
+    ranking_order: genesignatureSettings.rankingOrder || "desc",
+    request: "calcGeneSignatureMultiDatasetSimilar",
+  };
+  return await getData(body);
+};
+
 const runGeneExp = async (core, geneExp) => {
   const body = {
     gene: geneExp.selectedGene,
@@ -304,6 +324,53 @@ const runGeneExp = async (core, geneExp) => {
     correlationType: geneExp.corrType,
     retType: 0,
     request: "geneExpression",
+  };
+  return await getData(body);
+};
+
+const fetchDatasets = async () => {
+  try {
+    const response = await Axios.get(SERVER_ADRESS + "/getDatasets", {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.datasets;
+  } catch (error) {
+    console.error("Failed to fetch datasets: ", error);
+    return [];
+  }
+};
+
+const fetchWholeGenomeDatasets = async () => {
+  try {
+    const response = await Axios.get(SERVER_ADRESS + "/getWholeGenomeDatasets", {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.datasets;
+  } catch (error) {
+    console.error("Failed to fetch whole genome datasets: ", error);
+    return [];
+  }
+};
+
+const runMultiDatasetComparison = async (core, multiDatasetSettings) => {
+  // Get list of whole genome datasets from backend
+  const wholeGenomeDatasets = await fetchWholeGenomeDatasets();
+  const datasetIds = wholeGenomeDatasets.map(dataset => dataset.id);
+
+  const body = {
+    gene: multiDatasetSettings.selectedGene,
+    targetList: multiDatasetSettings.targetList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    correlationType: multiDatasetSettings.corrType,
+    datasets: datasetIds,
+    request: "multiDatasetComparison",
   };
   return await getData(body);
 };
@@ -389,8 +456,13 @@ export {
   runGeneRegulation,
   runHeatMap,
   runGeneSignature,
+  runGeneSignatureMultiDataset,
+  runGeneSignatureMultiDatasetSimilar,
   getBlackList,
   updateGeneLists,
   fetchHugoGenes,
   runGeneExp,
+  runMultiDatasetComparison,
+  fetchDatasets,
+  fetchWholeGenomeDatasets,
 };

@@ -17,6 +17,7 @@ import { scatterplotSettingsReducer } from "./scatterplot-settings";
 import { genesignatureSettingsReducer } from "./gene-signature-settings";
 import { expressionanalyzerSettingsReducer } from "./expression-analyzer-settings";
 import { genelistcompareSettingsReducer } from "./genelist-compare-settings";
+import { multidatasetComparisonSettingsReducer } from "./multidataset-comparison-settings";
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -36,6 +37,7 @@ const settingsReducer = combineReducers({
   genesignature: genesignatureSettingsReducer,
   expressionanalyzer: expressionanalyzerSettingsReducer,
   genelistcompare: genelistcompareSettingsReducer,
+  multidatasetComparison: multidatasetComparisonSettingsReducer,
 });
 
 export { settingsReducer };

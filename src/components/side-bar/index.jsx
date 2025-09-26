@@ -18,6 +18,7 @@ const SideBar = ({
   calcResults,
   coreSettings,
   coreSettingsChanged,
+  multidatasetComparisonSettings,
 }) => {
   const [sideBarWith, setSideBarWith] = useState(300);
   const handleSideBarResize = (size) => {
@@ -56,7 +57,9 @@ const SideBar = ({
     (pathname === ROUTES.GENESIGNATURE &&
       coreSettings.targetGeneList?.length > 1) ||
     pathname === ROUTES.EXPRESSIONANALYZER ||
-    pathname === ROUTES.GENELISTCOMPARE
+    pathname === ROUTES.GENELISTCOMPARE ||
+    (pathname === ROUTES.MULTIDATASET_COMPARISON &&
+      multidatasetComparisonSettings?.selectedGene?.trim()?.length > 0)
   )
     isDisabled = false;
 
@@ -115,6 +118,7 @@ const SideBar = ({
 const mapStateToProps = ({ calcResults, settings }) => ({
   calcResults,
   coreSettings: settings?.core ?? {},
+  multidatasetComparisonSettings: settings?.multidatasetComparison ?? {},
 });
 
 const mapDispatchToProps = {

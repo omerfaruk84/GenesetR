@@ -13,6 +13,9 @@ import {
   runGeneExp,
   runPathFinderCalc,
   runGeneSignature,
+  runGeneSignatureMultiDataset,
+  runGeneSignatureMultiDatasetSimilar,
+  runMultiDatasetComparison,
 } from "../api";
 import { ModulePathNames } from "./enums";
 
@@ -22,18 +25,20 @@ const resultState = {
 };
 
 const initialState = {
-  pcaGraph: resultState,
-  mdeGraph: resultState,
-  umapGraph: resultState,
-  tsneGraph: resultState,
-  biClusteringGraph: resultState,
-  geneRegulationGraph: resultState,
-  pathFinderGraph: resultState,
-  corrCluster: resultState,
-  heatmapGraph: resultState,
-  enrichmentResults: resultState,
-  genesignatureGraph: resultState,
-  geneExpressionGraph: resultState,
+  pcaGraph: { ...resultState },
+  mdeGraph: { ...resultState },
+  umapGraph: { ...resultState },
+  tsneGraph: { ...resultState },
+  biClusteringGraph: { ...resultState },
+  geneRegulationGraph: { ...resultState },
+  pathFinderGraph: { ...resultState },
+  corrCluster: { ...resultState },
+  heatmapGraph: { ...resultState },
+  enrichmentResults: { ...resultState },
+  genesignatureGraph: { ...resultState },
+  genesignatureSimilarGraph: { ...resultState },
+  geneExpressionGraph: { ...resultState },
+  multiDatasetComparison: { ...resultState },
 };
 
 export const calculationResults = createSlice({
@@ -103,6 +108,8 @@ const runCalculation = (module) => async (dispatch, getState) => {
     correlation,
     pathfinder,
     expressionanalyzer,
+    multidatasetComparison,
+    genesignature,
   } = settings;
 
 
@@ -190,6 +197,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
           resultReceived({ result, module: ModulePathNames[module] })
         );
       }
+      case ROUTES.MULTIDATASET_COMPARISON: {
+        const result = await runMultiDatasetComparison(core, multidatasetComparison);
+        return dispatch(
+          resultReceived({ result, module: ModulePathNames[module] })
+        );
+      }
       default: {
         dispatch(
           calcRunningChanged({ module: ModulePathNames[module], status: false })
@@ -222,4 +235,71 @@ const runCalculation = (module) => async (dispatch, getState) => {
   }
 };
 
-export { calculationResultsReducer, runCalculation };
+// Add a separate function for multi-dataset gene signature calculation
+const runMultiDatasetGeneSignature = (settings) => async (dispatch, getState) => {
+  const { settings: allSettings } = getState();
+  const { core } = allSettings;
+  
+  try {
+    dispatch(
+      calcRunningChanged({ module: "genesignatureGraph", status: true })
+    );
+    
+    const result = await runGeneSignatureMultiDataset(core, settings);
+    
+    return dispatch(
+      resultReceived({ result, module: "genesignatureGraph" })
+    );
+  } catch (error) {
+    dispatch(
+      calcRunningChanged({ module: "genesignatureGraph", status: false })
+    );
+    
+    console.log(error);
+    toast({
+      message: {
+        type: "Error",
+        icon: true,
+        content: "Multi-dataset calculation failed",
+        details: error.message,
+      },
+    });
+  }
+};
+
+export const runMultiDatasetGeneSignatureSimilar = (settings) => async (
+  dispatch,
+  getState
+) => {
+  const {
+    settings: { core },
+  } = getState();
+  
+  try {
+    dispatch(
+      calcRunningChanged({ module: "genesignatureSimilarGraph", status: true })
+    );
+    
+    const result = await runGeneSignatureMultiDatasetSimilar(core, settings);
+    
+    return dispatch(
+      resultReceived({ result, module: "genesignatureSimilarGraph" })
+    );
+  } catch (error) {
+    dispatch(
+      calcRunningChanged({ module: "genesignatureSimilarGraph", status: false })
+    );
+    
+    console.log(error);
+    toast({
+      message: {
+        type: "Error",
+        icon: true,
+        content: "Multi-dataset similar genes calculation failed",
+        details: error.message,
+      },
+    });
+  }
+};
+
+export { calculationResultsReducer, runCalculation, runMultiDatasetGeneSignature };

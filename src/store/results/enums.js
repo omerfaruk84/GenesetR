@@ -12,6 +12,7 @@ const ModulePathNames = {
   [ROUTES.CORRELATION]: "corrCluster",
   [ROUTES.HEATMAP]: "heatmapGraph",
   [ROUTES.GENESIGNATURE]: "genesignatureGraph",
+  [ROUTES.MULTIDATASET_COMPARISON]: "multiDatasetComparison",
 };
 
 export { ModulePathNames };

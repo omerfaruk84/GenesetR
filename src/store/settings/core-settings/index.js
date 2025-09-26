@@ -1,4 +1,5 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { fetchDatasets } from "../../api";
 const defaultGeneList = `TAF1C
   ACTR5
   UTP6
@@ -101,52 +102,27 @@ const initialState = {
   peturbationList: defaultGeneList,
   targetGeneList: "",
   graphType: "2D",
-  datasetList: [
-    {
-      droppable: true,
-      id: "K562gwps",
-      name: "K562 Whole Genome",
-      parent: 0,
-      active: true,
-      isWholeGenome: true,
-    },
-    {
-      droppable: true,
-      id: "K562essential",
-      name: "K562 Essential",
-      details: "Main",
-      parent: 0,
-      isWholeGenome: false,
-    },
-    {
-      droppable: true,
-      id: "HCT116gwps",
-      name: "HCT116 Whole Genome",
-      details: "Main",
-      parent: 0,
-      isWholeGenome: true,
-    },
-    {
-      droppable: true,
-      id: "HEK293gwps",
-      name: "HEK293 Whole Genome",
-      details: "Main",
-      parent: 0,
-      isWholeGenome: true,
-    },
-    {
-      droppable: true,
-      id: "RPE1essential",
-      name: "RPE1 Essential",
-      parent: 0,
-      isWholeGenome: false,
-    },
-  ],
+  datasetList: [], // Will be populated from backend
   mixscapePerturbed: true,
   mixscapeAll: true,
   datasetAdded: false,
   lastTaskID: null,
+  datasetsLoading: false,
+  datasetsError: null,
 };
+
+// Async thunk to fetch datasets from backend
+export const fetchDatasetsFromBackend = createAsyncThunk(
+  'core/fetchDatasets',
+  async (_, { rejectWithValue }) => {
+    try {
+      const datasets = await fetchDatasets();
+      return datasets;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
 
 export const coreSettingsSlice = createSlice({
   name: "core",
@@ -156,6 +132,31 @@ export const coreSettingsSlice = createSlice({
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchDatasetsFromBackend.pending, (state) => {
+        state.datasetsLoading = true;
+        state.datasetsError = null;
+      })
+      .addCase(fetchDatasetsFromBackend.fulfilled, (state, action) => {
+        state.datasetsLoading = false;
+        state.datasetList = action.payload;
+        // Update cellLine to first available dataset if current one doesn't exist
+        if (action.payload.length > 0) {
+          const currentExists = action.payload.find(dataset => dataset.id === state.cellLine.id);
+          if (!currentExists) {
+            state.cellLine = action.payload[0];
+          } else {
+            // Update cellLine with latest data from backend
+            state.cellLine = currentExists;
+          }
+        }
+      })
+      .addCase(fetchDatasetsFromBackend.rejected, (state, action) => {
+        state.datasetsLoading = false;
+        state.datasetsError = action.payload;
+      });
   },
 });
 

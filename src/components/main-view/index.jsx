@@ -15,6 +15,7 @@ import { MainPage } from "../../pages/mainpage/mainpage";
 import { DimReductionPage } from "../../pages/dim-reduction-page/dim-reduction-page";
 import AboutPage from "../../pages/aboutus/about";
 import { ExpressionAnalyzerPage } from "../../pages/expressionanalyzer/expression-analyzer";
+import { MultiDatasetComparisonPage } from "../../pages/multidataset-comparison/multidataset-comparison-page";
 import { GenelistCompare } from "../genelist-compare";
 const MainView = () => {
   return (
@@ -101,6 +102,15 @@ const MainView = () => {
                         element={
                           <ExpressionAnalyzerPage
                             path={ROUTES.EXPRESSIONANALYZER}
+                          />
+                        }
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.MULTIDATASET_COMPARISON}
+                        element={
+                          <MultiDatasetComparisonPage
+                            path={ROUTES.MULTIDATASET_COMPARISON}
                           />
                         }
                       />

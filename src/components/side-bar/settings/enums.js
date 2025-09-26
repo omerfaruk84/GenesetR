@@ -17,6 +17,7 @@ const SettingsTypes = {
   GENE_SIGNATURE_SETTINGS: "Gene Signature Settings",
   EXPRESSION_ANALYZER_SETTINGS: "Expression Analyzer Settings",
   GENELIST_COMPARE_SETTINGS: "Genelist Comparer Settings",
+  MULTIDATASET_COMPARISON_SETTINGS: "Multi-Dataset Comparison Settings",
 };
 
 const BiClusteringSettingsTypes = {
@@ -217,6 +218,7 @@ const GeneSetEnrichmentSettingsTypes = {
 
 const GeneSignatureSettingsTypes = {
   FILTER_BLACKLISTED: "filterBlackListed",
+  FILTER: "filter",
   GENES_TO_LABEL: "genesTolabel",
 };
 
@@ -256,6 +258,12 @@ const GenelistCompareSettingsTypes = {
   WIDTHRATIOS: "widthRatios",
 };
 
+const MultiDatasetComparisonSettingsTypes = {
+  SELECTED_GENE: "selectedGene",
+  CORR_TYPE: "corrType",
+  TARGET_LIST: "targetList",
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -276,4 +284,5 @@ export {
   ExpressionAnalyzerSettingsTypes,
   GenelistCompareSettingsTypes,
   InchlibSettingsTypes,
+  MultiDatasetComparisonSettingsTypes,
 };

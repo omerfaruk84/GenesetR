@@ -17,6 +17,7 @@ import { PathFinderSettings } from "./pathfinder-settings";
 import { ScatterPlotSettings } from "./scatterplot-settings";
 import { SettingsTypes } from "./enums";
 import { GenelistCompareSettings } from "./genelist-compare";
+import { MultiDatasetComparisonSettings } from "./multidataset-comparison-settings";
 
 const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
@@ -222,6 +223,12 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.GENELIST_COMPARE_SETTINGS,
         settings: <GenelistCompareSettings />,
+      },
+    ],
+    [ROUTES.MULTIDATASET_COMPARISON]: [
+      {
+        settingsName: SettingsTypes.MULTIDATASET_COMPARISON_SETTINGS,
+        settings: <MultiDatasetComparisonSettings />,
       },
     ],
   };

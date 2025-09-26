@@ -100,11 +100,11 @@ const ExpressionAnalyzer = ({
   const [pointDistribution, setPointDistribution] = useState([]);
   const [keyedData, setkeyedData] = useState([{}]);
   const [selectedTab, setSelectedTab] = useState({
-    label: "Perturbation Effects",
+    label: "Perturbation Effects (Downstream Effects)",
     value: 0,
   });
   const [selectedInnerTab, setSelectedInnerTab] = useState({
-    label: "Expression",
+    label: "Downstream Targets",
     value: 0,
   });
   const [genelists, setGeneLists] = useState([]);
@@ -116,30 +116,60 @@ const ExpressionAnalyzer = ({
   const [isCalcRunning, setisRunning] = useState(false);
   const [tabOptions, settabOptions] = useState([
     {
-      label: "Perturbation Effects",
+      label: "Perturbation Effects (Downstream Effects)",
       value: 0,
       disabled: false,
     },
     {
-      label: "Perturbed by",
+      label: "Perturbed By (Upstream Regulators)",
       value: 1,
       disabled: false,
     },
   ]);
-  const [innerTabOptions, setinnerTabOptions] = useState([
-    {
-      label: "Expression",
-      value: 0,
-      disabled: false,
-    },
-    {
-      label: "Correlation",
-      value: 1,
-      disabled: false,
-    },
-  ]);
+  // Dynamic inner tab options based on selected outer tab
+  const getInnerTabOptions = () => {
+    if (selectedTab.value === 0) {
+      // Perturbation Effects (Downstream Effects)
+      return [
+        {
+          label: "Downstream Targets",
+          value: 0,
+          disabled: false,
+        },
+        {
+          label: "Correlation (Similar Perturbations)",
+          value: 1,
+          disabled: false,
+        },
+      ];
+    } else {
+      // Perturbed By (Upstream Regulators)
+      return [
+        {
+          label: "Upstream Regulators",
+          value: 0,
+          disabled: false,
+        },
+        {
+          label: "Correlation (Similar Expressional Profile)",
+          value: 1,
+          disabled: false,
+        },
+      ];
+    }
+  };
+
+  const [innerTabOptions, setinnerTabOptions] = useState(getInnerTabOptions());
   const location = useLocation();
   const { pathname } = location;
+
+  // Update inner tab options when outer tab changes
+  useEffect(() => {
+    const newInnerTabOptions = getInnerTabOptions();
+    setinnerTabOptions(newInnerTabOptions);
+    // Reset to first inner tab when outer tab changes
+    setSelectedInnerTab({ value: 0, label: newInnerTabOptions[0].label });
+  }, [selectedTab.value]);
 
   useEffect(() => {
     runCalculation(pathname);
@@ -1061,7 +1091,7 @@ const ExpressionAnalyzer = ({
             <Tabs
               name="innertabs"
               value={selectedInnerTab}
-              options={innerTabOptions}
+              options={getInnerTabOptions()}
               onChange={(evt) => {
                 const { value, label } = evt.target;
                 setSelectedInnerTab({ value, label });

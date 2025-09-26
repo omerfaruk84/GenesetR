@@ -19,13 +19,19 @@ const moduleDescription = {
   }
 };
 
-const GeneSignaturePage = ({ geneRegulationResults, blacklistData, blacklistLoading }) => {
+const GeneSignaturePage = ({ geneRegulationResults, genesignatureSimilarResults, genesignatureSimilarLoading, blacklistData, blacklistLoading }) => {
 
   return (
     
     <div className={styles.mainView}>
       {geneRegulationResults ? (      
-          <GeneSignature data={geneRegulationResults} blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
+          <GeneSignature 
+            data={geneRegulationResults} 
+            similarData={genesignatureSimilarResults} 
+            similarLoading={genesignatureSimilarLoading}
+            blacklistData={blacklistData} 
+            blacklistLoading={blacklistLoading} 
+          />
           ) : (
             <div>  
             <Accordion defaultExpanded={true}
@@ -78,6 +84,8 @@ const GeneSignaturePage = ({ geneRegulationResults, blacklistData, blacklistLoad
 
 const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  genesignatureSimilarResults: calcResults?.genesignatureSimilarGraph?.result ?? null,
+  genesignatureSimilarLoading: calcResults?.genesignatureSimilarGraph?.loading ?? false,
   blacklistData: blacklist?.data,
   blacklistLoading: blacklist?.loading,
 });

@@ -13,6 +13,7 @@ const ROUTES = Object.freeze({
   GENESIGNATURE: "/genesignature",
   EXPRESSIONANALYZER: "/expressionanalyzer",
   GENELISTCOMPARE: "/genelists",
+  MULTIDATASET_COMPARISON: "/multidataset-comparison",
   ABOUTUS: "/about",
 });
 

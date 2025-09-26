@@ -51,6 +51,11 @@ const TopBar = () => {
       toLink: ROUTES.EXPRESSIONANALYZER,
     },
     {
+      icon: () => <FcSerialTasks size={"2em"} />,
+      name: TabNames.MULTIDATASET_COMPARISON,
+      toLink: ROUTES.MULTIDATASET_COMPARISON,
+    },
+    {
       icon: () => <FcMindMap size={"2em"} />,
       name: TabNames.GENE_REGULATION,
       toLink: ROUTES.GENE_REGULATION,
