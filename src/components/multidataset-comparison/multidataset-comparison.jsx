@@ -23,10 +23,13 @@ const MultiDatasetComparison = ({ data }) => {
   const [minDatasets, setMinDatasets] = useState(1); // Filter: minimum datasets per gene
   const [rankOrder, setRankOrder] = useState('asc'); // 'asc' = lowest values get rank 1, 'desc' = highest values get rank 1
   const [geneInfoCache, setGeneInfoCache] = useState({}); // Cache for gene information
+  const [selectedDatasets, setSelectedDatasets] = useState(new Set()); // Selected datasets for filtering
+  const [isDatasetDropdownOpen, setIsDatasetDropdownOpen] = useState(false); // Dropdown state
   
   // Use refs instead of state to avoid re-renders
   const currentTooltipRef = React.useRef(null);
   const tooltipTimeoutRef = React.useRef(null);
+  const dropdownRef = React.useRef(null);
 
   // Function to cleanup any existing tooltip
   const cleanupTooltip = () => {
@@ -115,6 +118,23 @@ const MultiDatasetComparison = ({ data }) => {
     cleanupTooltip();
   }, [selectedMainTab, selectedSubTab]);
 
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDatasetDropdownOpen(false);
+      }
+    };
+
+    if (isDatasetDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDatasetDropdownOpen]);
+
   // Reset sub-tab when main tab changes - MUST be before conditional returns
   React.useEffect(() => {
     // Get the appropriate sub-tab options for the selected main tab
@@ -151,6 +171,34 @@ const MultiDatasetComparison = ({ data }) => {
       return null;
     }
   }, [data]);
+
+  // Initialize selected datasets when data changes
+  React.useEffect(() => {
+    if (parsedData && parsedData.datasets) {
+      // Initialize with all datasets selected
+      setSelectedDatasets(new Set(parsedData.datasets));
+    }
+  }, [parsedData]);
+
+  // Helper function to check which datasets have data
+  const getDatasetsWithData = (dataSection) => {
+    const datasetsWithData = new Set();
+    const allDatasets = parsedData?.datasets || [];
+    
+    allDatasets.forEach(dataset => {
+      // Check if any gene has data for this dataset
+      const hasData = Object.values(dataSection).some(values => {
+        const value = values[dataset];
+        return value !== undefined && value !== null && typeof value === 'number' && !isNaN(value);
+      });
+      
+      if (hasData) {
+        datasetsWithData.add(dataset);
+      }
+    });
+    
+    return datasetsWithData;
+  };
 
   if (!parsedData) {
     return <div>No data available</div>;
@@ -230,6 +278,7 @@ const MultiDatasetComparison = ({ data }) => {
     return rankedData;
   };
 
+
   // Helper function to create table data from the parsed results
   const createTableData = (dataSection) => {
     if (!dataSection || Object.keys(dataSection).length === 0) {
@@ -239,9 +288,12 @@ const MultiDatasetComparison = ({ data }) => {
     const entries = Object.entries(dataSection);
     if (entries.length === 0) return { columns: [], data: [] };
 
-    // Get all dataset columns from the backend's dataset list instead of first entry
-    // This ensures we include all available datasets even if some genes don't have data for all
-    const datasetColumns = parsedData?.datasets || [];
+    // Get datasets that have data and are selected
+    const datasetsWithData = getDatasetsWithData(dataSection);
+    const availableDatasets = parsedData?.datasets || [];
+    const datasetColumns = availableDatasets.filter(dataset => 
+      selectedDatasets.has(dataset) && datasetsWithData.has(dataset)
+    );
     
     // We always calculate averages now in frontend
     const hasAverage = true;
@@ -249,18 +301,18 @@ const MultiDatasetComparison = ({ data }) => {
     // Filter genes by minimum dataset count and calculate averages
     const filteredData = {};
     Object.entries(dataSection).forEach(([gene, values]) => {
-      // Check which datasets have valid data for this gene
+      // Check which selected datasets have valid data for this gene
       const validValues = datasetColumns
         .map(dataset => values[dataset])
         .filter(val => val !== undefined && val !== null && typeof val === 'number' && !isNaN(val));
       
       if (validValues.length >= minDatasets) {
-        // Calculate average from valid values
+        // Calculate average from valid values in selected datasets only
         const average = validValues.length > 0 
           ? Math.round((validValues.reduce((sum, val) => sum + val, 0) / validValues.length) * 1000) / 1000
           : null;
         
-        // Create row with all dataset columns (including those with missing data)
+        // Create row with only selected dataset columns
         const rowData = {};
         datasetColumns.forEach(dataset => {
           rowData[dataset] = values[dataset]; // This might be undefined for some datasets
@@ -571,7 +623,7 @@ const MultiDatasetComparison = ({ data }) => {
           </div>
           <div className={styles.summaryItem}>
             <Text size="small" weight="bold">Datasets Compared:</Text>
-            <Text size="small">3 (K562, HCT116, HEK293)</Text>
+            <Text size="small">{selectedDatasets.size} of {parsedData?.datasets?.length || 0} selected</Text>
           </div>
           <div className={styles.summaryItem}>
             <Text size="small" weight="bold">Gene:</Text>
@@ -608,8 +660,10 @@ const MultiDatasetComparison = ({ data }) => {
           {getDescription()}
         </Text>
 
+        
+
         {/* Controls for ranks and filtering */}
-        <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: '10px' }}>
+        <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
           {/* Dataset filter */}
           <Flex alignItems="center" gap="8px">
             <Text size="small">Show genes in at least</Text>
@@ -633,6 +687,70 @@ const MultiDatasetComparison = ({ data }) => {
               <option value={3}>3</option>
             </select> datasets.
           </Flex>
+
+          {/* Dataset Selection Controls */}
+          <Flex alignItems="center" gap="8px">
+            <Text size="small" style={{ whiteSpace: 'nowrap' }}>Datasets:</Text>
+            <div className={styles.datasetDropdown} ref={dropdownRef}>
+              <button
+                type="button"
+                className={styles.datasetDropdownButton}
+                onClick={() => setIsDatasetDropdownOpen(!isDatasetDropdownOpen)}
+              >
+                <span>
+                  {selectedDatasets.size === 0 
+                    ? 'Select datasets...' 
+                    : `${selectedDatasets.size} dataset${selectedDatasets.size > 1 ? 's' : ''} selected`
+                  }
+                </span>
+                <span className={`${styles.dropdownArrow} ${isDatasetDropdownOpen ? styles.open : ''}`}>
+                  ▼
+                </span>
+              </button>
+              
+              {isDatasetDropdownOpen && (
+                <div className={styles.datasetDropdownContent}>
+                  {parsedData?.datasets?.map(dataset => {
+                    const datasetsWithData = getDatasetsWithData(currentData);
+                    const hasData = datasetsWithData.has(dataset);
+                    const isSelected = selectedDatasets.has(dataset);
+                    const datasetName = dataset === 'K562gwps' ? 'K562' : 
+                                       dataset === 'HCT116gwps' ? 'HCT116' : 
+                                       dataset === 'HEK293gwps' ? 'HEK293' : dataset;
+                    
+                    return (
+                      <label
+                        key={dataset}
+                        className={`${styles.datasetDropdownItem} ${!hasData ? styles.disabled : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={!hasData}
+                          onChange={(e) => {
+                            if (hasData) {
+                              const newSelected = new Set(selectedDatasets);
+                              if (e.target.checked) {
+                                newSelected.add(dataset);
+                              } else {
+                                newSelected.delete(dataset);
+                              }
+                              setSelectedDatasets(newSelected);
+                            }
+                          }}
+                          className={styles.checkbox}
+                        />
+                        <span className={`${styles.datasetLabel} ${!hasData ? styles.disabledText : ''}`}>
+                          {datasetName}
+                          {!hasData && ' (No Data)'}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Flex>
           
           {/* Toggle for showing ranks */}
           <Flex alignItems="center" gap="16px">
@@ -642,7 +760,6 @@ const MultiDatasetComparison = ({ data }) => {
                 checked={showRanks}
                 onChange={(e) => setShowRanks(e.target.checked)}
               />
-             
             </Flex>
             
             {/* Rank order toggle - only show when ranks are enabled */}

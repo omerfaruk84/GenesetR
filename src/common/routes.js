@@ -8,6 +8,7 @@ const ROUTES = Object.freeze({
   TSNE: "/tsne",
   BI_CLUSTERING: "/bi-clustering",
   GENE_REGULATION: "/gene-regulation",
+  GENE_REGULATION_ENHANCED: "/gene-regulation-enhanced",
   HEATMAP: "/heatmap",
   PATHFINDER: "/pathfinder",
   GENESIGNATURE: "/genesignature",

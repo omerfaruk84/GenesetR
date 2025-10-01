@@ -10,6 +10,7 @@ import {
   runMdeGraphCalc,
   runtSNEGraphCalc,
   runGeneRegulation,
+  runGeneRegulationEnhanced,
   runGeneExp,
   runPathFinderCalc,
   runGeneSignature,
@@ -31,6 +32,7 @@ const initialState = {
   tsneGraph: { ...resultState },
   biClusteringGraph: { ...resultState },
   geneRegulationGraph: { ...resultState },
+  geneRegulationEnhancedGraph: { ...resultState },
   pathFinderGraph: { ...resultState },
   corrCluster: { ...resultState },
   heatmapGraph: { ...resultState },
@@ -104,6 +106,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
     mde,
     tsne,  
     geneRegulationCore,
+    geneRegulationEnhanced,
     clustering,
     correlation,
     pathfinder,
@@ -163,6 +166,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
       }
       case ROUTES.GENE_REGULATION: {
         const result = await runGeneRegulation(core, geneRegulationCore);
+        return dispatch(
+          resultReceived({ result, module: ModulePathNames[module] })
+        );
+      }
+      case ROUTES.GENE_REGULATION_ENHANCED: {
+        const result = await runGeneRegulationEnhanced(core, geneRegulationEnhanced);
         return dispatch(
           resultReceived({ result, module: ModulePathNames[module] })
         );

@@ -61,6 +61,11 @@ const TopBar = () => {
       toLink: ROUTES.GENE_REGULATION,
     },
     {
+      icon: () => <FcMindMap size={"2em"} style={{ filter: "hue-rotate(120deg)" }} />,
+      name: TabNames.GENE_REGULATION_ENHANCED,
+      toLink: ROUTES.GENE_REGULATION_ENHANCED,
+    },
+    {
       icon: () => (
         <img
           src={heatmapicon}

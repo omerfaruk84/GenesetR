@@ -8,6 +8,7 @@ import { NotFoundPage } from "../not-found-page";
 import { Spacer } from "@oliasoft-open-source/react-ui-library";
 import { SideBar } from "../side-bar";
 import { GeneRegulationPage } from "../../pages/gene-regulation/gene-regulation-page";
+import { GeneRegulationEnhancedPage } from "../../pages/gene-regulation-enhanced/gene-regulation-enhanced-page";
 import { PathFinderPage } from "../../pages/pathfinder/pathfinder";
 import { GeneSignaturePage } from "../../pages/genesignature/gene-signature-page";
 import { HeatMapPage } from "../../pages/heatmap/heatmap-page";
@@ -133,6 +134,13 @@ const MainView = () => {
                         path={ROUTES.GENE_REGULATION}
                         element={
                           <GeneRegulationPage path={ROUTES.GENE_REGULATION} />
+                        }
+                      />
+                      <Route
+                        exact
+                        path={ROUTES.GENE_REGULATION_ENHANCED}
+                        element={
+                          <GeneRegulationEnhancedPage path={ROUTES.GENE_REGULATION_ENHANCED} />
                         }
                       />
 

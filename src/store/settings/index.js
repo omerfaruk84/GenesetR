@@ -6,6 +6,7 @@ import { umapSettingsReducer } from "./umap-settings";
 import { tsneSettingsReducer } from "./tsne-settings";
 import { biClusteringSettingsReducer } from "./bi-clustering-settings";
 import { geneRegulationCoreSettingsReducer } from "./gene-regulation-core-settings";
+import { geneRegulationEnhancedSettingsReducer } from "./gene-regulation-enhanced-settings";
 import { pcaSettingsReducer } from "./pca-settings";
 import { clusteringSettingsReducer } from "./clustering-settings";
 import { correlationSettingsReducer } from "./correlation-settings";
@@ -26,6 +27,7 @@ const settingsReducer = combineReducers({
   tsne: tsneSettingsReducer,
   biClustering: biClusteringSettingsReducer,
   geneRegulationCore: geneRegulationCoreSettingsReducer,
+  geneRegulationEnhanced: geneRegulationEnhancedSettingsReducer,
   pca: pcaSettingsReducer,
   clustering: clusteringSettingsReducer,
   correlation: correlationSettingsReducer,

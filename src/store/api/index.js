@@ -282,6 +282,24 @@ const runGeneRegulation = async (core, geneRegulationCore) => {
   return await getData(body);
 };
 
+const runGeneRegulationEnhanced = async (core, geneRegulationEnhanced) => {
+  const body = {
+    gene: geneRegulationEnhanced.selectedGene,
+    experiments: geneRegulationEnhanced.selectedExperiments,
+    exp_weights: geneRegulationEnhanced.experimentWeights,
+    combine: geneRegulationEnhanced.combineMethod,
+    filter: geneRegulationEnhanced.zFilter,
+    corrFilter: geneRegulationEnhanced.corrFilter,
+    topk_upstream: geneRegulationEnhanced.topkUpstream,
+    topk_downstream: geneRegulationEnhanced.topkDownstream,
+    corr_topk: geneRegulationEnhanced.corrTopk,
+    max_nodes: geneRegulationEnhanced.maxNodes,
+    max_edges: geneRegulationEnhanced.maxEdges,
+    request: "expandGeneEnhanced",
+  };
+  return await getData(body);
+};
+
 const runGeneSignature = async (core) => {
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
@@ -454,6 +472,7 @@ export {
   runbiClusteringCalc,
   runPathFinderCalc,
   runGeneRegulation,
+  runGeneRegulationEnhanced,
   runHeatMap,
   runGeneSignature,
   runGeneSignatureMultiDataset,

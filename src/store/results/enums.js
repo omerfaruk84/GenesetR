@@ -7,6 +7,7 @@ const ModulePathNames = {
   [ROUTES.TSNE]: "tsneGraph",
   [ROUTES.BI_CLUSTERING]: "biClusteringGraph",
   [ROUTES.GENE_REGULATION]: "geneRegulationGraph",
+  [ROUTES.GENE_REGULATION_ENHANCED]: "geneRegulationEnhancedGraph",
   [ROUTES.EXPRESSIONANALYZER]: "geneExpressionGraph",
   [ROUTES.PATHFINDER]: "pathFinderGraph",
   [ROUTES.CORRELATION]: "corrCluster",

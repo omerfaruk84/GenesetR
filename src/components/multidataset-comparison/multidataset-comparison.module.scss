@@ -67,4 +67,109 @@
 .badgeSuccess {
   background-color: #28a745;
   color: white;
+}
+
+.datasetSelection {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.datasetDropdown {
+  position: relative;
+  display: inline-block;
+  width: auto;
+  min-width: 150px;
+  max-width: 300px;
+  vertical-align: middle;
+}
+
+.datasetDropdownButton {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  vertical-align: middle;
+  
+  &:hover {
+    border-color: #999;
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  }
+}
+
+.dropdownArrow {
+  transition: transform 0.2s ease;
+  font-size: 12px;
+  color: #666;
+  
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.datasetDropdownContent {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.datasetDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  
+  &:hover:not(.disabled) {
+    background-color: #f8f9fa;
+  }
+  
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.checkbox {
+  margin: 0;
+  cursor: pointer;
+  
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.datasetLabel {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+  
+  &.disabledText {
+    color: #999;
+  }
 } 

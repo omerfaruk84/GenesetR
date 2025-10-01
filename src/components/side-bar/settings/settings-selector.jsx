@@ -4,6 +4,7 @@ import { Settings } from "./settings";
 import { CoreSettings } from "./core-settings";
 import { TsneSettings } from "./tsne-settings";
 import { GeneRegulationSettings } from "./gene-regulation-core-settings";
+import { GeneRegulationEnhancedSettings } from "./gene-regulation-enhanced-settings";
 import { CorrelationSettings } from "./correlation-settings";
 import { GeneSignatureSettings } from "./genesignature-settings";
 import { ExpressionAnalyzerSettings } from "./expression-analyzer-settings";
@@ -140,6 +141,12 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.GRAPHMAP_SETTINGS,
         settings: <GeneRegulationSettings />,
+      },
+    ],
+    [ROUTES.GENE_REGULATION_ENHANCED]: [
+      {
+        settingsName: "Enhanced Gene Regulation Settings",
+        settings: <GeneRegulationEnhancedSettings />,
       },
     ],
     [ROUTES.HEATMAP]: [
