@@ -145,7 +145,46 @@ function filterEdgesBySettings(edges, settings) {
     return true;
   };
 
-  return edges.filter(allow);
+  let filteredEdges = edges.filter(allow);
+
+  // Calculate node counts for all nodes (needed for sizing and simplified view)
+  const nodeCounts = {};
+  filteredEdges.forEach(edge => {
+    nodeCounts[edge.source] = (nodeCounts[edge.source] || 0) + 1;
+    nodeCounts[edge.target] = (nodeCounts[edge.target] || 0) + 1;
+  });
+
+  // Apply simplified view filtering if enabled
+  if (settings.simplifiedViewEnabled && settings.selectedGene) {
+    // Filter edges to only those connected to the selected gene
+    // and meeting the minimum neighbor count requirement
+    filteredEdges = filteredEdges.filter(edge => {
+      const source = edge.source;
+      const target = edge.target;
+      
+      // Keep edges connected to the selected gene
+      if (source === settings.selectedGene || target === settings.selectedGene) {
+        // Check if the other node meets the minimum neighbor count
+        const otherNode = target === settings.selectedGene ? source : target;
+        const totalNeighbors = nodeCounts[otherNode] || 0;
+        
+        // For the selected gene, we don't count it in the neighbor count
+        if (otherNode !== settings.selectedGene && totalNeighbors >= (settings.simplifiedViewMinNeighbors || 1)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  // Store node counts in the edges for later use
+  filteredEdges.forEach(edge => {
+    edge.sourceNeighborCount = nodeCounts[edge.source] || 0;
+    edge.targetNeighborCount = nodeCounts[edge.target] || 0;
+    edge.totalNeighborCount = (nodeCounts[edge.source] || 0) + (nodeCounts[edge.target] || 0);
+  });
+
+  return filteredEdges;
 }
 
 function settingsKeyForType(t) {
@@ -170,12 +209,28 @@ function edgeWidth(e) {
 function nodeSize(n, deg, settings) {
   const baseSize = 8;
   const degree = deg[n.id] || 0;
+  const neighbourCount = n.neighbourCount || 0;
+  
   if (settings?.nodeStyle === "degree") {
     return baseSize + Math.min(12, degree * 1.5);
   } else if (settings?.nodeStyle === "knockdown" && n.kd !== undefined) {
     return baseSize + Math.abs(n.kd) * 4;
   } else if (settings?.nodeStyle === "mixed") {
     return baseSize + Math.min(8, degree) + (n.kd ? Math.abs(n.kd) * 2 : 0);
+  } else if (settings?.nodeStyle === "neighbourCount") {
+    // Use neighbor count for sizing, similar to original module
+    const minSize = 6;
+    const maxSize = 30;
+    const minNeighbours = 1;
+    const maxNeighbours = Math.max(10, Math.max(...Object.values(deg)));
+    const sizeRange = maxSize - minSize;
+    const neighbourRange = maxNeighbours - minNeighbours;
+    
+    if (neighbourRange > 0) {
+      const normalizedCount = (neighbourCount - minNeighbours) / neighbourRange;
+      return minSize + normalizedCount * sizeRange;
+    }
+    return baseSize + Math.min(6, neighbourCount);
   }
   return baseSize + Math.min(6, degree);
 }
@@ -193,12 +248,50 @@ export default function NetworkGraphAlternatives({
     () => filterEdgesBySettings(g.edges, settings),
     [g.edges, settings]
   );
+  
+  // Calculate node counts for all nodes
+  const nodeCounts = useMemo(() => {
+    const counts = {};
+    filteredEdges.forEach(edge => {
+      counts[edge.source] = (counts[edge.source] || 0) + 1;
+      counts[edge.target] = (counts[edge.target] || 0) + 1;
+    });
+    return counts;
+  }, [filteredEdges]);
+
+  // Filter nodes to only include those connected by filtered edges (for simplified view)
+  const filteredNodes = useMemo(() => {
+    if (!settings?.simplifiedViewEnabled || !settings?.selectedGene) {
+      return g.nodes.map(node => ({
+        ...node,
+        neighbourCount: nodeCounts[node.id] || 0
+      }));
+    }
+    
+    const connectedNodes = new Set();
+    connectedNodes.add(settings.selectedGene); // Always keep the selected gene
+    
+    filteredEdges.forEach(edge => {
+      if (edge.source !== edge.target) {
+        connectedNodes.add(edge.source);
+        connectedNodes.add(edge.target);
+      }
+    });
+    
+    return g.nodes
+      .filter(node => connectedNodes.has(node.id))
+      .map(node => ({
+        ...node,
+        neighbourCount: nodeCounts[node.id] || 0
+      }));
+  }, [g.nodes, filteredEdges, settings, nodeCounts]);
+  
   const deg = useMemo(
-    () => degreeMap(g.nodes, filteredEdges),
-    [g.nodes, filteredEdges]
+    () => degreeMap(filteredNodes, filteredEdges),
+    [filteredNodes, filteredEdges]
   );
 
-  const common = { nodes: g.nodes, edges: filteredEdges, deg, height, settings };
+  const common = { nodes: filteredNodes, edges: filteredEdges, deg, height, settings };
 
   return (
     <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
@@ -687,6 +780,22 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
         size = 8 + Math.abs(n.kd) * 4;
       } else if (nodeSizeMode === "mixed") {
         size = 8 + Math.min(8, (deg[n.id] || 0)) + (n.kd ? Math.abs(n.kd) * 2 : 0);
+      } else if (nodeSizeMode === "neighbourCount") {
+        // Use neighbor count for sizing, similar to original module
+        const neighbourCount = n.neighbourCount || 0;
+        const minSize = 6;
+        const maxSize = 30;
+        const minNeighbours = 1;
+        const maxNeighbours = Math.max(10, Math.max(...nodes.map(n => n.neighbourCount || 0)));
+        const sizeRange = maxSize - minSize;
+        const neighbourRange = maxNeighbours - minNeighbours;
+        
+        if (neighbourRange > 0) {
+          const normalizedCount = (neighbourCount - minNeighbours) / neighbourRange;
+          size = minSize + normalizedCount * sizeRange;
+        } else {
+          size = 8 + Math.min(6, neighbourCount);
+        }
       }
       
           g.addNode(String(n.id), {
@@ -698,6 +807,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
             category: n.category,
             kd: n.kd,
             degree: deg[n.id] || 0,
+            neighbourCount: n.neighbourCount || 0,
         // Enhanced properties for interactivity
         highlighted: false,
         selected: false,
@@ -796,6 +906,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
       node,
       geneInfo,
       degree: deg[nodeId] || 0,
+      neighbourCount: node?.neighbourCount || 0,
       category: node?.category,
       kd: node?.kd,
     });
@@ -860,6 +971,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
             <option value="degree">By Degree</option>
             <option value="knockdown">By Knockdown</option>
             <option value="mixed">Mixed</option>
+            <option value="neighbourCount">By Neighbor Count</option>
             <option value="fixed">Fixed</option>
           </select>
         </div>
@@ -912,6 +1024,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
           </div>
           <div>Category: {tooltip.category ?? "N/A"}</div>
           <div>Degree: {tooltip.degree}</div>
+          <div>Neighbor Count: {tooltip.neighbourCount}</div>
           {Number.isFinite(tooltip.kd) && <div>Knockdown: {(+tooltip.kd).toFixed(3)}</div>}
           {tooltip.geneInfo?.description && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.2)", fontSize: 11, lineHeight: 1.4 }}>

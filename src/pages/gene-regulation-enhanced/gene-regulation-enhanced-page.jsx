@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { connect } from "react-redux";
 import styles from "../gene-regulation/gene-regulation-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
@@ -8,6 +8,9 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { LoadingPage } from "../../components/loading-page";
 import NetworkGraphAlternatives from "../../components/NetworkGraphAlternatives";
+import { ButtonGroup, Spacer } from "@oliasoft-open-source/react-ui-library";
+import { FaChartBar, FaTable } from "react-icons/fa";
+import EnrichmentTable from "../../components/enrichment-table-new/index.jsx";
 
 const moduleDescription = {
   title: "Enhanced Gene Regulation Network Analysis (Multi-Experiment)",
@@ -152,11 +155,173 @@ const GeneRegulationEnhancedPage = ({
   blacklistLoading,
   geneRegulationEnhancedSettings,
 }) => {
+  const [selectedView, setSelectedView] = useState(0);
+  const [tableData, setTableData] = useState([]);
+
+  // Table columns configuration for gene regulation data
+  const columns = useMemo(
+    () => [
+      {
+        id: "Regulation",
+        header: "Regulation",
+        columns: [
+          {
+            accessorKey: "Regulation Type",
+            header: "Regulation Type",
+            Header: <>Type</>,
+            size: 50,
+            maxSize: 50,
+            filterVariant: "select",
+            muiFilterTextFieldProps: {
+              placeholder: "Select",
+              size: "small",
+            },
+          },
+          {
+            accessorKey: "Direction",
+            header: "Direction",
+            size: 50,
+            maxSize: 50,
+            filterVariant: "select",
+            muiFilterTextFieldProps: {
+              placeholder: "Select",
+              size: "small",
+            },
+          },
+        ],
+      },
+      {
+        id: "GeneSymbols",
+        header: "Gene Symbol",
+        columns: [
+          {
+            accessorKey: "Gene Symbol From",
+            header: "Gene Symbol From",
+            Header: <>From</>,
+            size: 75,
+            filterVariant: "autocomplete",
+            minSize: 50,
+            maxSize: 150,
+            muiFilterTextFieldProps: {
+              placeholder: "Symbol",
+              size: "small",
+            },
+          },
+          {
+            accessorKey: "Gene Symbol To",
+            header: "Gene Symbol To",
+            Header: <>To</>,
+            size: 75,
+            filterVariant: "autocomplete",
+            muiFilterTextFieldProps: {
+              placeholder: "Symbol",
+              size: "small",
+            },
+          },
+        ],
+      },
+      {
+        id: "Z-Score",
+        header: "Z-Score",
+        columns: [
+          {
+            accessorKey: "Score",
+            header: "Score",
+            size: 50,
+            filterVariant: "range-slider",
+            muiFilterSliderProps: {
+              size: "small",
+              color: "primary",
+              step: 0.01,
+            },
+            enableResizing: true,
+          },
+        ],
+      },
+      {
+        id: "NeighbourCount",
+        header: "Neighbour Count",
+        columns: [
+          {
+            accessorKey: "Source NC",
+            header: "Source Neighbour Count",
+            Header: <>Source</>,
+            size: 50,
+            filterVariant: "range-slider",
+            muiFilterSliderProps: {
+              size: "small",
+              color: "primary",
+            },
+            enableResizing: true,
+          },
+          {
+            accessorKey: "Target NC",
+            header: "Target Neighbour Count",
+            Header: <>Target</>,
+            size: 50,
+            filterVariant: "range-slider",
+            filterFn: "betweenInclusive",
+            muiFilterSliderProps: {
+              size: "small",
+              color: "primary",
+            },
+          },
+          {
+            accessorKey: "Total NC",
+            header: "Total Neighbour Count",
+            Header: <>Total</>,
+            size: 50,
+            filterVariant: "range-slider",
+            muiFilterSliderProps: {
+              size: "small",
+              color: "primary",
+            },
+          },
+        ],
+      },
+    ],
+    []
+  );
   // Parse and normalize the graph data
   const geneRegulationResults = useMemo(
     () => normalizeGraph(rawResult),
     [rawResult]
   );
+
+  // Process graph data into table format
+  const processedTableData = useMemo(() => {
+    if (!geneRegulationResults || !geneRegulationResults.nodes || !geneRegulationResults.edges) {
+      return [];
+    }
+
+    const { nodes, edges } = geneRegulationResults;
+    
+    // Calculate node counts for neighbor count information
+    const nodeCounts = {};
+    edges.forEach((edge) => {
+      const source = edge.source;
+      const target = edge.target;
+      nodeCounts[source] = (nodeCounts[source] || 0) + 1;
+      nodeCounts[target] = (nodeCounts[target] || 0) + 1;
+    });
+
+    // Transform edges into table rows
+    const tableInfo = edges.map((edge) => ({
+      "Regulation Type": edge.Type2 || edge.type || "Exp",
+      "Direction": edge.type || "Unknown",
+      "Gene Symbol From": edge.source,
+      "Gene Symbol To": edge.target,
+      "Score": typeof edge.value === 'number' ? Number(edge.value.toFixed(2)) : edge.value,
+      "Source NC": nodeCounts[edge.source] || 0,
+      "Target NC": nodeCounts[edge.target] || 0,
+      "Total NC": (nodeCounts[edge.source] || 0) + (nodeCounts[edge.target] || 0),
+    }));
+
+    // Sort by total neighbor count (descending)
+    tableInfo.sort((a, b) => b["Total NC"] - a["Total NC"]);
+    
+    return tableInfo;
+  }, [geneRegulationResults]);
 
   // Debug: helps confirm we have an object with nodes/edges
   console.log("🚀 Enhanced Gene Regulation Debug:", {
@@ -209,24 +374,68 @@ const GeneRegulationEnhancedPage = ({
 
       {geneRegulationResults ? (
         <div>
-          {/* Enhanced Multi-Dataset Comparison */}
-          <NetworkGraphAlternatives
-            graph={geneRegulationResults}
-            settings={geneRegulationEnhancedSettings}
-            height={graphHeight}
+          {/* View Toggle */}
+          <ButtonGroup
+            items={[
+              {
+                icon: <FaChartBar />,
+                key: 0,
+                label: "Network Graph",
+              },
+              {
+                icon: <FaTable />,
+                key: 1,
+                label: "Link Table",
+              },
+            ]}
+            onSelected={(key) => setSelectedView(key)}
+            value={selectedView}
           />
+          
+          <Spacer height={10} />
 
-          {/* Summary Stats */}
-          <div style={{
-            marginTop: "16px",
-            padding: "12px",
-            backgroundColor: "#e8f5e8",
-            borderLeft: "4px solid #28a745",
-            borderRadius: "4px",
-            color: "#155724"
-          }}>
-            ✅ <strong>Analysis Complete:</strong> Successfully generated network with {geneRegulationResults.nodes.length} nodes and {geneRegulationResults.edges.length} edges from {geneRegulationEnhancedSettings?.selectedExperiments?.length || 1} experiment(s) using {geneRegulationEnhancedSettings?.combineMethod || "weighted_mean"} aggregation.
-          </div>
+          {/* Table View */}
+          {selectedView === 1 && processedTableData.length > 0 && (
+            <EnrichmentTable data={processedTableData} columns={columns} />
+          )}
+
+          {/* Graph View */}
+          {selectedView === 0 && (
+            <>
+              {/* Enhanced Multi-Dataset Comparison */}
+              <NetworkGraphAlternatives
+                graph={geneRegulationResults}
+                settings={geneRegulationEnhancedSettings}
+                height={graphHeight}
+              />
+
+              {/* Summary Stats */}
+              <div style={{
+                marginTop: "16px",
+                padding: "12px",
+                backgroundColor: "#e8f5e8",
+                borderLeft: "4px solid #28a745",
+                borderRadius: "4px",
+                color: "#155724"
+              }}>
+                ✅ <strong>Analysis Complete:</strong> Successfully generated network with {geneRegulationResults.nodes.length} nodes and {geneRegulationResults.edges.length} edges from {geneRegulationEnhancedSettings?.selectedExperiments?.length || 1} experiment(s) using {geneRegulationEnhancedSettings?.combineMethod || "weighted_mean"} aggregation.
+              </div>
+            </>
+          )}
+
+          {/* No data message for table view */}
+          {selectedView === 1 && processedTableData.length === 0 && (
+            <div style={{
+              padding: "12px",
+              backgroundColor: "#fff3cd",
+              borderLeft: "4px solid #ffc107",
+              borderRadius: "4px",
+              color: "#856404",
+              marginBottom: "8px"
+            }}>
+              ⚠️ No table data available. The network may not contain any valid edges.
+            </div>
+          )}
         </div>
       ) : (
         <div>

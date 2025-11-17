@@ -55,6 +55,10 @@ const initialState = {
   among_upr: true,
   among_dnr: true,
   among_unr: true,
+  
+  // Simplified view settings
+  simplifiedViewEnabled: false,
+  simplifiedViewMinNeighbors: 1,
 };
 
 export const geneRegulationEnhancedSettingsSlice = createSlice({

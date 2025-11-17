@@ -660,6 +660,39 @@ const GeneRegulationEnhancedSettings = ({
           checked={geneRegulationEnhancedSettings?.isolatedNodes}
         />
       </Field>
+
+      <Divider align="left">Simplified View</Divider>
+      
+      <Field
+        label="Simplified View"
+        helpText="If enabled, only links between the Gene of Interest and its immediate neighbors will be shown. The slider sets the minimum number of neighbors required for a gene to be included in the simplified view."
+      >
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            geneRegulationEnhancedSettingsChanged({
+              settingName: GeneRegulationEnhancedSettingsTypes.SIMPLIFIED_VIEW_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={geneRegulationEnhancedSettings?.simplifiedViewEnabled}
+          label="Enabled"
+        />
+        <div className={styles.inputRange}>
+          <Slider
+            label={geneRegulationEnhancedSettings?.simplifiedViewMinNeighbors}
+            disabled={!geneRegulationEnhancedSettings?.simplifiedViewEnabled}
+            max={100}
+            min={1}
+            value={geneRegulationEnhancedSettings?.simplifiedViewMinNeighbors}
+            onChange={({ target: { value } }) =>
+              geneRegulationEnhancedSettingsChanged({
+                settingName: GeneRegulationEnhancedSettingsTypes.SIMPLIFIED_VIEW_MIN_NEIGHBORS,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
     </>
   );
 };

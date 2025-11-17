@@ -12,7 +12,7 @@ import {
   Field,
 } from "@oliasoft-open-source/react-ui-library";
 import { MaterialReactTable } from 'material-react-table';
-import { FaSortAmountUpAlt, FaSortAmountDownAlt } from 'react-icons/fa';
+import { FaSortAmountUpAlt, FaSortAmountDownAlt, FaDownload } from 'react-icons/fa';
 import { fetchGeneInfo, formatGeneTooltip, cleanGeneSymbol } from "../../utils/geneFunctionUtils";
 import styles from "./multidataset-comparison.module.scss";
 
@@ -198,6 +198,50 @@ const MultiDatasetComparison = ({ data }) => {
     });
     
     return datasetsWithData;
+  };
+
+  // Function to download table data as CSV
+  const downloadTableData = () => {
+    if (!tableData.data || tableData.data.length === 0) {
+      alert('No data to download');
+      return;
+    }
+
+    // Get current date for filename
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const gene = parsedData?.gene || 'unknown';
+    const mainTab = selectedMainTab.label.replace(/[^a-zA-Z0-9]/g, '_');
+    const subTab = selectedSubTab.label.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    // Create CSV content
+    const headers = tableData.columns.map(col => col.header).join(',');
+    const rows = tableData.data.map(row => {
+      return tableData.columns.map(col => {
+        const value = row[col.accessorKey];
+        // Handle values that might contain commas or quotes
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        // Escape quotes and wrap in quotes if contains comma
+        if (stringValue.includes(',') || stringValue.includes('"')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(',');
+    });
+    
+    const csvContent = [headers, ...rows].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${gene}_${mainTab}_${subTab}_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!parsedData) {
@@ -612,25 +656,7 @@ const MultiDatasetComparison = ({ data }) => {
   return (
     <div className={styles.container}>
      
-<Card>
-        <Text weight="bold" style={{ marginTop: '0px' }}>
-          Analysis Summary
-        </Text>
-        <div className={styles.summary}>
-          <div className={styles.summaryItem}>
-            <Text size="small" weight="bold">Filtered Entries:</Text>
-            <Text size="small">{tableData.data.length} (min {minDatasets} dataset{minDatasets > 1 ? 's' : ''})</Text>
-          </div>
-          <div className={styles.summaryItem}>
-            <Text size="small" weight="bold">Datasets Compared:</Text>
-            <Text size="small">{selectedDatasets.size} of {parsedData?.datasets?.length || 0} selected</Text>
-          </div>
-          <div className={styles.summaryItem}>
-            <Text size="small" weight="bold">Gene:</Text>
-            <Text size="small">{parsedData.gene}</Text>
-          </div>
-        </div>
-      </Card>
+
       
 
       <Tabs
@@ -643,7 +669,7 @@ const MultiDatasetComparison = ({ data }) => {
         }}
       />
 
-      <Card bordered>
+      <Card bordered style={{ paddingTop: '0px' }}>
         <Tabs
           name="subTabs"
           value={selectedSubTab}
@@ -654,9 +680,9 @@ const MultiDatasetComparison = ({ data }) => {
           }}
         />
 
-        <Spacer height={15} />
+        
 
-        <Text muted style={{ marginBottom: '10px' }}>
+        <Text muted style={{ marginBottom: '5px' }}>
           {getDescription()}
         </Text>
 
@@ -809,6 +835,43 @@ const MultiDatasetComparison = ({ data }) => {
               </Flex>
             )}
           </Flex>
+
+          {/* Download button */}
+          <Flex alignItems="center" gap="8px">
+            <button
+              onClick={downloadTableData}
+              disabled={!tableData.data || tableData.data.length === 0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: '#f8f9fa',
+                cursor: tableData.data && tableData.data.length > 0 ? 'pointer' : 'not-allowed',
+                fontSize: '12px',
+                transition: 'all 0.2s ease',
+                opacity: tableData.data && tableData.data.length > 0 ? 1 : 0.6
+              }}
+              onMouseEnter={(e) => {
+                if (tableData.data && tableData.data.length > 0) {
+                  e.target.style.backgroundColor = '#e9ecef';
+                  e.target.style.borderColor = '#adb5bd';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (tableData.data && tableData.data.length > 0) {
+                  e.target.style.backgroundColor = '#f8f9fa';
+                  e.target.style.borderColor = '#ccc';
+                }
+              }}
+              title="Download table data as CSV"
+            >
+              <FaDownload style={{ color: '#28a745', fontSize: '12px' }} />
+              <span>CSV</span>
+            </button>
+          </Flex>
         </Flex>
 
         {tableData.data.length > 0 ? (
@@ -821,6 +884,7 @@ const MultiDatasetComparison = ({ data }) => {
             enableRowVirtualization={true}  // Enable row virtualization
             enableColumnOrdering={false}  // Disable column reordering to maintain our order
             enableColumnDragging={false}  // Disable column dragging
+            enableColumnActions={false}  // Hide column actions
             muiTableContainerProps={{
               sx: { maxHeight: '600px' }  // Set fixed height for virtualization
             }}
@@ -843,9 +907,7 @@ const MultiDatasetComparison = ({ data }) => {
         )}
       </Card>
 
-      <Spacer height={20} />
-
-      {/* Data Summary */}
+    
       
     </div>
   );

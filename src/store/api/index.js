@@ -297,6 +297,7 @@ const runGeneRegulationEnhanced = async (core, geneRegulationEnhanced) => {
     max_edges: geneRegulationEnhanced.maxEdges,
     request: "expandGeneEnhanced",
   };
+  
   return await getData(body);
 };
 

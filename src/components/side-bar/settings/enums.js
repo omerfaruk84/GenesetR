@@ -305,6 +305,8 @@ const GeneRegulationEnhancedSettingsTypes = {
   GRAPH_HEIGHT: "graphHeight",
   SHOW_LEGEND: "showLegend",
   ANIMATE_CORRELATIONS: "animateCorrelations",
+  SIMPLIFIED_VIEW_ENABLED: "simplifiedViewEnabled",
+  SIMPLIFIED_VIEW_MIN_NEIGHBORS: "simplifiedViewMinNeighbors",
 };
 
 export {
