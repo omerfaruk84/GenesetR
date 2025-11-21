@@ -18,6 +18,7 @@ const SettingsTypes = {
   EXPRESSION_ANALYZER_SETTINGS: "Expression Analyzer Settings",
   GENELIST_COMPARE_SETTINGS: "Genelist Comparer Settings",
   MULTIDATASET_COMPARISON_SETTINGS: "Multi-Dataset Comparison Settings",
+  PRECOMPUTED_DR_SETTINGS: "Pre-computed DR Settings",
 };
 
 const BiClusteringSettingsTypes = {
@@ -264,6 +265,20 @@ const MultiDatasetComparisonSettingsTypes = {
   TARGET_LIST: "targetList",
 };
 
+const PrecomputedDrSettingsTypes = {
+  HVG_STRATEGY: "hvgStrategy",
+  N_HVGS: "nHvgs",
+  DR_METHOD: "drMethod",
+  SELECTED_CELL_LINES: "selectedCellLines",
+  COLOR_BY: "colorBy",
+  CONCATENATION_MODE: "concatenationMode",
+  N_TOP_GENE_CELLLINES: "nTopGeneCelllines",
+  USE_COMMON_PERTURBATIONS: "useCommonPerturbations",
+  USE_BATCH_CORRECTION: "useBatchCorrection",
+  BATCH_CORRECTION_THETA: "batchCorrectionTheta",
+  BATCH_CORRECTION_MAX_ITER: "batchCorrectionMaxIter",
+};
+
 const GeneRegulationEnhancedSettingsTypes = {
   SELECTED_GENE: "selectedGene",
   SELECTED_EXPERIMENTS: "selectedExperiments",
@@ -328,6 +343,7 @@ export {
   GeneSetEnrichmentSettingsTypes,
   GeneSignatureSettingsTypes,
   ExpressionAnalyzerSettingsTypes,
+  PrecomputedDrSettingsTypes,
   GenelistCompareSettingsTypes,
   InchlibSettingsTypes,
   MultiDatasetComparisonSettingsTypes,

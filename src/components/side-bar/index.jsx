@@ -74,7 +74,8 @@ const SideBar = ({
         onResize={handleSideBarResize}
       >
         {pathname !== ROUTES.GENELISTCOMPARE &&
-          pathname !== ROUTES.GENE_REGULATION && (
+          pathname !== ROUTES.GENE_REGULATION &&
+          !(pathname === ROUTES.DR && coreSettings.currentModule === "precomputed") && (
             <>
               <Spacer />
               <Flex justifyContent="center">

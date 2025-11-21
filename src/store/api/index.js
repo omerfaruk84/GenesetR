@@ -37,16 +37,42 @@ const getData = async (body) => {
       });
 
       //console.log("response2", response2)
-      const { status, task_result } = response2.data;
+      // Handle two response formats:
+      // 1. From Redis cache: {status, task_result} - HTTP 200 with wrapped object
+      // 2. From AsyncResult when ready: result directly - HTTP 200 with result as body
+      let status, task_result;
+      
+      // Check if response has status field (Format 1: Redis cache)
+      if (response2.data && typeof response2.data === 'object' && response2.data.status !== undefined) {
+        // Format 1: Wrapped in status object from Redis cache
+        status = response2.data.status;
+        task_result = response2.data.task_result;
+      } else if (response2.status === 200 && response2.data) {
+        // Format 2: Result is the data directly (task is ready, not in Redis)
+        // Check if it looks like a task result object (has file_path, PC1, etc.) or is an error string
+        if (typeof response2.data === 'object' && (response2.data.file_path || response2.data.PC1 || response2.data.filename)) {
+          return response2.data;
+        } else if (typeof response2.data === 'string') {
+          // Might be an error message
+          throw new Error(response2.data);
+        } else {
+          return response2.data;
+        }
+      } else {
+        // Try to extract status and task_result
+        status = response2.data?.status;
+        task_result = response2.data?.task_result || response2.data;
+      }
+      
       console.log("task_status", status);
       //console.log("task_result", task_result);
 
       if (status === "PENDING") {
         console.log("Still not started");
       } else if (status === "FAILURE") {
-        throw new Error(task_result);
+        throw new Error(task_result || "Task failed");
       } else if (status === "PROGRESS") {
-        console.log("Processing", task_result.message);
+        console.log("Processing", task_result?.message || task_result);
         /*toast({
           message: {
             type: "Info",
@@ -57,8 +83,14 @@ const getData = async (body) => {
           id: "process",
           autoClose: "1000",
         });*/
-      } else if (task_result !== undefined && task_result !== null) {
+      } else if (status === "SUCCESS" && task_result !== undefined && task_result !== null) {
         return task_result;
+      } else if (task_result !== undefined && task_result !== null && status !== "PENDING" && status !== "PROGRESS") {
+        // If we have a task_result and status is not pending/progress, return it
+        return task_result;
+      } else if (response2.data && !status && response2.status === 200) {
+        // No status field but HTTP 200, assume it's the result directly
+        return response2.data;
       }
 
       await delay(times * 250);
@@ -464,6 +496,51 @@ const fetchHugoGenes = async () => {
   }
 };
 
+const fetchPrecomputedDR = async (params) => {
+  try {
+    const queryParams = new URLSearchParams();
+    // If filename is provided, use it directly (most reliable method)
+    if (params.filename) {
+      queryParams.append("filename", params.filename);
+    } else {
+      // Otherwise, use parameter matching
+      if (params.method) queryParams.append("method", params.method);
+      if (params.hvg_strategy) queryParams.append("hvg_strategy", params.hvg_strategy);
+      if (params.n_hvgs) queryParams.append("n_hvgs", params.n_hvgs.toString());
+      if (params.cell_lines) queryParams.append("cell_lines", params.cell_lines);
+    }
+
+    const response = await Axios.get(
+      `${SERVER_ADRESS}/getPrecomputedDR?${queryParams.toString()}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching pre-computed DR:", error);
+    throw error;
+  }
+};
+
+const listPrecomputedDR = async () => {
+  try {
+    const response = await Axios.get(`${SERVER_ADRESS}/listPrecomputedDR`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+
+    return response.data.available_results || [];
+  } catch (error) {
+    console.error("Error listing pre-computed DR:", error);
+    return [];
+  }
+};
+
 export {
   runPcaGraphCalc,
   runMdeGraphCalc,
@@ -485,4 +562,7 @@ export {
   runMultiDatasetComparison,
   fetchDatasets,
   fetchWholeGenomeDatasets,
+  fetchPrecomputedDR,
+  listPrecomputedDR,
+  getData,
 };

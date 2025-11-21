@@ -19,6 +19,7 @@ import { ScatterPlotSettings } from "./scatterplot-settings";
 import { SettingsTypes } from "./enums";
 import { GenelistCompareSettings } from "./genelist-compare";
 import { MultiDatasetComparisonSettings } from "./multidataset-comparison-settings";
+import { PrecomputedDrSettings } from "./precomputed-dr-settings";
 
 const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
@@ -26,6 +27,20 @@ const SettingsSelector = ({ pathname }) => {
       {
         //settingsName: SettingsTypes.CORE_SETTINGS,
         //settings: <CoreSettings />
+      },
+    ],
+    [ROUTES.DR]: [
+      {
+        settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: <CoreSettings source={"DR"} />,
+      },
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
+      },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />,
       },
     ],
     [ROUTES.CORRELATION]: [
@@ -68,6 +83,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
         settings: <ScatterPlotSettings />,
       },
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
+      },
     ],
     [ROUTES.MDE]: [
       {
@@ -85,6 +104,10 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
         settings: <ScatterPlotSettings />,
+      },
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
       },
     ],
     [ROUTES.UMAP]: [
@@ -104,6 +127,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
         settings: <ScatterPlotSettings />,
       },
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
+      },
     ],
     [ROUTES.TSNE]: [
       {
@@ -117,6 +144,20 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.CLUSTERING_SETTINGS,
         settings: <ClusteringSettings />,
+      },
+      {
+        settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
+        settings: <ScatterPlotSettings />,
+      },
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
+      },
+    ],
+    "/precomputed": [
+      {
+        settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
+        settings: <PrecomputedDrSettings />,
       },
       {
         settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
@@ -240,24 +281,43 @@ const SettingsSelector = ({ pathname }) => {
     ],
   };
 
+  // Debug: log pathname to help troubleshoot
+  if (process.env.NODE_ENV !== "production") {
+    console.log("SettingsSelector pathname:", pathname, "Available routes:", Object.keys(settingsMap));
+    console.log("Settings for pathname:", settingsMap?.[pathname]);
+  }
+
+  const settingsForPath = settingsMap?.[pathname] || [];
+  
+  // Additional debug for precomputed route
+  if (process.env.NODE_ENV !== "production" && pathname === "/precomputed") {
+    console.log("Precomputed route detected, settings count:", settingsForPath.length);
+  }
+  
   return (
     <div>
-      {settingsMap?.[pathname]?.map(
-        (
-          { settingsName, settings, hidden = false, isAccordion = true },
-          key
-        ) => (
-          <div style={{ display: hidden === false ? "block" : "none" }}>
-            <Settings
-              key={key}
-              expended
-              settingsName={settingsName}
-              settings={settings}
-              isAccordion={isAccordion}
-            />
-          </div>
-        )
+      {settingsForPath.length === 0 && process.env.NODE_ENV !== "production" && (
+        <div style={{ padding: "16px", color: "#ff6b6b" }}>
+          No settings found for pathname: {pathname}
+        </div>
       )}
+      {settingsForPath
+        .filter(({ settingsName }) => settingsName) // Filter out empty entries
+        .map(
+          (
+            { settingsName, settings, hidden = false, isAccordion = true },
+            index
+          ) => (
+            <div key={settingsName || `setting-${index}`} style={{ display: hidden === false ? "block" : "none" }}>
+              <Settings
+                expended
+                settingsName={settingsName}
+                settings={settings}
+                isAccordion={isAccordion}
+              />
+            </div>
+          )
+        )}
     </div>
   );
 };

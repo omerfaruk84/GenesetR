@@ -41,10 +41,15 @@ export const fetchGeneInfo = async (geneSymbol) => {
  * @returns {string} - Formatted HTML string for tooltip
  */
 export const formatGeneTooltip = (geneSymbol, geneInfo, additionalInfo = {}) => {
-  const { cluster, clusterProb, geneType, knockdown, neighbourCount } = additionalInfo;
+  const { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine } = additionalInfo;
   
   // Compact tooltip optimized for ECharts container
   let tooltipContent = `<div style="line-height:1.0;font-weight:600;color:#1976d2;font-size:13px;margin:0 0 3px 0;padding:0;">${geneSymbol.split('_')[0]}${geneInfo?.name ? ` (${geneInfo.name})` : ''}</div>`;
+  
+  // Add cell line information if available
+  if (cellLine !== undefined) {
+    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Cell Line:</strong> ${cellLine}</div>`;
+  }
   
   // Add cluster information if available
   if (cluster !== undefined) {
@@ -91,13 +96,13 @@ export const createGeneTooltipFormatter = (options = {}) => {
   const { useCache = true, parseData = (params) => ({ geneSymbol: params.data[3] }) } = options;
   
   return function(params, ticket, callback) {
-    const { geneSymbol, cluster, clusterProb, geneType, knockdown, neighbourCount } = parseData(params);
+    const { geneSymbol, cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine } = parseData(params);
     
     // Check cache first
     if (useCache) {
       const cached = localStorage.getItem(geneSymbol);
       if (cached) {
-        return formatGeneTooltip(geneSymbol, JSON.parse(cached), { cluster, clusterProb, geneType, knockdown, neighbourCount });
+        return formatGeneTooltip(geneSymbol, JSON.parse(cached), { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine });
       }
     }
     
@@ -117,16 +122,16 @@ export const createGeneTooltipFormatter = (options = {}) => {
             localStorage.setItem(geneSymbol, JSON.stringify(parsedContent));
           }
           
-          const formattedContent = formatGeneTooltip(geneSymbol, parsedContent, { cluster, clusterProb, geneType, knockdown, neighbourCount });
+          const formattedContent = formatGeneTooltip(geneSymbol, parsedContent, { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine });
           callback(ticket, formattedContent);
         } else {
-          const fallbackContent = formatGeneTooltip(geneSymbol, null, { cluster, clusterProb, geneType, knockdown, neighbourCount });
+          const fallbackContent = formatGeneTooltip(geneSymbol, null, { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine });
           callback(ticket, fallbackContent);
         }
       })
       .catch(error => {
         console.error('Error fetching gene info:', error);
-        const fallbackContent = formatGeneTooltip(geneSymbol, null, { cluster, clusterProb, geneType, knockdown, neighbourCount });
+        const fallbackContent = formatGeneTooltip(geneSymbol, null, { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine });
         callback(ticket, fallbackContent);
       });
     

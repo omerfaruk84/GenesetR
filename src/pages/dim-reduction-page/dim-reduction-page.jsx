@@ -74,6 +74,7 @@ const DimReductionPage = ({
   umapResults,
   mdeResults,
   pcaResults,
+  precomputedResults,
   coreSettingsChanged,
   coreSettings,
   calcResults,
@@ -97,6 +98,10 @@ const DimReductionPage = ({
     {
       label: "tSNE",
       value: "tsne",
+    },
+    {
+      label: "All Genes (Pre-computed)",
+      value: "precomputed",
     },
   ];
   const [selectedTab, setSelectedTab] = useState(options[0]);
@@ -239,6 +244,7 @@ const DimReductionPage = ({
   else if (selectedTab.value === "umap") graphdata = umapResults;
   else if (selectedTab.value === "pca") graphdata = pcaResults;
   else if (selectedTab.value === "mde") graphdata = mdeResults;
+  else if (selectedTab.value === "precomputed") graphdata = precomputedResults;
 
   if (selectedTab.value === "tsne" && graphdata === null) {
     content = (
@@ -536,6 +542,25 @@ const DimReductionPage = ({
         {content}
         <VideoHelpPage videoFile={helpVideo} />
         </>
+      ) : selectedTab.value === "precomputed" ? (
+        graphdata !== null ? (
+          <ScatterPlot graphData={graphdata} />
+        ) : (
+          <>
+            <div style={{ 
+              padding: '12px', 
+              backgroundColor: '#e3f2fd', 
+              borderLeft: '4px solid #1976d2',
+              borderRadius: '4px',
+              color: '#1565c0',
+              marginBottom: '8px',
+              fontSize: '13px'
+            }}>
+              💡 Select your parameters in the left sidebar and click "Load Pre-computed Data" to view the all-genes DR visualization.
+            </div>
+            <VideoHelpPage videoFile={helpVideo} />
+          </>
+        )
       ) : graphdata !== null ? (
         <ScatterPlot graphData={graphdata} />
       ) : (
@@ -555,6 +580,7 @@ const mapStateToProps = ({ calcResults, settings }) => ({
   mdeResults: calcResults?.["mdeGraph"]?.result ?? null,
   pcaResults: calcResults?.["pcaGraph"]?.result ?? null,
   umapResults: calcResults?.["umapGraph"]?.result ?? null,
+  precomputedResults: calcResults?.["precomputedDrGraph"]?.result ?? null,
 });
 
 const mapDispatchToProps = {

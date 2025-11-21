@@ -9,7 +9,7 @@ import { fetchGeneInfo, cleanGeneSymbol } from "../../utils/geneFunctionUtils";
 
 // ---- Optional libraries (try to load, but keep app running if missing) ----
 let CytoscapeComponent; // react-cytoscapejs
-let SigmaContainer, useLoadGraph, ControlsContainer, ZoomControl, FullScreenControl, useSigma;
+let SigmaContainer, ControlsContainer, ZoomControl, FullScreenControl, useSigma;
 let GraphClass, forceAtlas2; // graphology + FA2
 let circular, randomLayout, grid, radial, noverlap; // graphology-layouts
 
@@ -25,7 +25,6 @@ let drawLabel, drawHover;
 try {
   const s = require("@react-sigma/core");
   SigmaContainer = s.SigmaContainer;
-  useLoadGraph = s.useLoadGraph;
   ControlsContainer = s.ControlsContainer;
   ZoomControl = s.ZoomControl;
   FullScreenControl = s.FullScreenControl;
@@ -66,7 +65,9 @@ try {
 try {
   circular = require("graphology-layout/circular");
   randomLayout = require("graphology-layout/random");
+  // eslint-disable-next-line
   grid = require("graphology-layout/grid");
+  // eslint-disable-next-line
   radial = require("graphology-layout/radial");
   noverlap = require("graphology-layout-noverlap");
 } catch (e) {
@@ -865,7 +866,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
       }
 
     return g;
-  }, [nodes, edges, deg, settings, sigmaLayout, showLabels, nodeSizeMode]);
+  }, [nodes, edges, deg, settings, sigmaLayout, nodeSizeMode]);
 
   // Enhanced tooltip system
   const handleNodeHover = useCallback(async (nodeId) => {
@@ -913,12 +914,13 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
   }, [nodes, deg, geneInfoCache]);
 
   // Search functionality
-  const filteredNodes = useMemo(() => {
-    if (!searchTerm) return nodes;
-    return nodes.filter(n => 
-      n.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [nodes, searchTerm]);
+  // Note: filteredNodes is computed but currently not used in rendering
+  // const filteredNodes = useMemo(() => {
+  //   if (!searchTerm) return nodes;
+  //   return nodes.filter(n => 
+  //     n.id.toLowerCase().includes(searchTerm.toLowerCase())
+  //   );
+  // }, [nodes, searchTerm]);
 
   if (!graph) {
     return <SigmaFallback nodes={nodes} edges={edges} height={height} />;
@@ -1459,7 +1461,8 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
     node.fz = node.z;
   }, []);
 
-  const getNode = (id) => nodes.find((n) => n.id === id);
+  // Note: getNode is defined but not currently used
+  // const getNode = (id) => nodes.find((n) => n.id === id);
 
   // Fetch gene info on first hover
   useEffect(() => {
@@ -1828,7 +1831,7 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
     } catch (err) {
       console.error("DirectSigmaRenderer error:", err);
     }
-  }, [nodes, edges, deg, settings?.sigmaLayout]);
+  }, [nodes, edges, deg, settings]);
 
   return (
     <div style={{ width: "100%", height, position: "relative", background: "#fff", borderRadius: 8, overflow: "hidden" }}>
@@ -1912,58 +1915,60 @@ function SigmaFallback({ nodes, edges, height }) {
   );
 }
 
-function ForceGraph2DFallback({ nodes, edges, height }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height,
-        border: "2px dashed #e2e8f0",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        color: "#6c757d",
-      }}
-    >
-      <div>
-        <h3>ForceGraph2D Not Available</h3>
-        <p>
-          Install: <code>npm i react-force-graph-2d</code>
-        </p>
-        <p>
-          {nodes.length} nodes, {edges.length} edges ready to render
-        </p>
-      </div>
-    </div>
-  );
-}
+// Note: ForceGraph2DFallback is defined but not currently used
+// function ForceGraph2DFallback({ nodes, edges, height }) {
+//   return (
+//     <div
+//       style={{
+//         width: "100%",
+//         height,
+//         border: "2px dashed #e2e8f0",
+//         borderRadius: "8px",
+//         display: "flex",
+//         alignItems: "center",
+//         justifyContent: "center",
+//         textAlign: "center",
+//         color: "#6c757d",
+//       }}
+//     >
+//       <div>
+//         <h3>ForceGraph2D Not Available</h3>
+//         <p>
+//           Install: <code>npm i react-force-graph-2d</code>
+//         </p>
+//         <p>
+//           {nodes.length} nodes, {edges.length} edges ready to render
+//         </p>
+//       </div>
+//     </div>
+//   );
+// }
 
-function ForceGraph3DFallback({ nodes, edges, height }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height,
-        border: "2px dashed #e2e8f0",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        color: "#6c757d",
-      }}
-    >
-      <div>
-        <h3>ForceGraph3D Not Available</h3>
-        <p>
-          Install: <code>npm i react-force-graph-3d</code>
-        </p>
-        <p>
-          {nodes.length} nodes, {edges.length} edges ready to render
-        </p>
-      </div>
-    </div>
-  );
-}
+// Note: ForceGraph3DFallback is defined but not currently used
+// function ForceGraph3DFallback({ nodes, edges, height }) {
+//   return (
+//     <div
+//       style={{
+//         width: "100%",
+//         height,
+//         border: "2px dashed #e2e8f0",
+//         borderRadius: "8px",
+//         display: "flex",
+//         alignItems: "center",
+//         justifyContent: "center",
+//         textAlign: "center",
+//         color: "#6c757d",
+//       }}
+//     >
+//       <div>
+//         <h3>ForceGraph3D Not Available</h3>
+//         <p>
+//           Install: <code>npm i react-force-graph-3d</code>
+//         </p>
+//         <p>
+//           {nodes.length} nodes, {edges.length} edges ready to render
+//         </p>
+//       </div>
+//     </div>
+//   );
+// }

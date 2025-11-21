@@ -41,6 +41,7 @@ const initialState = {
   genesignatureSimilarGraph: { ...resultState },
   geneExpressionGraph: { ...resultState },
   multiDatasetComparison: { ...resultState },
+  precomputedDrGraph: { ...resultState },
 };
 
 export const calculationResults = createSlice({

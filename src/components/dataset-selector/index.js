@@ -47,8 +47,8 @@ const DatasetSelector = forwardRef(
         dataset.geneCount, 
         dataset.isMixscape
       ),
-      active: dataset.active || false
-    }), [updateActivityById]);
+      active: dataset.id === coreSettings.cellLine?.id
+    }), [updateActivityById, coreSettings.cellLine?.id]);
 
     // Load datasets from backend
     useEffect(() => {
@@ -216,6 +216,18 @@ const DatasetSelector = forwardRef(
       //console.log(coreSettings.cellLine
       updateGeneLists(coreSettings.cellLine.id);
     }, [coreSettings.cellLine.id]);
+
+    // Sync active state when coreSettings.cellLine.id changes
+    useEffect(() => {
+      if (coreSettings.cellLine?.id) {
+        setDatasetList(prevList => 
+          prevList.map(item => ({
+            ...item,
+            active: item.id === coreSettings.cellLine.id
+          }))
+        );
+      }
+    }, [coreSettings.cellLine?.id]);
 
     useEffect(() => {
       if (

@@ -19,6 +19,7 @@ import { genesignatureSettingsReducer } from "./gene-signature-settings";
 import { expressionanalyzerSettingsReducer } from "./expression-analyzer-settings";
 import { genelistcompareSettingsReducer } from "./genelist-compare-settings";
 import { multidatasetComparisonSettingsReducer } from "./multidataset-comparison-settings";
+import { precomputedDrSettingsReducer } from "./precomputed-dr-settings";
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -40,6 +41,7 @@ const settingsReducer = combineReducers({
   expressionanalyzer: expressionanalyzerSettingsReducer,
   genelistcompare: genelistcompareSettingsReducer,
   multidatasetComparison: multidatasetComparisonSettingsReducer,
+  precomputedDr: precomputedDrSettingsReducer,
 });
 
 export { settingsReducer };
