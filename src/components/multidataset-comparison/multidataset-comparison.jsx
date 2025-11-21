@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   Spacer,
@@ -14,6 +14,7 @@ import {
 import { MaterialReactTable } from 'material-react-table';
 import { FaSortAmountUpAlt, FaSortAmountDownAlt, FaDownload } from 'react-icons/fa';
 import { fetchGeneInfo, formatGeneTooltip, cleanGeneSymbol } from "../../utils/geneFunctionUtils";
+import { GeneSetEnrichmentTable } from "../enrichment";
 import styles from "./multidataset-comparison.module.scss";
 
 const MultiDatasetComparison = ({ data }) => {
@@ -26,10 +27,33 @@ const MultiDatasetComparison = ({ data }) => {
   const [selectedDatasets, setSelectedDatasets] = useState(new Set()); // Selected datasets for filtering
   const [isDatasetDropdownOpen, setIsDatasetDropdownOpen] = useState(false); // Dropdown state
   
+  // Enrichment tab state
+  const [enrichmentTab, setEnrichmentTab] = useState({
+    label: "Geneset Enrichment",
+    value: "gsea",
+  });
+  
+  // State for gene lists based on sorted table data
+  const [currentGeneLists, setCurrentGeneLists] = useState({});
+  
+  // State for table sorting and filtering
+  const [sorting, setSorting] = useState(showRanks ? [{ id: 'average_rank', desc: false }] : [{ id: 'average', desc: true }]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const debounceTimerRef = useRef(null);
+  
   // Use refs instead of state to avoid re-renders
   const currentTooltipRef = React.useRef(null);
   const tooltipTimeoutRef = React.useRef(null);
   const dropdownRef = React.useRef(null);
+  
+  // Tab options for enrichment
+  const tabOptions = [
+    {
+      label: "Geneset Enrichment",
+      value: "gsea",
+    },
+  ];
 
   // Function to cleanup any existing tooltip
   const cleanupTooltip = () => {
@@ -652,12 +676,133 @@ const MultiDatasetComparison = ({ data }) => {
     1,
     datasetsWithData.size || parsedData?.datasets?.length || 0
   );
+  
+  // Callback to handle sorted/filtered data changes from table
+  const handleTableDataChange = useCallback((sortedData) => {
+    if (!sortedData || sortedData.length === 0) {
+      setCurrentGeneLists({});
+      return;
+    }
+    
+    const lists = {};
+    const positiveGenes = sortedData.filter(g => (g.average || 0) > 0).map(g => g.gene);
+    const negativeGenes = sortedData.filter(g => (g.average || 0) < 0).map(g => g.gene);
+    
+    lists["All Positive"] = positiveGenes.join();
+    lists["All Negative"] = negativeGenes.join();
+    lists["Top 10 Positive"] = positiveGenes.slice(0, 10).join();
+    lists["Top 20 Positive"] = positiveGenes.slice(0, 20).join();
+    lists["Top 50 Positive"] = positiveGenes.slice(0, 50).join();
+    lists["Top 100 Positive"] = positiveGenes.slice(0, 100).join();
+    lists["Bottom 10 Negative"] = negativeGenes.slice(0, 10).join();
+    lists["Bottom 20 Negative"] = negativeGenes.slice(0, 20).join();
+    lists["Bottom 50 Negative"] = negativeGenes.slice(0, 50).join();
+    lists["Bottom 100 Negative"] = negativeGenes.slice(0, 100).join();
+    
+    setCurrentGeneLists(lists);
+  }, []);
+  
+  // Generate initial gene lists for enrichment
+  const geneLists = useMemo(() => {
+    if (!tableData.data || tableData.data.length === 0) return {};
+    
+    const lists = {};
+    const sortedByAverage = [...tableData.data].sort((a, b) => {
+      const aVal = a.average || 0;
+      const bVal = b.average || 0;
+      return bVal - aVal; // Sort descending by average
+    });
+    
+    const positiveGenes = sortedByAverage.filter(g => (g.average || 0) > 0).map(g => g.gene);
+    const negativeGenes = sortedByAverage.filter(g => (g.average || 0) < 0).map(g => g.gene).reverse();
+    
+    lists["All Positive"] = positiveGenes.join();
+    lists["All Negative"] = negativeGenes.join();
+    lists["Top 10 Positive"] = positiveGenes.slice(0, 10).join();
+    lists["Top 20 Positive"] = positiveGenes.slice(0, 20).join();
+    lists["Top 50 Positive"] = positiveGenes.slice(0, 50).join();
+    lists["Top 100 Positive"] = positiveGenes.slice(0, 100).join();
+    lists["Bottom 10 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 10, 0)).join();
+    lists["Bottom 20 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 20, 0)).join();
+    lists["Bottom 50 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 50, 0)).join();
+    lists["Bottom 100 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 100, 0)).join();
+    
+    return lists;
+  }, [tableData.data]);
+  
+  // Use current gene lists if available (from sorted table), otherwise use initial
+  const activeGeneLists = Object.keys(currentGeneLists).length > 0 ? currentGeneLists : geneLists;
 
   React.useEffect(() => {
     if (minDatasets > datasetFilterMax) {
       setMinDatasets(datasetFilterMax);
     }
   }, [datasetFilterMax, minDatasets]);
+  
+  // Debounced effect to update gene lists when table sorting/filtering changes
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      if (!tableData.data || tableData.data.length === 0) {
+        setCurrentGeneLists({});
+        return;
+      }
+      
+      // Apply filtering
+      let filteredData = [...tableData.data];
+      
+      // Apply global filter
+      if (globalFilter) {
+        const lowerFilter = globalFilter.toLowerCase();
+        filteredData = filteredData.filter(row => 
+          Object.values(row).some(val => 
+            String(val).toLowerCase().includes(lowerFilter)
+          )
+        );
+      }
+      
+      // Apply column filters
+      columnFilters.forEach(filter => {
+        filteredData = filteredData.filter(row => {
+          const cellValue = String(row[filter.id] || '').toLowerCase();
+          const filterValue = String(filter.value || '').toLowerCase();
+          return cellValue.includes(filterValue);
+        });
+      });
+      
+      // Apply sorting
+      if (sorting && sorting.length > 0) {
+        const sortConfig = sorting[0];
+        filteredData.sort((a, b) => {
+          let aVal = a[sortConfig.id];
+          let bVal = b[sortConfig.id];
+          
+          // Handle numeric values
+          if (typeof aVal === 'number' && typeof bVal === 'number') {
+            return sortConfig.desc ? bVal - aVal : aVal - bVal;
+          }
+          
+          // Handle string values
+          const aStr = String(aVal || '');
+          const bStr = String(bVal || '');
+          const comparison = aStr.localeCompare(bStr);
+          return sortConfig.desc ? -comparison : comparison;
+        });
+      }
+      
+      // Generate gene lists from filtered and sorted data
+      handleTableDataChange(filteredData);
+    }, 1000);
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [sorting, columnFilters, globalFilter, tableData.data, handleTableDataChange]);
 
   const minDatasetOptions = useMemo(
     () => Array.from({ length: datasetFilterMax }, (_, idx) => idx + 1),
@@ -911,31 +1056,63 @@ const MultiDatasetComparison = ({ data }) => {
         </Flex>
 
         {tableData.data.length > 0 ? (
-          <MaterialReactTable
-            columns={tableData.columns}
-            data={tableData.data}
-            enableSorting
-            enableFilters
-            enablePagination={false}  // Disable pagination in favor of virtualization
-            enableRowVirtualization={true}  // Enable row virtualization
-            enableColumnOrdering={false}  // Disable column reordering to maintain our order
-            enableColumnDragging={false}  // Disable column dragging
-            enableColumnActions={false}  // Hide column actions
-            muiTableContainerProps={{
-              sx: { maxHeight: '600px' }  // Set fixed height for virtualization
-            }}
-            initialState={{
-              showGlobalFilter: true,
-              sorting: showRanks ? [{ id: 'average_rank', desc: false }] : [{ id: 'average', desc: true }],
-            }}
-            muiTableProps={{
-              sx: {
-                '& .MuiTableCell-root': {
-                  fontSize: '0.875rem',
-                },
-              },
-            }}
-          />
+          <>
+            <div style={{ maxHeight: '50vh', overflow: 'auto' }}>
+              <MaterialReactTable
+                columns={tableData.columns}
+                data={tableData.data}
+                enableSorting
+                enableFilters
+                enablePagination={false}  // Disable pagination in favor of virtualization
+                enableRowVirtualization={true}  // Enable row virtualization
+                enableColumnOrdering={false}  // Disable column reordering to maintain our order
+                enableColumnDragging={false}  // Disable column dragging
+                enableColumnActions={false}  // Hide column actions
+                state={{
+                  sorting,
+                  columnFilters,
+                  globalFilter,
+                }}
+                onSortingChange={setSorting}
+                onColumnFiltersChange={setColumnFilters}
+                onGlobalFilterChange={setGlobalFilter}
+                muiTableContainerProps={{
+                  sx: { maxHeight: '50vh' }  // Set fixed height for virtualization
+                }}
+                initialState={{
+                  showGlobalFilter: true,
+                  sorting: showRanks ? [{ id: 'average_rank', desc: false }] : [{ id: 'average', desc: true }],
+                }}
+                muiTableProps={{
+                  sx: {
+                    '& .MuiTableCell-root': {
+                      fontSize: '0.875rem',
+                    },
+                  },
+                }}
+              />
+            </div>
+            <Spacer height={10} />
+            {activeGeneLists && Object.keys(activeGeneLists).length > 0 && (
+              <>
+                <Tabs
+                  name="tabs-multidataset"
+                  value={enrichmentTab}
+                  options={tabOptions}
+                  onChange={(evt) => {
+                    const { value, label } = evt.target;
+                    setEnrichmentTab({ value, label });
+                  }}
+                />
+
+                {enrichmentTab.value === "gsea" ? (
+                  <GeneSetEnrichmentTable genesets={activeGeneLists} />
+                ) : (
+                  <span> Will be available soon! </span>
+                )}
+              </>
+            )}
+          </>
         ) : (
           <div className={styles.noData}>
             <Text muted>No data available for this combination</Text>

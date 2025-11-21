@@ -185,7 +185,12 @@ const GeneSetEnrichmentTable = ({
           }
         }
 
-        temp.sort((a, b) => b["Combined score"] - a["Combined score"]);
+        // Sort by adjusted p-value (low to high) as default
+        temp.sort((a, b) => {
+          const aVal = typeof a["Adjusted p-value"] === 'string' ? parseFloat(a["Adjusted p-value"]) : a["Adjusted p-value"];
+          const bVal = typeof b["Adjusted p-value"] === 'string' ? parseFloat(b["Adjusted p-value"]) : b["Adjusted p-value"];
+          return aVal - bVal;
+        });
 
         setkeyedData(temp);
       })
@@ -429,7 +434,7 @@ const GeneSetEnrichmentTable = ({
       }),
   ];
   const table = {
-    fixedWidth: "850px",
+    fixedWidth: "100%",
     headers: [
       {
         cells: dataSortCells,
@@ -877,9 +882,11 @@ const GeneSetEnrichmentTable = ({
     if (Object.keys(genesets).length > 0) {
       let tempx = [];
       Object.keys(genesets).forEach((gl) => {
-        if (genesets[gl].trim(",").split(",").length > 2) {
+        const geneCount = genesets[gl].trim(",").split(",").length;
+        // Filter: Only include gene lists with more than 2 genes and less than or equal to 400 genes
+        if (geneCount > 2 && geneCount <= 400) {
           tempx.push({
-            label: `${gl} (${genesets[gl].trim(",").split(",").length} genes)`,
+            label: `${gl} (${geneCount} genes)`,
             value: gl,
             genes: genesets[gl],
           });

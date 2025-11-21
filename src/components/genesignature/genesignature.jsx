@@ -103,6 +103,114 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
   });
   const [genelists, setGeneLists] = useState([]);
   
+  // Enrichment tabs for table views
+  const [enrichmentTabTable, setEnrichmentTabTable] = useState({
+    label: "Geneset Enrichment",
+    value: "gsea",
+  });
+  const [enrichmentTabSimilar, setEnrichmentTabSimilar] = useState({
+    label: "Geneset Enrichment",
+    value: "gsea",
+  });
+  const [enrichmentTabMulti, setEnrichmentTabMulti] = useState({
+    label: "Geneset Enrichment",
+    value: "gsea",
+  });
+  const [enrichmentTabMultiSimilar, setEnrichmentTabMultiSimilar] = useState({
+    label: "Geneset Enrichment",
+    value: "gsea",
+  });
+  
+  // Gene lists for enrichment in table views
+  const [genelistsTable, setGeneListsTable] = useState([]);
+  const [genelistsSimilar, setGeneListsSimilar] = useState([]);
+  const [genelistsMulti, setGeneListsMulti] = useState([]);
+  const [genelistsMultiSimilar, setGeneListsMultiSimilar] = useState([]);
+  
+  // Callback functions to update gene lists when table data changes (sorted/filtered)
+  const handleTableDataChange = useCallback((sortedData) => {
+    if (!sortedData || sortedData.length === 0) return;
+    
+    const tableGeneLists = {};
+    const sortedByZScore = [...sortedData]; // Already sorted by table
+    const upreg = sortedByZScore.filter(g => g.Effect === "UP").map(g => g.Gene);
+    const dowreg = sortedByZScore.filter(g => g.Effect === "DOWN").map(g => g.Gene);
+    const topGenes = sortedByZScore.map(g => g.Gene);
+    const bottomGenes = [...topGenes].reverse();
+    
+    tableGeneLists["All UP"] = upreg.join();
+    tableGeneLists["All DOWN"] = dowreg.join();
+    tableGeneLists["Top 10 Increasing"] = topGenes.slice(0, 10).join();
+    tableGeneLists["Top 20 Increasing"] = topGenes.slice(0, 20).join();
+    tableGeneLists["Top 50 Increasing"] = topGenes.slice(0, 50).join();
+    tableGeneLists["Top 100 Increasing"] = topGenes.slice(0, 100).join();
+    tableGeneLists["Bottom 10 Decreasing"] = bottomGenes.slice(0, 10).join();
+    tableGeneLists["Bottom 20 Decreasing"] = bottomGenes.slice(0, 20).join();
+    tableGeneLists["Bottom 50 Decreasing"] = bottomGenes.slice(0, 50).join();
+    tableGeneLists["Bottom 100 Decreasing"] = bottomGenes.slice(0, 100).join();
+    setGeneListsTable(tableGeneLists);
+  }, []);
+  
+  const handleSimilarDataChange = useCallback((sortedData) => {
+    if (!sortedData || sortedData.length === 0) return;
+    
+    const similarGeneLists = {};
+    const topSimilar = sortedData.filter(g => (g.Similarity || 0) > 0).map(g => g.Gene);
+    const bottomSimilar = sortedData.filter(g => (g.Similarity || 0) < 0).map(g => g.Gene);
+    
+    similarGeneLists["All Positively Correlated"] = topSimilar.join();
+    similarGeneLists["All Negatively Correlated"] = bottomSimilar.join();
+    similarGeneLists["Top 10 Similar"] = topSimilar.slice(0, 10).join();
+    similarGeneLists["Top 20 Similar"] = topSimilar.slice(0, 20).join();
+    similarGeneLists["Top 50 Similar"] = topSimilar.slice(0, 50).join();
+    similarGeneLists["Top 100 Similar"] = topSimilar.slice(0, 100).join();
+    similarGeneLists["Bottom 10 Anti-correlated"] = bottomSimilar.slice(0, 10).join();
+    similarGeneLists["Bottom 20 Anti-correlated"] = bottomSimilar.slice(0, 20).join();
+    similarGeneLists["Bottom 50 Anti-correlated"] = bottomSimilar.slice(0, 50).join();
+    similarGeneLists["Bottom 100 Anti-correlated"] = bottomSimilar.slice(0, 100).join();
+    setGeneListsSimilar(similarGeneLists);
+  }, []);
+  
+  const handleMultiDataChange = useCallback((sortedData) => {
+    if (!sortedData || sortedData.length === 0) return;
+    
+    const multiGeneLists = {};
+    const topMulti = sortedData.filter(g => (g.average || 0) > 0).map(g => g.gene);
+    const bottomMulti = sortedData.filter(g => (g.average || 0) < 0).map(g => g.gene);
+    
+    multiGeneLists["All Increasing"] = topMulti.join();
+    multiGeneLists["All Decreasing"] = bottomMulti.join();
+    multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
+    multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
+    multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
+    multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
+    multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(0, 10).join();
+    multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(0, 20).join();
+    multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(0, 50).join();
+    multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(0, 100).join();
+    setGeneListsMulti(multiGeneLists);
+  }, []);
+  
+  const handleMultiSimilarDataChange = useCallback((sortedData) => {
+    if (!sortedData || sortedData.length === 0) return;
+    
+    const multiSimilarGeneLists = {};
+    const topMultiSimilar = sortedData.filter(g => (g.average || 0) > 0).map(g => g.Gene);
+    const bottomMultiSimilar = sortedData.filter(g => (g.average || 0) < 0).map(g => g.Gene);
+    
+    multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
+    multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
+    multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
+    multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
+    multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
+    multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
+    multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(0, 10).join();
+    multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(0, 20).join();
+    multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(0, 50).join();
+    multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(0, 100).join();
+    setGeneListsMultiSimilar(multiSimilarGeneLists);
+  }, []);
+  
   // Multi-dataset local settings
   const [showRanks, setShowRanks] = useState(false);
   const [rankOrder, setRankOrder] = useState('desc');
@@ -982,10 +1090,45 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       
       setkeyedDataMulti(multiTableInfo);
       
+      // Create gene lists for Multi-Dataset tab enrichment
+      const multiGeneLists = {};
+      const sortedMultiByAvg = [...multiTableInfo].sort((a, b) => (b.average || 0) - (a.average || 0));
+      const topMulti = sortedMultiByAvg.filter(g => (g.average || 0) > 0).map(g => g.gene);
+      const bottomMulti = sortedMultiByAvg.filter(g => (g.average || 0) < 0).map(g => g.gene);
+      
+      multiGeneLists["All Increasing"] = topMulti.join();
+      multiGeneLists["All Decreasing"] = bottomMulti.join();
+      multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
+      multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
+      multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
+      multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
+      multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 10, 0)).join();
+      multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 20, 0)).join();
+      multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 50, 0)).join();
+      multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 100, 0)).join();
+      setGeneListsMulti(multiGeneLists);
+      
       // Also process multi-dataset similar genes from backend correlations
       // Note: similar genes from multi-dataset might come in multiDatasetData too
       const multiSimilarInfo = processMultiDatasetSimilarGenes(multiDatasetData, blacklistData, genesignatureSettings);
       setkeyedDataMultiSimilar(multiSimilarInfo);
+      
+      // Create gene lists for Multi-Dataset Similar Genes tab enrichment
+      const multiSimilarGeneLists = {};
+      const topMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) > 0).map(g => g.Gene);
+      const bottomMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) < 0).map(g => g.Gene);
+      
+      multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
+      multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
+      multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
+      multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
+      multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
+      multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
+      multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 10, 0)).join();
+      multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 20, 0)).join();
+      multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
+      multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
+      setGeneListsMultiSimilar(multiSimilarGeneLists);
     } else if ((selectedView === 3 || selectedView === 4) && 
                coreSettings.targetGeneList && 
                coreSettings.targetGeneList.trim().length > 0 && 
@@ -999,6 +1142,23 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     if (similarData && similarData.correlations && Object.keys(similarData.correlations).length > 0) {
       const multiSimilarInfo = processMultiDatasetSimilarGenes(similarData, blacklistData, genesignatureSettings);
       setkeyedDataMultiSimilar(multiSimilarInfo);
+      
+      // Create gene lists for Multi-Dataset Similar Genes tab enrichment
+      const multiSimilarGeneLists = {};
+      const topMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) > 0).map(g => g.Gene);
+      const bottomMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) < 0).map(g => g.Gene);
+      
+      multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
+      multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
+      multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
+      multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
+      multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
+      multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
+      multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 10, 0)).join();
+      multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 20, 0)).join();
+      multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
+      multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
+      setGeneListsMultiSimilar(multiSimilarGeneLists);
     }
     
     // Process chart data if we have results (from main data prop)
@@ -1031,11 +1191,27 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
           Included: signatureGenesSet.has(gene.split("_")[0]) ? "YES" : "",
         })
       );
-      setkeyedData2(
-        similarGenesTableInfo.sort(
-          (geneA, geneB) => geneB["Similarity"] - geneA["Similarity"]
-        )
+      const sortedSimilarGenes = similarGenesTableInfo.sort(
+        (geneA, geneB) => geneB["Similarity"] - geneA["Similarity"]
       );
+      setkeyedData2(sortedSimilarGenes);
+      
+      // Create gene lists for Similar Genes tab enrichment
+      const similarGeneLists = {};
+      const topSimilar = sortedSimilarGenes.filter(g => g.Similarity > 0).map(g => g.Gene);
+      const bottomSimilar = sortedSimilarGenes.filter(g => g.Similarity < 0).map(g => g.Gene);
+      
+      similarGeneLists["All Positively Correlated"] = topSimilar.join();
+      similarGeneLists["All Negatively Correlated"] = bottomSimilar.join();
+      similarGeneLists["Top 10 Similar"] = topSimilar.slice(0, 10).join();
+      similarGeneLists["Top 20 Similar"] = topSimilar.slice(0, 20).join();
+      similarGeneLists["Top 50 Similar"] = topSimilar.slice(0, 50).join();
+      similarGeneLists["Top 100 Similar"] = topSimilar.slice(0, 100).join();
+      similarGeneLists["Bottom 10 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 10, 0)).join();
+      similarGeneLists["Bottom 20 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 20, 0)).join();
+      similarGeneLists["Bottom 50 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 50, 0)).join();
+      similarGeneLists["Bottom 100 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 100, 0)).join();
+      setGeneListsSimilar(similarGeneLists);
 
       const pointData = [];
 
@@ -1187,6 +1363,20 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       setGeneLists(temp);
       setkeyedData(tableInfo);
       
+      // Create gene lists for Table tab enrichment
+      const tableGeneLists = {};
+      tableGeneLists["All UP"] = upreg.join();
+      tableGeneLists["All DOWN"] = dowreg.join();
+      tableGeneLists["Top 10 Increasing"] = topGenes.slice(0, 10).join();
+      tableGeneLists["Top 20 Increasing"] = topGenes.slice(0, 20).join();
+      tableGeneLists["Top 50 Increasing"] = topGenes.slice(0, 50).join();
+      tableGeneLists["Top 100 Increasing"] = topGenes.slice(0, 100).join();
+      tableGeneLists["Bottom 10 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 10, 0)).join();
+      tableGeneLists["Bottom 20 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 20, 0)).join();
+      tableGeneLists["Bottom 50 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 50, 0)).join();
+      tableGeneLists["Bottom 100 Decreasing"] = bottomGenes.join();
+      setGeneListsTable(tableGeneLists);
+      
       pointData.sort((a, b) => b[0] - a[0]);
       console.log("GeneSignature - Final pointData:", pointData.slice(0, 5));
       setPointData(pointData);
@@ -1201,11 +1391,46 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       if (selectedView === 3) {
         const multiTableInfo = processMultiDatasetData(multiDatasetData, 1, blacklistData, genesignatureSettings);
         setkeyedDataMulti(multiTableInfo);
+        
+        // Update gene lists for Multi-Dataset tab
+        const multiGeneLists = {};
+        const sortedMultiByAvg = [...multiTableInfo].sort((a, b) => (b.average || 0) - (a.average || 0));
+        const topMulti = sortedMultiByAvg.filter(g => (g.average || 0) > 0).map(g => g.gene);
+        const bottomMulti = sortedMultiByAvg.filter(g => (g.average || 0) < 0).map(g => g.gene);
+        
+        multiGeneLists["All Increasing"] = topMulti.join();
+        multiGeneLists["All Decreasing"] = bottomMulti.join();
+        multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
+        multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
+        multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
+        multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
+        multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 10, 0)).join();
+        multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 20, 0)).join();
+        multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 50, 0)).join();
+        multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 100, 0)).join();
+        setGeneListsMulti(multiGeneLists);
       }
       if (selectedView === 4) {
         const source = (similarData && similarData.correlations) ? similarData : multiDatasetData;
         const multiSimilarInfo = processMultiDatasetSimilarGenes(source, blacklistData, genesignatureSettings);
         setkeyedDataMultiSimilar(multiSimilarInfo);
+        
+        // Update gene lists for Multi-Dataset Similar Genes tab
+        const multiSimilarGeneLists = {};
+        const topMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) > 0).map(g => g.Gene);
+        const bottomMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) < 0).map(g => g.Gene);
+        
+        multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
+        multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
+        multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
+        multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
+        multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
+        multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
+        multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 10, 0)).join();
+        multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 20, 0)).join();
+        multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
+        multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
+        setGeneListsMultiSimilar(multiSimilarGeneLists);
       }
     }
   }, [showRanks, rankOrder, multiDatasetData, similarData, selectedView,
@@ -1584,13 +1809,57 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       <Spacer height={5} />
       {keyedData && selectedView === 1 && (
         <>
-          <EnrichmentTable data={keyedData} columns={columns} />
+          <div style={{ height: "60vh", overflow: "auto" }}>
+            <EnrichmentTable data={keyedData} columns={columns} onSortedDataChange={handleTableDataChange} />
+          </div>
+          <Spacer height={10} />
+          {genelistsTable && Object.keys(genelistsTable).length > 0 && (
+            <>
+              <Tabs
+                name="tabs-table"
+                value={enrichmentTabTable}
+                options={tabOptions}
+                onChange={(evt) => {
+                  const { value, label } = evt.target;
+                  setEnrichmentTabTable({ value, label });
+                }}
+              />
+
+              {enrichmentTabTable.value === "gsea" ? (
+                <GeneSetEnrichmentTable genesets={genelistsTable} />
+              ) : (
+                <span> Will be available soon! </span>
+              )}
+            </>
+          )}
         </>
       )}
 
       {keyedData2 && selectedView === 2 && (
         <>
-          <EnrichmentTable data={keyedData2} columns={columns2} />
+          <div style={{ height: "60vh", overflow: "auto" }}>
+            <EnrichmentTable data={keyedData2} columns={columns2} onSortedDataChange={handleSimilarDataChange} />
+          </div>
+          <Spacer height={10} />
+          {genelistsSimilar && Object.keys(genelistsSimilar).length > 0 && (
+            <>
+              <Tabs
+                name="tabs-similar"
+                value={enrichmentTabSimilar}
+                options={tabOptions}
+                onChange={(evt) => {
+                  const { value, label } = evt.target;
+                  setEnrichmentTabSimilar({ value, label });
+                }}
+              />
+
+              {enrichmentTabSimilar.value === "gsea" ? (
+                <GeneSetEnrichmentTable genesets={genelistsSimilar} />
+              ) : (
+                <span> Will be available soon! </span>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -1675,11 +1944,36 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
          
           
           {keyedDataMulti && keyedDataMulti.length > 0 && (
-            <EnrichmentTable 
-              data={keyedDataMulti} 
-              columns={columnsMulti} 
-              key={`multi-table-${showRanks}-${rankOrder}`} // Force re-render when settings change
-            />
+            <>
+              <div style={{ height: "60vh", overflow: "auto" }}>
+                <EnrichmentTable 
+                  data={keyedDataMulti} 
+                  columns={columnsMulti} 
+                  onSortedDataChange={handleMultiDataChange}
+                  key={`multi-table-${showRanks}-${rankOrder}`} // Force re-render when settings change
+                />
+              </div>
+              <Spacer height={10} />
+              {genelistsMulti && Object.keys(genelistsMulti).length > 0 && (
+                <>
+                  <Tabs
+                    name="tabs-multi"
+                    value={enrichmentTabMulti}
+                    options={tabOptions}
+                    onChange={(evt) => {
+                      const { value, label } = evt.target;
+                      setEnrichmentTabMulti({ value, label });
+                    }}
+                  />
+
+                  {enrichmentTabMulti.value === "gsea" ? (
+                    <GeneSetEnrichmentTable genesets={genelistsMulti} />
+                  ) : (
+                    <span> Will be available soon! </span>
+                  )}
+                </>
+              )}
+            </>
           )}
         </>
       )}
@@ -1762,11 +2056,36 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
           )}
 
           {keyedDataMultiSimilar && keyedDataMultiSimilar.length > 0 && (
-            <EnrichmentTable 
-              data={keyedDataMultiSimilar} 
-              columns={columnsMultiSimilar} 
-              key={`multi-similar-${showRanks}-${rankOrder}-${(similarData?.datasets || data?.datasets || []).length}`} 
-            />
+            <>
+              <div style={{ height: "60vh", overflow: "auto" }}>
+                <EnrichmentTable 
+                  data={keyedDataMultiSimilar} 
+                  columns={columnsMultiSimilar} 
+                  onSortedDataChange={handleMultiSimilarDataChange}
+                  key={`multi-similar-${showRanks}-${rankOrder}-${(similarData?.datasets || data?.datasets || []).length}`} 
+                />
+              </div>
+              <Spacer height={10} />
+              {genelistsMultiSimilar && Object.keys(genelistsMultiSimilar).length > 0 && (
+                <>
+                  <Tabs
+                    name="tabs-multi-similar"
+                    value={enrichmentTabMultiSimilar}
+                    options={tabOptions}
+                    onChange={(evt) => {
+                      const { value, label } = evt.target;
+                      setEnrichmentTabMultiSimilar({ value, label });
+                    }}
+                  />
+
+                  {enrichmentTabMultiSimilar.value === "gsea" ? (
+                    <GeneSetEnrichmentTable genesets={genelistsMultiSimilar} />
+                  ) : (
+                    <span> Will be available soon! </span>
+                  )}
+                </>
+              )}
+            </>
           )}
           
           {(!keyedDataMultiSimilar || keyedDataMultiSimilar.length === 0) && !multiDatasetSimilarLoading && data?.correlations && Object.keys(data.correlations).length > 0 && (
