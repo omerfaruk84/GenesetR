@@ -6,11 +6,24 @@ import { progressUpdateReceived } from "../results";
 let SERVER_ADRESS = "https://genesetr.uio.no/api";
 //const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
 
-if (process.env.NODE_ENV !== "production") {
-  console.log("WORKING IN PRODUCTION MODE");
+const isDevEnv = process.env.NODE_ENV !== "production";
+
+if (isDevEnv) {
   SERVER_ADRESS = "https://b74f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
   SERVER_ADRESS = "http://localhost:8443";
 }
+
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+
+const debugError = (...args) => {
+  if (isDevEnv) {
+    console.error(...args);
+  }
+};
 
 // Mapping from request type to module name
 const requestToModuleMap = {
@@ -90,11 +103,11 @@ const getData = async (body, moduleName = null) => {
         task_result = response2.data?.task_result || response2.data;
       }
       
-      console.log("task_status", status);
+      debugLog("task_status", status);
       //console.log("task_result", task_result);
 
       if (status === "PENDING") {
-        console.log("Still not started");
+        debugLog("Still not started");
       } else if (status === "FAILURE") {
         throw new Error(task_result || "Task failed");
       } else if (status === "PROGRESS") {
@@ -108,7 +121,7 @@ const getData = async (body, moduleName = null) => {
           percentage = Math.round((current / total) * 100);
         }
         
-        console.log("Processing", message);
+        debugLog("Processing", message);
         
         // Dispatch progress update if module name is available
         if (moduleName) {
@@ -132,7 +145,7 @@ const getData = async (body, moduleName = null) => {
       times++;
     } while (times < 30);
   } catch (error) {
-    console.log(error);
+    debugError(error);
   }
 };
 
@@ -258,7 +271,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
 };
 
 const runPathFinderCalc = async (core, pathfinder) => {
-  console.log(core, pathfinder)
+  debugLog(core, pathfinder)
   const body = {
     downgeneList: core.peturbationList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
@@ -336,7 +349,7 @@ const runHeatMap = async (core, heatMap) => {
     write_original: heatMap.write_original,
     request: "heatMap",
   };
-  console.log("Here we  go");
+  debugLog("Here we  go");
   return await getData(body);
 };
 
@@ -423,7 +436,7 @@ const fetchDatasets = async () => {
     });
     return response.data.datasets;
   } catch (error) {
-    console.error("Failed to fetch datasets: ", error);
+    debugError("Failed to fetch datasets: ", error);
     return [];
   }
 };
@@ -437,7 +450,7 @@ const fetchWholeGenomeDatasets = async () => {
     });
     return response.data.datasets;
   } catch (error) {
-    console.error("Failed to fetch whole genome datasets: ", error);
+    debugError("Failed to fetch whole genome datasets: ", error);
     return [];
   }
 };
@@ -501,10 +514,10 @@ const updateGeneLists = async (dataType) => {
         new Set(response.data.result.genes.map((x) => x.split("_")[0].toUpperCase()))
       );
     } else {
-      console.log("Something is wornge cant get genes", response);
+      debugError("Something is wornge cant get genes", response);
     }
   } catch (error) {
-    console.error("Error updating gene lists:", error);
+    debugError("Error updating gene lists:", error);
   }
 };
 
@@ -526,7 +539,7 @@ const fetchHugoGenes = async () => {
         set("allHugoGenes", new Set(response.data.result));
       }
     } catch (error) {
-      console.error("Failed to fetch Hugo genes: ", error);
+      debugError("Failed to fetch Hugo genes: ", error);
     }
   }
 };
@@ -556,7 +569,7 @@ const fetchPrecomputedDR = async (params) => {
 
     return response.data;
   } catch (error) {
-    console.error("Error fetching pre-computed DR:", error);
+    debugError("Error fetching pre-computed DR:", error);
     throw error;
   }
 };
@@ -571,7 +584,7 @@ const listPrecomputedDR = async () => {
 
     return response.data.available_results || [];
   } catch (error) {
-    console.error("Error listing pre-computed DR:", error);
+    debugError("Error listing pre-computed DR:", error);
     return [];
   }
 };

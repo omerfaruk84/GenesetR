@@ -97,7 +97,6 @@ const RenderSuggestion = function (props) {
 };
 
 const GeneSymbolValidatorMessageChild = (props) => {
-  console.log("props in ge", props);
   if (props.isEmpty) {
     return null;
   }

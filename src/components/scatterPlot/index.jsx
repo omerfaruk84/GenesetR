@@ -55,6 +55,8 @@ echarts.use([
 
 registerTransform(transform.clustering);
 
+const isDevEnv = process.env.NODE_ENV !== "production";
+
 const ScatterPlot = ({
   graphData,
   scatterplotSettings,
@@ -117,17 +119,18 @@ const ScatterPlot = ({
 
     let graphdata = graphData;
     
-    // Debug logging
-    console.log('ScatterPlot - Received graphData:', graphdata);
-    console.log('ScatterPlot - Data structure check:', {
-      hasGraphData: !!graphdata,
-      hasPC1: !!graphdata?.["PC1"],
-      hasPC2: !!graphdata?.["PC2"],
-      hasGeneSymbols: !!graphdata?.["GeneSymbols"],
-      pc1Length: graphdata?.["PC1"]?.length,
-      pc2Length: graphdata?.["PC2"]?.length,
-      geneSymbolsLength: graphdata?.["GeneSymbols"]?.length,
-    });
+    if (isDevEnv) {
+      console.log('ScatterPlot - Received graphData:', graphdata);
+      console.log('ScatterPlot - Data structure check:', {
+        hasGraphData: !!graphdata,
+        hasPC1: !!graphdata?.["PC1"],
+        hasPC2: !!graphdata?.["PC2"],
+        hasGeneSymbols: !!graphdata?.["GeneSymbols"],
+        pc1Length: graphdata?.["PC1"]?.length,
+        pc2Length: graphdata?.["PC2"]?.length,
+        geneSymbolsLength: graphdata?.["GeneSymbols"]?.length,
+      });
+    }
     
     if (
       !graphdata ||
@@ -135,7 +138,9 @@ const ScatterPlot = ({
       !graphdata["PC2"] ||
       !graphdata["GeneSymbols"]
     ) {
-      console.log('ScatterPlot - Data validation failed, returning empty data');
+      if (isDevEnv) {
+        console.log('ScatterPlot - Data validation failed, returning empty data');
+      }
       return { data, pieces, clusterData, minandmax, clusters };
     }
 

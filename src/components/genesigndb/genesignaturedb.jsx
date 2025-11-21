@@ -26,6 +26,18 @@ import {
 import _ from "lodash";
 // ... other imports
 
+const isDevEnv = process.env.NODE_ENV !== "production";
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+const debugError = (...args) => {
+  if (isDevEnv) {
+    console.error(...args);
+  }
+};
+
 const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAndCalculate }) => {
   const [isError, setIsError] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
@@ -52,8 +64,8 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
 
   let SERVER_ADRESS = "https://genesetr.uio.no/api";
-  if (process.env.NODE_ENV !== "production") {
-    console.log("WORKING IN DEVELOPMENT MODE");
+  if (isDevEnv) {
+    debugLog("WORKING IN DEVELOPMENT MODE");
     SERVER_ADRESS = "http://localhost:8443";
   }
 
@@ -105,7 +117,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
         throw new Error(`Failed to submit gene signature: ${response.status} ${errorData}`);
       }
     } catch (error) {
-      console.error("Error:", error);
+      debugError("Error:", error);
       setNotification({
         open: true,
         message: `Error submitting gene signature: ${error.message}. Please make sure the backend server is running.`,
@@ -128,7 +140,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   const getGeneSignatures = useCallback(() => {
     function handleResponse(error, data) {
       if (error) {
-        console.error("API call failed:", error);
+        debugError("API call failed:", error);
         setIsError(true);
         setNotification({
           open: true,
@@ -137,7 +149,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
         });
         return;
       }
-      console.log("API call succeeded:", data);
+      debugLog("API call succeeded:", data);
       data != null ? setRowCount(data.length) : setRowCount(0);
       setGeneSignatures(data);
       setIsError(false);
@@ -159,7 +171,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
       const result = await sendGetRequest(url);
       callback(null, result);
     } catch (error) {
-      console.log(error);
+      debugError(error);
       callback(error);
     }
   }, 300);
@@ -179,11 +191,11 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
       }
 
       const json = await response.json();
-      console.log("Success:", json);
+      debugLog("Success:", json);
       return json;
     } catch (error) {
       setIsError(true);
-      console.error("Error:", error);
+      debugError("Error:", error);
       
       // More specific error messages
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
@@ -233,7 +245,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
       
       onClose();
     } catch (error) {
-      console.error("Error increasing popularity:", error);
+      debugError("Error increasing popularity:", error);
       setNotification({
         open: true,
         message: "Error selecting gene signature. Please try again.",

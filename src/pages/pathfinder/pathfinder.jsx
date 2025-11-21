@@ -27,28 +27,9 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
   // Fetch blacklist data if not already loaded
   useEffect(() => {
     if (!blacklistData || Object.keys(blacklistData).length === 0) {
-      console.log('PathFinderPage - Fetching blacklist data...');
       dispatch(fetchBlacklistData());
     }
   }, [blacklistData, dispatch]);
-
-  // Debug: Log blacklist data
-  console.log('PathFinderPage - blacklistData received:', {
-    hasBlacklistData: !!blacklistData,
-    blacklistDataKeys: blacklistData ? Object.keys(blacklistData) : [],
-    blacklistDataStructure: blacklistData ? {
-      blackListDown: blacklistData.blackListDown ? Object.keys(blacklistData.blackListDown).length : 0,
-      blackListUp: blacklistData.blackListUp ? Object.keys(blacklistData.blackListUp).length : 0,
-      blackListExpDown: blacklistData.blackListExpDown ? Object.keys(blacklistData.blackListExpDown).length : 0,
-      blackListExpUp: blacklistData.blackListExpUp ? Object.keys(blacklistData.blackListExpUp).length : 0,
-      blackListPCount: blacklistData.blackListPCount ? Object.keys(blacklistData.blackListPCount).length : 0,
-      blackListECount: blacklistData.blackListECount ? Object.keys(blacklistData.blackListECount).length : 0
-    } : null,
-    sampleBlacklistEntries: blacklistData ? {
-      blackListDown: blacklistData.blackListDown ? Object.entries(blacklistData.blackListDown).slice(0, 3) : [],
-      blackListUp: blacklistData.blackListUp ? Object.entries(blacklistData.blackListUp).slice(0, 3) : []
-    } : null
-  });
 
   // Check if pathfinder calculation is running
   const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;

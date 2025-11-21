@@ -13,7 +13,6 @@ export const genesetEnrichmentSettingsSlice = createSlice({
     genesetEnrichmentSettingsChanged: (state, action) => {
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
-      console.log("genesetEnrichmentSettingsChanged");
     },
   },
 });

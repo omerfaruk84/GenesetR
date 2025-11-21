@@ -20,6 +20,60 @@ import {
 } from "../api";
 import { ModulePathNames } from "./enums";
 
+const sanitizeInvalidJsonNumbers = (input) => {
+  if (typeof input !== "string") {
+    return input;
+  }
+
+  let sanitized = "";
+  let inString = false;
+  let escaping = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+
+    if (!escaping && char === '"') {
+      inString = !inString;
+      sanitized += char;
+      continue;
+    }
+
+    if (char === "\\" && !escaping) {
+      escaping = true;
+      sanitized += char;
+      continue;
+    }
+
+    if (escaping) {
+      escaping = false;
+      sanitized += char;
+      continue;
+    }
+
+    if (!inString) {
+      if (input.startsWith("-Infinity", i)) {
+        sanitized += "null";
+        i += 8;
+        continue;
+      }
+      if (input.startsWith("Infinity", i)) {
+        sanitized += "null";
+        i += 7;
+        continue;
+      }
+      if (input.startsWith("NaN", i)) {
+        sanitized += "null";
+        i += 2;
+        continue;
+      }
+    }
+
+    sanitized += char;
+  }
+
+  return sanitized;
+};
+
 const resultState = {
   result: null,
   running: false,
@@ -55,15 +109,13 @@ export const calculationResults = createSlice({
       //console.log(action);
       const { result, module } = action.payload;
       //console.log(result);
-      
-    
-      
-            // Use the original JSON.parse approach with error handling
+      // Use the original JSON.parse approach with error handling
       let parsedResult;
       
       try {
         if (typeof result === 'string') {
-          parsedResult = JSON.parse(result);
+          const sanitizedResult = sanitizeInvalidJsonNumbers(result);
+          parsedResult = JSON.parse(sanitizedResult);
         } else if (typeof result === 'object' && result !== null) {
           // Deep clone to avoid reference issues
           parsedResult = JSON.parse(JSON.stringify(result));

@@ -46,6 +46,18 @@ echarts.use([
   ToolboxComponent,
 ]);
 
+const isDevEnv = process.env.NODE_ENV !== "production";
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+const debugWarn = (...args) => {
+  if (isDevEnv) {
+    console.warn(...args);
+  }
+};
+
 const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
   //Import json file. Used in {options}.
 
@@ -176,10 +188,10 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
     return content;
   }
 
-  console.log("pathfinderSettings", pathfinderSettings);
+  debugLog("pathfinderSettings", pathfinderSettings);
 
   useEffect(() => {
-    console.log('PathFinder - Main useEffect triggered:', {
+    debugLog('PathFinder - Main useEffect triggered:', {
       hasPathFinderGraph: !!pathFinderGraph,
       nodesCount: pathFinderGraph?.nodes?.length || 0,
       edgesCount: pathFinderGraph?.edges?.length || 0,
@@ -286,24 +298,24 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
               // Check source gene
               if (blacklistData?.blackListDown?.[edge.source] !== undefined &&
                   blacklistData.blackListDown[edge.source] > pathfinderSettings.filterBlackListed) {
-                console.log('PathFinder - Filtered out edge (Filter 1, source down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
+                debugLog('PathFinder - Filtered out edge (Filter 1, source down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
                 continue;
               }
               if (blacklistData?.blackListUp?.[edge.source] !== undefined &&
                   blacklistData.blackListUp[edge.source] > pathfinderSettings.filterBlackListed) {
-                console.log('PathFinder - Filtered out edge (Filter 1, source up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
+                debugLog('PathFinder - Filtered out edge (Filter 1, source up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
                 continue;
               }
               
               // Check target gene
               if (blacklistData?.blackListDown?.[edge.target] !== undefined &&
                   blacklistData.blackListDown[edge.target] > pathfinderSettings.filterBlackListed) {
-                console.log('PathFinder - Filtered out edge (Filter 1, target down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
+                debugLog('PathFinder - Filtered out edge (Filter 1, target down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
                 continue;
               }
               if (blacklistData?.blackListUp?.[edge.target] !== undefined &&
                   blacklistData.blackListUp[edge.target] > pathfinderSettings.filterBlackListed) {
-                console.log('PathFinder - Filtered out edge (Filter 1, target up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
+                debugLog('PathFinder - Filtered out edge (Filter 1, target up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
                 continue;
               }
             }
@@ -364,7 +376,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         
         // Debug: Log first few edges that pass filters
         if (edgesFiltered.length <= 3) {
-          console.log('PathFinder - Edge passed filters:', {
+          debugLog('PathFinder - Edge passed filters:', {
             source: edge.source,
             target: edge.target,
             type: edge.type,
@@ -387,7 +399,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         }
       }
 
-      console.log('PathFinder - Filtering results:', {
+      debugLog('PathFinder - Filtering results:', {
         totalEdges: edges.length,
         edgesAfterFiltering: edgesFiltered.length,
         cutoff: pathfinderSettings.cutoff,
@@ -404,7 +416,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
 
       // Filter nodes based on blacklist data if filters are enabled
       if (pathfinderSettings.filter1Enabled || pathfinderSettings.filter2Enabled || pathfinderSettings.filter3Enabled || pathfinderSettings.filter4Enabled) {
-        console.log('PathFinder - Filtering nodes based on blacklist data');
+        debugLog('PathFinder - Filtering nodes based on blacklist data');
         const originalNodeCount = nodesFiltered.length;
         
         nodesFiltered = nodesFiltered.filter((node) => {
@@ -415,14 +427,14 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             if (blacklistData?.blackListDown?.[nodeId] !== undefined &&
                 blacklistData.blackListDown[nodeId] > pathfinderSettings.filterBlackListed) {
               if (!pathfinderSettings.filter1Directional) {
-                console.log('PathFinder - Filtered out node (down):', nodeId);
+                debugLog('PathFinder - Filtered out node (down):', nodeId);
                 return false;
               }
             }
             if (blacklistData?.blackListUp?.[nodeId] !== undefined &&
                 blacklistData.blackListUp[nodeId] > pathfinderSettings.filterBlackListed) {
               if (!pathfinderSettings.filter1Directional) {
-                console.log('PathFinder - Filtered out node (up):', nodeId);
+                debugLog('PathFinder - Filtered out node (up):', nodeId);
                 return false;
               }
             }
@@ -433,14 +445,14 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             if (blacklistData?.blackListExpDown?.[nodeId] !== undefined &&
                 blacklistData.blackListExpDown[nodeId] > pathfinderSettings.filterBlackListedExp) {
               if (!pathfinderSettings.filter2Directional) {
-                console.log('PathFinder - Filtered out node (exp down):', nodeId);
+                debugLog('PathFinder - Filtered out node (exp down):', nodeId);
                 return false;
               }
             }
             if (blacklistData?.blackListExpUp?.[nodeId] !== undefined &&
                 blacklistData.blackListExpUp[nodeId] > pathfinderSettings.filterBlackListedExp) {
               if (!pathfinderSettings.filter2Directional) {
-                console.log('PathFinder - Filtered out node (exp up):', nodeId);
+                debugLog('PathFinder - Filtered out node (exp up):', nodeId);
                 return false;
               }
             }
@@ -450,7 +462,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           if (pathfinderSettings.filter3Enabled && blacklistData) {
             if (blacklistData?.blackListPCount?.[nodeId] !== undefined &&
                 blacklistData.blackListPCount[nodeId] > pathfinderSettings.filterCount) {
-              console.log('PathFinder - Filtered out node (pcount):', nodeId);
+              debugLog('PathFinder - Filtered out node (pcount):', nodeId);
               return false;
             }
           }
@@ -459,7 +471,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           if (pathfinderSettings.filter4Enabled && blacklistData) {
             if (blacklistData?.blackListECount?.[nodeId] !== undefined &&
                 blacklistData.blackListECount[nodeId] > pathfinderSettings.filterCountExp) {
-              console.log('PathFinder - Filtered out node (ecount):', nodeId);
+              debugLog('PathFinder - Filtered out node (ecount):', nodeId);
               return false;
             }
           }
@@ -467,7 +479,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           return true;
         });
         
-        console.log('PathFinder - Node filtering results:', {
+        debugLog('PathFinder - Node filtering results:', {
           originalNodeCount,
           filteredNodeCount: nodesFiltered.length,
           removedNodeCount: originalNodeCount - nodesFiltered.length
@@ -510,7 +522,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         );
       });
 
-      console.log("maxNodeCount", maxNodeCount);
+      debugLog("maxNodeCount", maxNodeCount);
 
       // Update node counts in nodes array
       nodesFiltered.forEach((node) => {
@@ -550,7 +562,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       // Apply node limit to prevent crashes with large networks
       const MAX_NODES = pathfinderSettings.maxNodes || 1000;
       if (nodesFiltered.length > MAX_NODES) {
-        console.warn(`PathFinder - Network too large (${nodesFiltered.length} nodes). Limiting to top ${MAX_NODES} nodes by neighbour count.`);
+        debugWarn(`PathFinder - Network too large (${nodesFiltered.length} nodes). Limiting to top ${MAX_NODES} nodes by neighbour count.`);
         
         // Sort nodes by neighbour count and take top MAX_NODES
         nodesFiltered.sort((a, b) => b.neighbours - a.neighbours);
@@ -565,7 +577,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         );
       }
 
-      console.log('PathFinder - After filtering:', {
+      debugLog('PathFinder - After filtering:', {
         nodesCount: nodesFiltered.length,
         edgesCount: edgesFiltered.length
       });
@@ -642,7 +654,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
 
       tableInfo.sort((edge1, edge2) => edge2["Total NC"] - edge1["Total NC"]);
 
-      console.log(nodesFinal, edgesFiltered);
+      debugLog(nodesFinal, edgesFiltered);
 
       setOptions({
         tooltip: {
@@ -748,7 +760,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
 
   // Debug logging for settings changes
   useEffect(() => {
-    console.log('PathFinder - Settings changed:', {
+    debugLog('PathFinder - Settings changed:', {
       filter1Enabled: pathfinderSettings.filter1Enabled,
       filter2Enabled: pathfinderSettings.filter2Enabled,
       filter3Enabled: pathfinderSettings.filter3Enabled,
@@ -761,7 +773,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
 
   // Debug logging for blacklist data
   useEffect(() => {
-    console.log('PathFinder - Blacklist data received:', {
+    debugLog('PathFinder - Blacklist data received:', {
       hasBlacklistData: !!blacklistData,
       blacklistDataKeys: blacklistData ? Object.keys(blacklistData) : [],
       blacklistDataStructure: blacklistData ? {

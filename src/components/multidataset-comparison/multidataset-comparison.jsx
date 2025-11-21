@@ -244,10 +244,6 @@ const MultiDatasetComparison = ({ data }) => {
     document.body.removeChild(link);
   };
 
-  if (!parsedData) {
-    return <div>No data available</div>;
-  }
-
   const mainTabOptions = [
     { value: 0, label: "Perturbation Effects (Downstream Effects)" },
     { value: 1, label: "Perturbed By (Upstream Regulators)" },
@@ -651,6 +647,26 @@ const MultiDatasetComparison = ({ data }) => {
 
   const currentData = getCurrentData();
   const tableData = createTableData(currentData);
+  const datasetsWithData = getDatasetsWithData(currentData);
+  const datasetFilterMax = Math.max(
+    1,
+    datasetsWithData.size || parsedData?.datasets?.length || 0
+  );
+
+  React.useEffect(() => {
+    if (minDatasets > datasetFilterMax) {
+      setMinDatasets(datasetFilterMax);
+    }
+  }, [datasetFilterMax, minDatasets]);
+
+  const minDatasetOptions = useMemo(
+    () => Array.from({ length: datasetFilterMax }, (_, idx) => idx + 1),
+    [datasetFilterMax]
+  );
+
+  if (!parsedData) {
+    return <div>No data available</div>;
+  }
 
   // Get description based on current selection
   const getDescription = () => {
@@ -727,9 +743,11 @@ const MultiDatasetComparison = ({ data }) => {
                 fontSize: '14px'
               }}
             >
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
+              {minDatasetOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
             </select> datasets.
           </Flex>
 
@@ -756,7 +774,6 @@ const MultiDatasetComparison = ({ data }) => {
               {isDatasetDropdownOpen && (
                 <div className={styles.datasetDropdownContent}>
                   {parsedData?.datasets?.map(dataset => {
-                    const datasetsWithData = getDatasetsWithData(currentData);
                     const hasData = datasetsWithData.has(dataset);
                     const isSelected = selectedDatasets.has(dataset);
                     const datasetName = dataset === 'K562gwps' ? 'K562' : 
