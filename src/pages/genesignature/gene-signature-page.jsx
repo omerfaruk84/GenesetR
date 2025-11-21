@@ -23,6 +23,7 @@ const moduleDescription = {
 const GeneSignaturePage = ({ 
   geneRegulationResults, 
   genesignatureSimilarResults, 
+  genesignatureMultiDatasetResults,
   genesignatureSimilarLoading, 
   blacklistData, 
   blacklistLoading,
@@ -31,7 +32,7 @@ const GeneSignaturePage = ({
 }) => {
   // Check if any gene signature calculation is running
   const isMainCalculationRunning = calcResults?.[ModulePathNames?.[path]]?.running;
-  const isMultiDatasetRunning = calcResults?.["genesignatureGraph"]?.running;
+  const isMultiDatasetRunning = calcResults?.["genesignatureMultiDataset"]?.running;
   const isMultiDatasetSimilarRunning = calcResults?.["genesignatureSimilarGraph"]?.running;
   const isAnyCalculationRunning = isMainCalculationRunning || isMultiDatasetRunning || isMultiDatasetSimilarRunning;
   
@@ -39,8 +40,8 @@ const GeneSignaturePage = ({
   const getProgressState = () => {
     if (isMultiDatasetRunning) {
       return {
-        message: calcResults["genesignatureGraph"].progressMessage,
-        percentage: calcResults["genesignatureGraph"].progressPercentage,
+        message: calcResults["genesignatureMultiDataset"].progressMessage,
+        percentage: calcResults["genesignatureMultiDataset"].progressPercentage,
       };
     } else if (isMultiDatasetSimilarRunning) {
       return {
@@ -74,6 +75,7 @@ const GeneSignaturePage = ({
           <GeneSignature 
             data={geneRegulationResults} 
             similarData={genesignatureSimilarResults} 
+            multiDatasetData={genesignatureMultiDatasetResults}
             similarLoading={genesignatureSimilarLoading}
             blacklistData={blacklistData} 
             blacklistLoading={blacklistLoading} 
@@ -133,6 +135,7 @@ const GeneSignaturePage = ({
 const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
   genesignatureSimilarResults: calcResults?.genesignatureSimilarGraph?.result ?? null,
+  genesignatureMultiDatasetResults: calcResults?.genesignatureMultiDataset?.result ?? null,
   genesignatureSimilarLoading: calcResults?.genesignatureSimilarGraph?.loading ?? false,
   blacklistData: blacklist?.data,
   blacklistLoading: blacklist?.loading,

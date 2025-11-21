@@ -25,7 +25,7 @@ const requestToModuleMap = {
   "corrCluster": "corrCluster",
   "heatMap": "heatmapGraph",
   "calcGeneSignature": "genesignatureGraph",
-  "calcGeneSignatureMultiDataset": "genesignatureGraph",
+  "calcGeneSignatureMultiDataset": "genesignatureMultiDataset",
   "calcGeneSignatureMultiDatasetSimilar": "genesignatureSimilarGraph",
   "geneExpression": "geneExpressionGraph",
   "multiDatasetComparison": "multiDatasetComparison",

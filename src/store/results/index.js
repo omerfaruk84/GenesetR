@@ -40,6 +40,7 @@ const initialState = {
   heatmapGraph: { ...resultState },
   enrichmentResults: { ...resultState },
   genesignatureGraph: { ...resultState },
+  genesignatureMultiDataset: { ...resultState },
   genesignatureSimilarGraph: { ...resultState },
   geneExpressionGraph: { ...resultState },
   multiDatasetComparison: { ...resultState },
@@ -103,12 +104,21 @@ export const calculationResults = createSlice({
       state[module].progressMessage = message;
       state[module].progressPercentage = percentage;
     },
+    clearResult: (state, action) => {
+      const { module } = action.payload;
+      if (state[module]) {
+        state[module].result = null;
+        state[module].running = false;
+        state[module].progressMessage = null;
+        state[module].progressPercentage = null;
+      }
+    },
   },
 });
 
 const calculationResultsReducer = calculationResults.reducer;
 
-export const { resultReceived, calcRunningChanged, progressUpdateReceived } =
+export const { resultReceived, calcRunningChanged, progressUpdateReceived, clearResult } =
   calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
@@ -217,6 +227,10 @@ const runCalculation = (module) => async (dispatch, getState) => {
         );
       }
       case ROUTES.GENESIGNATURE: {
+        // Clear downstream multi-dataset results when starting a new gene signature calculation
+        dispatch(clearResult({ module: "genesignatureMultiDataset" }));
+        dispatch(clearResult({ module: "genesignatureSimilarGraph" }));
+        
         const result = await runGeneSignature(core);
         return dispatch(
           resultReceived({ result, module: ModulePathNames[module] })
@@ -267,17 +281,17 @@ const runMultiDatasetGeneSignature = (settings) => async (dispatch, getState) =>
   
   try {
     dispatch(
-      calcRunningChanged({ module: "genesignatureGraph", status: true })
+      calcRunningChanged({ module: "genesignatureMultiDataset", status: true })
     );
     
     const result = await runGeneSignatureMultiDataset(core, settings);
     
     return dispatch(
-      resultReceived({ result, module: "genesignatureGraph" })
+      resultReceived({ result, module: "genesignatureMultiDataset" })
     );
   } catch (error) {
     dispatch(
-      calcRunningChanged({ module: "genesignatureGraph", status: false })
+      calcRunningChanged({ module: "genesignatureMultiDataset", status: false })
     );
     
     console.log(error);
