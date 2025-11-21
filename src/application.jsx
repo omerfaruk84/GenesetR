@@ -19,8 +19,8 @@ const Application = () => {
     <div className='application'>
       <MainView />
       <Toaster />
-   </div>
-    
+    </div>
+  
   );
 };
 

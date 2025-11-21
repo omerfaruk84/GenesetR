@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
 import { CorrelationPage } from "../../pages/correlation/correlation-page";
 import { TopBar } from "../top-bar";
@@ -18,15 +18,26 @@ import AboutPage from "../../pages/aboutus/about";
 import { ExpressionAnalyzerPage } from "../../pages/expressionanalyzer/expression-analyzer";
 import { MultiDatasetComparisonPage } from "../../pages/multidataset-comparison/multidataset-comparison-page";
 import { GenelistCompare } from "../genelist-compare";
+
+const SideBarLayout = () => (
+  <div className={styles.contentWrapper}>
+    <Spacer />
+    <div className={styles.flexContainer}>
+      <SideBar />
+      <div className={styles.routeContent}>
+        <Outlet />
+      </div>
+    </div>
+  </div>
+);
+
 const MainView = () => {
   return (
     <Router>
       <div className={styles.mainView}>
         <TopBar />
         <Routes>
-          {/* Home page route without SideBar */}
           <Route
-            exact
             path={ROUTES.HOME}
             element={
               <div className={styles.homeContentWrapper}>
@@ -34,125 +45,57 @@ const MainView = () => {
               </div>
             }
           />
-          <Route exact path={ROUTES.ABOUTUS} element={<AboutPage />} />
-          {/* Other page routes with SideBar */}
-          <Route
-            path="*"
-            element={
-              <div className={styles.contentWrapper}>
-                <Spacer />
-                {/* Flexbox container */}
-                <div className={styles.flexContainer}>
-                  {/* Route Wrapper with flex */}
-                  <SideBar />
-                  <div className={styles.routeContent}>
-                    {/* Scrollable content area */}
-                    <Routes>
-                      <Route
-                        exact
-                        path={ROUTES.DR}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.DR + "/pca"}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.PCA}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.MDE}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.UMAP}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.TSNE}
-                        element={<DimReductionPage />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.CORRELATION}
-                        element={
-                          <CorrelationPage path={ROUTES.CORRELATION} />
-                        }
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.PATHFINDER}
-                        element={<PathFinderPage path={ROUTES.PATHFINDER} />}
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.GENESIGNATURE}
-                        element={
-                          <GeneSignaturePage path={ROUTES.GENESIGNATURE} />
-                        }
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.EXPRESSIONANALYZER}
-                        element={
-                          <ExpressionAnalyzerPage
-                            path={ROUTES.EXPRESSIONANALYZER}
-                          />
-                        }
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.MULTIDATASET_COMPARISON}
-                        element={
-                          <MultiDatasetComparisonPage
-                            path={ROUTES.MULTIDATASET_COMPARISON}
-                          />
-                        }
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.HEATMAP}
-                        element={<HeatMapPage path={ROUTES.HEATMAP} />}
-                      />
-                      {
-                        <Route
-                          exact
-                          path={ROUTES.GENELISTCOMPARE}
-                          element={
-                            <GenelistCompare path={ROUTES.GENELISTCOMPARE} />
-                          }
-                        />
-                      }
-                      <Route
-                        exact
-                        path={ROUTES.GENE_REGULATION}
-                        element={
-                          <GeneRegulationPage path={ROUTES.GENE_REGULATION} />
-                        }
-                      />
-                      <Route
-                        exact
-                        path={ROUTES.GENE_REGULATION_ENHANCED}
-                        element={
-                          <GeneRegulationEnhancedPage path={ROUTES.GENE_REGULATION_ENHANCED} />
-                        }
-                      />
-
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Routes>
-                  </div>
-                  {/* End of routeContent */}
-                </div>
-                {/* End of flexContainer */}
-              </div>
-            }
-          />
+          <Route path={ROUTES.ABOUTUS} element={<AboutPage />} />
+          <Route element={<SideBarLayout />}>
+            <Route path={ROUTES.DR} element={<DimReductionPage />} />
+            <Route
+              path={ROUTES.CORRELATION}
+              element={<CorrelationPage path={ROUTES.CORRELATION} />}
+            />
+            <Route
+              path={ROUTES.PATHFINDER}
+              element={<PathFinderPage path={ROUTES.PATHFINDER} />}
+            />
+            <Route
+              path={ROUTES.GENESIGNATURE}
+              element={<GeneSignaturePage path={ROUTES.GENESIGNATURE} />}
+            />
+            <Route
+              path={ROUTES.EXPRESSIONANALYZER}
+              element={
+                <ExpressionAnalyzerPage path={ROUTES.EXPRESSIONANALYZER} />
+              }
+            />
+            <Route
+              path={ROUTES.MULTIDATASET_COMPARISON}
+              element={
+                <MultiDatasetComparisonPage
+                  path={ROUTES.MULTIDATASET_COMPARISON}
+                />
+              }
+            />
+            <Route
+              path={ROUTES.HEATMAP}
+              element={<HeatMapPage path={ROUTES.HEATMAP} />}
+            />
+            <Route
+              path={ROUTES.GENELISTCOMPARE}
+              element={<GenelistCompare path={ROUTES.GENELISTCOMPARE} />}
+            />
+            <Route
+              path={ROUTES.GENE_REGULATION}
+              element={<GeneRegulationPage path={ROUTES.GENE_REGULATION} />}
+            />
+            <Route
+              path={ROUTES.GENE_REGULATION_ENHANCED}
+              element={
+                <GeneRegulationEnhancedPage
+                  path={ROUTES.GENE_REGULATION_ENHANCED}
+                />
+              }
+            />
+          </Route>
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
     </Router>

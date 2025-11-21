@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { PathFinder } from '../../components/pathfinder';
 import { ModulePathNames } from '../../store/results/enums';
-import { Row, Column} from "@oliasoft-open-source/react-ui-library";
 import styles from './pathfinder-page.module.scss';
 import VideoHelpPage from '../../components/video-help';
-import helpVideo from '../../common/videos/5.webm'
+import helpVideo from '../../common/videos/5.webm';
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';
@@ -128,7 +127,7 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
     color: '#1565c0',
     marginBottom: '8px'
   }}>
-    💡 To start, select a dataset from the left sidebar, then enter your gene list in the perturbations field.
+    Tip: Select a dataset from the left sidebar, then enter your gene list in the perturbations field to begin.
   </div>
        
         <VideoHelpPage videoFile={helpVideo}/>

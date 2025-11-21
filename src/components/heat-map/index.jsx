@@ -531,14 +531,12 @@ const keyedData = useMemo(() => {
   return (
     <>
       {loading && (
-        <LoadingPage 
+        <LoadingPage
           progressMessage={progressMessage}
           progressPercentage={progressPercentage}
         />
       )}
-      {!loading && (
-      <>
-        {showDescription && (
+      {showDescription && (
           <Accordion
             sx={{
               marginBottom: '14px',
@@ -586,12 +584,12 @@ const keyedData = useMemo(() => {
             </AccordionDetails>
           </Accordion>
         )}
-        <div
-          style={{ visibility: loading ? "hidden" : "visible" }}
-          className={styles.mainView}
-          ref={heatmapContainerRef}
-        >
-          <div className={styles.controlBar}>
+      <div
+        style={{ visibility: loading ? "hidden" : "visible" }}
+        className={styles.mainView}
+        ref={heatmapContainerRef}
+      >
+        <div className={styles.controlBar}>
             <ButtonGroup
               items={[
                 {
@@ -711,9 +709,7 @@ const keyedData = useMemo(() => {
               )}
             </div>
           </div>
-        </div>
-      </>
-      )}
+      </div>
     </>
   );
 };

@@ -1,11 +1,10 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Row, Column, Spacer, Heading } from '@oliasoft-open-source/react-ui-library';
 import { GeneSignature } from '../../components/genesignature/genesignature';
 import styles from './gene-signature-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
 import VideoHelpPage from '../../components/video-help';
-import helpVideo from '../../common/videos/6.webm'
+import helpVideo from '../../common/videos/6.webm';
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';

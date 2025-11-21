@@ -1,6 +1,5 @@
 import React from "react";
 import { connect } from "react-redux";
-import { Row, Column } from "@oliasoft-open-source/react-ui-library";
 import { GeneRegulation } from "./generegulation";
 import styles from "./gene-regulation-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
@@ -24,11 +23,13 @@ const moduleDescription = {
 };
 
 const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklistData, blacklistLoading }) => {
-
-  // Check if gene regulation calculation is running
-  const isCalculationRunning = calcResults?.["geneRegulationGraph"]?.running;
-  const progressMessage = calcResults?.["geneRegulationGraph"]?.progressMessage;
-  const progressPercentage = calcResults?.["geneRegulationGraph"]?.progressPercentage;
+  const moduleKey = ModulePathNames?.[path] ?? "geneRegulationGraph";
+  const moduleState = calcResults?.[moduleKey] ?? {};
+  const {
+    running: isCalculationRunning,
+    progressMessage,
+    progressPercentage,
+  } = moduleState;
 
   return (
     <div className={styles.mainView}>

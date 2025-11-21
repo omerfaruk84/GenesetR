@@ -18,6 +18,16 @@ const ROUTES = Object.freeze({
   ABOUTUS: "/about",
 });
 
+const normalizePath = (path) => {
+  if (!path) {
+    return "/";
+  }
+  if (path.length > 1 && path.endsWith("/")) {
+    return path.slice(0, -1);
+  }
+  return path;
+};
+
 /**
  * This function will check the current path (url) and the navigation elements path
  * if they are equal then thats the active tab in the top bar, otherwise will return false
@@ -26,10 +36,17 @@ const ROUTES = Object.freeze({
  * @returns Boolean
  */
 export const isActiveTab = (currentPath, navPath) => {
-  if (currentPath === navPath) {
-    return true;
+  const normalizedCurrent = normalizePath(currentPath);
+  const normalizedNav = normalizePath(navPath);
+
+  if (normalizedNav === ROUTES.HOME) {
+    return normalizedCurrent === ROUTES.HOME;
   }
-  return false;
+
+  return (
+    normalizedCurrent === normalizedNav ||
+    normalizedCurrent.startsWith(`${normalizedNav}/`)
+  );
 };
 
 export { ROUTES };
