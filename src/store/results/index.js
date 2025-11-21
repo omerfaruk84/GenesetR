@@ -23,6 +23,8 @@ import { ModulePathNames } from "./enums";
 const resultState = {
   result: null,
   running: false,
+  progressMessage: null,
+  progressPercentage: null,
 };
 
 const initialState = {
@@ -81,19 +83,32 @@ export const calculationResults = createSlice({
       
       state[module].result = parsedResult;
       state[module].running = false;
+      // Clear progress when calculation completes
+      state[module].progressMessage = null;
+      state[module].progressPercentage = null;
     },
     calcRunningChanged: (state, action) => {
       //console.log(state, action);
       const { module, status } = action.payload;
       //console.log(module, status);
       state[module].running = status;
+      // Clear progress when calculation starts or stops
+      if (!status) {
+        state[module].progressMessage = null;
+        state[module].progressPercentage = null;
+      }
+    },
+    progressUpdateReceived: (state, action) => {
+      const { module, message, percentage } = action.payload;
+      state[module].progressMessage = message;
+      state[module].progressPercentage = percentage;
     },
   },
 });
 
 const calculationResultsReducer = calculationResults.reducer;
 
-export const { resultReceived, calcRunningChanged } =
+export const { resultReceived, calcRunningChanged, progressUpdateReceived } =
   calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {

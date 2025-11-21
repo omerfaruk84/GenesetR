@@ -8,6 +8,7 @@ import VideoHelpPage from '../../components/video-help';
 import helpVideo from '../../common/videos/6.webm'
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { LoadingPage } from '../../components/loading-page';
 
 const moduleDescription = {
   title: "Gene Signature Analysis",
@@ -19,11 +20,56 @@ const moduleDescription = {
   }
 };
 
-const GeneSignaturePage = ({ geneRegulationResults, genesignatureSimilarResults, genesignatureSimilarLoading, blacklistData, blacklistLoading }) => {
+const GeneSignaturePage = ({ 
+  geneRegulationResults, 
+  genesignatureSimilarResults, 
+  genesignatureSimilarLoading, 
+  blacklistData, 
+  blacklistLoading,
+  calcResults,
+  path
+}) => {
+  // Check if any gene signature calculation is running
+  const isMainCalculationRunning = calcResults?.[ModulePathNames?.[path]]?.running;
+  const isMultiDatasetRunning = calcResults?.["genesignatureGraph"]?.running;
+  const isMultiDatasetSimilarRunning = calcResults?.["genesignatureSimilarGraph"]?.running;
+  const isAnyCalculationRunning = isMainCalculationRunning || isMultiDatasetRunning || isMultiDatasetSimilarRunning;
+  
+  // Get progress state from the currently running calculation
+  const getProgressState = () => {
+    if (isMultiDatasetRunning) {
+      return {
+        message: calcResults["genesignatureGraph"].progressMessage,
+        percentage: calcResults["genesignatureGraph"].progressPercentage,
+      };
+    } else if (isMultiDatasetSimilarRunning) {
+      return {
+        message: calcResults["genesignatureSimilarGraph"].progressMessage,
+        percentage: calcResults["genesignatureSimilarGraph"].progressPercentage,
+      };
+    } else if (isMainCalculationRunning) {
+      const moduleName = ModulePathNames?.[path];
+      return {
+        message: calcResults[moduleName]?.progressMessage,
+        percentage: calcResults[moduleName]?.progressPercentage,
+      };
+    }
+    return { message: null, percentage: null };
+  };
+  
+  const progressState = getProgressState();
 
   return (
     
     <div className={styles.mainView}>
+      {isAnyCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressState.message}
+          progressPercentage={progressState.percentage}
+        />
+      )}
+      {!isAnyCalculationRunning && (
+      <>
       {geneRegulationResults ? (      
           <GeneSignature 
             data={geneRegulationResults} 
@@ -76,6 +122,8 @@ const GeneSignaturePage = ({ geneRegulationResults, genesignatureSimilarResults,
             <VideoHelpPage videoFile={helpVideo}/>
             </div>
           )}
+      </>
+      )}
     </div>
   );
 };
@@ -88,6 +136,8 @@ const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
   genesignatureSimilarLoading: calcResults?.genesignatureSimilarGraph?.loading ?? false,
   blacklistData: blacklist?.data,
   blacklistLoading: blacklist?.loading,
+  calcResults,
+  path,
 });
 const mapDispatchToProps = {};
 

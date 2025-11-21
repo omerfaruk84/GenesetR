@@ -1,7 +1,9 @@
 .mainView {
+  position: relative;
   padding: 10px;
   padding-top: 0px;
   width: 100%;
+  min-height: calc(100vh - 60px);
   height: max-content;
 }
 

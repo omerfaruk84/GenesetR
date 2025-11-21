@@ -1,5 +1,7 @@
 import Axios from "axios";
 import { get, set } from "idb-keyval";
+import { store } from "../store";
+import { progressUpdateReceived } from "../results";
 
 let SERVER_ADRESS = "https://genesetr.uio.no/api";
 //const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
@@ -10,8 +12,32 @@ if (process.env.NODE_ENV !== "production") {
   SERVER_ADRESS = "http://localhost:8443";
 }
 
-const getData = async (body) => {
+// Mapping from request type to module name
+const requestToModuleMap = {
+  "PCAGraph": "pcaGraph",
+  "MDEGraph": "mdeGraph",
+  "UMAPGraph": "umapGraph",
+  "tSNEGraph": "tsneGraph",
+  "biClustering": "biClusteringGraph",
+  "expandGene": "geneRegulationGraph",
+  "expandGeneEnhanced": "geneRegulationEnhancedGraph",
+  "findPath": "pathFinderGraph",
+  "corrCluster": "corrCluster",
+  "heatMap": "heatmapGraph",
+  "calcGeneSignature": "genesignatureGraph",
+  "calcGeneSignatureMultiDataset": "genesignatureGraph",
+  "calcGeneSignatureMultiDatasetSimilar": "genesignatureSimilarGraph",
+  "geneExpression": "geneExpressionGraph",
+  "multiDatasetComparison": "multiDatasetComparison",
+};
+
+const getData = async (body, moduleName = null) => {
   try {
+    // Determine module name from request type if not provided
+    if (!moduleName && body?.request) {
+      moduleName = requestToModuleMap[body.request];
+    }
+
     const response = await Axios.post(
       SERVER_ADRESS + "/getData",
       {
@@ -72,17 +98,26 @@ const getData = async (body) => {
       } else if (status === "FAILURE") {
         throw new Error(task_result || "Task failed");
       } else if (status === "PROGRESS") {
-        console.log("Processing", task_result?.message || task_result);
-        /*toast({
-          message: {
-            type: "Info",
-            icon: false,
-            heading: "Completed:" + task_result.current,
-            content: task_result.message,
-          },
-          id: "process",
-          autoClose: "1000",
-        });*/
+        const message = task_result?.message || task_result || "Processing...";
+        const current = task_result?.current;
+        const total = task_result?.total;
+        let percentage = null;
+        
+        // Calculate percentage if both current and total are available
+        if (typeof current === 'number' && typeof total === 'number' && total > 0) {
+          percentage = Math.round((current / total) * 100);
+        }
+        
+        console.log("Processing", message);
+        
+        // Dispatch progress update if module name is available
+        if (moduleName) {
+          store.dispatch(progressUpdateReceived({
+            module: moduleName,
+            message: message,
+            percentage: percentage,
+          }));
+        }
       } else if (status === "SUCCESS" && task_result !== undefined && task_result !== null) {
         return task_result;
       } else if (task_result !== undefined && task_result !== null && status !== "PENDING" && status !== "PROGRESS") {

@@ -1,15 +1,29 @@
 .mainView {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  min-height: calc(100vh - 60px);
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .page {
   width: 60%;
+  max-width: 600px;
   text-align: center;
   padding: 40px 0;
   background: #fff;
   font-family: "Arvo", serif;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .page img {
@@ -20,6 +34,8 @@
   background-image: url(https://cdn.dribbble.com/users/2004171/screenshots/5646149/dribbble_canvas__calculator_.gif);
   height: 400px;
   background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
 .wait_bg h1 {

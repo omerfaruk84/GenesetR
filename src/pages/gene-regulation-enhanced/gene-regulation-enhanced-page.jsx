@@ -154,6 +154,8 @@ const GeneRegulationEnhancedPage = ({
   blacklistData,
   blacklistLoading,
   geneRegulationEnhancedSettings,
+  calcResults,
+  path,
 }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [tableData, setTableData] = useState([]);
@@ -367,11 +369,23 @@ const GeneRegulationEnhancedPage = ({
 
   const showLoading = isRunning && !geneRegulationResults;
   const graphHeight = geneRegulationEnhancedSettings?.graphHeight || 640;
+  
+  // Get progress state
+  const resultKey = ModulePathNames?.[path] || "geneRegulationEnhancedGraph";
+  const progressMessage = calcResults?.[resultKey]?.progressMessage;
+  const progressPercentage = calcResults?.[resultKey]?.progressPercentage;
 
   return (
     <div className={styles.mainView}>
-      {showLoading && <LoadingPage />}
+      {showLoading && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
 
+      {!showLoading && (
+      <>
       {geneRegulationResults ? (
         <div>
           {/* View Toggle */}
@@ -520,6 +534,8 @@ const GeneRegulationEnhancedPage = ({
           <VideoHelpPage videoFile={helpVideo} />
         </div>
       )}
+      </>
+      )}
     </div>
   );
 };
@@ -539,6 +555,7 @@ const mapStateToProps = ({ calcResults, blacklist, settings }, { path }) => {
     blacklistData: blacklist?.data,
     blacklistLoading: blacklist?.loading,
     geneRegulationEnhancedSettings: settings?.geneRegulationEnhanced ?? {},
+    calcResults,
     path,
   };
 };

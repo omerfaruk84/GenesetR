@@ -113,6 +113,34 @@ const DimReductionPage = ({
     calcResults?.["mdeGraph"]?.running ||
     calcResults?.["tsneGraph"]?.running ||
     calcResults?.["umapGraph"]?.running;
+  
+  // Get progress state from the currently running calculation
+  const getProgressState = () => {
+    if (calcResults?.["pcaGraph"]?.running) {
+      return {
+        message: calcResults["pcaGraph"].progressMessage,
+        percentage: calcResults["pcaGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["mdeGraph"]?.running) {
+      return {
+        message: calcResults["mdeGraph"].progressMessage,
+        percentage: calcResults["mdeGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["tsneGraph"]?.running) {
+      return {
+        message: calcResults["tsneGraph"].progressMessage,
+        percentage: calcResults["tsneGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["umapGraph"]?.running) {
+      return {
+        message: calcResults["umapGraph"].progressMessage,
+        percentage: calcResults["umapGraph"].progressPercentage,
+      };
+    }
+    return { message: null, percentage: null };
+  };
+  
+  const progressState = getProgressState();
 
   useEffect(() => {
     //navigate("../dr/"+selectedTab.value)
@@ -493,8 +521,15 @@ const DimReductionPage = ({
         </AccordionDetails>
       </Accordion>
       
-      {isAnyCalculationRunning && <LoadingPage />}
+      {isAnyCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressState.message}
+          progressPercentage={progressState.percentage}
+        />
+      )}
       
+      {!isAnyCalculationRunning && (
+        <>
       {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
         <div style={{ 
           padding: '12px', 
@@ -567,6 +602,8 @@ const DimReductionPage = ({
         <>
         {content}
         <VideoHelpPage videoFile={helpVideo} />
+        </>
+      )}
         </>
       )}
     </div>

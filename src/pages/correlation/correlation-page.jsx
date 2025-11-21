@@ -249,6 +249,8 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
 
   // Check if correlation calculation is running
   const isCalculationRunning = calcResults?.["corrCluster"]?.running;
+  const progressMessage = calcResults?.["corrCluster"]?.progressMessage;
+  const progressPercentage = calcResults?.["corrCluster"]?.progressPercentage;
 
   return (
     <div className={styles.mainView}>
@@ -346,8 +348,15 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
             </div>
             )}
       
-      {isCalculationRunning && <LoadingPage />}
+      {isCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
       
+      {!isCalculationRunning && (
+        <>
       {isFilteringInProgress ? (
         <div style={{ textAlign: 'center', padding: '50px', fontSize: '16px' }}>
           ⏳ Filtering correlation data...
@@ -420,6 +429,8 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
             </video>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

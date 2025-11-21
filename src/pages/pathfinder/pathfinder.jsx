@@ -53,12 +53,20 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
 
   // Check if pathfinder calculation is running
   const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;
+  const progressMessage = calcResults?.["pathFinderGraph"]?.progressMessage;
+  const progressPercentage = calcResults?.["pathFinderGraph"]?.progressPercentage;
 
   return (
     <div className={styles.mainView}>
-      {(isCalculationRunning || blacklistLoading) && <LoadingPage />}
+      {(isCalculationRunning || blacklistLoading) && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
 
-      
+      {!(isCalculationRunning || blacklistLoading) && (
+      <>
       {pathfinderResults ? (
         <PathFinder pathFinderGraph={pathfinderResults} blacklistData={blacklistData} pathfinderSettings={pathfinderSettings} /> 
       ) : (
@@ -126,6 +134,8 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
         <VideoHelpPage videoFile={helpVideo}/>
         </div>
 
+      )}
+      </>
       )}
     </div>
   );

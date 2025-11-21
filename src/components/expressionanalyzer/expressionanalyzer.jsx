@@ -994,11 +994,19 @@ const ExpressionAnalyzer = ({
     setOptions(chartOptions);
   }, [chartOptions]);
 
+  // Get progress state
+  const progressMessage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressMessage;
+  const progressPercentage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressPercentage;
+
   return (
     <>
-      {isCalcRunning ? (
-        <LoadingPage />
-      ) : (
+      {isCalcRunning && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
+      {!isCalcRunning && (
         <>
           <Accordion defaultExpanded={true}
             sx={{

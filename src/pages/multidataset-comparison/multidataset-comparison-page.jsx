@@ -29,10 +29,19 @@ const MultiDatasetComparisonPage = ({
 }) => {
   // Check if calculation is running
   const isCalculationRunning = calcResults?.["multiDatasetComparison"]?.running;
+  const progressMessage = calcResults?.["multiDatasetComparison"]?.progressMessage;
+  const progressPercentage = calcResults?.["multiDatasetComparison"]?.progressPercentage;
 
   return (
     <div className={styles.mainView}>
-      {isCalculationRunning && <LoadingPage />}
+      {isCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
+      {!isCalculationRunning && (
+      <>
       {multiDatasetResults ? (
         <MultiDatasetComparison data={multiDatasetResults} />
       ) : (
@@ -92,6 +101,8 @@ const MultiDatasetComparisonPage = ({
 
           <VideoHelpPage videoFile={helpVideo} />
         </div>
+      )}
+      </>
       )}
     </div>
   );

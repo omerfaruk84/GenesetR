@@ -524,9 +524,19 @@ const keyedData = useMemo(() => {
     };
   }, [destroyInchlibInstance, forceGarbageCollection]);
 
+  // Get progress state
+  const progressMessage = calcResults?.["corrCluster"]?.progressMessage;
+  const progressPercentage = calcResults?.["corrCluster"]?.progressPercentage;
+
   return (
     <>
-      {loading && <LoadingPage />}
+      {loading && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
+      {!loading && (
       <>
         {showDescription && (
           <Accordion
@@ -703,6 +713,7 @@ const keyedData = useMemo(() => {
           </div>
         </div>
       </>
+      )}
     </>
   );
 };

@@ -27,10 +27,19 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklis
 
   // Check if gene regulation calculation is running
   const isCalculationRunning = calcResults?.["geneRegulationGraph"]?.running;
+  const progressMessage = calcResults?.["geneRegulationGraph"]?.progressMessage;
+  const progressPercentage = calcResults?.["geneRegulationGraph"]?.progressPercentage;
 
   return (
     <div className={styles.mainView}>
-      {isCalculationRunning && <LoadingPage />}
+      {isCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
+      {!isCalculationRunning && (
+      <>
       {geneRegulationResults ? (
         <GeneRegulation blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
       ) : (
@@ -98,6 +107,8 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklis
 
           <VideoHelpPage videoFile={helpVideo} />
         </div>
+      )}
+      </>
       )}
     </div>
   );
