@@ -26,7 +26,7 @@ import {
 import _ from "lodash";
 // ... other imports
 
-const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
+const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAndCalculate }) => {
   const [isError, setIsError] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [rowCount, setRowCount] = useState(0);
@@ -225,6 +225,12 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
       
       // Pass the gene list to parent component
       onGeneListSelect(selectedGeneSignature.genes);
+      
+      // Trigger auto-calculation if callback is provided
+      if (onSelectAndCalculate) {
+        onSelectAndCalculate();
+      }
+      
       onClose();
     } catch (error) {
       console.error("Error increasing popularity:", error);
@@ -349,8 +355,9 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
     enableRowVirtualization: true, // Enable row virtualization
     muiTableContainerProps: {
       sx: {
-        maxHeight: '300px', // Reduced height to fit better in modal
-        minHeight: '300px', // Set consistent height
+        height: '100%', // Fill 100% of available space
+        flex: 1, // Take up remaining space
+        minHeight: 0, // Allow flexbox to shrink
       },
     },
     initialState: {
@@ -421,7 +428,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
           </Box>
         </DialogTitle>
         
-        <DialogContent sx={{ pb: 1 }}>
+        <DialogContent sx={{ pb: 1, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {showSuggestionForm ? (
             // Suggestion Form View
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -472,7 +479,9 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect }) => {
             </Box>
           ) : (
             // Main Table View
-            <MaterialReactTable table={table} />
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <MaterialReactTable table={table} />
+            </Box>
           )}
         </DialogContent>
         

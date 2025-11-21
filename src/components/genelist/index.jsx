@@ -30,6 +30,8 @@ import { coreSettingsChanged } from "../../store/settings/core-settings";
 import GeneSignatureSearchPopup from "../genesigndb/genesignaturedb";
 import { checkGenes } from "./helper";
 import { fetchHugoGenes, updateGeneLists } from "../../store/api";
+import { runCalculation } from "../../store/results/index";
+import { ROUTES } from "../../common/routes";
 
 /*
 let isLoaded = false;
@@ -53,6 +55,7 @@ const Genelist = ({
   showAddList = false,
   showSavedGeneLists = true,
   newListName = undefined,
+  runCalculation,
 }) => {
   const [currentGenes, setGenes] = useState(""); //sets the current genes in textarea
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
@@ -685,7 +688,18 @@ const Genelist = ({
       <GeneSignatureSearchPopup
         open={isGeneSignaturePopupOpen}
         onClose={() => setGeneSignaturePopupOpen(false)}
-        onGeneListSelect={(geneList) => genesChanged(geneList)}
+        onGeneListSelect={(geneList) => {
+          genesChanged(geneList);
+        }}
+        onSelectAndCalculate={() => {
+          // Auto-trigger calculation if we're on gene signature page
+          if (isGeneSignature && pathname === ROUTES.GENESIGNATURE) {
+            // Small delay to ensure the gene list is updated in Redux first
+            setTimeout(() => {
+              runCalculation(ROUTES.GENESIGNATURE);
+            }, 200);
+          }
+        }}
       />
     </>
   );
@@ -697,6 +711,7 @@ const mapStateToProps = ({ settings }) => ({
 
 const mapDispatchToProps = {
   coreSettingsChanged,
+  runCalculation,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(Genelist);

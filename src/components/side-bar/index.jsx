@@ -41,6 +41,34 @@ const SideBar = ({
     isCalcRunning = calcResults?.[ModulePathNames?.[pathname]]?.running;
   }
 
+  // Custom button labels per module
+  const buttonLabels = {
+    [ROUTES.GENESIGNATURE]: "Calculate Gene Signature",
+    [ROUTES.CORRELATION]: "Calculate Correlation",
+    [ROUTES.HEATMAP]: "Generate Heatmap",
+    [ROUTES.PATHFINDER]: "Find Path",
+    [ROUTES.EXPRESSIONANALYZER]: "Analyze Expression",
+    [ROUTES.MULTIDATASET_COMPARISON]: "Compare Datasets",
+    [ROUTES.GENE_REGULATION_ENHANCED]: "Expand Gene Network",
+    // Default for DR and other modules
+    default: "Run Calculation",
+  };
+
+  // Get button label for current path
+  const getButtonLabel = () => {
+    if (pathname === ROUTES.DR) {
+      // For DR, use module-specific labels
+      const drLabels = {
+        pca: "Calculate PCA",
+        mde: "Calculate MDE",
+        umap: "Calculate UMAP",
+        tsne: "Calculate t-SNE",
+      };
+      return drLabels[coreSettings.currentModule] || buttonLabels.default;
+    }
+    return buttonLabels[pathname] || buttonLabels.default;
+  };
+
   //To set runcalc button disabled or not
   let isDisabled = true;
   if (
@@ -80,7 +108,7 @@ const SideBar = ({
               <Spacer />
               <Flex justifyContent="center">
                 <Button
-                  label={`${isCalcRunning ? "Pending" : "Run Calculation"}`}
+                  label={isCalcRunning ? "Pending" : getButtonLabel()}
                   colored
                   width="90%"
                   disabled={isCalcRunning || isDisabled}
