@@ -373,11 +373,15 @@ const MultiDatasetComparison = ({ data }) => {
     // Material React Table column format - ensure Average column is always last
     const columns = [];
     
-    // 1. Gene/Perturbation column (first) with tooltip
-    columns.push({ 
-      accessorKey: "gene", 
-      header: "Gene/Perturbation",
-      size: 150,
+    // 1. Gene/Perturbation column (first) with tooltip - wrapped in parent column for consistency
+    columns.push({
+      id: "gene_group_comparison", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [{
+        accessorKey: "gene", 
+        header: "Gene/Perturbation",
+        size: 150,
+        enableColumnActions: false, // Disable three dots menu
       Cell: ({ cell }) => {
         const geneSymbol = cell.getValue();
         return (
@@ -450,19 +454,21 @@ const MultiDatasetComparison = ({ data }) => {
             {geneSymbol}
           </div>
         );
-      }
+      },
+      }],
     });
     
-    // 2. Dataset columns (middle)
-    datasetColumns.forEach(dataset => {
+    // 2. Dataset columns (middle) - grouped under header
+    const datasetCols = datasetColumns.map(dataset => {
       const datasetName = dataset === 'K562gwps' ? 'K562' : 
                          dataset === 'HCT116gwps' ? 'HCT116' : 
                          dataset === 'HEK293gwps' ? 'HEK293' : dataset;
       
-      columns.push({
+      return {
         accessorKey: showRanks ? `${dataset}_display` : dataset,
-        header: showRanks ? `${datasetName} Rank (Score)` : datasetName,
-        size: showRanks ? 140 : 120,
+        header: datasetName,
+        size: showRanks ? 70 : 50, // Reduced width
+        enableColumnActions: false, // Disable three dots menu
         Cell: ({ cell }) => {
           const value = cell.getValue();
           if (showRanks) {
@@ -503,48 +509,61 @@ const MultiDatasetComparison = ({ data }) => {
           
           return aNum - bNum;
         }
-      });
+      };
     });
     
-    // 3. Average column (always last)
+    // Add grouped header for dataset columns
+    columns.push({
+      header: showRanks ? "Rank (Score)" : "Score",
+      columns: datasetCols,
+      // Don't disable filters on the grouped header - filters should only appear on child columns
+      // The grouped header itself doesn't need filter properties
+    });
+    
+    // 3. Average column (always last) - wrapped in parent column for consistency
     if (hasAverage) {
       columns.push({
-        accessorKey: showRanks ? "average_rank" : "average", 
-        header: showRanks ? "Avg Rank" : "Average",
-        size: 100,
-        Cell: ({ cell }) => {
-          const value = cell.getValue();
-          if (showRanks) {
-            return typeof value === 'number' ? value.toFixed(1) : '';
-          } else {
-            return typeof value === 'number' ? value.toFixed(3) : '';
+        id: "average_group_comparison", // Required when using non-string header
+        header: "", // Empty header for parent column
+        columns: [{
+          accessorKey: showRanks ? "average_rank" : "average", 
+          header: showRanks ? "Avg Rank" : "Average",
+          size: 100,
+          enableColumnActions: false, // Disable three dots menu
+          Cell: ({ cell }) => {
+            const value = cell.getValue();
+            if (showRanks) {
+              return typeof value === 'number' ? value.toFixed(1) : '';
+            } else {
+              return typeof value === 'number' ? value.toFixed(3) : '';
+            }
+          },
+          sortingFn: (rowA, rowB, columnId) => {
+            const aValue = rowA.getValue(columnId);
+            const bValue = rowB.getValue(columnId);
+            
+            // Always put empty/null/undefined values at the end
+            if ((aValue === null || aValue === undefined || aValue === '') && (bValue === null || bValue === undefined || bValue === '')) {
+              return 0; // Both empty, maintain order
+            }
+            if (aValue === null || aValue === undefined || aValue === '') {
+              return 1; // A is empty, put it after B
+            }
+            if (bValue === null || bValue === undefined || bValue === '') {
+              return -1; // B is empty, put it after A
+            }
+            
+            // For numeric values
+            const aNum = typeof aValue === 'number' ? aValue : parseFloat(aValue);
+            const bNum = typeof bValue === 'number' ? bValue : parseFloat(bValue);
+            
+            if (isNaN(aNum) && isNaN(bNum)) return 0;
+            if (isNaN(aNum)) return 1;
+            if (isNaN(bNum)) return -1;
+            
+            return aNum - bNum;
           }
-        },
-        sortingFn: (rowA, rowB, columnId) => {
-          const aValue = rowA.getValue(columnId);
-          const bValue = rowB.getValue(columnId);
-          
-          // Always put empty/null/undefined values at the end
-          if ((aValue === null || aValue === undefined || aValue === '') && (bValue === null || bValue === undefined || bValue === '')) {
-            return 0; // Both empty, maintain order
-          }
-          if (aValue === null || aValue === undefined || aValue === '') {
-            return 1; // A is empty, put it after B
-          }
-          if (bValue === null || bValue === undefined || bValue === '') {
-            return -1; // B is empty, put it after A
-          }
-          
-          // For numeric values
-          const aNum = typeof aValue === 'number' ? aValue : parseFloat(aValue);
-          const bNum = typeof bValue === 'number' ? bValue : parseFloat(bValue);
-          
-          if (isNaN(aNum) && isNaN(bNum)) return 0;
-          if (isNaN(aNum)) return 1;
-          if (isNaN(bNum)) return -1;
-          
-          return aNum - bNum;
-        }
+        }],
       });
     }
 

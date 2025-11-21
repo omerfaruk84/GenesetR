@@ -27,9 +27,10 @@ const EnrichmentTable = ({ columns, data }) => {
     //enableColumnResizing: true,
     enableDensityToggle: false,
     enableFacetedValues: true,
+    enableColumnActions: false, // Disable three dots menu on all columns
     displayColumnDefOptions: {
       "mrt-row-select": {
-        enableColumnActions: true,
+        enableColumnActions: false,
         enableHiding: true,
         size: "20px",
         maxSize: "40px",
@@ -77,6 +78,29 @@ const EnrichmentTable = ({ columns, data }) => {
         m: "auto",
         maxWidth: "100%",
       },
+    },
+    // Custom styling to conditionally hide filters on grouped header cells
+    muiTableHeadCellFilterTextFieldProps: ({ column }) => {
+      // Hide filter if this is a grouped column (has children columns)
+      if (column.columns && column.columns.length > 0) {
+        return {
+          sx: {
+            display: 'none !important',
+          },
+        };
+      }
+      return {};
+    },
+    muiTableHeadCellFilterSliderProps: ({ column }) => {
+      // Hide filter slider if this is a grouped column
+      if (column.columns && column.columns.length > 0) {
+        return {
+          sx: {
+            display: 'none !important',
+          },
+        };
+      }
+      return {};
     },
     //columnFilterDisplayMode: "popover",
     paginationDisplayMode: "pages",

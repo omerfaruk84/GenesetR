@@ -201,32 +201,39 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     
     const columns = [];
     
-    // Gene column first
+    // Gene column wrapped in parent column for consistency
     columns.push({
-      accessorKey: "gene",
-      header: "Gene",
-      size: 120,
-      filterVariant: "autocomplete",
-      muiFilterTextFieldProps: {
-        placeholder: "Symbol",
-        size: "small",
-      },
+      id: "gene_group", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [{
+        accessorKey: "gene",
+        header: "Gene",
+        size: 120,
+        enableColumnActions: false, // Disable three dots menu
+        filterVariant: "autocomplete",
+        muiFilterTextFieldProps: {
+          placeholder: "Symbol",
+          size: "small",
+        },
+      }],
     });
     
-    // Dataset columns
-    data.datasets.forEach(dataset => {
+    // Group dataset columns under "Score" or "Rank" header
+    const datasetColumns = data.datasets.map(dataset => {
       const datasetName = dataset === 'K562gwps' ? 'K562' : 
                          dataset === 'HCT116gwps' ? 'HCT116' : 
                          dataset === 'HEK293gwps' ? 'HEK293' : dataset;
       
-      columns.push({
+      return {
         accessorKey: showRanks ? `${dataset}_display` : dataset,
-        header: showRanks ? `${datasetName} Rank (Score)` : datasetName,
-        size: showRanks ? 140 : 100,
-        filterVariant: "text",
-        muiFilterTextFieldProps: {
-          placeholder: showRanks ? "Rank" : "Score",
+        header: datasetName,
+        size: showRanks ? 70 : 50, // Reduced width
+        enableColumnActions: false, // Disable three dots menu
+        filterVariant: "range-slider",
+        muiFilterSliderProps: {
           size: "small",
+          color: "primary",
+          step: showRanks ? 0.1 : 0.01,
         },
         Cell: ({ cell }) => {
           const value = cell.getValue();
@@ -236,41 +243,55 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
             return typeof value === 'number' ? value.toFixed(3) : (value || '');
           }
         },
-      });
+      };
     });
     
-    // Average column
+    // Add grouped header for dataset columns
     columns.push({
-      accessorKey: showRanks ? "average_rank" : "average",
-      header: showRanks ? "Avg Rank" : "Average",
-      size: 90,
-      filterVariant: "range-slider",
-      muiFilterSliderProps: {
-        size: "small",
-        color: "primary",
-        step: showRanks ? 0.1 : 0.01,
-      },
-      Cell: ({ cell }) => {
-        const value = cell.getValue();
-        if (showRanks) {
-          return typeof value === 'number' ? value.toFixed(1) : '';
-        } else {
-          return typeof value === 'number' ? value.toFixed(3) : '';
-        }
-      },
+      header: showRanks ? "Rank (Score)" : "Score",
+      columns: datasetColumns,   
+      // Don't disable filters on the grouped header - filters should only appear on child columns
+      // The grouped header itself doesn't need filter properties
     });
     
-    // Dataset count column
+    // Group Average and Datasets columns under one header
     columns.push({
-      accessorKey: "dataset_count",
-      header: "Datasets",
-      size: 70,
-      filterVariant: "range-slider",
-      muiFilterSliderProps: {
-        size: "small",
-        color: "primary",
-        step: 1,
-      },
+      id: "summary_group", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [
+        {
+          accessorKey: showRanks ? "average_rank" : "average",
+          header: showRanks ? "Avg Rank" : "Average",
+          size: 80,
+          enableColumnActions: false, // Disable three dots menu
+          filterVariant: "range-slider",
+          muiFilterSliderProps: {
+            size: "small",
+            color: "primary",
+            step: showRanks ? 0.1 : 0.01,
+          },
+          Cell: ({ cell }) => {
+            const value = cell.getValue();
+            if (showRanks) {
+              return typeof value === 'number' ? value.toFixed(1) : '';
+            } else {
+              return typeof value === 'number' ? value.toFixed(3) : '';
+            }
+          },
+        },
+        {
+          accessorKey: "dataset_count",
+          header: "Datasets",
+          size: 60,
+          enableColumnActions: false, // Disable three dots menu
+          filterVariant: "range-slider",
+          muiFilterSliderProps: {
+            size: "small",
+            color: "primary",
+            step: 1,
+          },
+        },
+      ],
     });
     
     return columns;
@@ -280,24 +301,34 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     const ds = similarData?.datasets || data?.datasets || [];
     if (!ds.length) return [];
 
-    const cols = [{
-      accessorKey: "Gene",
-      header: "Gene",
-      size: 120,
-      filterVariant: "autocomplete",
-      muiFilterTextFieldProps: { placeholder: "Symbol", size: "small" },
-    }];
+    const cols = [];
 
-    ds.forEach(dataset => {
+    // Gene column wrapped in parent column for consistency
+    cols.push({
+      id: "gene_group_similar", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [{
+        accessorKey: "Gene",
+        header: "Gene",
+        size: 120,
+        enableColumnActions: false, // Disable three dots menu
+        filterVariant: "autocomplete",
+        muiFilterTextFieldProps: { placeholder: "Symbol", size: "small" },
+      }],
+    });
+
+    // Group dataset columns under "Similarity (r coefficient)" header
+    const similarityColumns = ds.map(dataset => {
       const datasetName =
         dataset === 'K562gwps' ? 'K562' :
         dataset === 'HCT116gwps' ? 'HCT116' :
         dataset === 'HEK293gwps' ? 'HEK293' : dataset;
 
-      cols.push({
+      return {
         accessorKey: showRanks ? `${dataset}_display` : dataset,
-        header: showRanks ? `${datasetName} Rank (Similarity)` : `${datasetName} Similarity`,
-        size: showRanks ? 160 : 120,
+        header: showRanks ? `${datasetName} Rank` : datasetName,
+        size: showRanks ? 70 : 50, // Reduced width
+        enableColumnActions: false, // Disable three dots menu
         filterVariant: showRanks ? "text" : "range-slider",
         muiFilterTextFieldProps: showRanks ? { placeholder: "Rank", size: "small" } : undefined,
         muiFilterSliderProps: showRanks ? undefined : { size: "small", color: "primary", step: 0.01 },
@@ -306,28 +337,59 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
           if (showRanks) return v || '';
           return typeof v === 'number' ? v.toFixed(3) : (v ?? '');
         },
-      });
+      };
     });
 
+    // Add grouped header for similarity columns
     cols.push({
-      accessorKey: showRanks ? "average_rank" : "average",
-      header: showRanks ? "Avg Rank" : "Avg Similarity",
-      size: 100,
-       sortingFn: 'basic',
-      filterVariant: showRanks ? "text" : "range-slider",
-      muiFilterSliderProps: showRanks ? undefined : { size: "small", color: "primary", step: 0.01 },
-      Cell: ({ cell }) => {
-        const v = cell.getValue();
-        return typeof v === 'number' ? (showRanks ? v.toFixed(1) : v.toFixed(3)) : '';
-      },
+      header: showRanks ? "Rank (Similarity)" : "Similarity (r coefficient)",
+      columns: similarityColumns,
+      // Don't disable filters on the grouped header - filters should only appear on child columns
+      // The grouped header itself doesn't need filter properties
     });
 
-    cols.push({ accessorKey: "Datasets", header: "Datasets", size: 70, filterVariant: "range-slider",
-      muiFilterSliderProps: { size: "small", color: "primary", step: 1 },
+    // Group Average and Datasets columns under one header
+    cols.push({
+      id: "summary_group_similar", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [
+        {
+          accessorKey: showRanks ? "average_rank" : "average",
+          header: showRanks ? "Avg Rank" : "Avg Similarity",
+          size: 80,
+          enableColumnActions: false, // Disable three dots menu
+          sortingFn: 'basic',
+          filterVariant: showRanks ? "text" : "range-slider",
+          muiFilterSliderProps: showRanks ? undefined : { size: "small", color: "primary", step: 0.01 },
+          Cell: ({ cell }) => {
+            const v = cell.getValue();
+            return typeof v === 'number' ? (showRanks ? v.toFixed(1) : v.toFixed(3)) : '';
+          },
+        },
+        {
+          accessorKey: "Datasets",
+          header: "Datasets",
+          size: 60,
+          enableColumnActions: false, // Disable three dots menu
+          filterVariant: "range-slider",
+          muiFilterSliderProps: { size: "small", color: "primary", step: 1 },
+        },
+      ],
     });
 
-    cols.push({ accessorKey: "Included", header: "Included", size: 70, maxSize: 70,
-      filterVariant: "select", muiFilterTextFieldProps: { placeholder: "Select", size: "small" },
+    // Included column wrapped in parent column for consistency
+    cols.push({
+      id: "included_group", // Required when using non-string header
+      header: "", // Empty header for parent column
+      columns: [{
+        accessorKey: "Included",
+        header: "Included",
+        size: 70,
+        maxSize: 70,
+        enableColumnActions: false, // Disable three dots menu
+        filterVariant: "select",
+        muiFilterTextFieldProps: { placeholder: "Select", size: "small" },
+      }],
     });
 
     return cols;
@@ -1720,7 +1782,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
 
       {selectedView === 0 && (
         <>
-          <div className={styles.mainView}>
+          <div style={{ 
+            height: "350px", 
+            width: "100%", 
+            marginBottom: "0px",
+            minHeight: "350px"
+          }}>
             <ReactEChartsCore
               echarts={echarts}
               option={options}
@@ -1733,7 +1800,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       )}
       <Spacer height={5} />
 
-      {genelists && (
+      {genelists && selectedView === 0 && (
         <>
           <Tabs
             name="tabs"
