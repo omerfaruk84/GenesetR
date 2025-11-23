@@ -17,6 +17,7 @@ import {
   runGeneSignatureMultiDataset,
   runGeneSignatureMultiDatasetSimilar,
   runMultiDatasetComparison,
+  cancelTask,
 } from "../api";
 import { ModulePathNames } from "./enums";
 
@@ -79,6 +80,7 @@ const resultState = {
   running: false,
   progressMessage: null,
   progressPercentage: null,
+  taskId: null, // Store task ID for cancellation
 };
 
 const initialState = {
@@ -163,6 +165,23 @@ export const calculationResults = createSlice({
         state[module].running = false;
         state[module].progressMessage = null;
         state[module].progressPercentage = null;
+        state[module].taskId = null;
+      }
+    },
+    taskStarted: (state, action) => {
+      const { module, taskId } = action.payload;
+      if (state[module]) {
+        state[module].taskId = taskId;
+        state[module].running = true;
+      }
+    },
+    taskCancelled: (state, action) => {
+      const { module } = action.payload;
+      if (state[module]) {
+        state[module].running = false;
+        state[module].progressMessage = null;
+        state[module].progressPercentage = null;
+        state[module].taskId = null;
       }
     },
   },
@@ -170,8 +189,14 @@ export const calculationResults = createSlice({
 
 const calculationResultsReducer = calculationResults.reducer;
 
-export const { resultReceived, calcRunningChanged, progressUpdateReceived, clearResult } =
-  calculationResults.actions;
+export const { 
+  resultReceived, 
+  calcRunningChanged, 
+  progressUpdateReceived, 
+  clearResult,
+  taskStarted,
+  taskCancelled,
+} = calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
   console.log("Running");
@@ -315,12 +340,19 @@ const runCalculation = (module) => async (dispatch, getState) => {
     }
 
     console.log(error);
+    
+    // Handle standardized error format from API
+    const errorMessage = error.code 
+      ? `${error.code}: ${error.message}` 
+      : error.message || "An unknown error occurred";
+    const errorDetails = error.details || {};
+    
     toast({
       message: {
         type: "Error",
         icon: true,
         content: "Calculation failed",
-        details: error.message,
+        details: errorMessage,
       },
     });
   }
@@ -393,4 +425,46 @@ export const runMultiDatasetGeneSignatureSimilar = (settings) => async (
   }
 };
 
-export { calculationResultsReducer, runCalculation, runMultiDatasetGeneSignature };
+/**
+ * Cancel a running calculation task.
+ */
+const cancelCalculation = (module) => async (dispatch, getState) => {
+  const state = getState();
+  const moduleName = module === ROUTES.DR 
+    ? ModulePathNames["/" + state.settings.core.currentModule]
+    : ModulePathNames[module];
+  
+  const taskId = state.calcResults[moduleName]?.taskId;
+  
+  if (!taskId) {
+    console.warn(`No task ID found for module: ${moduleName}`);
+    return;
+  }
+  
+  try {
+    await cancelTask(taskId);
+    dispatch(taskCancelled({ module: moduleName }));
+    dispatch(calcRunningChanged({ module: moduleName, status: false }));
+    
+    toast({
+      message: {
+        type: "Info",
+        icon: true,
+        content: "Calculation cancelled",
+        details: "The calculation has been cancelled successfully.",
+      },
+    });
+  } catch (error) {
+    console.error("Error cancelling task:", error);
+    toast({
+      message: {
+        type: "Error",
+        icon: true,
+        content: "Failed to cancel calculation",
+        details: error.message || "Could not cancel the calculation.",
+      },
+    });
+  }
+};
+
+export { calculationResultsReducer, runCalculation, runMultiDatasetGeneSignature, cancelCalculation };

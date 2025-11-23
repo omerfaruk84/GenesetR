@@ -79,14 +79,14 @@
       rel="apple-touch-icon"
       href="https://genesetr.uio.no/images/logo.png"
     />
-    <link rel="manifest" href="others/manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Droid+Sans&display=swap"
     />
 
-    <script src="others/jquery-2.0.3.min.js"></script>
-    <script src="others/kinetic-v5.1.0.min.js"></script>
+    <!-- jQuery and KineticJS are imported via npm/webpack (see package.json), no need for script tags -->
+    <!-- The files exist in public/ but are not needed since they're bundled by webpack -->
     <title>Perturb-Seq Analyzer</title>
   </head>
   <body>

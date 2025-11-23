@@ -2,6 +2,8 @@ import Axios from "axios";
 import { get, set } from "idb-keyval";
 import { store } from "../store";
 import { progressUpdateReceived } from "../results";
+// Import WebSocket support at the top
+import { waitForTaskCompletion, cancelTask } from "./websocket";
 
 let SERVER_ADRESS = "https://genesetr.uio.no/api";
 //const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
@@ -44,7 +46,7 @@ const requestToModuleMap = {
   "multiDatasetComparison": "multiDatasetComparison",
 };
 
-const getData = async (body, moduleName = null) => {
+const getData = async (body, moduleName = null, options = {}) => {
   try {
     // Determine module name from request type if not provided
     if (!moduleName && body?.request) {
@@ -63,89 +65,47 @@ const getData = async (body, moduleName = null) => {
       }
     );
 
-    //console.log("response", response)
     const { task_id } = response.data;
-    //console.log("task_id", task_id)
-    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-    let times = 1;
-    do {
-      const response2 = await Axios.get(SERVER_ADRESS + `/tasks/${task_id}`, {
-        headers: {
-          "ngrok-skip-browser-warning": "69420",
-        },
-      });
+    debugLog(`Task created: ${task_id} for ${body.request}`);
 
-      //console.log("response2", response2)
-      // Handle two response formats:
-      // 1. From Redis cache: {status, task_result} - HTTP 200 with wrapped object
-      // 2. From AsyncResult when ready: result directly - HTTP 200 with result as body
-      let status, task_result;
-      
-      // Check if response has status field (Format 1: Redis cache)
-      if (response2.data && typeof response2.data === 'object' && response2.data.status !== undefined) {
-        // Format 1: Wrapped in status object from Redis cache
-        status = response2.data.status;
-        task_result = response2.data.task_result;
-      } else if (response2.status === 200 && response2.data) {
-        // Format 2: Result is the data directly (task is ready, not in Redis)
-        // Check if it looks like a task result object (has file_path, PC1, etc.) or is an error string
-        if (typeof response2.data === 'object' && (response2.data.file_path || response2.data.PC1 || response2.data.filename)) {
-          return response2.data;
-        } else if (typeof response2.data === 'string') {
-          // Might be an error message
-          throw new Error(response2.data);
-        } else {
-          return response2.data;
+    // Store task ID in Redux for cancellation support
+    if (moduleName && store && store.dispatch) {
+      try {
+        const resultsModule = await import("../results");
+        if (resultsModule.taskStarted) {
+          store.dispatch(resultsModule.taskStarted({ module: moduleName, taskId: task_id }));
         }
-      } else {
-        // Try to extract status and task_result
-        status = response2.data?.status;
-        task_result = response2.data?.task_result || response2.data;
+      } catch (e) {
+        // Ignore if taskStarted not available (backward compatibility)
+        debugLog("Could not dispatch taskStarted:", e);
       }
-      
-      debugLog("task_status", status);
-      //console.log("task_result", task_result);
+    }
 
-      if (status === "PENDING") {
-        debugLog("Still not started");
-      } else if (status === "FAILURE") {
-        throw new Error(task_result || "Task failed");
-      } else if (status === "PROGRESS") {
-        const message = task_result?.message || task_result || "Processing...";
-        const current = task_result?.current;
-        const total = task_result?.total;
-        let percentage = null;
-        
-        // Calculate percentage if both current and total are available
-        if (typeof current === 'number' && typeof total === 'number' && total > 0) {
-          percentage = Math.round((current / total) * 100);
-        }
-        
-        debugLog("Processing", message);
-        
-        // Dispatch progress update if module name is available
-        if (moduleName) {
-          store.dispatch(progressUpdateReceived({
-            module: moduleName,
-            message: message,
-            percentage: percentage,
-          }));
-        }
-      } else if (status === "SUCCESS" && task_result !== undefined && task_result !== null) {
-        return task_result;
-      } else if (task_result !== undefined && task_result !== null && status !== "PENDING" && status !== "PROGRESS") {
-        // If we have a task_result and status is not pending/progress, return it
-        return task_result;
-      } else if (response2.data && !status && response2.status === 200) {
-        // No status field but HTTP 200, assume it's the result directly
-        return response2.data;
-      }
+    // Use WebSocket with polling fallback for better performance
+    // Options: { useWebSocket: true, fallbackToPolling: true, useVersionedEndpoint: false }
+    // Legacy /getData endpoint uses /tasks/{task_id}, not /api/v1/tasks/{task_id}
+    const defaultOptions = {
+      useWebSocket: true,
+      fallbackToPolling: true,
+      useVersionedEndpoint: false, // Legacy endpoint format
+      ...options,
+    };
 
-      await delay(times * 250);
-      times++;
-    } while (times < 30);
+    return await waitForTaskCompletion(task_id, moduleName, defaultOptions);
   } catch (error) {
-    debugError(error);
+    debugError("Error in getData:", error);
+    
+    // Handle standardized error format
+    if (error.response?.data?.error) {
+      const apiError = error.response.data.error;
+      const errorMessage = apiError.message || "An error occurred";
+      const fullError = new Error(errorMessage);
+      fullError.code = apiError.code;
+      fullError.details = apiError.details;
+      throw fullError;
+    }
+    
+    throw error;
   }
 };
 
@@ -494,15 +454,18 @@ const updateGeneLists = async (dataType) => {
       return;
 
     // If genes do not exist, download and save them
-    const response = await Axios.post(SERVER_ADRESS + "/getData", {
-      headers: {
-        "ngrok-skip-browser-warning": "69420",
-      },
-      body: JSON.stringify({
+    const response = await Axios.post(
+      SERVER_ADRESS + "/getData",
+      {
         dataset: dataType,
         request: "getAllGenes",
-      }),
-    });
+      },
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
 
     if (response && response.data) {
       set(
@@ -588,6 +551,20 @@ const listPrecomputedDR = async () => {
     return [];
   }
 };
+
+// Export task cancellation function
+export { cancelTask } from "./websocket";
+
+// Export new RESTful API functions (optional - can be used instead of legacy functions)
+export {
+  runCorrelationClusterV2,
+  runPCAGraphV2,
+  runMultiDatasetComparisonV2,
+  fetchDatasetsV2,
+  fetchWholeGenomeDatasetsV2,
+  getDatasetMetadataV2,
+  getDatasetGenesV2,
+} from "./v2";
 
 export {
   runPcaGraphCalc,
