@@ -29,6 +29,8 @@ const initialState = {
   filter1Directional: false,
   filter2Directional: false,
   maxNodes: 1000, // Maximum number of nodes to display to prevent crashes
+  selectedDatasets: [],
+  combinationStrategy: 'intersection',
 };
 
 export const pathfinderSettingsSlice = createSlice({

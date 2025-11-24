@@ -224,6 +224,23 @@ const runbiClusteringCalc = async (core, biClustering) => {
 
 const runPathFinderCalc = async (core, pathfinder) => {
   debugLog(core, pathfinder)
+  
+  // Extract selected datasets, ensuring we have an array of IDs
+  let selectedDatasets = pathfinder.selectedDatasets || [];
+  if (Array.isArray(selectedDatasets)) {
+    selectedDatasets = selectedDatasets.map((ds) => {
+      if (typeof ds === 'object' && ds !== null) {
+        return ds.value || ds.id || String(ds);
+      }
+      return String(ds);
+    });
+  }
+  
+  // If no datasets selected, use the current one
+  if (selectedDatasets.length === 0 && core.cellLine?.id) {
+    selectedDatasets = [core.cellLine.id];
+  }
+
   const body = {
     downgeneList: core.peturbationList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
@@ -232,6 +249,8 @@ const runPathFinderCalc = async (core, pathfinder) => {
       .join(";"),
     dataType: core.dataType,
     cell_line: core.cellLine.id,
+    selectedDatasets: selectedDatasets,
+    combinationStrategy: pathfinder.combinationStrategy || 'intersection',
 
     upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")

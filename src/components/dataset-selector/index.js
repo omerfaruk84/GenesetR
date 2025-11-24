@@ -10,8 +10,8 @@ import { connect } from "react-redux";
 import { FaTrash } from "react-icons/fa";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { correlationSettingsChanged } from "../../store/settings/correlation-settings";
-import { CoreSettingsTypes } from "../side-bar/settings/enums";
-import { CorrelationSettingsTypes } from "../side-bar/settings/enums";
+import { pathfinderSettingsChanged } from "../../store/settings/pathfinder-settings";
+import { CoreSettingsTypes, CorrelationSettingsTypes, PathFinderSettingsTypes } from "../side-bar/settings/enums";
 import styles from "./AccordionMenu.scss";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
@@ -19,9 +19,12 @@ import { updateGeneLists, fetchDatasets } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
 
 const DatasetSelector = forwardRef(
-  ({ coreSettingsChanged, correlationSettingsChanged, coreSettings, correlationSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
+  ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
     const location = useLocation();
     const isCorrelationModule = location.pathname === ROUTES.CORRELATION;
+    const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
+    const isMultiSelectMode = isCorrelationModule || isPathFinderModule;
+
     const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
       setDatasetList(prevList => 
         prevList.map(item => ({
@@ -43,11 +46,26 @@ const DatasetSelector = forwardRef(
     const [datasetList, setDatasetList] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Function to handle checkbox change for correlation module
+    // Function to handle checkbox change for correlation or pathfinder module
     const handleCheckboxChange = useCallback((datasetId, checked) => {
-      if (!isCorrelationModule) return;
+      if (!isMultiSelectMode) return;
       
-      const current = correlationSettings?.selectedDatasets || [];
+      let current = [];
+      let settingName = "";
+      let changeHandler = null;
+
+      if (isCorrelationModule) {
+        current = correlationSettings?.selectedDatasets || [];
+        settingName = CorrelationSettingsTypes.SELECTED_DATASETS;
+        changeHandler = correlationSettingsChanged;
+      } else if (isPathFinderModule) {
+        current = pathfinderSettings?.selectedDatasets || [];
+        settingName = PathFinderSettingsTypes.SELECTED_DATASETS;
+        changeHandler = pathfinderSettingsChanged;
+      } else {
+        return;
+      }
+
       let newSelection;
       
       if (checked) {
@@ -56,22 +74,22 @@ const DatasetSelector = forwardRef(
         newSelection = current.filter((ds) => ds !== datasetId);
       }
       
-      correlationSettingsChanged({
-        settingName: CorrelationSettingsTypes.SELECTED_DATASETS,
+      changeHandler({
+        settingName: settingName,
         newValue: newSelection,
       });
-    }, [isCorrelationModule, correlationSettings?.selectedDatasets, correlationSettingsChanged]);
+    }, [isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets, correlationSettingsChanged, pathfinderSettingsChanged]);
 
     // Function to transform backend dataset to frontend format
     const transformDataset = useCallback((dataset) => {
-      const isActive = isCorrelationModule 
-        ? false // Correlation module uses checkbox selection, not active state
+      const isActive = isMultiSelectMode 
+        ? false // Multi-select modules use checkbox selection, not active state
         : dataset.id === coreSettings.cellLine?.id;
       
       return {
         ...dataset,
-        onClick: isCorrelationModule 
-          ? undefined // No onClick for correlation module (use checkboxes instead)
+        onClick: isMultiSelectMode 
+          ? undefined // No onClick for multi-select (use checkboxes instead)
           : () => updateActivityById(
               dataset.id, 
               dataset.perturbationCount, 
@@ -80,7 +98,7 @@ const DatasetSelector = forwardRef(
             ),
         active: isActive,
       };
-    }, [updateActivityById, isCorrelationModule, coreSettings.cellLine?.id]);
+    }, [updateActivityById, isMultiSelectMode, coreSettings.cellLine?.id]);
 
     // Load datasets from backend
     useEffect(() => {
@@ -90,14 +108,14 @@ const DatasetSelector = forwardRef(
           const datasets = await fetchDatasets();
           const transformedDatasets = datasets.map(transformDataset);
       
-          // For correlation module, we don't auto-select datasets - user must select manually
+          // For multi-select modules, we don't auto-select datasets - user must select manually
 
           // Filter for whole genome datasets if wholeGenomeOnly is true (for non-correlation modules)
           if (wholeGenomeOnly && !isCorrelationModule) {
             const filteredDatasets = transformedDatasets.filter(dataset => dataset.isWholeGenome === true);
             // Ensure the first whole genome dataset is active if current selection is not in the filtered list
             const hasActiveDataset = filteredDatasets.some(dataset => dataset.active);
-            if (!hasActiveDataset && filteredDatasets.length > 0) {
+            if (!hasActiveDataset && filteredDatasets.length > 0 && !isMultiSelectMode) {
               filteredDatasets[0].active = true;
             }
             setDatasetList(filteredDatasets);
@@ -113,7 +131,7 @@ const DatasetSelector = forwardRef(
       };
 
       loadDatasets();
-    }, [wholeGenomeOnly, transformDataset, isCorrelationModule]);
+    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode]);
 
     const deleteItemAndChildren = (id) => {
       let parent = "";
@@ -245,36 +263,46 @@ const DatasetSelector = forwardRef(
 
     useEffect(() => {
       //console.log(coreSettings.cellLine
-      if (!isCorrelationModule) {
+      if (!isMultiSelectMode) {
         updateGeneLists(coreSettings.cellLine.id);
-      } else if (correlationSettings?.selectedDatasets?.length > 0) {
-        // For correlation module, use the first selected dataset for gene lists
-        const firstSelectedId = correlationSettings.selectedDatasets[0];
-        updateGeneLists(firstSelectedId);
-        
-        // Also update core settings cellLine to the first selected dataset for compatibility
-        const firstDataset = datasetList.find(d => d.id === firstSelectedId);
-        if (firstDataset && coreSettings.cellLine?.id !== firstSelectedId) {
-          updateActivityById(
-            firstSelectedId,
-            firstDataset.perturbationCount,
-            firstDataset.geneCount,
-            firstDataset.isMixscape
-          );
+      } else {
+        // For multi-select modules, use the first selected dataset for gene lists
+        let selectedDatasets = [];
+        if (isCorrelationModule) selectedDatasets = correlationSettings?.selectedDatasets || [];
+        else if (isPathFinderModule) selectedDatasets = pathfinderSettings?.selectedDatasets || [];
+
+        if (selectedDatasets.length > 0) {
+          const firstSelectedId = selectedDatasets[0];
+          updateGeneLists(firstSelectedId);
+          
+          // Also update core settings cellLine to the first selected dataset for compatibility
+          const firstDataset = datasetList.find(d => d.id === firstSelectedId);
+          if (firstDataset && coreSettings.cellLine?.id !== firstSelectedId) {
+            updateActivityById(
+              firstSelectedId,
+              firstDataset.perturbationCount,
+              firstDataset.geneCount,
+              firstDataset.isMixscape
+            );
+          }
         }
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [coreSettings.cellLine.id, isCorrelationModule, correlationSettings?.selectedDatasets?.[0]]);
+    }, [coreSettings.cellLine.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets?.[0], pathfinderSettings?.selectedDatasets?.[0]]);
 
     // Sync active/checked state when settings change
     useEffect(() => {
-      if (isCorrelationModule) {
-        // For correlation module, sync checkbox state
+      if (isMultiSelectMode) {
+        let selectedDatasets = [];
+        if (isCorrelationModule) selectedDatasets = correlationSettings?.selectedDatasets || [];
+        else if (isPathFinderModule) selectedDatasets = pathfinderSettings?.selectedDatasets || [];
+
+        // For multi-select modules, sync checkbox state
         setDatasetList(prevList => 
           prevList.map(item => ({
             ...item,
-            active: correlationSettings?.selectedDatasets?.includes(item.id) || false,
-            checked: correlationSettings?.selectedDatasets?.includes(item.id) || false,
+            active: selectedDatasets.includes(item.id) || false,
+            checked: selectedDatasets.includes(item.id) || false,
           }))
         );
       } else if (coreSettings.cellLine?.id) {
@@ -286,7 +314,7 @@ const DatasetSelector = forwardRef(
           }))
         );
       }
-    }, [coreSettings.cellLine?.id, isCorrelationModule, correlationSettings?.selectedDatasets]);
+    }, [coreSettings.cellLine?.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets]);
 
     useEffect(() => {
       if (
@@ -319,9 +347,17 @@ const DatasetSelector = forwardRef(
       ? datasetList.filter((x) => x.id.length < 17)
       : datasetList;
 
-    // For correlation module with checkboxes, render custom checkbox list
-    if (isCorrelationModule) {
-      const selectedCount = correlationSettings?.selectedDatasets?.length || 0;
+    // For multi-select modules with checkboxes, render custom checkbox list
+    if (isMultiSelectMode) {
+      let selectedCount = 0;
+      let changeHandler = null;
+      if (isCorrelationModule) {
+        selectedCount = correlationSettings?.selectedDatasets?.length || 0;
+        changeHandler = correlationSettingsChanged;
+      } else if (isPathFinderModule) {
+        selectedCount = pathfinderSettings?.selectedDatasets?.length || 0;
+        changeHandler = pathfinderSettingsChanged;
+      }
       
       return (
         <>
@@ -371,7 +407,9 @@ const DatasetSelector = forwardRef(
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                 {filteredDatasets.map((dataset) => {
-                  const isSelected = correlationSettings?.selectedDatasets?.includes(dataset.id);
+                  let isSelected = false;
+                  if (isCorrelationModule) isSelected = correlationSettings?.selectedDatasets?.includes(dataset.id);
+                  else if (isPathFinderModule) isSelected = pathfinderSettings?.selectedDatasets?.includes(dataset.id);
                   
                   return (
                     <label
@@ -387,6 +425,8 @@ const DatasetSelector = forwardRef(
                         border: isSelected ? "1px solid #90caf9" : "1px solid transparent",
                         transition: "all 0.2s ease",
                         minHeight: "28px",
+                        width: "100%",
+                        boxSizing: "border-box"
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected) {
@@ -433,7 +473,7 @@ const DatasetSelector = forwardRef(
                     border: "1px solid #ffc107"
                   }}>
                     <Text size="small" style={{ color: "#856404", fontStyle: "italic" }}>
-                      ⚠️ No datasets selected. Select at least one dataset to calculate correlation.
+                      ⚠️ No datasets selected. Select at least one dataset to calculate.
                     </Text>
                   </div>
                 )}
@@ -480,7 +520,7 @@ const DatasetSelector = forwardRef(
           )}
 
           {/* Combine Method setting - shown when multiple datasets are selected */}
-          {selectedCount > 1 && (
+          {isCorrelationModule && selectedCount > 1 && (
             <div style={{ 
               marginTop: "12px",
               padding: "12px",
@@ -517,11 +557,7 @@ const DatasetSelector = forwardRef(
                   Combine Method for Multiple Datasets
                 </Text>
               </div>
-              <Field
-                label=""
-                labelLeft={false}
-                helpText="Method to combine correlation scores across datasets: Average takes the mean, Max takes the value with maximum absolute value."
-              >
+              <div style={{ marginBottom: "8px" }}>
                 <Select
                   small
                   onChange={({ target: { value } }) =>
@@ -536,7 +572,88 @@ const DatasetSelector = forwardRef(
                   ]}
                   value={correlationSettings?.combineMethod || "average"}
                 />
-              </Field>
+              </div>
+              <Text size="small" style={{ 
+                color: "#856404",
+                fontSize: "11px",
+                lineHeight: "1.4",
+                marginTop: "8px",
+                padding: "8px",
+                backgroundColor: "#fffbf0",
+                borderRadius: "4px",
+                border: "1px solid #ffd54f"
+              }}>
+                <strong>Help:</strong> Method to combine correlation scores across multiple datasets. <strong>'Average'</strong> calculates the mean correlation value across all selected datasets, providing a balanced representation. <strong>'Max'</strong> selects the correlation value with the maximum absolute magnitude, emphasizing the strongest relationship found in any dataset. Use Average for more conservative, consensus-based results, or Max to highlight the strongest correlations.
+              </Text>
+            </div>
+          )}
+
+          {/* Combination Strategy setting for PathFinder - shown when multiple datasets are selected */}
+          {isPathFinderModule && selectedCount > 1 && (
+            <div style={{ 
+              marginTop: "12px",
+              padding: "12px",
+              backgroundColor: "#e8f5e9",
+              borderRadius: "6px",
+              border: "2px solid #4caf50",
+              boxShadow: "0 2px 4px rgba(76, 175, 80, 0.15)"
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "8px"
+              }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "20px",
+                  height: "20px",
+                  backgroundColor: "#4caf50",
+                  color: "white",
+                  borderRadius: "50%",
+                  fontSize: "12px",
+                  fontWeight: "bold"
+                }}>
+                  ⚙
+                </span>
+                <Text size="small" style={{ 
+                  color: "#2e7d32",
+                  fontWeight: "600",
+                  fontSize: "13px"
+                }}>
+                  Combination Strategy for Multiple Datasets
+                </Text>
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <Select
+                  small
+                  onChange={({ target: { value } }) =>
+                    pathfinderSettingsChanged({
+                      settingName: PathFinderSettingsTypes.COMBINATION_STRATEGY,
+                      newValue: value,
+                    })
+                  }
+                  options={[
+                    { label: "Strict Intersection (AND)", value: "intersection" },
+                    { label: "Union (OR)", value: "union" },
+                  ]}
+                  value={pathfinderSettings?.combinationStrategy || "intersection"}
+                />
+              </div>
+              <Text size="small" style={{ 
+                color: "#2e7d32",
+                fontSize: "11px",
+                lineHeight: "1.4",
+                marginTop: "8px",
+                padding: "8px",
+                backgroundColor: "#f1f8f4",
+                borderRadius: "4px",
+                border: "1px solid #81c784"
+              }}>
+                <strong>Help:</strong> Strategy to combine network edges and nodes across multiple datasets. <strong>'Strict Intersection (AND)'</strong> keeps only edges and nodes that appear in ALL selected datasets, providing high-confidence results with reduced false positives but potentially fewer findings. <strong>'Union (OR)'</strong> includes edges and nodes found in ANY selected dataset, providing more comprehensive networks but may include dataset-specific artifacts. Use Intersection for conservative, highly reliable networks, or Union for exploratory analysis with broader coverage.
+              </Text>
             </div>
           )}
         </>
@@ -633,11 +750,13 @@ const DatasetSelector = forwardRef(
 const mapStateToProps = ({ settings }) => ({
   coreSettings: settings?.core ?? {},
   correlationSettings: settings?.correlation ?? {},
+  pathfinderSettings: settings?.pathfinder ?? {},
 });
 
 const mapDispatchToProps = { 
   coreSettingsChanged,
   correlationSettingsChanged,
+  pathfinderSettingsChanged,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps, null, {

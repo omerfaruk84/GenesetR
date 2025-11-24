@@ -401,6 +401,7 @@ const PathFinderSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   pathfinderSettings: settings?.pathfinder ?? {},
+  coreSettings: settings?.core ?? {},
 });
 
 const mapDispatchToProps = {

@@ -50,6 +50,7 @@ const CoreSettingsTypes = {
   MIXSCAPE_ALL: "mixscapeAll",
   DATASET_ADDED: "datasetAdded",
   LAST_TASK_ID: "lastTaskID",
+  SELECTED_DATASETS: "selectedDatasets",
 };
 
 const GraphmapSettingsTypes = {
@@ -197,6 +198,8 @@ const PathFinderSettingsTypes = {
   FILTER1_DIRECTIONAL: "filter1Directional",
   FILTER2_DIRECTIONAL: "filter2Directional",
   MAX_NODES: "maxNodes",
+  SELECTED_DATASETS: "selectedDatasets",
+  COMBINATION_STRATEGY: "combinationStrategy",
 };
 
 const ScatterPlotSettingsTypes = {
