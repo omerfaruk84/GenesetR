@@ -7,6 +7,7 @@ import {
   Slider,
   Spacer,
   Flex,
+  Text,
 } from "@oliasoft-open-source/react-ui-library";
 import { correlationSettingsChanged } from "../../../store/settings/correlation-settings";
 import { CorrelationSettingsTypes } from "./enums";
@@ -16,6 +17,7 @@ import styles from "./settings.module.scss";
 const CorrelationSettings = ({
   correlationSettings,
   correlationSettingsChanged,
+  coreSettings,
 }) => {
   // Local state for immediate slider updates
   const [localTrimThreshold, setLocalTrimThreshold] = useState(
@@ -142,6 +144,38 @@ const CorrelationSettings = ({
       value: "kendall",
     },
   ];
+
+  // Validate selected datasets against available datasets (remove invalid ones)
+  useEffect(() => {
+    // Get all main datasets (id.length < 17) for correlation module
+    const allDatasets = coreSettings?.datasetList?.filter(
+      (dataset) => dataset.id.length < 17
+    ) || [];
+
+    if (allDatasets.length === 0) {
+      // No datasets available - ensure selectedDatasets is empty array
+      if (correlationSettings?.selectedDatasets?.length > 0) {
+        correlationSettingsChanged({
+          settingName: CorrelationSettingsTypes.SELECTED_DATASETS,
+          newValue: [],
+        });
+      }
+      return;
+    }
+
+    const availableDatasetIds = allDatasets.map(d => d.id);
+    const currentSelected = correlationSettings?.selectedDatasets || [];
+    const validSelected = currentSelected.filter(id => availableDatasetIds.includes(id));
+
+    // Only update if some datasets were invalid (don't auto-select if none selected)
+    if (validSelected.length !== currentSelected.length) {
+      correlationSettingsChanged({
+        settingName: CorrelationSettingsTypes.SELECTED_DATASETS,
+        newValue: validSelected,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coreSettings?.datasetList, correlationSettingsChanged]);
 
   return (
     <>
@@ -324,12 +358,15 @@ const CorrelationSettings = ({
           </div>
         </Field>
       )}
+      
+      <Spacer size={10} />
     </>
   );
 };
 
 const mapStateToProps = ({ settings }) => ({
   correlationSettings: settings?.correlation ?? {},
+  coreSettings: settings?.core ?? {},
 });
 const mapDispatchToProps = {
   correlationSettingsChanged,

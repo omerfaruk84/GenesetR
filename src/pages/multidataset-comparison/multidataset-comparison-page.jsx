@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { MultiDatasetComparison } from "../../components/multidataset-comparison/multidataset-comparison";
 import styles from "./multidataset-comparison-page.module.scss";
@@ -27,10 +27,28 @@ const MultiDatasetComparisonPage = ({
   calcResults, 
   path 
 }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
   // Check if calculation is running
   const isCalculationRunning = calcResults?.["multiDatasetComparison"]?.running;
   const progressMessage = calcResults?.["multiDatasetComparison"]?.progressMessage;
   const progressPercentage = calcResults?.["multiDatasetComparison"]?.progressPercentage;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || multiDatasetResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, multiDatasetResults]);
 
   return (
     <div className={styles.mainView}>
@@ -46,7 +64,9 @@ const MultiDatasetComparisonPage = ({
         <MultiDatasetComparison data={multiDatasetResults} />
       ) : (
         <div>
-          <Accordion defaultExpanded
+          <Accordion 
+            expanded={isDescriptionExpanded}
+            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
             sx={{
               marginBottom: '14px',
               backgroundColor: '#f8f9fa', 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { HeatMap } from "../../components/heat-map/index";
 import styles from "./heatmap-page.module.scss";
@@ -18,14 +18,35 @@ const moduleDescription = {
     "Integrated gene set enrichment analysis (GSEA)"
   ],  
 };
-const HeatMapPage = ({ heatmapResults }) => {
+const HeatMapPage = ({ heatmapResults, calcResults }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+  const isCalculationRunning = calcResults?.[ModulePathNames?.["/heatmap"]]?.running;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || heatmapResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, heatmapResults]);
+
   return (
     <div className={styles.mainView}>
       {heatmapResults ? (
         <HeatMap graphData={heatmapResults} />
       ) : (
         <div>
-          <Accordion defaultExpanded={true}
+          <Accordion 
+            expanded={isDescriptionExpanded}
+            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
             sx={{
               marginBottom: '14px',
               backgroundColor: '#f8f9fa', 
@@ -92,6 +113,7 @@ const HeatMapPage = ({ heatmapResults }) => {
 
 const mapStateToProps = ({ calcResults }, { path }) => ({
   heatmapResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
+  calcResults,
 });
 
 const MainContainer = connect(mapStateToProps)(HeatMapPage);

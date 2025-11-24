@@ -112,10 +112,8 @@ const getData = async (body, moduleName = null, options = {}) => {
 const runPcaGraphCalc = async (core, pca, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
     numcomponents: pca.numberOfComponents,
@@ -133,10 +131,8 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
 const runMdeGraphCalc = async (core, mde, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
 
@@ -160,10 +156,8 @@ const runMdeGraphCalc = async (core, mde, clustering) => {
 const runUMAPGraphCalc = async (core, umap, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
 
@@ -186,10 +180,8 @@ const runUMAPGraphCalc = async (core, umap, clustering) => {
 const runtSNEGraphCalc = async (core, tsne, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
 
@@ -260,10 +252,8 @@ const runPathFinderCalc = async (core, pathfinder) => {
 const runCorrCalc = async (core, corr) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
     targetList: core.targetGeneList
@@ -285,21 +275,52 @@ const runCorrCalc = async (core, corr) => {
   return await getData(body);
 };
 
+const runCorrCalcMultiDataset = async (core, corr) => {
+  // Ensure datasets is an array of strings
+  let datasets = core.selectedDatasets || [];
+  if (Array.isArray(datasets)) {
+    datasets = datasets.map((ds) => {
+      if (typeof ds === 'object' && ds !== null) {
+        return ds.id || ds.value || String(ds);
+      }
+      return String(ds);
+    });
+  }
+  
+  const body = {
+    geneList: core.peturbationList
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
+    dataType: core.dataType,
+    datasets: datasets,
+    combineMethod: corr.combineMethod || "average",
+    targetList: core.targetGeneList
+      ? core.targetGeneList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
+    row_distance: corr.row_distance,
+    column_distance: corr.column_distance,
+    row_linkage: corr.row_linkage,
+    column_linkage: corr.column_linkage,
+    axis: corr.axis,
+    normalize: corr.normalize,
+    write_original: corr.write_original,
+    processtype: corr.corrType,
+    request: "corrClusterMultiDataset",
+  };
+  
+  console.log('Multi-dataset correlation body:', body);
+  return await getData(body);
+};
+
 const runHeatMap = async (core, heatMap) => {
+  const geneList = core.peturbationList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";") || "";
+  const targetList = core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";") || "";
+
   const body = {
     //dataType: core.dataType,
     cell_line: core.cellLine.id,
-    geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
-    targetList: core.targetGeneList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
-
+    geneList: geneList,
+    targetList: targetList,
     row_distance: heatMap.row_distance,
     column_distance: heatMap.column_distance,
     row_linkage: heatMap.row_linkage,
@@ -572,6 +593,7 @@ export {
   runUMAPGraphCalc,
   runtSNEGraphCalc,
   runCorrCalc,
+  runCorrCalcMultiDataset,
   runbiClusteringCalc,
   runPathFinderCalc,
   runGeneRegulation,

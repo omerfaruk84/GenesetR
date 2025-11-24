@@ -73,6 +73,7 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
   const [filteredCorrResults, setFilteredCorrResults] = useState(null);
   const [trimStats, setTrimStats] = useState(null);
   const [isFilteringInProgress, setIsFilteringInProgress] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
 
   // Effect to load pending gene list from localStorage (when opened from enrichment table)
   useEffect(() => {
@@ -299,10 +300,28 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
   const progressMessage = calcResults?.["corrCluster"]?.progressMessage;
   const progressPercentage = calcResults?.["corrCluster"]?.progressPercentage;
 
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || corrResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, corrResults]);
+
   return (
     <div className={styles.mainView}>
       {/* Module Description */}
-      <Accordion defaultExpanded
+      <Accordion 
+        expanded={isDescriptionExpanded}
+        onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
        sx={{
          marginBottom: '14px',
          backgroundColor: '#f8f9fa', 
@@ -417,13 +436,30 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
               throwOnError: false
             });
             
-            const dataToRender = filteredCorrResults || parsedCorrResults;
+            // Determine which data source to use
+            const dataSource = filteredCorrResults || parsedCorrResults;
+            
+            // Check if this is multi-dataset result structure (check both filtered and original)
+            const isMultiDataset = dataSource?.combined_data || dataSource?.dataset_scores;
+            
+            let dataToRender = dataSource;
+            let datasetScores = null;
+            let datasets = null;
+            
+            if (isMultiDataset) {
+              // Multi-dataset mode: extract combined_data for heatmap
+              dataToRender = dataSource.combined_data || dataSource;
+              datasetScores = dataSource.dataset_scores || null;
+              datasets = dataSource.datasets || null;
+            }
+            
             const hasNodes = !!dataToRender?.data?.nodes;
             const hasFeatureNames = !!dataToRender?.data?.feature_names;
             const isValid = hasNodes && hasFeatureNames;
             
             console.log('Rendering HeatMap with data:', 
               'useFiltered:', !!filteredCorrResults,
+              'isMultiDataset:', isMultiDataset,
               'isValid:', isValid,
               'hasNodes:', hasNodes,
               'hasFeatureNames:', hasFeatureNames,
@@ -432,7 +468,13 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
             );
             
             return isValid ? (
-              <HeatMap graphData={dataToRender} showDescription={false} />
+              <HeatMap 
+                graphData={dataToRender} 
+                showDescription={false}
+                datasetScores={datasetScores}
+                datasets={datasets}
+                isMultiDataset={isMultiDataset}
+              />
             ) : (
               <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
                 ⚠️ Invalid data structure - cannot render heatmap

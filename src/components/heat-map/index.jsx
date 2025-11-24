@@ -36,6 +36,9 @@ const HeatMap = ({
   inchlibSettings,
   calcResults,
   showDescription = true,
+  datasetScores = null,
+  datasets = null,
+  isMultiDataset = false,
 }) => {
   const [selectedGenes, setSelectedGenes] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
@@ -50,45 +53,115 @@ const HeatMap = ({
   const instanceIdRef = useRef(0);
   const isMountedRef = useRef(false);
 
-  const columns = useMemo(
-    () => [
-      {
-        accessorKey: "Gene 1",
-        header: "Gene 1",
-        size: 75,
-        filterVariant: "autocomplete",
-        minSize: 50,
-        maxSize: 150,
-        muiFilterTextFieldProps: {
-          placeholder: "Symbol",
-          size: "small",
+  const columns = useMemo(() => {
+    if (isMultiDataset && datasets && datasets.length > 0) {
+      // Multi-dataset mode: create grouped columns
+      const datasetColumns = datasets.map(dataset => {
+        const datasetName = dataset === 'K562gwps' ? 'K562' : 
+                           dataset === 'HCT116gwps' ? 'HCT116' : 
+                           dataset === 'HEK293gwps' ? 'HEK293' : dataset;
+        return {
+          accessorKey: dataset,
+          header: datasetName,
+          size: 70,
+          enableColumnActions: false,
+          Cell: ({ cell }) => {
+            const value = cell.getValue();
+            return typeof value === 'number' ? value.toFixed(3) : (value || '');
+          },
+        };
+      });
+
+      return [
+        {
+          accessorKey: "Gene 1",
+          header: "Gene 1",
+          size: 75,
+          filterVariant: "autocomplete",
+          minSize: 50,
+          maxSize: 150,
+          enableColumnActions: false,
+          muiFilterTextFieldProps: {
+            placeholder: "Symbol",
+            size: "small",
+          },
         },
-      },
-      {
-        accessorKey: "Gene 2",
-        header: "Gene 2",
-        size: 75,
-        filterVariant: "autocomplete",
-        muiFilterTextFieldProps: {
-          placeholder: "Symbol",
-          size: "small",
+        {
+          accessorKey: "Gene 2",
+          header: "Gene 2",
+          size: 75,
+          filterVariant: "autocomplete",
+          enableColumnActions: false,
+          muiFilterTextFieldProps: {
+            placeholder: "Symbol",
+            size: "small",
+          },
         },
-      },
-      {
-        accessorKey: "Corr R",
-        header: "Score",
-        size: 50,
-        filterVariant: "range-slider",
-        muiFilterSliderProps: {
-          size: "small",
-          color: "primary",
-          step: 0.01,
+        {
+          header: "Score",
+          columns: datasetColumns,
         },
-        enableResizing: true,
-      },
-    ],
-    []
-  );
+        {
+          accessorKey: "Average",
+          header: "Average",
+          size: 80,
+          enableColumnActions: false,
+          Cell: ({ cell }) => {
+            const value = cell.getValue();
+            return typeof value === 'number' ? value.toFixed(3) : (value || '');
+          },
+        },
+        {
+          accessorKey: "Max",
+          header: "Max",
+          size: 80,
+          enableColumnActions: false,
+          Cell: ({ cell }) => {
+            const value = cell.getValue();
+            return typeof value === 'number' ? value.toFixed(3) : (value || '');
+          },
+        },
+      ];
+    } else {
+      // Single dataset mode: original columns
+      return [
+        {
+          accessorKey: "Gene 1",
+          header: "Gene 1",
+          size: 75,
+          filterVariant: "autocomplete",
+          minSize: 50,
+          maxSize: 150,
+          muiFilterTextFieldProps: {
+            placeholder: "Symbol",
+            size: "small",
+          },
+        },
+        {
+          accessorKey: "Gene 2",
+          header: "Gene 2",
+          size: 75,
+          filterVariant: "autocomplete",
+          muiFilterTextFieldProps: {
+            placeholder: "Symbol",
+            size: "small",
+          },
+        },
+        {
+          accessorKey: "Corr R",
+          header: "Score",
+          size: 50,
+          filterVariant: "range-slider",
+          muiFilterSliderProps: {
+            size: "small",
+            color: "primary",
+            step: 0.01,
+          },
+          enableResizing: true,
+        },
+      ];
+    }
+  }, [isMultiDataset, datasets]);
 
   const genesets = useMemo(() => {
     return selectedGenes.length > 0
@@ -118,27 +191,83 @@ const HeatMap = ({
 const keyedData = useMemo(() => {
   if (!graphData?.data?.nodes) return [];
 
-  const tableInfo = [];
-  for (let i in graphData.data.nodes) {
-    if (graphData.data.nodes[i].count === 1) {
-      let gene1 = graphData.data.nodes[i].objects[0];
-      for (let j in graphData.data.nodes[i].features) {
-        const value = graphData.data.nodes[i].features[j];
-        if (
-          graphData.data.feature_names[j] !== gene1 &&
-          (value > 0.05 || value < -0.05)
-        ) {
-          tableInfo.push({
-            "Gene 1": gene1,
-            "Gene 2": graphData.data.feature_names[j],
-            "Corr R": value,
-          });
-        }
+  // Multi-dataset mode: use dataset_scores
+  if (isMultiDataset && datasetScores && datasets) {
+    const tableInfo = [];
+    const genePairs = new Set();
+    
+    // Collect all gene pairs from all datasets
+    datasets.forEach(dataset => {
+      if (datasetScores[dataset]) {
+        Object.keys(datasetScores[dataset]).forEach(key => {
+          const [gene1, gene2] = key.split('_');
+          if (gene1 && gene2 && gene1 !== gene2) {
+            genePairs.add(`${gene1}_${gene2}`);
+          }
+        });
       }
-    } else break;
+    });
+    
+    // Create rows for each gene pair
+    genePairs.forEach(pairKey => {
+      const [gene1, gene2] = pairKey.split('_');
+      const row = {
+        "Gene 1": gene1,
+        "Gene 2": gene2,
+      };
+      
+      // Add scores for each dataset
+      const scores = [];
+      datasets.forEach(dataset => {
+        const score = datasetScores[dataset]?.[pairKey] || datasetScores[dataset]?.[`${gene2}_${gene1}`];
+        row[dataset] = score !== undefined ? score : null;
+        if (score !== undefined && score !== null) {
+          scores.push(score);
+        }
+      });
+      
+      // Calculate Average and Max
+      if (scores.length > 0) {
+        row.Average = scores.reduce((sum, val) => sum + val, 0) / scores.length;
+        // Find value with maximum absolute value, preserving sign
+        const maxAbs = Math.max(...scores.map(Math.abs));
+        row.Max = scores.find(s => Math.abs(s) === maxAbs);
+      } else {
+        row.Average = null;
+        row.Max = null;
+      }
+      
+      // Only include rows with at least one score
+      if (scores.length > 0) {
+        tableInfo.push(row);
+      }
+    });
+    
+    return tableInfo;
+  } else {
+    // Single dataset mode: original logic
+    const tableInfo = [];
+    for (let i in graphData.data.nodes) {
+      if (graphData.data.nodes[i].count === 1) {
+        let gene1 = graphData.data.nodes[i].objects[0];
+        for (let j in graphData.data.nodes[i].features) {
+          const value = graphData.data.nodes[i].features[j];
+          if (
+            graphData.data.feature_names[j] !== gene1 &&
+            (value > 0.05 || value < -0.05)
+          ) {
+            tableInfo.push({
+              "Gene 1": gene1,
+              "Gene 2": graphData.data.feature_names[j],
+              "Corr R": value,
+            });
+          }
+        }
+      } else break;
+    }
+    return tableInfo;
   }
-  return tableInfo;
-}, [graphData]);
+}, [graphData, isMultiDataset, datasetScores, datasets]);
 
 
   const logMemoryUsage = useCallback((label) => {

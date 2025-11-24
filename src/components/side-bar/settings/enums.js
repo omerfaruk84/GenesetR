@@ -72,6 +72,8 @@ const CorrelationSettingsTypes = {
   ROW_COL_SAMEORDER: "row_col_sameorder",
   TRIM_ENABLED: "trimEnabled",
   TRIM_THRESHOLD: "trimThreshold",
+  SELECTED_DATASETS: "selectedDatasets",
+  COMBINE_METHOD: "combineMethod",
 };
 const InchlibSettingsTypes = {
   COLOR_SCALE: "color_scale",

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { GeneSignature } from '../../components/genesignature/genesignature';
 import styles from './gene-signature-page.module.scss';
@@ -29,11 +29,29 @@ const GeneSignaturePage = ({
   calcResults,
   path
 }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
   // Check if any gene signature calculation is running
   const isMainCalculationRunning = calcResults?.[ModulePathNames?.[path]]?.running;
   const isMultiDatasetRunning = calcResults?.["genesignatureMultiDataset"]?.running;
   const isMultiDatasetSimilarRunning = calcResults?.["genesignatureSimilarGraph"]?.running;
   const isAnyCalculationRunning = isMainCalculationRunning || isMultiDatasetRunning || isMultiDatasetSimilarRunning;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isAnyCalculationRunning || geneRegulationResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isAnyCalculationRunning, geneRegulationResults]);
   
   // Get progress state from the currently running calculation
   const getProgressState = () => {
@@ -81,7 +99,9 @@ const GeneSignaturePage = ({
           />
           ) : (
             <div>  
-            <Accordion defaultExpanded={true}
+            <Accordion 
+              expanded={isDescriptionExpanded}
+              onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
             sx={{
               marginBottom: '14px',
               backgroundColor: '#f8f9fa', 

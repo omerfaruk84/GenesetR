@@ -19,6 +19,7 @@ const SideBar = ({
   coreSettings,
   coreSettingsChanged,
   multidatasetComparisonSettings,
+  correlationSettings,
 }) => {
   const [sideBarWith, setSideBarWith] = useState(300);
   const handleSideBarResize = (size) => {
@@ -71,9 +72,16 @@ const SideBar = ({
 
   //To set runcalc button disabled or not
   let isDisabled = true;
+  
+  // For correlation, require both perturbation list and at least one selected dataset
+  const hasSelectedDatasets = correlationSettings?.selectedDatasets && 
+                               Array.isArray(correlationSettings.selectedDatasets) && 
+                               correlationSettings.selectedDatasets.length > 0;
+  
   if (
     (pathname === ROUTES.CORRELATION &&
-      coreSettings.peturbationList?.trim().split("\n").length > 1) ||
+      coreSettings.peturbationList?.trim().split("\n").length > 1 &&
+      hasSelectedDatasets) ||
     (pathname === ROUTES.DR &&
       coreSettings.peturbationList?.trim().split("\n").length > 9) ||
     pathname === ROUTES.GENE_REGULATION ||
@@ -148,6 +156,7 @@ const mapStateToProps = ({ calcResults, settings }) => ({
   calcResults,
   coreSettings: settings?.core ?? {},
   multidatasetComparisonSettings: settings?.multidatasetComparison ?? {},
+  correlationSettings: settings?.correlation ?? {},
 });
 
 const mapDispatchToProps = {

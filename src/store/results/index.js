@@ -6,6 +6,7 @@ import {
   runHeatMap,
   runPcaGraphCalc,
   runCorrCalc,
+  runCorrCalcMultiDataset,
   runUMAPGraphCalc,
   runMdeGraphCalc,
   runtSNEGraphCalc,
@@ -292,10 +293,40 @@ const runCalculation = (module) => async (dispatch, getState) => {
         );
       }
       case ROUTES.CORRELATION: {
-        const result = await runCorrCalc(core, correlation);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        // Validate that at least one dataset is selected
+        if (!correlation?.selectedDatasets || correlation.selectedDatasets.length === 0) {
+          throw new Error("Please select at least one dataset to calculate correlation.");
+        }
+
+        // Check if multiple datasets are selected
+        if (correlation.selectedDatasets.length > 1) {
+          // Prepare core params for multi-dataset mode
+          const multiCore = {
+            ...core,
+            selectedDatasets: correlation.selectedDatasets,
+          };
+          const multiCorr = {
+            ...correlation,
+            combineMethod: correlation.combineMethod || "average",
+          };
+          const result = await runCorrCalcMultiDataset(multiCore, multiCorr);
+          return dispatch(
+            resultReceived({ result, module: ModulePathNames[module] })
+          );
+        } else {
+          // Single dataset mode - use the selected dataset
+          const singleCore = {
+            ...core,
+            cellLine: {
+              ...core.cellLine,
+              id: correlation.selectedDatasets[0],
+            },
+          };
+          const result = await runCorrCalc(singleCore, correlation);
+          return dispatch(
+            resultReceived({ result, module: ModulePathNames[module] })
+          );
+        }
       }
       case ROUTES.EXPRESSIONANALYZER: {
         const result = await runGeneExp(core, expressionanalyzer);

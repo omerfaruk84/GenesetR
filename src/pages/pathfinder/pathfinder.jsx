@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { PathFinder } from '../../components/pathfinder';
 import { ModulePathNames } from '../../store/results/enums';
@@ -25,6 +25,26 @@ const moduleDescription = {
   ],  
 };
 const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blacklistLoading, pathfinderSettings, dispatch, coreSettingsChanged: setCoreSettings }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
+  // Check if pathfinder calculation is running
+  const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || pathfinderResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, pathfinderResults]);
 
   // Effect to load pending gene list from localStorage (when opened from enrichment table)
   useEffect(() => {
@@ -71,8 +91,6 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
     }
   }, [blacklistData, dispatch]);
 
-  // Check if pathfinder calculation is running
-  const isCalculationRunning = calcResults?.["pathFinderGraph"]?.running;
   const progressMessage = calcResults?.["pathFinderGraph"]?.progressMessage;
   const progressPercentage = calcResults?.["pathFinderGraph"]?.progressPercentage;
 
@@ -91,7 +109,9 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
         <PathFinder pathFinderGraph={pathfinderResults} blacklistData={blacklistData} pathfinderSettings={pathfinderSettings} /> 
       ) : (
         <div>  
-          <Accordion defaultExpanded={true}
+          <Accordion 
+            expanded={isDescriptionExpanded}
+            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
         sx={{
           marginBottom: '14px',
           backgroundColor: '#f8f9fa',

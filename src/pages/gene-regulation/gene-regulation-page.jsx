@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { GeneRegulation } from "./generegulation";
 import styles from "./gene-regulation-page.module.scss";
@@ -23,6 +23,7 @@ const moduleDescription = {
 };
 
 const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklistData, blacklistLoading }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
   const moduleKey = ModulePathNames?.[path] ?? "geneRegulationGraph";
   const moduleState = calcResults?.[moduleKey] ?? {};
   const {
@@ -30,6 +31,22 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklis
     progressMessage,
     progressPercentage,
   } = moduleState;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || geneRegulationResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, geneRegulationResults]);
 
   return (
     <div className={styles.mainView}>
@@ -45,7 +62,9 @@ const GeneRegulationPage = ({ geneRegulationResults, calcResults, path, blacklis
         <GeneRegulation blacklistData={blacklistData} blacklistLoading={blacklistLoading} />
       ) : (
         <div>
-          <Accordion defaultExpanded
+          <Accordion 
+            expanded={isDescriptionExpanded}
+            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
       sx={{
          marginBottom: '14px',
               backgroundColor: '#f8f9fa', 

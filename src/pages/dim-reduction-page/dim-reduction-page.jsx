@@ -81,6 +81,30 @@ const DimReductionPage = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
+  // Check if any calculation is running
+  const isCalculationRunning = 
+    calcResults?.["tsneGraph"]?.running ||
+    calcResults?.["umapGraph"]?.running ||
+    calcResults?.["mdeGraph"]?.running ||
+    calcResults?.["pcaGraph"]?.running;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || tsneResults || umapResults || mdeResults || pcaResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, tsneResults, umapResults, mdeResults, pcaResults]);
 
   // Effect to load pending gene list from localStorage (when opened from enrichment table)
   useEffect(() => {
@@ -534,7 +558,9 @@ const DimReductionPage = ({
   return (
     <div className={styles.mainView}>
       {/* Module Description */}
-      <Accordion defaultExpanded={!tsneResults && !umapResults && !mdeResults && !pcaResults}
+      <Accordion 
+        expanded={isDescriptionExpanded}
+        onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
        sx={{
          marginBottom: '14px',
          backgroundColor: '#f8f9fa', 
