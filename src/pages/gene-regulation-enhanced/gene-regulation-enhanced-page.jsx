@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { connect } from "react-redux";
 import styles from "../gene-regulation/gene-regulation-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
@@ -159,6 +159,23 @@ const GeneRegulationEnhancedPage = ({
 }) => {
   const [selectedView, setSelectedView] = useState(0);
   const [tableData, setTableData] = useState([]);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isRunning || rawResult) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isRunning, rawResult]);
 
   // Table columns configuration for gene regulation data
   const columns = useMemo(
@@ -453,7 +470,9 @@ const GeneRegulationEnhancedPage = ({
         </div>
       ) : (
         <div>
-          <Accordion defaultExpanded
+          <Accordion 
+            expanded={isDescriptionExpanded}
+            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
             sx={{
               marginBottom: "14px",
               backgroundColor: "#f8f9fa",
