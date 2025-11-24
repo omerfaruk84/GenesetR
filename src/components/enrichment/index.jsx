@@ -992,8 +992,8 @@ const GeneSetEnrichmentTable = ({
         timestamp: Date.now()
       }));
     } else if (route === ROUTES.DR) {
-      // For DR & Clustering, primary list is target gene list
-      settingToUpdate = CoreSettingsTypes.TARGET_LIST;
+      // For DR & Clustering, primary list is perturbation list
+      settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
       settingValue = genesForPrimaryList; // Use newline format for primary list
       
       localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({

@@ -96,17 +96,16 @@ const DimReductionPage = ({
           if (Date.now() - data.timestamp < 30000) {
             console.log('Loading gene list from localStorage:', data);
             
-            // For DR, we're setting target gene list, so clear perturbation list first
-            // to avoid showing default genes. Do this BEFORE setting target list
-            // to prevent both lists from showing genes
-            if (data.settingName === CoreSettingsTypes.TARGET_LIST) {
-              // Clear perturbation list first (synchronously)
+            // For DR, we're setting perturbation list, so clear target gene list first
+            // to avoid showing genes in both lists
+            if (data.settingName === CoreSettingsTypes.PETURBATION_LIST) {
+              // Clear target gene list first (synchronously)
               coreSettingsChanged({
-                settingName: CoreSettingsTypes.PETURBATION_LIST,
+                settingName: CoreSettingsTypes.TARGET_LIST,
                 newValue: "",
               });
               
-              // Set the target gene list in Redux immediately after clearing
+              // Set the perturbation list in Redux immediately after clearing
               // Use a small delay to ensure Redux state updates properly
               setTimeout(() => {
                 coreSettingsChanged({

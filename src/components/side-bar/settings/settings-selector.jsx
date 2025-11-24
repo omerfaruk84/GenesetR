@@ -218,7 +218,7 @@ const SettingsSelector = ({ pathname }) => {
             source={"PATHFINDER"}
             showcellLineOptions={true}
             showPerturbationList={true}
-            showGeneList={false}
+            showGeneList={true}
             showdataTypeOptions={false}
             showgraphTypeOptions={false}
             wholeGenomeOnly={true}

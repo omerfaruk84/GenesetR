@@ -39,6 +39,9 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
           // Check if data is recent (within last 30 seconds) to avoid stale data
           if (Date.now() - data.timestamp < 30000) {
             console.log('Loading gene list from localStorage:', data);
+            
+            // For Path Explorer, we're setting downregulated genes (perturbation list)
+            // Don't clear the upregulated genes list (target list) since both should be visible
             // Set the gene list in Redux
             setCoreSettings({
               settingName: data.settingName,
