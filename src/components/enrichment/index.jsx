@@ -19,13 +19,17 @@ import GenelistAdd from "../genelist-add";
 import { connect } from "react-redux";
 import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
 
-import { FaCopy, FaDatabase, FaDownload, FaTimesCircle } from "react-icons/fa";
+import { FaCopy, FaDatabase, FaDownload, FaTimesCircle, FaExternalLinkAlt } from "react-icons/fa";
 import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
 import data from "./enrichrDatasets.json";
 //import { runEnrichr } from "../../store/api";
 import { genesetEnrichmentSettingsChanged } from "../../store/settings/geneset-enrichment-settings";
+import { useDispatch } from "react-redux";
+import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { CoreSettingsTypes } from "../side-bar/settings/enums";
+import { ROUTES } from "../../common/routes";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
@@ -110,9 +114,12 @@ const GeneSetEnrichmentTable = ({
 }) => {
   console.log(genesets);
   assignObjectPaths(data);
+  const dispatch = useDispatch();
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
   const [genelistOptions, setGeneListOptions] = useState([]);
+  const [showNavigationMenu, setShowNavigationMenu] = useState(false);
+  const navigationMenuRef = useRef(null);
 
   //Rank, Term name, P-value, Z-score, Combined score, Overlapping genes, Adjusted p-value, Old p-value, Old adjusted p-value
   const headings = [
@@ -928,6 +935,119 @@ const GeneSetEnrichmentTable = ({
     }
   };
 
+  // Get current genes as a formatted string
+  const getCurrentGenes = () => {
+    if (!selectedCluster || genelistOptions.length === 0) return "";
+    const geneItem = genelistOptions.find((item) => item.value === selectedCluster);
+    if (!geneItem) return "";
+    
+    return geneItem.genes
+      .replaceAll("_2", "")
+      .split(",")
+      .filter((gene) => !gene.trim().startsWith("non-targeting"))
+      .map((gene) => gene.trim())
+      .join("\n");
+  };
+
+  // Handle navigation to different pages with genes
+  const handleNavigateWithGenes = (route, dataType = "genes") => {
+    const genesString = getCurrentGenes();
+    if (!genesString) {
+      toast({
+        message: {
+          type: "Warning",
+          icon: true,
+          heading: "No Genes Selected",
+          content: "Please select a gene list first.",
+        },
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    // Convert newline-separated genes to the format needed for each component
+    // For primary gene list, we use newline-separated format (as components expect)
+    const genesForPrimaryList = genesString; // Keep as newline-separated
+    const genesForSettings = genesString.split("\n").join(";"); // Semicolon-separated for Redux
+
+    // Determine which setting to update based on route
+    let settingToUpdate = null;
+    let settingValue = null;
+    
+    if (route === ROUTES.CORRELATION) {
+      // For correlation, primary list is perturbation list when dataType is "pert", otherwise target list
+      if (dataType === "pert") {
+        settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
+        settingValue = genesForPrimaryList; // Use newline format for primary list
+      } else {
+        settingToUpdate = CoreSettingsTypes.TARGET_LIST;
+        settingValue = genesForPrimaryList; // Use newline format for primary list
+      }
+      
+      // Store in localStorage with route-specific key so new tab can read it
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        dataType: dataType,
+        timestamp: Date.now()
+      }));
+    } else if (route === ROUTES.DR) {
+      // For DR & Clustering, primary list is target gene list
+      settingToUpdate = CoreSettingsTypes.TARGET_LIST;
+      settingValue = genesForPrimaryList; // Use newline format for primary list
+      
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        timestamp: Date.now()
+      }));
+    } else if (route === ROUTES.PATHFINDER) {
+      // For Path Explorer, primary list is perturbation list
+      settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
+      settingValue = genesForPrimaryList; // Use newline format for primary list
+      
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        timestamp: Date.now()
+      }));
+    }
+
+    // Open in new tab
+    const newTab = window.open(route, '_blank');
+    
+    // Close the dropdown menu
+    setShowNavigationMenu(false);
+    
+    // Show success message
+    toast({
+      message: {
+        type: "Success",
+        icon: true,
+        heading: "Opening in New Tab",
+        content: `Gene list will be copied to the primary gene list in the new tab.`,
+      },
+      autoClose: 2000,
+    });
+  };
+
+  // Close navigation menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navigationMenuRef.current && !navigationMenuRef.current.contains(event.target)) {
+        setShowNavigationMenu(false);
+      }
+    };
+
+    if (showNavigationMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNavigationMenu]);
+
   // Handle accepting dataset changes
   const handleAcceptDatasets = () => {
     if (tempData) {
@@ -1199,6 +1319,93 @@ const GeneSetEnrichmentTable = ({
                   icon={<PlaylistAddCircleRoundedIcon />}
                 />
               </Popover>
+              <Spacer width="6px" />
+
+              {/* Navigation dropdown button */}
+              <div ref={navigationMenuRef} style={{ position: "relative", display: "inline-block" }}>
+                <Button
+                  label="Open in..."
+                  colored="info"
+                  small
+                  width={100}
+                  icon={<FaExternalLinkAlt />}
+                  onClick={() => setShowNavigationMenu(!showNavigationMenu)}
+                />
+                {showNavigationMenu && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "4px",
+                      backgroundColor: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                      zIndex: 1000,
+                      minWidth: "200px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.CORRELATION, "pert")}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      Correlation
+                    </button>
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.DR)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      DR & Clustering
+                    </button>
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.PATHFINDER)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      Path Explorer
+                    </button>
+                  </div>
+                )}
+              </div>
               <Spacer width="6px" />
               <Toggle
                 label="Bar Graph"

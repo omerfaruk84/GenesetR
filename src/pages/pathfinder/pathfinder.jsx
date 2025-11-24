@@ -9,6 +9,8 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';
 import { fetchBlacklistData } from '../../store/blacklist';
+import { coreSettingsChanged } from '../../store/settings/core-settings';
+import { CoreSettingsTypes } from '../../components/side-bar/settings/enums';
 
 const moduleDescription = {
   title: "Pathway Explorer",
@@ -22,7 +24,42 @@ const moduleDescription = {
     "Integrates protein-protein interaction data from BioGRID"
   ],  
 };
-const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blacklistLoading, pathfinderSettings, dispatch }) => {
+const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blacklistLoading, pathfinderSettings, dispatch, coreSettingsChanged: setCoreSettings }) => {
+
+  // Effect to load pending gene list from localStorage (when opened from enrichment table)
+  useEffect(() => {
+    // Add a small delay to ensure page is fully loaded
+    const timer = setTimeout(() => {
+      const pendingDataKey = `pendingGeneList_/pathfinder`;
+      const pendingData = localStorage.getItem(pendingDataKey);
+      
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          // Check if data is recent (within last 30 seconds) to avoid stale data
+          if (Date.now() - data.timestamp < 30000) {
+            console.log('Loading gene list from localStorage:', data);
+            // Set the gene list in Redux
+            setCoreSettings({
+              settingName: data.settingName,
+              newValue: data.value,
+            });
+            
+            // Remove from localStorage after using
+            localStorage.removeItem(pendingDataKey);
+          } else {
+            console.log('Pending gene list expired, removing from localStorage');
+            localStorage.removeItem(pendingDataKey);
+          }
+        } catch (error) {
+          console.error('Error loading pending gene list:', error);
+          localStorage.removeItem(pendingDataKey);
+        }
+      }
+    }, 100); // 100ms delay to ensure page is loaded
+
+    return () => clearTimeout(timer);
+  }, [setCoreSettings]);
 
   // Fetch blacklist data if not already loaded
   useEffect(() => {
@@ -129,5 +166,10 @@ const mapStateToProps = ({ calcResults, blacklist, settings }, { path }) => ({
   pathfinderSettings: settings?.pathfinder ?? {},
 });
 
-const MainContainer = connect(mapStateToProps)(PathFinderPage);
+const mapDispatchToProps = (dispatch) => ({
+  dispatch,
+  coreSettingsChanged: (payload) => dispatch(coreSettingsChanged(payload)),
+});
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(PathFinderPage);
 export { MainContainer as PathFinderPage };

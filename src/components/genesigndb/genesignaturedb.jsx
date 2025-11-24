@@ -38,6 +38,13 @@ const debugError = (...args) => {
   }
 };
 
+// Use centralized server address configuration (matches frontend/src/store/api/index.js)
+let SERVER_ADRESS = "https://genesetr.uio.no/api";
+if (isDevEnv) {
+  SERVER_ADRESS = "http://localhost:8443";
+  debugLog("WORKING IN DEVELOPMENT MODE");
+}
+
 const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAndCalculate }) => {
   const [isError, setIsError] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
@@ -63,12 +70,6 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   // Notification state
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
 
-  let SERVER_ADRESS = "https://genesetr.uio.no/api";
-  if (isDevEnv) {
-    debugLog("WORKING IN DEVELOPMENT MODE");
-    SERVER_ADRESS = "http://localhost:8443";
-  }
-
   // Process gene input to handle different formats (+ - comma ; newline)
   const processGeneInput = (input) => {
     return input
@@ -86,11 +87,13 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
     try {
       const processedGenes = processGeneInput(genes);
       
+      debugLog(`Submitting gene signature to: ${SERVER_ADRESS}/gene-signature/`);
       const response = await fetch(`${SERVER_ADRESS}/gene-signature/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
+          "ngrok-skip-browser-warning": "69420", // Add ngrok header for consistency
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -99,23 +102,33 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
           notes: notes.trim(),
         }),
       });
-
-      if (response.ok) {
-        setName("");
-        setGenes("");
-        setSource("");
-        setNotes("");
-        setShowSuggestionForm(false);
-        setNotification({
-          open: true,
-          message: "Thank you for your gene signature suggestion! We will review and add it to our database.",
-          severity: "success"
-        });
-        getGeneSignatures(); // Refresh the list
-      } else {
-        const errorData = await response.text();
-        throw new Error(`Failed to submit gene signature: ${response.status} ${errorData}`);
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch {
+          // If response is not JSON, use default message
+        }
+        throw new Error(errorMessage);
       }
+
+      // Success - response is ok
+      const responseData = await response.json();
+      setName("");
+      setGenes("");
+      setSource("");
+      setNotes("");
+      setShowSuggestionForm(false);
+      setNotification({
+        open: true,
+        message: "Thank you for your gene signature suggestion! We will review and add it to our database.",
+        severity: "success"
+      });
+      getGeneSignatures(); // Refresh the list
     } catch (error) {
       debugError("Error:", error);
       setNotification({
@@ -178,28 +191,52 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
 
   async function sendGetRequest(url) {
     try {
+      debugLog(`Making request to: ${url}`);
       const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
+          "ngrok-skip-browser-warning": "69420", // Add ngrok header for consistency
         },
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+        // Try to get error details from response
+        let errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch {
+          // If response is not JSON, use default message
+        }
+        throw new Error(errorMessage);
       }
 
       const json = await response.json();
       debugLog("Success:", json);
+      setIsError(false); // Clear error on success
       return json;
     } catch (error) {
       setIsError(true);
-      debugError("Error:", error);
+      debugError("API call failed:", error);
+      debugError("Request URL:", url);
       
       // More specific error messages
-      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-        throw new Error('Cannot connect to server. Please ensure the backend is running on the correct port.');
+      if (error.name === 'TypeError' && (error.message === 'Failed to fetch' || error.message.includes('NetworkError'))) {
+        const errorMsg = `Cannot connect to server at ${SERVER_ADRESS}.\n\n` +
+          `Please ensure:\n` +
+          `1. The backend server is running (python API/main.py or uvicorn main:app --port 8443)\n` +
+          `2. Redis is running (redis-server)\n` +
+          `3. Celery worker is running (celery -A tasks.celery worker)\n` +
+          `4. The server is accessible at ${SERVER_ADRESS}`;
+        throw new Error(errorMsg);
+      }
+      // Re-throw with more context
+      if (error.message && !error.message.includes('Cannot connect')) {
+        throw new Error(`API request failed: ${error.message}`);
       }
       throw error;
     }
@@ -231,6 +268,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "ngrok-skip-browser-warning": "69420", // Add ngrok header for consistency
           }
         }
       );

@@ -82,6 +82,62 @@ const DimReductionPage = ({
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Effect to load pending gene list from localStorage (when opened from enrichment table)
+  useEffect(() => {
+    // Add a small delay to ensure page is fully loaded
+    const timer = setTimeout(() => {
+      const pendingDataKey = `pendingGeneList_/dr`;
+      const pendingData = localStorage.getItem(pendingDataKey);
+      
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          // Check if data is recent (within last 30 seconds) to avoid stale data
+          if (Date.now() - data.timestamp < 30000) {
+            console.log('Loading gene list from localStorage:', data);
+            
+            // For DR, we're setting target gene list, so clear perturbation list first
+            // to avoid showing default genes. Do this BEFORE setting target list
+            // to prevent both lists from showing genes
+            if (data.settingName === CoreSettingsTypes.TARGET_LIST) {
+              // Clear perturbation list first (synchronously)
+              coreSettingsChanged({
+                settingName: CoreSettingsTypes.PETURBATION_LIST,
+                newValue: "",
+              });
+              
+              // Set the target gene list in Redux immediately after clearing
+              // Use a small delay to ensure Redux state updates properly
+              setTimeout(() => {
+                coreSettingsChanged({
+                  settingName: data.settingName,
+                  newValue: data.value,
+                });
+              }, 100);
+            } else {
+              // Set the gene list in Redux immediately for other cases
+              coreSettingsChanged({
+                settingName: data.settingName,
+                newValue: data.value,
+              });
+            }
+            
+            // Remove from localStorage after using
+            localStorage.removeItem(pendingDataKey);
+          } else {
+            console.log('Pending gene list expired, removing from localStorage');
+            localStorage.removeItem(pendingDataKey);
+          }
+        } catch (error) {
+          console.error('Error loading pending gene list:', error);
+          localStorage.removeItem(pendingDataKey);
+        }
+      }
+    }, 100); // 100ms delay to ensure page is loaded
+
+    return () => clearTimeout(timer);
+  }, [coreSettingsChanged]);
+
   const options = [
     {
       label: "PCA",

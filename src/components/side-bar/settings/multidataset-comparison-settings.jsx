@@ -43,10 +43,19 @@ const MultiDatasetComparisonSettings = ({
       let check = new Set();
 
       try {
+        // Check if coreSettings and datasetList are available
+        if (!coreSettings?.datasetList || coreSettings.datasetList.length === 0) {
+          return;
+        }
+
         // Get genes from all whole genome datasets
         const wholeGenomeDatasets = coreSettings.datasetList
           .filter(dataset => dataset.isWholeGenome)
           .map(dataset => dataset.id);
+        
+        if (wholeGenomeDatasets.length === 0) {
+          return;
+        }
         
         for (let cellline of wholeGenomeDatasets) {
           await updateGeneLists(cellline);
@@ -94,7 +103,7 @@ const MultiDatasetComparisonSettings = ({
     if (pathname === ROUTES.MULTIDATASET_COMPARISON && geneOptions.length === 0) {
       fetchDataAndPopulate();
     }
-  }, [pathname, geneOptions.length]);
+  }, [pathname, geneOptions.length, coreSettings?.datasetList]);
 
   return (
     <>

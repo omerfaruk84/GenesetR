@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { runCorrCalc } from "../../store/api";
 import { safeJsonParse } from "../../utils/jsonUtils";
+import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
 
 import { HeatMap } from "../../components/heat-map/index";
 import styles from "./correlation-page.module.scss";
@@ -71,6 +73,65 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
   const [filteredCorrResults, setFilteredCorrResults] = useState(null);
   const [trimStats, setTrimStats] = useState(null);
   const [isFilteringInProgress, setIsFilteringInProgress] = useState(false);
+
+  // Effect to load pending gene list from localStorage (when opened from enrichment table)
+  useEffect(() => {
+    // Add a small delay to ensure page is fully loaded
+    const timer = setTimeout(() => {
+      const pendingDataKey = `pendingGeneList_/correlation`;
+      const pendingData = localStorage.getItem(pendingDataKey);
+      
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          // Check if data is recent (within last 30 seconds) to avoid stale data
+          if (Date.now() - data.timestamp < 30000) {
+            console.log('Loading gene list from localStorage:', data);
+          // If dataType is "pert", clear target list to avoid confusion
+          // If dataType is "genes", clear perturbation list to avoid confusion
+          if (data.dataType === "pert") {
+            // Clear target gene list when setting perturbation list
+            dispatch(coreSettingsChanged({
+              settingName: CoreSettingsTypes.TARGET_LIST,
+              newValue: "",
+            }));
+          } else if (data.dataType === "genes") {
+            // Clear perturbation list when setting target gene list
+            dispatch(coreSettingsChanged({
+              settingName: CoreSettingsTypes.PETURBATION_LIST,
+              newValue: "",
+            }));
+          }
+          
+          // Set the gene list in Redux
+          dispatch(coreSettingsChanged({
+            settingName: data.settingName,
+            newValue: data.value,
+          }));
+          
+          // If dataType is provided, set it too
+          if (data.dataType) {
+            dispatch(coreSettingsChanged({
+              settingName: CoreSettingsTypes.DATA_TYPE,
+              newValue: data.dataType,
+            }));
+          }
+            
+            // Remove from localStorage after using
+            localStorage.removeItem(pendingDataKey);
+          } else {
+            console.log('Pending gene list expired, removing from localStorage');
+            localStorage.removeItem(pendingDataKey);
+          }
+        } catch (error) {
+          console.error('Error loading pending gene list:', error);
+          localStorage.removeItem(pendingDataKey);
+        }
+      }
+    }, 100); // 100ms delay to ensure page is loaded
+
+    return () => clearTimeout(timer);
+  }, [dispatch]);
 
   // Effect to handle correlation filtering
   useEffect(() => {
@@ -155,10 +216,7 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
       corrType: correlationSettings?.corrType || "spearman"
     };
 
-    console.log('Making server request with params:', { coreParams, corrParams });
-    console.log('Original core settings:', coreSettings);
-    console.log('Original correlation settings:', correlationSettings);
-
+  
     // Set running state for progress indicator
     dispatch({
       type: 'calcResults/calcRunningChanged',
@@ -168,8 +226,6 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
     // Request filtered correlation data from server
     runCorrCalc(coreParams, corrParams)
       .then(response => {
-        console.log('Received filtered correlation data:', response);
-        console.log('Response type:', typeof response);
         
         // Parse the response if it's a string
         const parsedResponse = safeJsonParse(response, {
@@ -177,15 +233,6 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
           throwOnError: false
         });
         
-        console.log('Parsed response:', parsedResponse);
-        console.log('Parsed response type:', typeof parsedResponse);
-        console.log('Parsed response keys:', parsedResponse ? Object.keys(parsedResponse) : 'null');
-        console.log('Parsed response.data:', parsedResponse?.data);
-        console.log('Parsed response.data keys:', parsedResponse?.data ? Object.keys(parsedResponse.data) : 'no data');
-        console.log('Parsed response.data.nodes:', parsedResponse?.data?.nodes);
-        console.log('Parsed response.data.nodes keys:', parsedResponse?.data?.nodes ? Object.keys(parsedResponse.data.nodes) : 'no nodes');
-        console.log('Parsed response.data.feature_names:', parsedResponse?.data?.feature_names);
-        console.log('Parsed response.data.feature_names length:', parsedResponse?.data?.feature_names?.length || 'no feature names');
         
         // Check if we got a valid response (runCorrCalc handles task polling)
         if (!parsedResponse) {

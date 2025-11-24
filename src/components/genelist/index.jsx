@@ -21,7 +21,7 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import styles from "./main-view.module.scss";
 import { FaTrash, FaSave, FaTimesCircle, FaPlusSquare } from "react-icons/fa";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { get, set, del } from "idb-keyval";
 import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorMessage";
@@ -67,6 +67,10 @@ const Genelist = ({
   const location = useLocation();
   const [isGeneSignaturePopupOpen, setGeneSignaturePopupOpen] = useState(false);
   const { pathname } = location;
+  const perturbationListInitializedRef = useRef(false); // Track if perturbation list has initialized
+  const targetListInitializedRef = useRef(false); // Track if target list has initialized
+  const prevPerturbationListRef = useRef(null); // Track previous perturbation list value
+  const prevTargetListRef = useRef(null); // Track previous target list value
 
   // Optimize geneListNames loading with useEffect
   const [geneListNames, setGeneListNames] = useState(new Set());
@@ -244,6 +248,129 @@ const Genelist = ({
       replaceGene,
     ]
   );
+
+  // Sync local state from Redux when Redux state changes (e.g., when opened from enrichment table)
+  // Only sync from the field that this component is responsible for
+  // Use separate effects to ensure only the correct field triggers updates
+  
+  // Sync from perturbation list when this is the perturbation list component
+  useEffect(() => {
+    if (!isPerturbationList) return;
+    
+    const reduxGeneList = coreSettings?.peturbationList;
+    
+    // Skip if value hasn't changed
+    if (prevPerturbationListRef.current === reduxGeneList) {
+      return;
+    }
+    
+    // On first render, initialize after a delay to let page component set values first
+    if (!perturbationListInitializedRef.current) {
+      const timer = setTimeout(() => {
+        perturbationListInitializedRef.current = true;
+        // Sync the current value after initialization
+        const currentReduxList = coreSettings?.peturbationList;
+        prevPerturbationListRef.current = currentReduxList;
+        if (currentReduxList && currentReduxList.trim().length > 0) {
+          setGenes(currentReduxList.trim());
+        } else {
+          // Clear if empty (including empty string)
+          setGenes("");
+        }
+      }, 250); // Wait 250ms for page component to set values (longer than page's 100ms)
+      return () => clearTimeout(timer);
+    }
+    
+    // Update the ref to track this value
+    prevPerturbationListRef.current = reduxGeneList;
+    
+    // After initialization, sync normally
+    if (reduxGeneList && reduxGeneList.trim().length > 0) {
+      // Only update if different from current local state to avoid infinite loops
+      const normalizedRedux = reduxGeneList.trim().replace(/\s+/g, '\n');
+      setGenes((prevGenes) => {
+        const normalizedCurrent = prevGenes.trim().replace(/\s+/g, '\n');
+        if (normalizedRedux !== normalizedCurrent) {
+          return reduxGeneList.trim();
+        }
+        return prevGenes; // Return unchanged if same
+      });
+    } else {
+      // If Redux is empty or cleared, clear local state
+      setGenes((prevGenes) => {
+        if (prevGenes.trim().length > 0) {
+          return "";
+        }
+        return prevGenes; // Return unchanged if already empty
+      });
+    }
+  }, [coreSettings?.peturbationList, isPerturbationList]);
+  
+  // Sync from target gene list when this is the target gene list component
+  useEffect(() => {
+    if (isPerturbationList) return;
+    
+    const reduxGeneList = coreSettings?.targetGeneList;
+    
+    // Skip if value hasn't changed
+    if (prevTargetListRef.current === reduxGeneList) {
+      return;
+    }
+    
+    // On first render, initialize after a delay to let page component set values first
+    if (!targetListInitializedRef.current) {
+      const timer = setTimeout(() => {
+        targetListInitializedRef.current = true;
+        // Sync the current value after initialization
+        const currentReduxList = coreSettings?.targetGeneList;
+        prevTargetListRef.current = currentReduxList;
+        if (currentReduxList && currentReduxList.trim().length > 0) {
+          setGenes(currentReduxList.trim());
+        } else {
+          // Clear if empty (including empty string)
+          setGenes("");
+        }
+      }, 250); // Wait 250ms for page component to set values (longer than page's 100ms)
+      return () => clearTimeout(timer);
+    }
+    
+    // Update the ref to track this value
+    prevTargetListRef.current = reduxGeneList;
+    
+    // After initialization, sync normally
+    if (reduxGeneList && reduxGeneList.trim().length > 0) {
+      // Only update if different from current local state to avoid infinite loops
+      const normalizedRedux = reduxGeneList.trim().replace(/\s+/g, '\n');
+      setGenes((prevGenes) => {
+        const normalizedCurrent = prevGenes.trim().replace(/\s+/g, '\n');
+        if (normalizedRedux !== normalizedCurrent) {
+          return reduxGeneList.trim();
+        }
+        return prevGenes; // Return unchanged if same
+      });
+    } else {
+      // If Redux is empty or cleared, clear local state
+      setGenes((prevGenes) => {
+        if (prevGenes.trim().length > 0) {
+          return "";
+        }
+        return prevGenes; // Return unchanged if already empty
+      });
+    }
+  }, [coreSettings?.targetGeneList, isPerturbationList]);
+
+  // Initialize refs with current Redux values on mount to prevent initial sync issues
+  useEffect(() => {
+    if (isPerturbationList) {
+      if (prevPerturbationListRef.current === null) {
+        prevPerturbationListRef.current = coreSettings?.peturbationList;
+      }
+    } else {
+      if (prevTargetListRef.current === null) {
+        prevTargetListRef.current = coreSettings?.targetGeneList;
+      }
+    }
+  }, [isPerturbationList]); // Only run when isPerturbationList changes (component type)
 
   useEffect(() => {
     setPerturbationList(currentGenes);
