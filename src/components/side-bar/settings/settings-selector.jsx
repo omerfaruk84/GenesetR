@@ -20,6 +20,7 @@ import { SettingsTypes } from "./enums";
 import { GenelistCompareSettings } from "./genelist-compare";
 import { MultiDatasetComparisonSettings } from "./multidataset-comparison-settings";
 import { PrecomputedDrSettings } from "./precomputed-dr-settings";
+import { DrMethodSelector } from "./dr-method-selector";
 
 const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
@@ -30,6 +31,11 @@ const SettingsSelector = ({ pathname }) => {
       },
     ],
     [ROUTES.DR]: [
+      {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings source={"DR"} />,
@@ -68,6 +74,11 @@ const SettingsSelector = ({ pathname }) => {
     ],
     [ROUTES.PCA]: [
       {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
+      {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings source={"DR"} />,
       },
@@ -89,6 +100,11 @@ const SettingsSelector = ({ pathname }) => {
       },
     ],
     [ROUTES.MDE]: [
+      {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
       {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings source={"DR"} />,
@@ -112,6 +128,11 @@ const SettingsSelector = ({ pathname }) => {
     ],
     [ROUTES.UMAP]: [
       {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
+      {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings source={"DR"} />,
       },
@@ -134,6 +155,11 @@ const SettingsSelector = ({ pathname }) => {
     ],
     [ROUTES.TSNE]: [
       {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
+      {
         settingsName: SettingsTypes.CORE_SETTINGS,
         settings: <CoreSettings source={"DR"} />,
       },
@@ -155,6 +181,11 @@ const SettingsSelector = ({ pathname }) => {
       },
     ],
     "/precomputed": [
+      {
+        settingsName: SettingsTypes.DR_METHOD_SELECTOR,
+        settings: <DrMethodSelector />,
+        isAccordion: false,
+      },
       {
         settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
         settings: <PrecomputedDrSettings />,

@@ -1,6 +1,7 @@
 const SettingsTypes = {
   CORE_SETTINGS: "Core Settings",
   CORRELATION_SETTINGS: "Correlation Settings",
+  DR_METHOD_SELECTOR: "DR Method Selector",
   PCA_SETTINGS: "PCA Settings",
   CLUSTERING_SETTINGS: "Clustering Settings",
   MDE_SETTINGS: "MDE Settings",

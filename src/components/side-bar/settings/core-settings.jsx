@@ -165,6 +165,7 @@ const CoreSettings = ({
             width="100%"
             label="ADD THIS TO DATASETS"
             onClick={() => {
+              console.log("Adding to datasets:", graphData);
               childRef?.current?.saveDataset(
                 graphData.taskID,
                 graphData.taskName,

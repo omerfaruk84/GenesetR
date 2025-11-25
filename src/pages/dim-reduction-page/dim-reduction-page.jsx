@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { connect } from "react-redux";
 import { ScatterPlot } from "../../components/scatterPlot";
-import { Spacer, Tabs, Row } from "@oliasoft-open-source/react-ui-library";
+import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import styles from "./dim-reduction-page.module.scss";
 import "echarts-gl";
 import * as echarts from "echarts/core";
@@ -83,8 +83,11 @@ const DimReductionPage = ({
   const navigate = useNavigate();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
 
+  // Get current DR method from settings
+  const currentMethod = coreSettings?.currentModule || "pca";
+
   // Check if any calculation is running
-  const isCalculationRunning = 
+  const isCalculationRunning =
     calcResults?.["tsneGraph"]?.running ||
     calcResults?.["umapGraph"]?.running ||
     calcResults?.["mdeGraph"]?.running ||
@@ -161,38 +164,15 @@ const DimReductionPage = ({
     return () => clearTimeout(timer);
   }, [coreSettingsChanged]);
 
-  const options = [
-    {
-      label: "PCA",
-      value: "pca",
-    },
-    {
-      label: "MDE",
-      value: "mde",
-    },
-    {
-      label: "UMAP",
-      value: "umap",
-    },
-    {
-      label: "tSNE",
-      value: "tsne",
-    },
-    {
-      label: "All Genes (Pre-computed)",
-      value: "precomputed",
-    },
-  ];
-  const [selectedTab, setSelectedTab] = useState(options[0]);
   const [graphoptions, setOptions] = useState({});
-  
+
   // Check if any DR calculation is running
-  const isAnyCalculationRunning = 
+  const isAnyCalculationRunning =
     calcResults?.["pcaGraph"]?.running ||
     calcResults?.["mdeGraph"]?.running ||
     calcResults?.["tsneGraph"]?.running ||
     calcResults?.["umapGraph"]?.running;
-  
+
   // Get progress state from the currently running calculation
   const getProgressState = () => {
     if (calcResults?.["pcaGraph"]?.running) {
@@ -218,16 +198,8 @@ const DimReductionPage = ({
     }
     return { message: null, percentage: null };
   };
-  
-  const progressState = getProgressState();
 
-  useEffect(() => {
-    //navigate("../dr/"+selectedTab.value)
-    coreSettingsChanged({
-      settingName: CoreSettingsTypes.CURRENT_MODULE,
-      newValue: selectedTab.value,
-    });
-  }, [selectedTab]);
+  const progressState = getProgressState();
 
   useEffect(() => {
     var cumulative_ratio = [];
@@ -347,13 +319,13 @@ const DimReductionPage = ({
   let graphdata = undefined;
   let content = undefined;
 
-  if (selectedTab.value === "tsne") graphdata = tsneResults;
-  else if (selectedTab.value === "umap") graphdata = umapResults;
-  else if (selectedTab.value === "pca") graphdata = pcaResults;
-  else if (selectedTab.value === "mde") graphdata = mdeResults;
-  else if (selectedTab.value === "precomputed") graphdata = precomputedResults;
+  if (currentMethod === "tsne") graphdata = tsneResults;
+  else if (currentMethod === "umap") graphdata = umapResults;
+  else if (currentMethod === "pca") graphdata = pcaResults;
+  else if (currentMethod === "mde") graphdata = mdeResults;
+  else if (currentMethod === "precomputed") graphdata = precomputedResults;
 
-  if (selectedTab.value === "tsne" && graphdata === null) {
+  if (currentMethod === "tsne" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -382,17 +354,17 @@ const DimReductionPage = ({
             <p className={styles.moduleTextInfos}>
               <strong>To perform t-SNE analysis,</strong> please enter your gene list to the
               perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
-              button. The t-SNE results will be displayed in this panel. For other
-              dimensionality reduction methods, you can choose one of the tabs
-              above. You can run the calculation multiple times with different
-              parameters, or you can run different methods sequentially.
+              button. The t-SNE results will be displayed in this panel. You can
+              run the calculation multiple times with different parameters, or you
+              can run different DR methods sequentially by selecting the result
+              from the dataset selector.
             </p>
           </div>
           <img alt="MDE" src="/images/correlation.png" />
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "umap" && graphdata === null) {
+  } else if (currentMethod === "umap" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -436,7 +408,7 @@ const DimReductionPage = ({
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "mde" && graphdata === null) {
+  } else if (currentMethod === "mde" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -495,7 +467,7 @@ const DimReductionPage = ({
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "pca") {
+  } else if (currentMethod === "pca") {
     content = (
 
       <div className={styles.submainView}>
@@ -612,60 +584,32 @@ const DimReductionPage = ({
       {!isAnyCalculationRunning && (
         <>
       {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#e3f2fd', 
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#e3f2fd',
           borderLeft: '4px solid #1976d2',
           borderRadius: '4px',
           color: '#1565c0',
           marginBottom: '8px',
           fontSize: '13px'
         }}>
-          💡 To start, please eneter your gene list to the input box at the left menu, and click the <strong>"Run Calculation"</strong> button.
+          💡 To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"Run Calculation"</strong> button.
         </div>
       )}
-      {graphdata === null ? (
-        <>
-          
-          <div>
-            <h4>
-              <span style={{ color: "black" }}>
-                <span style={{ color: "#0000ff" }}>
-                  <strong>
-                    Please choose one of the tabs below to perform DR and
-                    Clustering on your gene lists.
-                  </strong>
-                </span>
-              </span>
-            </h4>
-          </div>
-          
-        </>
-      ) : null}
-      <Tabs
-        name="Main Tabs"
-        value={selectedTab}
-        options={options}
-        onChange={(evt) => {
-          const { value, label } = evt.target;
-          setSelectedTab({ value, label });
-        }}
-      />
 
-      <Spacer />
-      {selectedTab.value === "pca" ? (
+      {currentMethod === "pca" ? (
         <>
         {content}
         <VideoHelpPage videoFile={helpVideo} />
         </>
-      ) : selectedTab.value === "precomputed" ? (
+      ) : currentMethod === "precomputed" ? (
         graphdata !== null ? (
           <ScatterPlot graphData={graphdata} />
         ) : (
           <>
-            <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#e3f2fd', 
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#e3f2fd',
               borderLeft: '4px solid #1976d2',
               borderRadius: '4px',
               color: '#1565c0',
@@ -690,7 +634,7 @@ const DimReductionPage = ({
     </div>
   );
 };
-//{selectedTab.value === "pca"? content : graphdata ? (<ScatterPlot graphData={graphdata} />):<></> }
+//{currentMethod === "pca"? content : graphdata ? (<ScatterPlot graphData={graphdata} />):<></> }
 const mapStateToProps = ({ calcResults, settings }) => ({
   calcResults,
   coreSettings: settings?.core ?? {},

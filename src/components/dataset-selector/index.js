@@ -1,4 +1,4 @@
-import { Tree, Field, Select } from "@oliasoft-open-source/react-ui-library";
+import { Field, Select } from "@oliasoft-open-source/react-ui-library";
 import React, {
   useEffect, 
   useState,
@@ -17,6 +17,97 @@ import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
 import { updateGeneLists, fetchDatasets } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
+
+const DatasetTreeItem = ({ item, level = 0, activeId }) => {
+  const isActive = item.id === activeId;
+  const hasChildren = item.children && item.children.length > 0;
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <div style={{ marginLeft: level > 0 ? "12px" : "0", borderLeft: level > 0 ? "1px solid #eee" : "none" }}>
+      <div 
+        style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          marginBottom: "2px",
+          paddingLeft: level > 0 ? "8px" : "0"
+        }}
+      >
+        {hasChildren ? (
+          <span 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              setIsExpanded(!isExpanded); 
+            }}
+            style={{ 
+              cursor: "pointer", 
+              marginRight: "4px", 
+              width: "14px", 
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#666",
+              fontSize: "10px"
+            }}
+          >
+            {isExpanded ? "▼" : "▶"}
+          </span>
+        ) : (
+          <span style={{ width: "18px" }}></span>
+        )}
+        
+        <div
+          onClick={item.onClick}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: "4px",
+            backgroundColor: isActive ? "#e3f2fd" : "transparent",
+            border: isActive ? "1px solid #90caf9" : "1px solid transparent",
+            transition: "all 0.2s ease",
+            flex: 1,
+            minHeight: "28px",
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
+        >
+          <Text size="small" style={{
+            color: isActive ? "#1976d2" : "#333",
+            fontWeight: isActive ? "500" : "normal",
+            flex: 1,
+            lineHeight: "1.3",
+          }}>
+            {item.name} {item.id.toString().length > 17 ? "(DR Result)" : ""}
+          </Text>
+        </div>
+      </div>
+      
+      {hasChildren && isExpanded && (
+        <div style={{ marginTop: "2px" }}>
+          {item.children.map(child => (
+            <DatasetTreeItem 
+              key={child.id} 
+              item={child} 
+              level={level + 1} 
+              activeId={activeId}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DatasetSelector = forwardRef(
   ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
@@ -81,11 +172,10 @@ const DatasetSelector = forwardRef(
     }, [isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets, correlationSettingsChanged, pathfinderSettingsChanged]);
 
     // Function to transform backend dataset to frontend format
+    // NOTE: We removed coreSettings.cellLine?.id from dependencies to prevent
+    // re-running this and the main useEffect when only the selection changes.
+    // The active state is now handled during render via activeId prop.
     const transformDataset = useCallback((dataset) => {
-      const isActive = isMultiSelectMode 
-        ? false // Multi-select modules use checkbox selection, not active state
-        : dataset.id === coreSettings.cellLine?.id;
-      
       return {
         ...dataset,
         onClick: isMultiSelectMode 
@@ -96,9 +186,9 @@ const DatasetSelector = forwardRef(
               dataset.geneCount, 
               dataset.isMixscape
             ),
-        active: isActive,
+        // active property is no longer used for state updates, handled in render
       };
-    }, [updateActivityById, isMultiSelectMode, coreSettings.cellLine?.id]);
+    }, [updateActivityById, isMultiSelectMode]);
 
     // Load datasets from backend
     useEffect(() => {
@@ -114,9 +204,13 @@ const DatasetSelector = forwardRef(
           if (wholeGenomeOnly && !isCorrelationModule) {
             const filteredDatasets = transformedDatasets.filter(dataset => dataset.isWholeGenome === true);
             // Ensure the first whole genome dataset is active if current selection is not in the filtered list
-            const hasActiveDataset = filteredDatasets.some(dataset => dataset.active);
-            if (!hasActiveDataset && filteredDatasets.length > 0 && !isMultiSelectMode) {
-              filteredDatasets[0].active = true;
+            // Note: We check against coreSettings.cellLine.id directly here since datasets don't have active prop anymore
+            const hasActiveDataset = filteredDatasets.some(dataset => dataset.id === coreSettings.cellLine?.id);
+            if (!hasActiveDataset && filteredDatasets.length > 0 && !isMultiSelectMode && !coreSettings.cellLine?.id) {
+               // Only auto-select if nothing is selected
+               // We can't set active state on the object, but we can trigger the update
+               const first = filteredDatasets[0];
+               updateActivityById(first.id, first.perturbationCount, first.geneCount, first.isMixscape);
             }
             setDatasetList(filteredDatasets);
           } else {
@@ -131,6 +225,7 @@ const DatasetSelector = forwardRef(
       };
 
       loadDatasets();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode]);
 
     const deleteItemAndChildren = (id) => {
@@ -175,6 +270,7 @@ const DatasetSelector = forwardRef(
 
     useImperativeHandle(ref, () => ({
       saveDataset: (newID, name, parentID, dataShape, dataType) => {
+        console.log("saveDataset called with:", { newID, name, parentID, dataShape, dataType });
         setDatasetList((prevDatasetList) => {
           let arr = [];
           var isParentMixscape = false;
@@ -660,16 +756,42 @@ const DatasetSelector = forwardRef(
       );
     }
 
-    // Default view for other modules - improved styling without checkboxes
+    // Default view for other modules - improved styling with DR chaining support (Tree Structure)
+    
+    // Helper to build tree hierarchy
+    // We can assume this runs fast enough to not require memoization for small dataset lists
+    const buildTree = (items) => {
+      const itemMap = {};
+      const roots = [];
+      
+      // Deep copy and create map
+      items.forEach(item => {
+        itemMap[item.id] = { ...item, children: [] };
+      });
+      
+      // Build hierarchy
+      items.forEach(item => {
+        if (item.parent && itemMap[item.parent]) {
+          itemMap[item.parent].children.push(itemMap[item.id]);
+        } else {
+          roots.push(itemMap[item.id]);
+        }
+      });
+      
+      return roots;
+    };
+
+    const treeRoots = buildTree(filteredDatasets);
+
     return (
       <>
         <div
           className={styles._itemHeader_1fhdv_401}
-          style={{ 
-            border: "1px solid #e0e0e0", 
+          style={{
+            border: "1px solid #e0e0e0",
             borderRadius: "8px",
-            height: "250px", 
-            overflow: "auto", 
+            height: "250px",
+            overflow: "auto",
             scrollbarWidth: "thin",
             scrollbarColor: "#c0c0c0 #f5f5f5",
             padding: "12px",
@@ -677,9 +799,9 @@ const DatasetSelector = forwardRef(
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
           }}
         >
-          <div style={{ 
-            marginBottom: "12px", 
-            fontWeight: "600", 
+          <div style={{
+            marginBottom: "12px",
+            fontWeight: "600",
             fontSize: "14px",
             color: "#333",
             paddingBottom: "8px",
@@ -688,8 +810,8 @@ const DatasetSelector = forwardRef(
             Dataset Selection
           </div>
           {filteredDatasets.length === 0 ? (
-            <div style={{ 
-              padding: "20px", 
+            <div style={{
+              padding: "20px",
               textAlign: "center",
               color: "#999",
               fontStyle: "italic"
@@ -697,51 +819,32 @@ const DatasetSelector = forwardRef(
               No datasets are available.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-              {filteredDatasets.map((dataset) => {
-                const isActive = dataset.id === coreSettings.cellLine?.id;
-                
-                return (
-                  <div
-                    key={dataset.id}
-                    onClick={dataset.onClick}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      cursor: "pointer",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      backgroundColor: isActive ? "#e3f2fd" : "transparent",
-                      border: isActive ? "1px solid #90caf9" : "1px solid transparent",
-                      transition: "all 0.2s ease",
-                      minHeight: "28px",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = "#f5f5f5";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }
-                    }}
-                  >
-                    <Text size="small" style={{ 
-                      color: isActive ? "#1976d2" : "#333",
-                      fontWeight: isActive ? "500" : "normal",
-                      flex: 1,
-                      lineHeight: "1.3",
-                    }}>
-                      {dataset.name}
-                    </Text>
-                  </div>
-                );
-              })}
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              {treeRoots.map(root => (
+                <DatasetTreeItem 
+                  key={root.id} 
+                  item={root} 
+                  activeId={coreSettings.cellLine?.id}
+                />
+              ))}
             </div>
           )}
         </div>
+
+        {/* For DR module, show chaining hint when DR results are available */}
+        {location.pathname === ROUTES.DR && filteredDatasets.some(d => d.id.toString().length > 17) && (
+          <div style={{
+            marginTop: "12px",
+            padding: "10px 12px",
+            backgroundColor: "#fff3cd",
+            borderRadius: "6px",
+            border: "1px solid #ffc107",
+            fontSize: "12px",
+            color: "#856404"
+          }}>
+            💡 <strong>DR Chaining:</strong> Select a previous DR result (child node) above to run another DR method on it.
+          </div>
+        )}
       </>
     );
   }
