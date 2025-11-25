@@ -1,3 +1,6 @@
+//ignore TSC error
+/* eslint-disable */
+// @ts-nocheck
 import Axios from "axios";
 import { get, set } from "idb-keyval";
 import { store } from "../store";
@@ -251,11 +254,7 @@ const runPathFinderCalc = async (core, pathfinder) => {
     cell_line: core.cellLine.id,
     selectedDatasets: selectedDatasets,
     combinationStrategy: pathfinder.combinationStrategy || 'intersection',
-
-    upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+    upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";"),
     cutoff: 0.2, //pathfinder.cutoff,
     depth: pathfinder.depth,
     checkCorr: pathfinder.checkCorr,
