@@ -163,12 +163,14 @@ const CoreSettings = ({
           <Button
             colored="success"
             width="100%"
-            label="ADD THIS TO DATASETS"
+            label="ADD DR RESULTS TO DATASETS"
             onClick={() => {
               console.log("Adding to datasets:", graphData);
+              const drMethod = coreSettings?.currentModule?.toUpperCase() || "DR";
+              const newName = `${drMethod} - ${graphData.taskName}`;
               childRef?.current?.saveDataset(
                 graphData.taskID,
-                graphData.taskName,
+                newName,
                 graphData.dataset,
                 graphData.resultShape,
                 graphData.dataType

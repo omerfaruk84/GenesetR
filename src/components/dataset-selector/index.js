@@ -805,9 +805,30 @@ const DatasetSelector = forwardRef(
             fontSize: "14px",
             color: "#333",
             paddingBottom: "8px",
-            borderBottom: "1px solid #e0e0e0"
+            borderBottom: "1px solid #e0e0e0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
           }}>
-            Dataset Selection
+            <span>Dataset Selection</span>
+            <div 
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                backgroundColor: "#e0e0e0",
+                color: "#666",
+                fontSize: "11px",
+                cursor: "help",
+                marginLeft: "8px"
+              }}
+              title="Select a dataset to analyze. Expand datasets to see and select previous DR results for chaining (e.g. run UMAP on PCA result)."
+            >
+              ?
+            </div>
           </div>
           {filteredDatasets.length === 0 ? (
             <div style={{
