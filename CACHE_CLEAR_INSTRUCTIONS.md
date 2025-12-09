@@ -36,3 +36,5 @@ The HTML file previously had script tags for jQuery and KineticJS. Even though w
 ## Verification
 After clearing cache, check the browser console - the jQuery/KineticJS errors should be gone. The files are now properly imported via npm/webpack, so no script tags are needed.
 
+
+

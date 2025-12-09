@@ -201,7 +201,7 @@ const Genelist = ({
     value = value
       ?.toUpperCase()
       .replaceAll(/NON-TARGETING_\d+/g, "")
-      .replaceAll(/\s+|,|;/g, "\n")
+      .replaceAll(/\s+|,|;|\+/g, "\n") // Also replace plus signs with newlines when not a gene signature box
       .replaceAll(/\n+/g, "\n")
       .trimStart("\n")
       .split("\n")
@@ -254,8 +254,10 @@ const Genelist = ({
   // Use separate effects to ensure only the correct field triggers updates
   
   // Sync from perturbation list when this is the perturbation list component
+  // Skip syncing when used in modal/popup mode for adding new lists (showAddList=true)
   useEffect(() => {
     if (!isPerturbationList) return;
+    if (showAddList) return; // Don't sync from Redux when adding a new list from enrichment
     
     const reduxGeneList = coreSettings?.peturbationList;
     
@@ -307,8 +309,10 @@ const Genelist = ({
   }, [coreSettings?.peturbationList, isPerturbationList]);
   
   // Sync from target gene list when this is the target gene list component
+  // Skip syncing when used in modal/popup mode for adding new lists (showAddList=true)
   useEffect(() => {
     if (isPerturbationList) return;
+    if (showAddList) return; // Don't sync from Redux when adding a new list from enrichment
     
     const reduxGeneList = coreSettings?.targetGeneList;
     

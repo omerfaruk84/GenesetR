@@ -909,15 +909,17 @@ const GeneSetEnrichmentTable = ({
 
   // Call performEnrichmentNow only when selectedCluster changes
   useEffect(() => {
-    if (selectedCluster) {
-      const geneItem = genelistOptions.find(
-        (item) => item.value === selectedCluster
-      );
-      if (geneItem && geneItem.genes) {
-        performEnrichmentNow(geneItem.genes);
-      }
+    if (!selectedCluster) return;
+
+    // Rerun enrichment when either the selected list OR its gene contents change
+    const geneItem = genelistOptions.find(
+      (item) => item.value === selectedCluster
+    );
+
+    if (geneItem?.genes) {
+      performEnrichmentNow(geneItem.genes);
     }
-  }, [selectedCluster]); // Only selectedCluster is tracked here
+  }, [selectedCluster, genelistOptions]);
 
   const handleSaveGeneList = () => {
     let genesString = selectedCluster
