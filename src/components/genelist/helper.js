@@ -4,17 +4,9 @@ import { set, get } from 'idb-keyval';
 
 const batchSize = 5;
 const limit = pLimit(5); // limit to 5 requests at a time
-const isDevEnv = process.env.NODE_ENV !== "production";
-const debugLog = (...args) => {
-  if (isDevEnv) {
-    console.log(...args);
-  }
-};
-const debugError = (...args) => {
-  if (isDevEnv) {
-    console.error(...args);
-  }
-};
+// Debug functions disabled for production
+const debugLog = () => {};
+const debugError = () => {};
 
 async function getAliasesForGeneList(genes) {
   debugLog("Checking alliases for ", genes)

@@ -1,10 +1,11 @@
 import { Field, Select } from "@oliasoft-open-source/react-ui-library";
 import React, {
-  useEffect, 
+  useEffect,
   useState,
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useMemo,
 } from "react";
 import { connect } from "react-redux";
 import { FaTrash } from "react-icons/fa";
@@ -24,82 +25,45 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <div style={{ marginLeft: level > 0 ? "12px" : "0", borderLeft: level > 0 ? "1px solid #eee" : "none" }}>
-      <div 
-        style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          marginBottom: "2px",
-          paddingLeft: level > 0 ? "8px" : "0"
-        }}
-      >
+    <div className={`${styles.treeLevel} ${level === 0 ? styles.root : ''}`}>
+      <div className={styles.treeItemContainer}>
         {hasChildren ? (
-          <span 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              setIsExpanded(!isExpanded); 
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
             }}
-            style={{ 
-              cursor: "pointer", 
-              marginRight: "4px", 
-              width: "14px", 
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#666",
-              fontSize: "10px"
-            }}
+            className={styles.expandButton}
+            aria-label={isExpanded ? "Collapse" : "Expand"}
+            role="button"
+            tabIndex={0}
           >
             {isExpanded ? "▼" : "▶"}
           </span>
         ) : (
-          <span style={{ width: "18px" }}></span>
+          <span className={styles.expandPlaceholder}></span>
         )}
-        
+
         <div
           onClick={item.onClick}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            backgroundColor: isActive ? "#e3f2fd" : "transparent",
-            border: isActive ? "1px solid #90caf9" : "1px solid transparent",
-            transition: "all 0.2s ease",
-            flex: 1,
-            minHeight: "28px",
-          }}
-          onMouseEnter={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.backgroundColor = "#f5f5f5";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }
-          }}
+          className={`${styles.treeItem} ${isActive ? styles.active : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-pressed={isActive}
         >
-          <Text size="small" style={{
-            color: isActive ? "#1976d2" : "#333",
-            fontWeight: isActive ? "500" : "normal",
-            flex: 1,
-            lineHeight: "1.3",
-          }}>
+          <Text size="small" className={styles.treeItemText}>
             {item.name} {item.id.toString().length > 17 ? "(DR Result)" : ""}
           </Text>
         </div>
       </div>
-      
+
       {hasChildren && isExpanded && (
-        <div style={{ marginTop: "2px" }}>
+        <div className={styles.treeChildren}>
           {item.children.map(child => (
-            <DatasetTreeItem 
-              key={child.id} 
-              item={child} 
-              level={level + 1} 
+            <DatasetTreeItem
+              key={child.id}
+              item={child}
+              level={level + 1}
               activeId={activeId}
             />
           ))}
@@ -217,7 +181,6 @@ const DatasetSelector = forwardRef(
             setDatasetList(transformedDatasets);
           }
         } catch (error) {
-          console.error("Failed to load datasets:", error);
           setDatasetList([]);
         } finally {
           setLoading(false);
@@ -270,7 +233,6 @@ const DatasetSelector = forwardRef(
 
     useImperativeHandle(ref, () => ({
       saveDataset: (newID, name, parentID, dataShape, dataType) => {
-        console.log("saveDataset called with:", { newID, name, parentID, dataShape, dataType });
         setDatasetList((prevDatasetList) => {
           let arr = [];
           var isParentMixscape = false;
@@ -358,7 +320,6 @@ const DatasetSelector = forwardRef(
     }));
 
     useEffect(() => {
-      //console.log(coreSettings.cellLine
       if (!isMultiSelectMode) {
         updateGeneLists(coreSettings.cellLine.id);
       } else {
@@ -427,11 +388,8 @@ const DatasetSelector = forwardRef(
 
     if (loading) {
       return (
-        <div
-          className={styles._itemHeader_1fhdv_401}
-          style={{ border: "1px solid black", height: "250px", overflow: "auto", scrollbarWidth: "thin" }}
-        >
-          <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className={styles.datasetContainer}>
+          <div className={styles.loadingState}>
             Loading datasets...
           </div>
         </div>
@@ -757,31 +715,32 @@ const DatasetSelector = forwardRef(
     }
 
     // Default view for other modules - improved styling with DR chaining support (Tree Structure)
-    
-    // Helper to build tree hierarchy
-    // We can assume this runs fast enough to not require memoization for small dataset lists
-    const buildTree = (items) => {
-      const itemMap = {};
-      const roots = [];
-      
-      // Deep copy and create map
-      items.forEach(item => {
-        itemMap[item.id] = { ...item, children: [] };
-      });
-      
-      // Build hierarchy
-      items.forEach(item => {
-        if (item.parent && itemMap[item.parent]) {
-          itemMap[item.parent].children.push(itemMap[item.id]);
-        } else {
-          roots.push(itemMap[item.id]);
-        }
-      });
-      
-      return roots;
-    };
 
-    const treeRoots = buildTree(filteredDatasets);
+    // Helper to build tree hierarchy - memoized for performance
+    const treeRoots = useMemo(() => {
+      const buildTree = (items) => {
+        const itemMap = {};
+        const roots = [];
+
+        // Deep copy and create map
+        items.forEach(item => {
+          itemMap[item.id] = { ...item, children: [] };
+        });
+
+        // Build hierarchy
+        items.forEach(item => {
+          if (item.parent && itemMap[item.parent]) {
+            itemMap[item.parent].children.push(itemMap[item.id]);
+          } else {
+            roots.push(itemMap[item.id]);
+          }
+        });
+
+        return roots;
+      };
+
+      return buildTree(filteredDatasets);
+    }, [filteredDatasets]);
 
     return (
       <>

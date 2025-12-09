@@ -47,3 +47,347 @@
   .depth-2 .menu-item-button {
     margin-top: 2px;
   }
+
+// Tree structure styles
+.treeLevel {
+  margin-left: 12px;
+  border-left: 1px solid #eee;
+
+  &.root {
+    margin-left: 0;
+    border-left: none;
+  }
+}
+
+.treeItemContainer {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+  padding-left: 8px;
+}
+
+.expandButton {
+  cursor: pointer;
+  margin-right: 4px;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 10px;
+
+  &:hover {
+    color: #333;
+  }
+}
+
+.expandPlaceholder {
+  width: 18px;
+}
+
+.treeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-height: 28px;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &.active {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+
+    .treeItemText {
+      color: #1976d2;
+      font-weight: 500;
+    }
+
+    &:hover {
+      background-color: #e3f2fd;
+    }
+  }
+}
+
+.treeItemText {
+  color: #333;
+  font-weight: normal;
+  flex: 1;
+  line-height: 1.3;
+  font-size: 0.875rem;
+}
+
+.treeChildren {
+  margin-top: 2px;
+}
+
+// Dataset container styles
+.datasetContainer {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  height: 250px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c0c0c0 #f5f5f5;
+  padding: 12px;
+  background-color: #fafafa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.datasetHeader {
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selectedCount {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #666;
+}
+
+.emptyState {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+.loadingState {
+  padding: 20px;
+  text-align: center;
+}
+
+.helpIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  color: #666;
+  font-size: 11px;
+  cursor: help;
+  margin-left: 8px;
+}
+
+// Multi-select checkbox styles
+.checkboxList {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  min-height: 28px;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &.selected {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+
+    .checkboxText {
+      color: #1976d2;
+      font-weight: 500;
+    }
+
+    &:hover {
+      background-color: #e3f2fd;
+    }
+  }
+}
+
+.checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: #1976d2;
+  flex-shrink: 0;
+}
+
+.checkboxText {
+  color: #333;
+  font-weight: normal;
+  flex: 1;
+  line-height: 1.3;
+  font-size: 0.875rem;
+}
+
+.warningBox {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #fff3cd;
+  border-radius: 4px;
+  border: 1px solid #ffc107;
+  font-size: 0.875rem;
+  color: #856404;
+  font-style: italic;
+}
+
+.selectedBadge {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &.multiple {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+  }
+}
+
+.badgeContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badgeNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background-color: #757575;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.multiple {
+    background-color: #1976d2;
+  }
+}
+
+.badgeText {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.875rem;
+
+  &.multiple {
+    color: #1976d2;
+  }
+}
+
+// Settings panels
+.settingsPanel {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+  &.correlation {
+    background-color: #fff3e0;
+    border: 2px solid #ff9800;
+  }
+
+  &.pathfinder {
+    background-color: #e8f5e9;
+    border: 2px solid #4caf50;
+  }
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.settingsIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+
+  &.correlation {
+    background-color: #ff9800;
+  }
+
+  &.pathfinder {
+    background-color: #4caf50;
+  }
+}
+
+.settingsTitle {
+  font-weight: 600;
+  font-size: 13px;
+
+  &.correlation {
+    color: #e65100;
+  }
+
+  &.pathfinder {
+    color: #2e7d32;
+  }
+}
+
+.settingsHelp {
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+
+  &.correlation {
+    color: #856404;
+    background-color: #fffbf0;
+    border: 1px solid #ffd54f;
+  }
+
+  &.pathfinder {
+    color: #2e7d32;
+    background-color: #f1f8f4;
+    border: 1px solid #81c784;
+  }
+}
+
+.drChainingHint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background-color: #fff3cd;
+  border-radius: 6px;
+  border: 1px solid #ffc107;
+  font-size: 12px;
+  color: #856404;
+}

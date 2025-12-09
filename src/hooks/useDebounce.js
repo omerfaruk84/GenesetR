@@ -31,30 +31,28 @@ export const useDebounce = (value, delay = 500) => {
  * @returns {Function} - The debounced function
  */
 export const useDebouncedCallback = (callback, delay = 500) => {
-  const [timeoutId, setTimeoutId] = useState(null);
+  const timeoutRef = useState({ current: null })[0];
+
+  // Clean up on unmount or when callback/delay changes
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [timeoutRef]);
 
   const debouncedCallback = (...args) => {
     // Clear the previous timeout
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
 
     // Set up a new timeout
-    const newTimeoutId = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       callback(...args);
     }, delay);
-
-    setTimeoutId(newTimeoutId);
   };
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [timeoutId]);
 
   return debouncedCallback;
 }; 

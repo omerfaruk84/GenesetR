@@ -165,7 +165,6 @@ const CoreSettings = ({
             width="100%"
             label="ADD DR RESULTS TO DATASETS"
             onClick={() => {
-              console.log("Adding to datasets:", graphData);
               const drMethod = coreSettings?.currentModule?.toUpperCase() || "DR";
               const newName = `${drMethod} - ${graphData.taskName}`;
               childRef?.current?.saveDataset(
@@ -217,7 +216,6 @@ const CoreSettings = ({
           display: isMixscape === true ? "block" : "none",
         }}
       >
-        {console.log(coreSettings?.cellLine.isMixscape)}
         <Flex gap="35px" marginBottom="10px">
           <Field
             labelLeft

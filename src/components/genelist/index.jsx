@@ -1,6 +1,5 @@
 import React from "react";
 import { connect } from "react-redux";
-//import { connect } from 'react-redux';
 
 import {
   Heading,
@@ -21,7 +20,7 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import styles from "./main-view.module.scss";
 import { FaTrash, FaSave, FaTimesCircle, FaPlusSquare } from "react-icons/fa";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { get, set, del } from "idb-keyval";
 import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorMessage";
@@ -32,12 +31,6 @@ import { checkGenes } from "./helper";
 import { fetchHugoGenes, updateGeneLists } from "../../store/api";
 import { runCalculation } from "../../store/results/index";
 import { ROUTES } from "../../common/routes";
-
-/*
-let isLoaded = false;
-var db;
-const dbPromise = window.indexedDB.open("GeneListDB", 1);
-*/
 
 const Genelist = ({
   setPerturbationList,
@@ -149,7 +142,6 @@ const Genelist = ({
           result = result.replace(/^[+-]|[+-]$/g, "");
         }
 
-        console.log("currentGenes", currentGene, oldSymbols, newSymbols);
         return result;
       });
     },
@@ -161,18 +153,14 @@ const Genelist = ({
     return new Promise((resolve, reject) => {
       getAllGenelists()
         .then((genelists) => {
-          //console.log("refreshList", genelists);
           if (genelists) {
             setGeneLists([...genelists]); //converts sets to array
             resolve();
           } else {
             return;
-            //reject("No saved genelists were found!");
-            //throw new Error("No saved genelists were found!")
           }
         })
         .catch((error) => {
-          console.log(error);
           toast({
             message: {
               type: "Error",
@@ -197,7 +185,6 @@ const Genelist = ({
         .replaceAll(/\++/g, "+")
         .replaceAll(/-+/g, "-")
         .trimStart("+");
-    else console.log(value);
     value = value
       ?.toUpperCase()
       .replaceAll(/NON-TARGETING_\d+/g, "")
@@ -227,21 +214,22 @@ const Genelist = ({
     return get("genelist_" + id);
   };
 
-  const debouncedChangeHandler = useCallback(
-    debounce((genes) => {
-      if (genes.length > 0)
-        checkGenes(
-          genes,
-          isPerturbationList,
-          coreSettings?.cellLine.id,
-          isGeneSignature
-        ).then((prop) => {
-          prop["replaceGene"] = replaceGene;
-          setProps(prop);
-        });
-    }, 1000),
+  // Create debounced function using useMemo to avoid recreating on every render
+  const debouncedChangeHandler = useMemo(
+    () =>
+      debounce((genes) => {
+        if (genes.length > 0)
+          checkGenes(
+            genes,
+            isPerturbationList,
+            coreSettings?.cellLine.id,
+            isGeneSignature
+          ).then((prop) => {
+            prop["replaceGene"] = replaceGene;
+            setProps(prop);
+          });
+      }, 1000),
     [
-      checkGenes,
       isPerturbationList,
       coreSettings?.cellLine.id,
       isGeneSignature,
@@ -404,11 +392,9 @@ const Genelist = ({
 
   // Insert a new genelist into the database
   const addGenelist = (genelistID, geneList) => {
-    console.log("We are in addgenelist", genelistID, geneList);
     if (genelistID && geneList)
       get("genelist_" + genelistID).then((val) => {
         if (val) {
-          console.log("We are updating genelist", genelistID, geneList);
           set("genelist_" + genelistID, geneList).then(() => {
             toast({
               message: {
@@ -425,7 +411,6 @@ const Genelist = ({
             });
           });
         } else {
-          console.log("We are creating genelist", genelistID, geneList);
           set("genelist_" + genelistID, geneList).then(() => {
             geneListNames.add(genelistID);
             saveGeneListNames();
@@ -472,8 +457,8 @@ const Genelist = ({
               setGenes(result.genes);
               setNewGeneListDescription(result?.description);
             })
-            .catch((error) => {
-              console.error(error);
+            .catch(() => {
+              // Handle error silently or with toast
             });
         } else {
           setSelectedGeneList([]);
@@ -586,19 +571,17 @@ const Genelist = ({
                 >
                   <Select
                     onChange={({ target: { value } }) => {
-                      //console.log("value", value);
                       setSelectedGeneList(value);
                       setNewGeneListName(value);
                       setsaveListChecked(false);
 
                       getGenelistById(value)
                         .then((result) => {
-                          //console.log(result);
                           setGenes(result.genes);
                           setNewGeneListDescription(result?.description);
                         })
-                        .catch((error) => {
-                          console.error(error);
+                        .catch(() => {
+                          // Handle error silently or with toast
                         });
                     }}
                     options={currentGeneLists}
@@ -691,7 +674,6 @@ const Genelist = ({
                   icon={<FaTrash />}
                   label="DELETE"
                   onClick={() => {
-                    console.log("Deleting", selectedGeneList);
                     removeGenelistById(selectedGeneList);
                   }}
                 />

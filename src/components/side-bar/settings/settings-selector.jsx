@@ -312,19 +312,8 @@ const SettingsSelector = ({ pathname }) => {
     ],
   };
 
-  // Debug: log pathname to help troubleshoot
-  if (process.env.NODE_ENV !== "production") {
-    console.log("SettingsSelector pathname:", pathname, "Available routes:", Object.keys(settingsMap));
-    console.log("Settings for pathname:", settingsMap?.[pathname]);
-  }
-
   const settingsForPath = settingsMap?.[pathname] || [];
-  
-  // Additional debug for precomputed route
-  if (process.env.NODE_ENV !== "production" && pathname === "/precomputed") {
-    console.log("Precomputed route detected, settings count:", settingsForPath.length);
-  }
-  
+
   return (
     <div>
       {settingsForPath.length === 0 && process.env.NODE_ENV !== "production" && (
