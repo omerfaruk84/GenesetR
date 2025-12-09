@@ -66,7 +66,7 @@
 * @option {string} [heatmap_colors="Greens"]
 *   the heatmap color scale
 
-* @option {number} [heatmap_part_width=0.7]
+* @option {number} [dendrogram_part_width=200]
 *   define the heatmap part width from the width of the whole graph
 
 * @option {string} [highlight_colors="Reds"]
@@ -129,14 +129,7 @@
 * @option {array} [columns_order=[]]
 *   the order of columns defined by their indexes startin from 0, when not provided the columns are sorted in common order 0, 1, 2... etc.
 
-* @option {boolean} [alternative_data=false]
-*   use original data to compute heatmap but show the alternative values (alternative_data section must be present in input data)
 
-* @option {boolean} [images_as_alternative_data=false]
-*   alternative data values can be used to identify image files (.png, .jpg) and draw them insted of the heatmap values
-
-* @option {object} [images_path=false]
-*   when using images_as_alternative_data option - set dir path of the image files and the image files extension to generate the whole file path ({"dir": "", "ext": ""})
 
 * @option {object} [navigation_toggle={"distance_scale": false, "filter_button": false, "export_button": false, "color_scale": false, "hint_button": false}]
 *   toggle "navigation" features - true/false
@@ -155,12 +148,10 @@
 */
 import Kinetic from "kinetic";
 import $ from "jquery";
-import Backbone from "backbone";
-//var _ = require("backbone");
-//var InCHlib;
-//let InCHlib;
+
+
 const _date = new Date();
-//var _date = new Date();
+
 
 function InCHlib(settings) {
   var self = this;
@@ -168,6 +159,276 @@ function InCHlib(settings) {
   self.target_element = $("#" + settings.target);
   var target_width = self.target_element.width();
   self.target_element.css({ position: "relative" });
+
+  // Add comprehensive cleanup method for complete destruction
+  self.cleanup = function() {
+    try {
+      // Clear all event listeners
+      if (self.events) {
+        Object.keys(self.events).forEach(key => {
+          self.events[key] = function() { return; };
+        });
+      }
+
+      // Properly cleanup KineticJS stage and all its components
+      if (self.stage) {
+        // First remove all event listeners from the stage itself
+        if (typeof self.stage.off === 'function') {
+          self.stage.off(); // Remove all event listeners from stage
+        }
+        
+        // Get all layers and clean them up properly
+        if (self.stage.getLayers) {
+          const layers = self.stage.getLayers();
+          layers.forEach(layer => {
+            if (layer) {
+              // Remove all event listeners from the layer
+              if (typeof layer.off === 'function') {
+                layer.off(); // This removes ALL event listeners including transformation ones
+              }
+              
+              // Recursively clean up all children (nodes, shapes, etc.)
+              if (layer.getChildren) {
+                const cleanupNode = (node) => {
+                  if (node && typeof node.off === 'function') {
+                    node.off(); // Remove all event listeners from this node
+                  }
+                  if (node && node.getChildren) {
+                    node.getChildren().forEach(cleanupNode);
+                  }
+                };
+                layer.getChildren().forEach(cleanupNode);
+              }
+              
+              // Now safely destroy the layer
+              if (typeof layer.destroy === 'function') {
+                layer.destroy();
+              }
+            }
+          });
+        }
+        
+        // Clean up individual layer references
+        const layerRefs = [
+          'cluster_layer', 'dendrogram_hover_layer', 'dendrogram_layer', 
+          'stage_layer', 'column_dendrogram_layer', 'heatmap_layer', 
+          'cell_value_layer', 'heatmap_overlay', 'row_id_layer', 
+          'highlighted_rows_layer', 'header_layer', 'navigation_layer'
+        ];
+        
+        layerRefs.forEach(layerRef => {
+          if (self[layerRef]) {
+            if (typeof self[layerRef].off === 'function') {
+              self[layerRef].off();
+            }
+            if (typeof self[layerRef].destroy === 'function') {
+              self[layerRef].destroy();
+            }
+            self[layerRef] = null;
+          }
+        });
+        
+        // Clean up group references
+        const groupRefs = ['row_cluster_group', 'column_cluster_group'];
+        groupRefs.forEach(groupRef => {
+          if (self[groupRef]) {
+            if (typeof self[groupRef].off === 'function') {
+              self[groupRef].off();
+            }
+            if (typeof self[groupRef].destroy === 'function') {
+              self[groupRef].destroy();
+            }
+            self[groupRef] = null;
+          }
+        });
+        
+        // Finally destroy the stage itself
+        if (typeof self.stage.destroy === 'function') {
+          self.stage.destroy();
+        }
+        self.stage = null;
+      }
+
+      // Clear all stored data (only for complete cleanup)
+      self.data = null;
+      self.metadata = null;
+      self.column_metadata = null;
+      self.dendrogram = null;
+      self.column_dendrogram = null;
+      self.leaves_y_coordinates = null;
+      self.objects2leaves = null;
+      self.leaves2objects = null;
+      self.column_leaves_x_coordinates = null;
+      self.column_objects2leaves = null;
+      self.column_leaves2objects = null;
+
+      // Clear any cached data
+      self.cached_data = null;
+      self.cached_metadata = null;
+      self.cached_column_metadata = null;
+
+      // Clear any stored settings
+      self.settings = null;
+      self.user_settings = null;
+
+      // Clear the target element
+      if (self.target_element && self.target_element.length) {
+        // Clean up jQuery event listeners first
+        self.target_element.find('.color_scale').off();
+        self.target_element.find('.color_scales').off(); 
+        self.target_element.off(); // Remove all event listeners from target element
+        self.target_element.empty();
+      }
+
+      // Clear any timers or intervals
+      if (self._timers) {
+        Object.values(self._timers).forEach(timer => {
+          if (timer) {
+            clearTimeout(timer);
+            clearInterval(timer);
+          }
+        });
+        self._timers = {};
+      }
+
+      // Clear any stored references
+      self._refs = {};
+      
+      // Clear color cache and palettes
+      if (self._color_cache) {
+        self._color_cache.clear();
+        self._color_cache = null;
+      }
+      if (self._color_palettes) {
+        self._color_palettes = null;
+      }
+      
+      // Force garbage collection hint (browser may ignore this)
+      if (window.gc && typeof window.gc === 'function') {
+        setTimeout(() => window.gc(), 100);
+      }
+      
+    } catch (error) {
+      console.warn('Error during InCHlib cleanup:', error);
+    }
+  };
+
+  // Add partial cleanup method for redrawing (preserves data)
+  self.cleanupUI = function() {
+    try {
+      // Properly cleanup KineticJS stage and all its components but preserve data
+      if (self.stage) {
+        // First remove all event listeners from the stage itself
+        if (typeof self.stage.off === 'function') {
+          self.stage.off(); // Remove all event listeners from stage
+        }
+        
+        // Get all layers and clean them up properly
+        if (self.stage.getLayers) {
+          const layers = self.stage.getLayers();
+          layers.forEach(layer => {
+            if (layer) {
+              // Remove all event listeners from the layer
+              if (typeof layer.off === 'function') {
+                layer.off(); // This removes ALL event listeners including transformation ones
+              }
+              
+              // Recursively clean up all children (nodes, shapes, etc.)
+              if (layer.getChildren) {
+                const cleanupNode = (node) => {
+                  if (node && typeof node.off === 'function') {
+                    node.off(); // Remove all event listeners from this node
+                  }
+                  if (node && node.getChildren) {
+                    node.getChildren().forEach(cleanupNode);
+                  }
+                };
+                layer.getChildren().forEach(cleanupNode);
+              }
+              
+              // Now safely destroy the layer
+              if (typeof layer.destroy === 'function') {
+                layer.destroy();
+              }
+            }
+          });
+        }
+        
+        // Clean up individual layer references
+        const layerRefs = [
+          'cluster_layer', 'dendrogram_hover_layer', 'dendrogram_layer', 
+          'stage_layer', 'column_dendrogram_layer', 'heatmap_layer', 
+          'cell_value_layer', 'heatmap_overlay', 'row_id_layer', 
+          'highlighted_rows_layer', 'header_layer', 'navigation_layer'
+        ];
+        
+        layerRefs.forEach(layerRef => {
+          if (self[layerRef]) {
+            if (typeof self[layerRef].off === 'function') {
+              self[layerRef].off();
+            }
+            if (typeof self[layerRef].destroy === 'function') {
+              self[layerRef].destroy();
+            }
+            self[layerRef] = null;
+          }
+        });
+        
+        // Clean up group references
+        const groupRefs = ['row_cluster_group', 'column_cluster_group'];
+        groupRefs.forEach(groupRef => {
+          if (self[groupRef]) {
+            if (typeof self[groupRef].off === 'function') {
+              self[groupRef].off();
+            }
+            if (typeof self[groupRef].destroy === 'function') {
+              self[groupRef].destroy();
+            }
+            self[groupRef] = null;
+          }
+        });
+        
+        // Finally destroy the stage itself
+        if (typeof self.stage.destroy === 'function') {
+          self.stage.destroy();
+        }
+        self.stage = null;
+      }
+
+      // Clean up jQuery event listeners from target element (but don't clear data)
+      if (self.target_element && self.target_element.length) {
+        self.target_element.find('.color_scale').off();
+        self.target_element.find('.color_scales').off(); 
+        // Don't clear the target element itself for redraw
+      }
+
+      // Clear any timers or intervals
+      if (self._timers) {
+        Object.values(self._timers).forEach(timer => {
+          if (timer) {
+            clearTimeout(timer);
+            clearInterval(timer);
+          }
+        });
+        self._timers = {};
+      }
+      
+    } catch (error) {
+      console.warn('Error during InCHlib UI cleanup:', error);
+    }
+  };
+
+  // Add cleanup method
+  self.destroy = function() {
+    // Remove all event listeners
+    self.events = {};
+    // Clear any references to DOM elements
+    self.target_element = null;
+    // Clear any timers or intervals
+    if (self._timer) {
+      clearTimeout(self._timer);
+    }
+  }
 
   /**
    * Default values for the settings
@@ -179,17 +440,18 @@ function InCHlib(settings) {
     heatmap: true,
     heatmap_header: true,
     dendrogram: true,
+    current_draw_values:true,
     metadata: false,
-    column_metadata: false,
+    column_metadata: true,
     column_metadata_row_height: 8,
     column_metadata_colors: "RdLrBu",
     max_height: 800,
     width: target_width,
     heatmap_colors: "Greens",
     heatmap_font_color: "black",
-    heatmap_part_width: 0.7,
-    column_dendrogram: false,
-    independent_columns: true,
+    dendrogram_part_width: 100,
+    column_dendrogram: true,
+    independent_columns: false,
     metadata_colors: "Reds",
     highlight_colors: "Oranges",
     highlighted_rows: [],
@@ -199,22 +461,22 @@ function InCHlib(settings) {
     min_row_height: 1,
     max_row_height: 25,
     max_column_width: 150,
-    font: "Helvetica",
-    draw_row_ids: false,
+    font: "Arial, sans-serif",
+    draw_row_ids: true,
     fixed_row_id_size: false,
     max_percentile: 100,
     min_percentile: 0,
+    dendrogram_line_width: 2,
     middle_percentile: 50,
+    left_margin : 0,
     columns_order: [],
-    alternative_data: false,
-    images_as_alternative_data: false,
-    images_path: { dir: "", ext: "" },
+    debug_performance: false,
     navigation_toggle: {
-      color_scale: true,
-      distance_scale: true,
+      color_scale: false,
+      distance_scale: false,
       export_button: true,
-      filter_button: true,
-      hint_button: true,
+      filter_button: false,
+      hint_button: false,
     },
   };
 
@@ -223,10 +485,10 @@ function InCHlib(settings) {
     settings.max_width && settings.max_width < target_width
       ? settings.max_width
       : self.settings.width;
-  self.settings.heatmap_part_width =
-    self.settings.heatmap_part_width > 0.9
-      ? 0.9
-      : self.settings.heatmap_part_width;
+  self.settings.dendrogram_part_width =
+    self.settings.dendrogram_part_width >150
+      ? 150
+      : self.settings.dendrogram_part_width;
 
   self.header_height = 150;
   self.footer_height = 70;
@@ -659,8 +921,8 @@ function InCHlib(settings) {
     }),
 
     node: new Kinetic.Line({
-      stroke: "grey",
-      strokeWidth: 2,
+      stroke: "black",
+      strokeWidth: self.settings.dendrogram_line_width,
       lineCap: "sqare",
       lineJoin: "round",
       listening: false,
@@ -677,16 +939,21 @@ function InCHlib(settings) {
       opacity: 0,
     }),
 
-    heatmap_value: new Kinetic.Text({
+    heatmap_value: new Kinetic.Text({     
       fontFamily: self.settings.font,
       fill: self.settings.heatmap_font_color,
       fontStyle: "bold",
       listening: false,
+          align: "center",
     }),
+    
 
     heatmap_line: new Kinetic.Line({
       lineCap: "butt",
       value: false,
+      listening: false,
+      hitGraphEnabled: false,    // no hit detection
+
     }),
 
     column_header: new Kinetic.Text({
@@ -726,11 +993,6 @@ function InCHlib(settings) {
       fillLinearGradientStartPoint: { x: 0, y: 80 },
       fillLinearGradientEndPoint: { x: 100, y: 80 },
       stroke: "#D2D2D2",
-      strokeWidth: "1px",
-    }),
-
-    image: new Kinetic.Image({
-      stroke: "#D2D2D2",
       strokeWidth: 1,
     }),
   };
@@ -769,15 +1031,55 @@ InCHlib.prototype._update_user_settings = function (settings) {
 };
 
 /**
+ * Validate input data structure
+ */
+InCHlib.prototype._validate_data = function(json) {
+  var self = this;
+  
+  if (!json || typeof json !== 'object') {
+    throw new Error('InCHlib: Invalid data format - data must be an object');
+  }
+  
+  if (!json.data || !json.data.nodes) {
+    throw new Error('InCHlib: Invalid data format - missing data.nodes');
+  }
+  
+  var node_count = Object.keys(json.data.nodes).length;
+  if (node_count === 0) {
+    throw new Error('InCHlib: Invalid data format - no nodes found');
+  }
+  
+  // Check for at least one leaf node
+  var has_leaf = false;
+  for (var key in json.data.nodes) {
+    if (json.data.nodes[key].count === 1) {
+      has_leaf = true;
+      break;
+    }
+  }
+  
+  if (!has_leaf) {
+    throw new Error('InCHlib: Invalid data format - no leaf nodes found');
+  }
+  
+  return true;
+};
+
+/**
  * Read data from JSON variable.
  *
  * @param {object} [variable] Clustering in proper JSON format.
  */
 InCHlib.prototype.read_data = function (json2) {
-  var json = JSON.parse(JSON.stringify(json2));
   var self = this;
+  
+  // Validate input data
+  self._validate_data(json2);
+  
+  var json = JSON.parse(JSON.stringify(json2));
   self.json = json;
-  self.data = JSON.parse(JSON.stringify(self.json.data));
+  self.data = json.data;
+
 
   var settings = {};
   if (json["metadata"] !== undefined) {
@@ -791,6 +1093,7 @@ InCHlib.prototype.read_data = function (json2) {
     settings.column_dendrogram = true;
   } else {
     settings.column_dendrogram = false;
+
   }
   if (json["column_metadata"] !== undefined) {
     self.column_metadata = json.column_metadata;
@@ -799,14 +1102,7 @@ InCHlib.prototype.read_data = function (json2) {
     settings.column_metadata = false;
   }
 
-  if (
-    self.json["alternative_data"] !== undefined &&
-    self.settings.alternative_data
-  ) {
-    self.alternative_data = self.json.alternative_data.nodes;
-  } else {
-    settings.alternative_data = false;
-  }
+
 
   self._update_user_settings(settings);
   self._add_prefix();
@@ -849,18 +1145,7 @@ InCHlib.prototype._add_prefix = function () {
     self.metadata.nodes = metadata;
   }
 
-  if (self.settings.alternative_data) {
-    var alternative_data = {};
-    for (
-      var i = 0, keys = Object.keys(self.alternative_data), len = keys.length;
-      i < len;
-      i++
-    ) {
-      id = [self.settings.target, keys[i]].join("#");
-      alternative_data[id] = self.alternative_data[keys[i]];
-    }
-    self.alternative_data = alternative_data;
-  }
+
 
   if (self.column_dendrogram) {
     Object.seal(self.column_dendrogram.nodes);
@@ -886,7 +1171,7 @@ InCHlib.prototype._add_prefix_to_data = function (data) {
       ].join("#");
     }
 
-    if (prefixed_data[id]["count"] != 1) {
+    if (prefixed_data[id]["count"] !== 1) {
       prefixed_data[id].left_child = [
         self.settings.target,
         prefixed_data[id].left_child,
@@ -919,20 +1204,16 @@ InCHlib.prototype._get_dimensions = function () {
     keys,
     i;
   var len = 0;
-  if (self.settings.images_as_alternative_data) {
-    dimensions["data"] =
-      self.alternative_data[Object.keys(self.alternative_data)[0]].length;
-  } else {
-    for (
-      i = 0, keys = Object.keys(self.data.nodes), len = keys.length;
-      i < len;
-      i++
-    ) {
-      key = keys[i];
-      if (self.data.nodes[key].count == 1) {
-        dimensions["data"] = self.data.nodes[key].features.length;
-        break;
-      }
+  
+  for (
+    i = 0, keys = Object.keys(self.data.nodes), len = keys.length;
+    i < len;
+    i++
+  ) {
+    key = keys[i];
+    if (self.data.nodes[key].count === 1) {
+      dimensions["data"] = self.data.nodes[key].features.length;
+      break;
     }
   }
 
@@ -1034,7 +1315,7 @@ InCHlib.prototype._get_data_min_max_middle = function (data, axis) {
   var i, j, value, len, columns;
   var data_length = data[0].length;
 
-  if (axis == "column") {
+  if (axis === "column") {
     columns = [];
 
     for (i = 0; i < data_length; i++) {
@@ -1079,7 +1360,7 @@ InCHlib.prototype._get_data_min_max_middle = function (data, axis) {
             ]
           : Math.min.apply(null, columns[i]);
       middle =
-        self.settings.middle_percentile != 50
+        self.settings.middle_percentile !== 50
           ? columns[i][
               self._hack_round((len * self.settings.middle_percentile) / 100)
             ]
@@ -1102,8 +1383,7 @@ InCHlib.prototype._get_data_min_max_middle = function (data, axis) {
   return data2descs;
 };
 
-InCHlib.prototype._get_hash_object = function (array) {
-  var self = this;
+InCHlib.prototype._get_hash_object = function (array) { 
   var i,
     count = 0,
     hash_object = {};
@@ -1132,37 +1412,17 @@ InCHlib.prototype._get_max_value_length = function () {
   var max_length = 0;
   var node_data, key;
 
-  if (self.settings.alternative_data) {
-    if (self.settings.images_as_alternative_data) {
-      max_length = 0;
-    } else {
-      for (
-        var i = 0, keys = Object.keys(self.alternative_data), len = keys.length;
-        i < len;
-        i++
-      ) {
-        key = keys[i];
-        node_data = self.alternative_data[key];
-        for (var j = 0, len_2 = node_data.length; j < len_2; j++) {
-          if (("" + node_data[j]).length > max_length) {
-            max_length = ("" + node_data[j]).length;
-          }
-        }
-      }
-    }
-  } else {
-    for (
-      var i = 0, keys = Object.keys(nodes), len = keys.length;
-      i < len;
-      i++
-    ) {
-      key = keys[i];
-      if (nodes[key].count == 1) {
-        node_data = nodes[key].features;
-        for (var j = 0, len_2 = node_data.length; j < len_2; j++) {
-          if (("" + node_data[j]).length > max_length) {
-            max_length = ("" + node_data[j]).length;
-          }
+  for (
+    var i = 0, keys = Object.keys(nodes), len = keys.length;
+    i < len;
+    i++
+  ) {
+    key = keys[i];
+    if (nodes[key].count === 1) {
+      node_data = nodes[key].features;
+      for (var j = 0, len_2 = node_data.length; j < len_2; j++) {
+        if (("" + node_data[j]).length > max_length) {
+          max_length = ("" + node_data[j]).length;
         }
       }
     }
@@ -1205,7 +1465,7 @@ InCHlib.prototype._preprocess_heatmap_data = function () {
   ) {
     key = keys[i];
     node = self.data.nodes[key];
-    if (node.count == 1) {
+    if (node.count === 1) {
       data = node.features;
       heatmap_array.push([key]);
       heatmap_array[j].push.apply(heatmap_array[j], data);
@@ -1223,22 +1483,22 @@ InCHlib.prototype._reorder_heatmap = function (column_index) {
   self.leaves_y_coordinates = {};
   column_index++;
 
-  if (self.ordered_by_index == column_index) {
+  if (self.ordered_by_index === column_index) {
     self.heatmap_array.reverse();
   } else {
     if (self._is_number(self.heatmap_array[0][column_index])) {
       self.heatmap_array.sort(function (a, b) {
-        return a[column_index] == null
+        return a[column_index] === null
           ? -1
-          : b[column_index] == null
+          : b[column_index] === null
           ? 1
           : a[column_index] - b[column_index];
       });
     } else {
       self.heatmap_array.sort(function (a, b) {
-        return a[column_index] == null
+        return a[column_index] === null
           ? -1
-          : b[column_index] == null
+          : b[column_index] === null
           ? 1
           : a[column_index] > b[column_index]
           ? 1
@@ -1260,10 +1520,88 @@ InCHlib.prototype._reorder_heatmap = function (column_index) {
 };
 
 /**
+ * Performance monitoring helper
+ */
+InCHlib.prototype._monitor_performance = function(operation_name, fn) {
+  var self = this;
+  var start_time = performance.now();
+  var result = fn();
+  var end_time = performance.now();
+  
+  if (self.settings.debug_performance) {
+    console.log(operation_name + ' took ' + (end_time - start_time) + ' milliseconds.');
+  }
+  
+  return result;
+};
+
+/**
+ * Pre-compute color palette for faster color lookups
+ */
+InCHlib.prototype._precompute_color_palette = function(color_scale, steps) {
+  var self = this;
+  steps = steps || 256;
+  
+  if (!self._color_palettes) {
+    self._color_palettes = {};
+  }
+  
+  var palette_key = color_scale + '_' + steps;
+  if (self._color_palettes[palette_key]) {
+    return self._color_palettes[palette_key];
+  }
+  
+  var palette = [];
+  for (var i = 0; i < steps; i++) {
+    var position = i / (steps - 1);
+    var color = self._calculate_color_at_position(position, color_scale);
+    palette.push(color);
+  }
+  
+  self._color_palettes[palette_key] = palette;
+  return palette;
+};
+
+/**
+ * Calculate color at specific position for palette generation
+ */
+InCHlib.prototype._calculate_color_at_position = function(position, color_scale) {
+  var self = this;
+  var color = self.colors[color_scale];
+  var c1 = color["start"];
+  var c2 = color["end"];
+  
+  if (color["middle"] !== undefined) {
+    if (position >= 0.5) {
+      c1 = color["middle"];
+      c2 = color["end"];
+      position = (position - 0.5) * 2;
+    } else {
+      c1 = color["start"];
+      c2 = color["middle"];
+      position = position * 2;
+    }
+  }
+  
+  var r = self._hack_round(c1.r + position * (c2.r - c1.r));
+  var g = self._hack_round(c1.g + position * (c2.g - c1.g));
+  var b = self._hack_round(c1.b + position * (c2.b - c1.b));
+  return "rgb(" + r + "," + g + "," + b + ")";
+};
+
+/**
  * Draw already read data (from file/JSON variable).
  */
 InCHlib.prototype.draw = function () {
   var self = this;
+  // Add a settings panel above the heatmap
+    // Add this cleanup block
+  if (self.stage) {
+    self.stage.destroy(); // Properly destroy previous stage
+    self.stage = null;
+  }
+
+  self.stage?.destroyChildren();
   self.zoomed_clusters = { row: [], column: [] };
   self.last_highlighted_cluster = null;
   self.current_object_ids = [];
@@ -1286,6 +1624,8 @@ InCHlib.prototype.draw = function () {
     self.dimensions = { data: 0, metadata: 0, overall: 0 };
     self.settings.heatmap_header = false;
     self.settings.column_dendrogram = false;
+
+
   }
   self._adjust_leaf_size(self.heatmap_array.length);
 
@@ -1302,6 +1642,8 @@ InCHlib.prototype.draw = function () {
     self.header_height +
     self.column_metadata_height +
     self.settings.column_metadata_row_height / 2;
+
+  
 
   if (self.settings.column_dendrogram && self.heatmap_header) {
     self.footer_height = 150;
@@ -1327,7 +1669,7 @@ InCHlib.prototype.draw = function () {
     self.root_id = self._get_root_id(self.data.nodes);
     self._draw_row_dendrogram(self.root_id);
 
-    if (self.settings.column_dendrogram && self.settings.dendrogram) {
+    if (self.settings.column_dendrogram) {
       self.column_root_id = self._get_root_id(self.column_dendrogram.nodes);
       self.nodes2columns = false;
       self.columns_start_index = 0;
@@ -1339,14 +1681,20 @@ InCHlib.prototype.draw = function () {
     self.ordered_by_index = 0;
   }
 
-  if (self.settings.images_as_alternative_data) {
-    self.path2image = {};
-    self.path2image_obj = {};
-    self.image_counter = 0;
-  }
 
-  self._draw_heatmap();
-  self._draw_heatmap_header();
+
+  
+
+  self._monitor_performance('Draw Heatmap', function() {
+    self._draw_heatmap();
+    return true;
+  });
+  
+  self._monitor_performance('Draw Heatmap Header', function() {
+    self._draw_heatmap_header();
+    return true;
+  });
+  
   self._draw_navigation();
   self.highlight_rows(self.settings.highlighted_rows);
 };
@@ -1369,8 +1717,26 @@ InCHlib.prototype._draw_row_dendrogram = function (node_id) {
   self.dendrogram_layer = new Kinetic.Layer();
   var node = self.data.nodes[node_id];
   var count = node.count;
+  var shortenDendogram = 0;
 
-  self.distance_step = self.distance / node.distance;
+    for(let i = 0; i < Object.keys(self.data.nodes).length; i++) {
+    const nodeKey = Object.keys(self.data.nodes)[i];
+    const node = self.data.nodes[nodeKey];    
+    if(node.count === 2 && shortenDendogram === 0) {
+        shortenDendogram = node.distance - 0.1;
+        if(shortenDendogram < 0) {
+            shortenDendogram = 0;
+            break;
+        }      
+    }
+
+    if(node.count>1  && shortenDendogram > 0)
+    {
+        node.distance =  node.distance - shortenDendogram;  
+    }
+  }
+
+  self.distance_step = self.distance / node.distance ;
   self.leaves_y_coordinates = {};
   self.objects2leaves = {};
 
@@ -1429,7 +1795,7 @@ InCHlib.prototype._draw_row_dendrogram_node = function (
   y
 ) {
   var self = this;
-  if (node.count != 1) {
+  if (node.count !== 1) {
     var node_neighbourhood = self._get_node_neighbourhood(
       node,
       self.data.nodes
@@ -1449,7 +1815,7 @@ InCHlib.prototype._draw_row_dendrogram_node = function (
     var x1 = self._hack_round(
       self.distance - self.distance_step * node.distance
     );
-    x1 = x1 == 0 ? 2 : x1;
+    x1 = x1 === 0 ? 2 : x1;
 
     var x2 = x1;
     var left_distance =
@@ -1459,7 +1825,7 @@ InCHlib.prototype._draw_row_dendrogram_node = function (
       self.distance -
       self.distance_step * self.data.nodes[node.right_child].distance;
 
-    if (right_child.count == 1) {
+    if (right_child.count === 1) {
       y2 = y2 + self.pixels_for_leaf / 2;
     }
 
@@ -1533,9 +1899,28 @@ InCHlib.prototype._draw_column_dendrogram = function (node_id) {
   var self = this;
   self.column_dendrogram_layer = new Kinetic.Layer();
   self.column_x_coordinates = {};
-  var node = self.column_dendrogram.nodes[node_id];
+  var node = self.column_dendrogram.nodes[node_id]; 
   self.current_column_count = node.count;
   self.vertical_distance = self.header_height;
+  var shortenDendogram = 0;
+
+  for(let i = 0; i < Object.keys(self.column_dendrogram.nodes).length; i++) {
+    const nodeKey = Object.keys(self.column_dendrogram.nodes)[i];
+    const node = self.column_dendrogram.nodes[nodeKey];    
+    if(node.count === 2 && shortenDendogram === 0) {
+        shortenDendogram = node.distance - 0.1;
+        if(shortenDendogram < 0) {
+            shortenDendogram = 0;
+            break;
+        }      
+    }
+
+    if(node.count>1  && shortenDendogram > 0)
+    {
+        node.distance =  node.distance - shortenDendogram;  
+    }
+  }
+
   self.vertical_distance_step = self.vertical_distance / node.distance;
 
   self.last_highlighted_column_cluster = null;
@@ -1611,7 +1996,6 @@ InCHlib.prototype._bind_dendrogram_hover_events = function (layer) {
 };
 
 InCHlib.prototype._delete_layers = function (to_destroy, to_remove_children) {
-  var self = this;
   for (var i = 0, len = to_destroy.length; i < len; i++) {
     if (to_destroy[i] !== undefined) {
       to_destroy[i].destroy();
@@ -1656,6 +2040,7 @@ InCHlib.prototype._adjust_leaf_size = function (leaves) {
 
 InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
   var self = this;
+
   if (dimensions === undefined) {
     dimensions = self._get_visible_count();
   }
@@ -1665,23 +2050,24 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
       self.heatmap_width =
         (self.settings.width -
           self.right_margin -
-          self.dendrogram_heatmap_distance) *
-        self.settings.heatmap_part_width;
+          self.dendrogram_heatmap_distance) -
+        self.settings.dendrogram_part_width;
     } else {
       self.heatmap_width = 0;
     }
 
     self.pixels_for_dimension =
-      dimensions > 0 && self.heatmap_width > 0
-        ? self.heatmap_width / dimensions
-        : 0;
+            dimensions > 0 && self.heatmap_width > 0
+                ? Math.floor(self.heatmap_width / dimensions)
+                : 0;
     if (self.pixels_for_dimension === 0) {
       self.heatmap_width = 0;
     }
+        self.heatmap_width = self.pixels_for_dimension * dimensions;
 
     self.distance =
       self.settings.width - self.heatmap_width - self.right_margin;
-    self.heatmap_distance = self.distance + self.dendrogram_heatmap_distance;
+      self.heatmap_distance = self.distance + self.dendrogram_heatmap_distance;
   } else {
     self.heatmap_width = self.settings.width - self.right_margin;
     self.distance = self.right_margin / 2;
@@ -1689,16 +2075,21 @@ InCHlib.prototype._adjust_horizontal_sizes = function (dimensions) {
     self.pixels_for_dimension = dimensions
       ? self.heatmap_width / dimensions
       : 0;
+       // Adjust heatmap width to match integer column widths
+        self.heatmap_width = self.pixels_for_dimension * dimensions;
   }
 
   if (
     self.settings.max_column_width &&
     self.settings.max_column_width < self.pixels_for_dimension
-  ) {
+  ) { 
+    var diff =    (self.pixels_for_dimension - self.settings.max_column_width) * dimensions;
     self.pixels_for_dimension = self.settings.max_column_width;
     self.heatmap_width = dimensions * self.pixels_for_dimension;
+    self.settings.width = self.settings.width - diff;
 
     if (self.settings.dendrogram) {
+      //self.right_margin = self.right_margin + diff;
       self.distance =
         self.settings.width -
         self.heatmap_width -
@@ -1805,12 +2196,7 @@ InCHlib.prototype._set_heatmap_settings = function () {
 
   self._set_color_settings();
 
-  if (
-    self.settings.alternative_data &&
-    self.json.alternative_data.feature_names !== undefined
-  ) {
-    self.heatmap_header = self.json.alternative_data.feature_names;
-  } else if (self.data.feature_names !== undefined) {
+  if (self.data.feature_names !== undefined) {
     self.heatmap_header = self.data.feature_names;
   }
 
@@ -1890,11 +2276,13 @@ InCHlib.prototype._draw_heatmap = function () {
     return;
   }
 
-  var heatmap_row, row_id, col_number, col_label, row_values, y;
+  // Initialize layers
   self.heatmap_layer = new Kinetic.Layer();
+  self.cell_value_layer = new Kinetic.Layer();
   self.heatmap_overlay = new Kinetic.Layer();
+  self.row_id_layer = new Kinetic.Layer();
 
-  self.current_draw_values = true;
+  // Calculate font size once
   self.max_value_length = self._get_max_value_length();
   self.value_font_size = self._get_font_size(
     self.max_value_length,
@@ -1903,44 +2291,63 @@ InCHlib.prototype._draw_heatmap = function () {
     12
   );
 
-  if (self.value_font_size < 4) {
-    self.current_draw_values = false;
+  // Disable text drawing if font is too small
+  if (self.value_font_size < 4 && self.settings.current_draw_values) {
+    self.settings.current_draw_values = false;
   }
 
-
-
+  // Batch process rows for better performance
+  var rows_batch = [];
+  var cell_values_batch = [];
+  var events_to_bind = [];
   var x1 = self.heatmap_distance;
-  var key;
-  for (
-    var i = 0, keys = Object.keys(self.leaves_y_coordinates), len = keys.length;
-    i < len;
-    i++
-  ) {
-    key = keys[i];
-    y = self.leaves_y_coordinates[key];
-    heatmap_row = self._draw_heatmap_row(key, x1, y);
-    self.heatmap_layer.add(heatmap_row);
-    self._bind_row_events(heatmap_row);
-  }
-
-  if (self.settings.column_metadata) {
-    self.column_metadata_descs = self._get_data_min_max_middle(
-      self.column_metadata.features,
-      "row"
-    );
-    var y1 =
-      self.header_height + 0.5 * self.settings.column_metadata_row_height;
-
-    for (var i = 0, len = self.column_metadata.features.length; i < len; i++) {
-      heatmap_row = self._draw_column_metadata_row(
-        self.column_metadata.features[i],
-        i,
-        x1,
-        y1
-      );
-      self.heatmap_layer.add(heatmap_row);
-      self._bind_row_events(heatmap_row);
-      y1 = y1 + self.settings.column_metadata_row_height;
+  var keys = Object.keys(self.leaves_y_coordinates);
+  
+  // Process rows in smaller batches to prevent UI blocking
+  var batch_size = len > 1000 ? 25 : 50; // Smaller batches for large datasets
+  
+  for (var i = 0, len = keys.length; i < len; i++) {
+    var key = keys[i];
+    var y = self.leaves_y_coordinates[key];
+    var row_data = self._draw_heatmap_row(key, x1, y);
+    
+    rows_batch.push(row_data[0]);
+    cell_values_batch.push(row_data[1]);
+    events_to_bind.push(row_data[0]);
+    
+    // Add to layers in batches for better performance
+    if (rows_batch.length >= batch_size || i === len - 1) {
+      // Use requestAnimationFrame for large datasets to prevent blocking
+      if (len > 500 && i < len - 1) {
+        (function(current_batch_rows, current_batch_values, current_events) {
+          requestAnimationFrame(function() {
+            current_batch_rows.forEach(function(row) {
+              self.heatmap_layer.add(row);
+            });
+            current_batch_values.forEach(function(cell_values) {
+              self.cell_value_layer.add(cell_values);
+            });
+            current_events.forEach(function(row) {
+              self._bind_row_events(row);
+            });
+          });
+        })(rows_batch.slice(), cell_values_batch.slice(), events_to_bind.slice());
+      } else {
+        rows_batch.forEach(function(row) {
+          self.heatmap_layer.add(row);
+        });
+        cell_values_batch.forEach(function(cell_values) {
+          self.cell_value_layer.add(cell_values);
+        });
+        events_to_bind.forEach(function(row) {
+          self._bind_row_events(row);
+        });
+      }
+      
+      // Clear batches
+      rows_batch = [];
+      cell_values_batch = [];
+      events_to_bind = [];
     }
   }
 
@@ -1948,17 +2355,24 @@ InCHlib.prototype._draw_heatmap = function () {
     self._draw_row_ids();
   }
 
+  // Initialize remaining layers
   self.highlighted_rows_layer = new Kinetic.Layer();
   self.stage.add(
+    self.cell_value_layer,
     self.heatmap_layer,
     self.heatmap_overlay,
     self.highlighted_rows_layer
   );
 
+  // Optimize layer rendering order
   self.highlighted_rows_layer.moveToTop();
+  self.cell_value_layer.moveToTop();
+  
+  // Initialize overlay objects
   self.row_overlay = self.objects_ref.heatmap_line.clone();
   self.column_overlay = self.objects_ref.heatmap_line.clone();
 
+  // Bind heatmap layer events
   self.heatmap_layer.on("mouseleave", function (evt) {
     self.last_header = null;
     self.heatmap_overlay.destroyChildren();
@@ -1967,67 +2381,23 @@ InCHlib.prototype._draw_heatmap = function () {
   });
 };
 
+
 InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
   var self = this;
   var node = self.data.nodes[node_id];
   var row = new Kinetic.Group({ id: node_id });
-  var x2, y2, color, line, value, text, text_value, col_index;
+  var cell_values = new Kinetic.Group({ id: node_id });
 
+  var x2, y2, color, line, value, text, text_value, col_index;
+  var row_colors = []; // Cache colors for the row
+  var row_values = []; // Cache values for the row
+
+  // Pre-calculate all colors and values for this row
   for (var i = 0, len = self.on_features["data"].length; i < len; i++) {
     col_index = self.on_features["data"][i];
-    x2 = x1 + self.pixels_for_dimension;
-    y2 = y1;
     value = node.features[col_index];
-    text_value = value;
-
-    if (self.settings.alternative_data) {
-      text_value = self.alternative_data[node_id][col_index];
-
-      if (
-        self.settings.images_as_alternative_data &&
-        text_value !== undefined &&
-        text_value !== null &&
-        text_value != ""
-      ) {
-        value = null;
-        var filepath =
-          self.settings.images_path.dir +
-          text_value +
-          self.settings.images_path.ext;
-        filepath = escape(filepath);
-
-        if (self.path2image[text_value] === undefined) {
-          var image_obj = new Image();
-          image_obj.src = filepath;
-
-          image_obj.onload = function () {
-            self.image_counter++;
-
-            if (self.image_counter === Object.keys(self.path2image).length) {
-              self.heatmap_layer.draw();
-            }
-          };
-
-          self.path2image_obj[text_value] = image_obj;
-          self.path2image[text_value] = self.objects_ref.image.clone({
-            image: self.path2image_obj[text_value],
-          });
-        }
-
-        var image = self.path2image[text_value].clone({
-          width: self.pixels_for_dimension,
-          height: self.pixels_for_leaf,
-          x: x1,
-          y: y1 - self._hack_round(0.5 * self.pixels_for_leaf),
-          points: [x1, y1, x1 + self.pixels_for_dimension, null],
-          column: ["d", col_index].join("_"),
-          value: text_value,
-        });
-        row.add(image);
-      }
-    }
-
-    if (value !== null && !self.settings.images_as_alternative_data) {
+    
+    if (value !== null) {
       color = self._get_color_for_value(
         value,
         self.data_descs[col_index]["min"],
@@ -2035,120 +2405,50 @@ InCHlib.prototype._draw_heatmap_row = function (node_id, x1, y1) {
         self.data_descs[col_index]["middle"],
         self.settings.heatmap_colors
       );
+      row_colors[i] = color;
+      row_values[i] = value;
+    } else {
+      row_colors[i] = null;
+      row_values[i] = null;
+    }
+  }
 
+  // Create visual elements with pre-calculated data
+  var current_x = x1;
+  for (var i = 0, len = self.on_features["data"].length; i < len; i++) {
+    col_index = self.on_features["data"][i];
+    x2 = current_x + self.pixels_for_dimension;
+    
+    if (row_colors[i] !== null) {
       line = self.objects_ref.heatmap_line.clone({
-        stroke: color,
-        points: [x1, y1, x2, y2],
-        value: text_value,
+        stroke: row_colors[i],
+        points: [current_x, y1, x2 + 0.8, y1],
+        value: row_values[i],
         column: ["d", col_index].join("_"),
-        strokeWidth: self.pixels_for_leaf,
+        strokeWidth: self.pixels_for_leaf + 0.8,
       });
       row.add(line);
 
-      if (self.current_draw_values) {
+      // Add text if enabled
+      if (self.settings.current_draw_values && self.value_font_size >= 4) {
         text = self.objects_ref.heatmap_value.clone({
           x: self._hack_round(
-            (x1 + x2) / 2 -
-              ("" + text_value).length * (self.value_font_size / 4)
+            (current_x + x2) / 2 -
+              ("" + row_values[i]).length * (self.value_font_size / 3)
           ),
           y: self._hack_round(y1 - self.value_font_size / 2),
-          fontSize: self.value_font_size,
-          text: text_value,
+          fontSize: self.value_font_size + 4,
+          text: row_values[i],
+          opacity: 1,
         });
-        row.add(text);
+        cell_values.add(text);
       }
     }
-
-    x1 = x2;
+    
+    current_x = x2;
   }
-
-  if (self.settings.metadata) {
-    var metadata = self.metadata.nodes[node_id];
-
-    if (metadata !== undefined) {
-      for (var i = 0, len = self.on_features["metadata"].length; i < len; i++) {
-        col_index = self.on_features["metadata"][i];
-        value = metadata[col_index];
-        x2 = x1 + self.pixels_for_dimension;
-        y2 = y1;
-
-        if (value !== null && value !== undefined) {
-          text_value = value;
-
-          if (self.metadata_descs[col_index]["str2num"] !== undefined) {
-            value = self.metadata_descs[col_index]["str2num"][value];
-          }
-          color = self._get_color_for_value(
-            value,
-            self.metadata_descs[col_index]["min"],
-            self.metadata_descs[col_index]["max"],
-            self.metadata_descs[col_index]["middle"],
-            self.settings.metadata_colors
-          );
-
-          line = self.objects_ref.heatmap_line.clone({
-            stroke: color,
-            points: [x1, y1, x2, y2],
-            value: text_value,
-            column: ["m", col_index].join("_"),
-            strokeWidth: self.pixels_for_leaf,
-          });
-          row.add(line);
-
-          if (self.current_draw_values) {
-            text = self.objects_ref.heatmap_value.clone({
-              text: text_value,
-              fontSize: self.value_font_size,
-            });
-
-            var width = text.getWidth();
-            var x = self._hack_round((x1 + x2) / 2 - width / 2);
-            var y = self._hack_round(y1 - self.value_font_size / 2);
-            text.position({ x: x, y: y });
-            row.add(text);
-          }
-        }
-        x1 = x2;
-      }
-    }
-  }
-
-  if (
-    self.settings.count_column &&
-    self.features[self.dimensions["overall"] - 1]
-  ) {
-    x2 = x1 + self.pixels_for_dimension;
-    var count = node.objects.length;
-    color = self._get_color_for_value(
-      count,
-      self.min_item_count,
-      self.max_item_count,
-      self.middle_item_count,
-      self.settings.count_column_colors
-    );
-
-    line = self.objects_ref.heatmap_line.clone({
-      stroke: color,
-      points: [x1, y1, x2, y2],
-      value: count,
-      column: "Count",
-      strokeWidth: self.pixels_for_leaf,
-    });
-    row.add(line);
-
-    if (self.current_draw_values) {
-      text = self.objects_ref.heatmap_value.clone({
-        text: count,
-      });
-
-      width = text.getWidth();
-      x = self._hack_round((x1 + x2) / 2 - width / 2);
-      y = self._hack_round(y1 - self.value_font_size / 2);
-      text.position({ x: x, y: y });
-      row.add(text);
-    }
-  }
-  return row;
+  
+  return [row, cell_values];
 };
 
 InCHlib.prototype._draw_column_metadata_row = function (
@@ -2231,7 +2531,9 @@ InCHlib.prototype._bind_row_events = function (row) {
 };
 
 InCHlib.prototype._draw_row_ids = function () {
+
   var self = this;
+  self.row_id_layer.destroyChildren();
   if (self.pixels_for_leaf < 6 || self.row_id_size < 5) {
     return;
   }
@@ -2264,13 +2566,15 @@ InCHlib.prototype._draw_row_ids = function () {
     text = self.objects_ref.heatmap_value.clone({
       x: x,
       y: self._hack_round(object_y[i][1] - self.row_id_size / 2),
-      fontSize: self.row_id_size,
+      fontSize: self.row_id_size+3,
       text: object_y[i][0],
-      fontStyle: "italic",
-      fill: "gray",
+      //fontStyle: "italic",
+      fill: "black",
     });
-    self.heatmap_layer.add(text);
+    text.visibility = true;
+    self.row_id_layer.add(text);
   }
+  self.stage.add(self.row_id_layer);
 };
 
 InCHlib.prototype._get_row_id_size = function () {
@@ -2316,6 +2620,7 @@ InCHlib.prototype._get_row_id_size = function () {
       self.pixels_for_leaf,
       10
     );
+
     self.right_margin = 100;
   }
 };
@@ -2335,9 +2640,10 @@ InCHlib.prototype._draw_heatmap_header = function () {
     var rotation =
       self.settings.column_dendrogram && self.heatmap_header ? 45 : -45;
     var distance_step = 0;
-    var x, i, column_header, key;
+    var x, i, column_header;
     var current_headers = [],
-      len;
+      len; 
+
 
     for (i = 0, len = self.on_features["data"].length; i < len; i++) {
       current_headers.push(self.header[self.on_features["data"][i]]);
@@ -2489,7 +2795,7 @@ InCHlib.prototype._draw_distance_scale = function (distance) {
   });
   self.dendrogram_layer.add(path, circle, distance_number);
 
-  if (marker_distance_step == 0) {
+  if (marker_distance_step === 0) {
     marker_distance_step = 0.5;
   }
 
@@ -2787,7 +3093,7 @@ InCHlib.prototype._highlight_path = function (path_id, color) {
 InCHlib.prototype._highlight_column_path = function (path_id, color) {
   var self = this;
   var node = self.column_dendrogram.nodes[path_id];
-  if (node.count != 1) {
+  if (node.count !== 1) {
     self.column_dendrogram_layer.get("#col" + path_id)[0].stroke(color);
     self._highlight_column_path(node.left_child, color);
     self._highlight_column_path(node.right_child, color);
@@ -2849,11 +3155,12 @@ InCHlib.prototype.highlight_rows = function (row_ids) {
     row = self._draw_heatmap_row(
       unique_row_ids[i],
       self.heatmap_distance,
-      self.leaves_y_coordinates[unique_row_ids[i]]
-    );
+      self.leaves_y_coordinates[unique_row_ids[i]],
+    )[0];
     self.highlighted_rows_layer.add(row);
     row.setAttr("listening", false);
   }
+  
 
   self.highlighted_rows_layer.draw();
   self.heatmap_overlay.moveToTop();
@@ -2976,7 +3283,7 @@ InCHlib.prototype._neutralize_path = function (path_id) {
   var self = this;
   var node = self.data.nodes[path_id];
 
-  if (node.count != 1) {
+  if (node.count !== 1) {
     var path = self.dendrogram_layer.get("#" + path_id)[0];
     if (path) {
       path.setStroke("grey");
@@ -3210,7 +3517,7 @@ InCHlib.prototype._draw_column_cluster = function (node_id) {
 
 InCHlib.prototype._zoom_column_cluster = function (node_id) {
   var self = this;
-  if (node_id != self.column_root_id) {
+  if (node_id !== self.column_root_id) {
     self.zoomed_clusters["column"].push(node_id);
     self._draw_column_cluster(node_id);
     self.highlight_rows(self.settings.highlighted_rows);
@@ -3291,7 +3598,6 @@ InCHlib.prototype._unzoom_cluster = function () {
 };
 
 InCHlib.prototype._get_node_neighbourhood = function (node, nodes) {
-  var self = this;
   var node_neighbourhood = {
     left_node: {
       left_node: { left_count: 0, right_count: 0 },
@@ -3318,13 +3624,13 @@ InCHlib.prototype._get_node_neighbourhood = function (node, nodes) {
   var right_child_left_child = nodes[right_child.left_child];
   var right_child_right_child = nodes[right_child.right_child];
 
-  if (left_child.count != 1) {
+  if (left_child.count !== 1) {
     node_neighbourhood.left_node.left_count =
       nodes[left_child.left_child].count;
     node_neighbourhood.left_node.right_count =
       nodes[left_child.right_child].count;
 
-    if (left_child_left_child.count != 1) {
+    if (left_child_left_child.count !== 1) {
       node_neighbourhood.left_node.left_node.left_count =
         nodes[left_child_left_child.left_child].count;
       node_neighbourhood.left_node.left_node.right_count =
@@ -3334,7 +3640,7 @@ InCHlib.prototype._get_node_neighbourhood = function (node, nodes) {
       node_neighbourhood.left_node.left_node.right_count = 0.5;
     }
 
-    if (left_child_right_child.count != 1) {
+    if (left_child_right_child.count !== 1) {
       node_neighbourhood.left_node.right_node.left_count =
         nodes[left_child_right_child.left_child].count;
       node_neighbourhood.left_node.right_node.right_count =
@@ -3345,13 +3651,13 @@ InCHlib.prototype._get_node_neighbourhood = function (node, nodes) {
     }
   }
 
-  if (right_child.count != 1) {
+  if (right_child.count !== 1) {
     node_neighbourhood.right_node.left_count =
       nodes[right_child.left_child].count;
     node_neighbourhood.right_node.right_count =
       nodes[right_child.right_child].count;
 
-    if (right_child_left_child.count != 1) {
+    if (right_child_left_child.count !== 1) {
       node_neighbourhood.right_node.left_node.left_count =
         nodes[right_child_left_child.left_child].count;
       node_neighbourhood.right_node.left_node.right_count =
@@ -3361,7 +3667,7 @@ InCHlib.prototype._get_node_neighbourhood = function (node, nodes) {
       node_neighbourhood.right_node.left_node.right_count = 0.5;
     }
 
-    if (right_child_right_child.count != 1) {
+    if (right_child_right_child.count !== 1) {
       node_neighbourhood.right_node.right_node.left_count =
         nodes[right_child_right_child.left_child].count;
       node_neighbourhood.right_node.right_node.right_count =
@@ -3382,6 +3688,7 @@ InCHlib.prototype._draw_column_dendrogram_node = function (
   x,
   y
 ) {
+ 
   var self = this;
 
   if (node.count > 1) {
@@ -3402,23 +3709,23 @@ InCHlib.prototype._draw_column_dendrogram_node = function (
       current_right_count
     );
     var y1 = self._hack_round(
-      self.vertical_distance - self.vertical_distance_step * node.distance
+      self.vertical_distance - self.vertical_distance_step * (node.distance)
     );
-    y1 = y1 == 0 ? 2 : y1;
+    y1 = y1 === 0 ? 2 : y1;
     var y2 = y1;
 
-    if (right_child.count == 1) {
+    if (right_child.count === 1) {
       x2 = x2 - self.pixels_for_dimension / 2;
     }
 
     var left_distance =
       self.vertical_distance -
       self.vertical_distance_step *
-        self.column_dendrogram.nodes[node.left_child].distance;
+        (self.column_dendrogram.nodes[node.left_child].distance)  ;
     var right_distance =
       self.vertical_distance -
       self.vertical_distance_step *
-        self.column_dendrogram.nodes[node.right_child].distance;
+        (self.column_dendrogram.nodes[node.right_child].distance );
 
     self.column_dendrogram_layer.add(
       self._draw_vertical_path(
@@ -3608,7 +3915,7 @@ InCHlib.prototype._filter_icon_click = function (filter_button) {
       }
       if (attr < self.dimensions) {
         var text = self.header[attr];
-        if (text == "") {
+        if (text === "") {
           text = parseInt(attr) + 1 + ". column";
         }
         filter_list =
@@ -3756,7 +4063,7 @@ InCHlib.prototype._filter_icon_click = function (filter_button) {
       self._draw_heatmap();
       self._draw_heatmap_header();
 
-      if (highlighted_cluster != null) {
+      if (highlighted_cluster !== null) {
         self._highlight_cluster(highlighted_cluster);
       }
     });
@@ -3765,6 +4072,10 @@ InCHlib.prototype._filter_icon_click = function (filter_button) {
 InCHlib.prototype._draw_target_overlay = function () {
   var self = this;
   var overlay = self.target_element.find(".target_overlay");
+
+  
+
+
 
   if (overlay.length) {
     overlay.fadeIn("fast");
@@ -4056,7 +4367,7 @@ InCHlib.prototype._color_scale_click = function (icon, evt) {
         option = $(this);
         key = option.attr("name");
         value = option.val();
-        if (value != "") {
+        if (value !== "") {
           if (value === "true") {
             value = true;
           } else if (value === "false") {
@@ -4343,35 +4654,81 @@ InCHlib.prototype._get_color_for_value = function (
   color_scale
 ) {
   var self = this;
+  
+  // Use cache for frequently calculated colors
+  if (!self._color_cache) {
+    self._color_cache = new Map();
+  }
+  
+  var cache_key = value + "_" + min + "_" + max + "_" + middle + "_" + color_scale;
+  if (self._color_cache.has(cache_key)) {
+    return self._color_cache.get(cache_key);
+  }
+  
+  var result;
   var color = self.colors[color_scale];
   var c1 = color["start"];
   var c2 = color["end"];
 
   if (value > max) {
-    return "rgb(" + c2.r + "," + c2.g + "," + c2.b + ")";
-  }
-
-  if (min == max || value < min) {
-    return "rgb(" + c1.r + "," + c1.g + "," + c1.b + ")";
-  }
-
-  if (color["middle"] !== undefined) {
-    if (value >= middle) {
-      min = middle;
-      c1 = color["middle"];
-      c2 = color["end"];
+    result = "rgb(" + c2.r + "," + c2.g + "," + c2.b + ")";
+  } else if (min === max || value < min) {
+    result = "rgb(" + c1.r + "," + c1.g + "," + c1.b + ")";
+  } else {
+    // Try to use pre-computed palette for faster lookup
+    var use_palette = (max - min) > 0.001; // Only use palette for reasonable ranges
+    if (use_palette) {
+      var palette = self._precompute_color_palette(color_scale, 256);
+      var position = (value - min) / (max - min);
+      
+      // Handle middle color scaling
+      if (color["middle"] !== undefined) {
+        var middle_position = (middle - min) / (max - min);
+        if (position >= middle_position) {
+          position = 0.5 + (position - middle_position) / (1 - middle_position) * 0.5;
+        } else {
+          position = position / middle_position * 0.5;
+        }
+      }
+      
+      var palette_index = Math.round(position * (palette.length - 1));
+      palette_index = Math.max(0, Math.min(palette.length - 1, palette_index));
+      result = palette[palette_index];
     } else {
-      max = middle;
-      c1 = color["start"];
-      c2 = color["middle"];
+      // Fallback to original calculation for edge cases
+      if (color["middle"] !== undefined) {
+        if (value >= middle) {
+          min = middle;
+          c1 = color["middle"];
+          c2 = color["end"];
+        } else {
+          max = middle;
+          c1 = color["start"];
+          c2 = color["middle"];
+        }
+      }
+
+      var position = (value - min) / (max - min);
+      var r = self._hack_round(c1.r + position * (c2.r - c1.r));
+      var g = self._hack_round(c1.g + position * (c2.g - c1.g));
+      var b = self._hack_round(c1.b + position * (c2.b - c1.b));
+      result = "rgb(" + r + "," + g + "," + b + ")";
     }
   }
-
-  var position = (value - min) / (max - min);
-  var r = self._hack_round(c1.r + position * (c2.r - c1.r));
-  var g = self._hack_round(c1.g + position * (c2.g - c1.g));
-  var b = self._hack_round(c1.b + position * (c2.b - c1.b));
-  return "rgb(" + r + "," + g + "," + b + ")";
+  
+  // Cache the result (limit cache size to prevent memory issues)
+  if (self._color_cache.size < 10000) {
+    self._color_cache.set(cache_key, result);
+  } else if (self._color_cache.size >= 15000) {
+    // Clear half the cache when it gets too large
+    var keys_to_delete = Array.from(self._color_cache.keys()).slice(0, 7500);
+    keys_to_delete.forEach(function(key) {
+      self._color_cache.delete(key);
+    });
+    self._color_cache.set(cache_key, result);
+  }
+  
+  return result;
 };
 
 InCHlib.prototype._get_font_size = function (
@@ -4435,17 +4792,14 @@ InCHlib.prototype._collect_column_ids = function (node_id) {
 };
 
 InCHlib.prototype._hack_size = function (obj) {
-  var self = this;
   return Object.keys(obj).length;
 };
 
 InCHlib.prototype._hack_round = function (value) {
-  var self = this;
-  return (0.5 + value) >> 0;
+  return Math.round(value);
 };
 
 InCHlib.prototype._is_number = function (n) {
-  var self = this;
   return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
@@ -4615,7 +4969,16 @@ InCHlib.prototype.update_settings = function (settings_object) {
  */
 InCHlib.prototype.redraw = function () {
   var self = this;
-  self._delete_all_layers();
+  // Clear color cache and palettes on redraw to prevent memory accumulation
+  if (self._color_cache) {
+    self._color_cache.clear();
+  }
+  if (self._color_palettes) {
+    self._color_palettes = {};
+  }
+  
+  // Use UI cleanup instead of full cleanup to preserve data
+  self.cleanupUI();
   self.draw();
 };
 
@@ -4624,6 +4987,9 @@ InCHlib.prototype.redraw = function () {
  */
 InCHlib.prototype.redraw_heatmap = function () {
   var self = this;
+  [self.heatmap_layer, self.heatmap_overlay, self.highlighted_rows_layer, self.header_layer].forEach(layer => {
+    if (layer) layer.destroy();
+  });
   self._delete_layers([
     self.heatmap_layer,
     self.heatmap_overlay,
@@ -4636,6 +5002,353 @@ InCHlib.prototype.redraw_heatmap = function () {
   self.heatmap_layer.moveToBottom();
   self.heatmap_layer.moveUp();
 };
+
+
+InCHlib.prototype.setRowIdsVisibility = function (visibility) {
+  if (typeof visibility !== "boolean") {
+     console.error("Visibility must be a boolean value.");
+      return;
+    }
+    const self = this;
+    self.settings.draw_row_ids = visibility;
+    if(visibility){
+       self.row_id_layer.show()
+    } else{
+        self.row_id_layer.hide()
+    }
+    self.row_id_layer.draw();
+};
+
+// Set the width ratio for the heatmap
+InCHlib.prototype.setDendrogramWidth = function (diff) {
+   const self = this;
+   
+   
+    if (typeof diff === "number") {
+        self.settings.dendrogram_part_width =  diff;
+       
+    self.redraw();
+       
+    } else {
+        console.error("Invalid width ratio. It must be a number between 0 and 1.");
+    }
+};
+
+// Toggle the visibility of row IDs
+InCHlib.prototype.setColumnIdsVisibility = function (visibility) {
+     if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+   
+    if(visibility){
+       this.header_layer.show()
+    } else{
+        this.header_layer.hide()
+    }
+    this.header_layer.draw();
+    
+};
+
+
+
+InCHlib.prototype.updateCellColors = function (colorScale) {
+    const self = this;
+    // Update the heatmap color scale in settings
+    self.settings.heatmap_colors = colorScale;
+    
+    // Clear existing color cache since scale changed
+    if (self._color_cache) {
+      self._color_cache.clear();
+    }
+
+    if(!self.settings.independent_columns){
+      // Initialize a cache for color calculations
+    const colorCache = new Map();
+      const getColor = (value) => {        
+        if (colorCache.has(value)) {
+            return colorCache.get(value);
+        }
+
+        // Calculate the color
+        const color = self._get_color_for_value(
+            value,
+            self.data_descs[0].min,
+            self.data_descs[0].max,
+            self.data_descs[0].middle,
+            colorScale
+        );
+        // Store the result in the cache
+        colorCache.set(value, color);
+        return color;
+    };
+    // Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value;            
+
+                // Get the color (cached or calculated)
+                const color = getColor(value);
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    }  else{
+// Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value;
+                const colIndex = parseInt(line.attrs.column.split("_")[1], 10);
+
+                // Get the color for the current value
+                const color = self._get_color_for_value(
+                    value,
+                    self.data_descs[colIndex].min,
+                    self.data_descs[colIndex].max,
+                    self.data_descs[colIndex].middle,
+                    colorScale
+                );
+
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    }
+    // Redraw the heatmap layer to apply the changes
+    self.heatmap_layer.draw();  
+
+};
+
+InCHlib.prototype.updateCellColorsPercentile = function (colorPercentile) {
+    const self = this;
+    
+    // Clear existing color cache since percentiles changed
+    if (self._color_cache) {
+      self._color_cache.clear();
+    }
+    
+    // Initialize a cache for color calculations
+    const colorCache = new Map();
+    const getColor = (value) => {        
+        if (colorCache.has(value)) {
+            return colorCache.get(value);
+        }
+
+        // Calculate the color
+        const color = self._get_color_for_value(
+            value,
+            colorPercentile.minValue,
+            colorPercentile.maxValue,
+            (colorPercentile.maxValue + colorPercentile.minValue)/2,
+            self.settings.heatmap_colors
+        );
+        // Store the result in the cache
+        colorCache.set(value, color);
+        return color;
+    };
+    // Iterate over rows and update their colors
+    const rows = self.heatmap_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.column !== undefined && line.attrs.value !== undefined) {
+                const value = line.attrs.value; 
+
+                // Get the color (cached or calculated)
+                const color = getColor(value);
+                // Update the line's stroke color
+                line.setAttr("stroke", color);
+            }
+        });
+    });
+    
+    // Redraw the heatmap layer to apply the changes
+    self.heatmap_layer.draw();  
+
+};
+InCHlib.prototype.updateDendrogramLineWidth = function (size) {
+    const self = this;
+
+    // Update the heatmap color scale in settings
+    self.settings.dendrogram_line_width = size;
+
+    // Iterate over rows and update their colors
+    var rows = self.dendrogram_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.strokeWidth !== undefined) {             
+                line.setAttr("strokeWidth", size);
+            }
+        });
+    });
+
+
+    rows = self.column_dendrogram_layer.getChildren(); // Each child is a heatmap row
+    rows.forEach((row) => {
+        const rowChildren = row.getChildren(); // Each child in the row is a cell (line)
+
+        rowChildren.forEach((line) => {
+            // Only process lines that represent data cells
+            if (line.attrs.strokeWidth !== undefined) {             
+                line.setAttr("strokeWidth", size);
+            }
+        });
+    });
+
+    // Redraw the heatmap layer to apply the changes
+    self.dendrogram_layer.draw();
+    self.column_dendrogram_layer.draw();
+};
+
+InCHlib.prototype.setCellValueVisibility = function (visibility) {
+    if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    const self = this;
+    self.settings.current_draw_values = visibility;
+    if(visibility){
+        self.cell_value_layer.show()
+    } else{
+        self.cell_value_layer.hide()
+    }
+    self.cell_value_layer.draw();
+};
+
+InCHlib.prototype.setColumnDendrogramVisibility = function (visibility) {
+  const self = this;
+    if (typeof visibility !== "boolean" || self.column_dendrogram_layer === undefined) {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    
+    
+   // self.settings.column_dendrogram = visibility;
+    if (visibility) {
+        self.column_dendrogram_layer.show();
+    } else {
+        self.column_dendrogram_layer.hide();
+    }
+    self.column_dendrogram_layer.draw();
+};
+
+InCHlib.prototype.setDendrogramVisibility = function (visibility) {
+    if (typeof visibility !== "boolean") {
+        console.error("Visibility must be a boolean value.");
+        return;
+    }
+    const self = this;
+    self.settings.dendrogram = visibility;
+    if (visibility) {
+        self.dendrogram_layer.show();
+    } else {
+        self.dendrogram_layer.hide();
+    }
+    self.dendrogram_layer.draw();
+};
+
+/**
+ * Simplified API for common configuration changes
+ */
+InCHlib.prototype.configure = function(options) {
+  var self = this;
+  
+  if (!options || typeof options !== 'object') {
+    console.error('InCHlib.configure: options must be an object');
+    return;
+  }
+  
+  var should_redraw = false;
+  var should_redraw_heatmap = false;
+  
+  // Handle visibility toggles
+  if (options.showRowIds !== undefined) {
+    self.setRowIdsVisibility(options.showRowIds);
+  }
+  
+  if (options.showColumnIds !== undefined) {
+    self.setColumnIdsVisibility(options.showColumnIds);
+  }
+  
+  if (options.showCellValues !== undefined) {
+    self.setCellValueVisibility(options.showCellValues);
+  }
+  
+  if (options.showDendrogram !== undefined) {
+    self.setDendrogramVisibility(options.showDendrogram);
+  }
+  
+  if (options.showColumnDendrogram !== undefined) {
+    self.setColumnDendrogramVisibility(options.showColumnDendrogram);
+  }
+  
+  // Handle color changes
+  if (options.colorScale !== undefined) {
+    self.updateCellColors(options.colorScale);
+    should_redraw_heatmap = true;
+  }
+  
+  if (options.colorPercentile !== undefined) {
+    self.updateCellColorsPercentile(options.colorPercentile);
+    should_redraw_heatmap = true;
+  }
+  
+  // Handle dendrogram settings
+  if (options.dendrogramWidth !== undefined) {
+    self.setDendrogramWidth(options.dendrogramWidth);
+    should_redraw = true;
+  }
+  
+  if (options.dendrogramLineWidth !== undefined) {
+    self.updateDendrogramLineWidth(options.dendrogramLineWidth);
+  }
+  
+  // Handle other settings that require redraw
+  if (options.maxHeight !== undefined) {
+    self.settings.max_height = options.maxHeight;
+    should_redraw = true;
+  }
+  
+  if (options.width !== undefined) {
+    self.settings.width = options.width;
+    should_redraw = true;
+  }
+  
+  // Enable performance debugging if requested
+  if (options.debugPerformance !== undefined) {
+    self.settings.debug_performance = options.debugPerformance;
+  }
+  
+  // Apply redraws if needed
+  if (should_redraw) {
+    self.redraw();
+  } else if (should_redraw_heatmap) {
+    self.redraw_heatmap();
+  }
+  
+  return self; // Enable method chaining
+};
+
+
+
+//strokeWidth
 
 //module.exports = InCHlib;
 export default InCHlib;

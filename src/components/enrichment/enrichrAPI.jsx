@@ -1,101 +1,172 @@
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { get, set } from "idb-keyval";
+import PQueue from "p-queue";
 
-// async function to perform enrichment
-async function performEnrichment(geneList, datasets) {
-  // Get hash of the genelist.
-  let hashVal = hashGeneList(geneList);
+// Initialize a queue with limited concurrency & optional rate limit
+const queue = new PQueue({
+  concurrency: 1, // up to 3 concurrent API calls
+  interval: 300, // each "window" is 1 second
+  intervalCap: 1, // max 5 requests per 1 second window
+});
 
-  // check whether the genelist exists in the database
-  let listID = undefined;
-  try {
-    listID = await get(hashVal);
-  } catch (error) {}
+// Optional in-flight request cache so the same (geneList+datasets)
+// request doesn’t get triggered twice at once.
+const inFlightMap = new Map();
 
-  if (!listID) {
-    // if the genelist does not exist, connect to Enrichr and get the list ID+
-    listID = await runEnrichr(geneList);
+/**
+ * Main function to perform Enrichment.
+ * It uses IndexedDB for caching, p-queue to limit concurrency,
+ * and an in-flight map to avoid duplicate simultaneous requests.
+ */
+export async function performEnrichment(geneList, datasets) {
+  // Build a simple cache key based on hashed geneList + the dataset string
+  const geneListHash = hashGeneList(geneList);
+  // Make sure we convert datasets to a canonical string for the cache key
+  const datasetsKey = canonicalizeDatasets(datasets);
+  const key = `${geneListHash}_${datasetsKey}`;
 
-    if (listID) {
-      await set(hashVal, listID);
-    }
+  // If a request for the same combination is already in-flight, return it:
+  if (inFlightMap.has(key)) {
+    return inFlightMap.get(key);
   }
 
-  if (listID) {
-    // check whether the database contains data for each dataset
-    datasets = datasets.trim().trim(",").split(",");
-    var datasetsSet = new Set(datasets);
-    var enrichRdata = [];
-
+  // Create a wrapped promise so inFlightMap knows about it.
+  const enrichmentPromise = (async () => {
+    // 1) Try to get listID from IDB
+    let listID;
     try {
-      // get all available data from the storage
-      let results = await get("enrichr_" + listID);
-      //console.log("Checking results?", results);
-      if (results) {
-        for (let i in results.data) {
-          enrichRdata.push(results.data[i]);
-          if (results.data[i].name && datasetsSet.has(results.data[i].name)) {
-            datasetsSet.delete(results.data[i].name);
-          }
-        }
-      }
-    } catch (error) {
-      //console.log("Not in hash?", error);
+      listID = await get(geneListHash);
+    } catch (err) {
+      // no-op, ignore missing or DB read error
     }
 
-    // if there are still missing datasets, retrieve them from the API
-    var operations = [];
-    if (datasetsSet.size > 0) {
-      for (let dataset of datasetsSet) {
-        operations.push(getEnrichr(listID, dataset));
-      }
-      let enrichRresults = await Promise.allSettled(operations);
-
-      for (let result of enrichRresults) {
-        if (result.status === "fulfilled" && result.value) {
-          enrichRdata.push(result.value);
-        }
-      }
-
-      await set("enrichr_" + listID, { data: enrichRdata, time: Date.now() });
-
-      datasetsSet = new Set(datasets);
-      // filter the requested databases
-      for (let i = enrichRdata.length - 1; i > -1; i--) {
-        if (enrichRdata[i].name && datasetsSet.has(enrichRdata[i].name)) {
-          continue;
-        }
-        enrichRdata.splice(i, 1);
+    // 2) If we don’t have it, call runEnrichr to store & retrieve listID
+    if (!listID) {
+      listID = await runEnrichr(geneList);
+      if (listID) {
+        await set(geneListHash, listID);
+      } else {
+        // If runEnrichr fails, return here
+        return [];
       }
     }
+
+    // 3) Now retrieve the actual dataset enrichment results
+    const enrichRdata = await retrieveEnrichmentData(listID, datasetsKey);
 
     return enrichRdata;
+  })();
+
+  // Store the promise in the map
+  inFlightMap.set(key, enrichmentPromise);
+
+  try {
+    // Wait for the enrichment to complete
+    const result = await enrichmentPromise;
+    return result;
+  } finally {
+    // Remove from map once complete
+    inFlightMap.delete(key);
   }
 }
 
-//Create a basic hash function for genelists.
-//Sort the list take first item, last item, count, length of allgenes
+/**
+ * Helper function that calls Enrichr for the needed datasets
+ * using local caching, and runs them through our p-queue
+ * to avoid too many requests in a short burst.
+ */
+async function retrieveEnrichmentData(listID, datasetsKey) {
+  // Convert CSV string to array
+  const datasets = datasetsKey.split(",");
+
+  // Try to load existing data from IDB
+  let storedResults;
+  try {
+    storedResults = await get("enrichr_" + listID);
+  } catch (error) {
+    storedResults = null;
+  }
+
+  let enrichRdata = storedResults?.data || [];
+  // Create a set for easy membership checks
+  let existingDatasetNames = new Set(enrichRdata.map((d) => d.name));
+
+  // Which datasets are missing from local storage?
+  const missingDatasets = datasets.filter(
+    (ds) => !existingDatasetNames.has(ds)
+  );
+
+  if (missingDatasets.length > 0) {
+    // Queue the requests
+    const operations = missingDatasets.map((dataset) => {
+      return queue.add(() => getEnrichr(listID, dataset));
+      // "queue.add" ensures requests go through p-queue
+    });
+
+    // Wait for all requests to finish
+    const enrichRresults = await Promise.allSettled(operations);
+
+    // Merge the new results
+    for (let result of enrichRresults) {
+      if (result.status === "fulfilled" && result.value) {
+        enrichRdata.push(result.value);
+      }
+    }
+
+    // Save updated data to IDB
+    await set("enrichr_" + listID, { data: enrichRdata, time: Date.now() });
+  }
+
+  // Filter only the requested datasets, in case we have extras
+  return enrichRdata.filter((item) => datasets.includes(item.name));
+}
+
+/**
+ * Create a basic hash function for geneList:
+ * 1) Trim and split by comma
+ * 2) Sort
+ * 3) Return length + first item + last item + sum of item lengths
+ */
 function hashGeneList(geneList) {
-  geneList = geneList.trim(",").split(",").sort();
-  if (geneList && geneList.length > 1) {
+  let trimmed = geneList.trim(",").split(",").sort();
+  if (trimmed && trimmed.length > 1) {
     let sum = 0;
-    for (var x in geneList) sum = sum + x.length;
-    return geneList.length + geneList[0] + geneList[geneList.length - 1] + sum;
+    for (let x of trimmed) {
+      sum += x.length;
+    }
+    return trimmed.length + trimmed[0] + trimmed[trimmed.length - 1] + sum;
   }
-  return undefined;
+  return "empty_geneList"; // fallback if the list is empty
 }
 
-const runEnrichr = (genes) => {
-  //We need to remove _2 as second sgRNAs contain that.
-  let genes_str = genes.replaceAll("_2", "").replaceAll(",", "\n");
-  let description = "Example gene list 1";
-  const formData = new FormData();
+/**
+ * Normalizes the dataset string by removing whitespace,
+ * then re-joins with commas in a consistent order (alphabetical).
+ */
+function canonicalizeDatasets(datasetsStr) {
+  return datasetsStr
+    .trim()
+    .trim(",")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
 
+/**
+ * Calls Enrichr’s “addList” endpoint to retrieve a userListId for your gene list.
+ */
+function runEnrichr(genes) {
+  // remove _2, transform commas to newlines
+  const genes_str = genes.replaceAll("_2", "").replaceAll(",", "\n");
+  const description = "";
+  const formData = new FormData();
   formData.append("list", genes_str);
   formData.append("description", description);
-  //console.log("genes_str",genes_str.split("\n").length, genes_str)
 
   return new Promise((resolve, reject) => {
+    console.log("Requesting Enrichr listID");
     fetch("https://maayanlab.cloud/Enrichr/addList", {
       method: "POST",
       body: formData,
@@ -108,40 +179,43 @@ const runEnrichr = (genes) => {
         }
       })
       .then((data) => {
-        resolve(data.userListId); // Resolve the promise with the response data
+        resolve(data.userListId);
       })
       .catch((error) => {
-        /*toast({
-                message: { "type":  "Error",
-                "icon": true,
-                "heading": "Enrichr",
-                "content": "Sorry. Enrichr servers are not responding."},
-                autoClose:2000
-              })*/
-        reject(error); // Reject the promise with the error message
+        toast({
+          message: {
+            type: "Error",
+            icon: true,
+            heading: "Enrichr",
+            content: "Sorry. Enrichr servers are not responding." + error,
+          },
+          autoClose: 2000,
+        });
+        reject(error);
       });
   });
-};
+}
 
-const getEnrichr = (listID, datasets) => {
-  //console.log("datasets", datasets);
+/**
+ * Calls Enrichr’s “enrich” endpoint for a specific dataset & listID.
+ * Wrapped in p-queue (via retrieveEnrichmentData) to limit concurrency.
+ */
+function getEnrichr(listID, dataset) {
+  console.log("Requesting Enrichr data for dataset:", dataset);
   return fetch(
-    `https://maayanlab.cloud/Enrichr/enrich?userListId=${listID}&backgroundType=${datasets}`,
-    {
-      method: "GET",
-    }
+    `https://maayanlab.cloud/Enrichr/enrich?userListId=${listID}&backgroundType=${dataset}`,
+    { method: "GET" }
   )
     .then((response) => {
       if (response.ok) {
         return response.json();
       } else {
-        console.log(response);
         throw new Error("Request failed.");
       }
     })
     .then((result) => {
-      console.log(result);
-      return { name: datasets, data: result[datasets] };
+      // Enrichr returns an object keyed by dataset name
+      return { name: dataset, data: result[dataset] };
     })
     .catch((error) => {
       toast({
@@ -150,12 +224,10 @@ const getEnrichr = (listID, datasets) => {
           icon: true,
           heading: "Enrichr",
           content:
-            "Sorry. Error fetching enrichment results. Enrichr servers are not responding.",
+            "Sorry. Error fetching enrichment results. Enrichr servers may be busy.",
         },
         autoClose: 2000,
       });
       throw error;
     });
-};
-
-export { performEnrichment };
+}

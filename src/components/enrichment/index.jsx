@@ -11,10 +11,7 @@ import {
   Heading,
   TextArea,
   Modal,
-  Dialog,
-  InputGroup,
   Flex,
-  Label,
   Toggle,
 } from "@oliasoft-open-source/react-ui-library";
 import React, { useEffect, useRef, useState } from "react";
@@ -22,13 +19,17 @@ import GenelistAdd from "../genelist-add";
 import { connect } from "react-redux";
 import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
 
-import { FaCopy, FaDatabase, FaDownload, FaTimesCircle } from "react-icons/fa";
+import { FaCopy, FaDatabase, FaDownload, FaTimesCircle, FaExternalLinkAlt } from "react-icons/fa";
 import DropdownTreeSelect from "react-dropdown-tree-select";
 //import 'react-dropdown-tree-select/dist/styles.css'
 import "./treeview.css";
 import data from "./enrichrDatasets.json";
 //import { runEnrichr } from "../../store/api";
 import { genesetEnrichmentSettingsChanged } from "../../store/settings/geneset-enrichment-settings";
+import { useDispatch } from "react-redux";
+import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { CoreSettingsTypes } from "../side-bar/settings/enums";
+import { ROUTES } from "../../common/routes";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
@@ -53,11 +54,7 @@ import {
   CanvasRenderer,
   // SVGRenderer,
 } from "echarts/renderers";
-import { SmsSharp } from "@mui/icons-material";
-import {
-  GeneSetEnrichmentSettingsTypes,
-  GenelistCompareSettingsTypes,
-} from "../side-bar/settings/enums";
+import { GeneSetEnrichmentSettingsTypes } from "../side-bar/settings/enums";
 
 echarts.use([
   TitleComponent,
@@ -102,6 +99,8 @@ const onChange = (currentNode, selectedNodes) => {
   checkNode(data, currentNode.path, currentNode.checked);
 };
 
+
+
 /*
 Container component manages state and configuration of table
         */
@@ -115,9 +114,12 @@ const GeneSetEnrichmentTable = ({
 }) => {
   console.log(genesets);
   assignObjectPaths(data);
+  const dispatch = useDispatch();
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
   const [genelistOptions, setGeneListOptions] = useState([]);
+  const [showNavigationMenu, setShowNavigationMenu] = useState(false);
+  const navigationMenuRef = useRef(null);
 
   //Rank, Term name, P-value, Z-score, Combined score, Overlapping genes, Adjusted p-value, Old p-value, Old adjusted p-value
   const headings = [
@@ -157,7 +159,10 @@ const GeneSetEnrichmentTable = ({
   const performEnrichmentNow = function (genes) {
     let selectedDatasets = [];
 
-    for (let obj of data) {
+    // Use tempData if available (for modal preview), otherwise use original data
+    const dataToUse = tempData || data;
+    
+    for (let obj of dataToUse) {
       selectedDatasets = selectedDatasets.concat(findCheckedLeaves(obj));
     }
 
@@ -187,7 +192,12 @@ const GeneSetEnrichmentTable = ({
           }
         }
 
-        temp.sort((a, b) => b["Combined score"] - a["Combined score"]);
+        // Sort by adjusted p-value (low to high) as default
+        temp.sort((a, b) => {
+          const aVal = typeof a["Adjusted p-value"] === 'string' ? parseFloat(a["Adjusted p-value"]) : a["Adjusted p-value"];
+          const bVal = typeof b["Adjusted p-value"] === 'string' ? parseFloat(b["Adjusted p-value"]) : b["Adjusted p-value"];
+          return aVal - bVal;
+        });
 
         setkeyedData(temp);
       })
@@ -219,6 +229,67 @@ const GeneSetEnrichmentTable = ({
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [datasetVisible, setdatasetVisible] = useState(false);
+  const [tempData, setTempData] = useState(null); // Store temporary dataset changes
+  const [searchTerm, setSearchTerm] = useState(""); // Search term for filtering
+
+  // Function to handle dataset changes in the modal
+  const handleDatasetChange = (currentNode, selectedNodes) => {
+    // Create a deep copy of the data for temporary changes
+    const dataCopy = JSON.parse(JSON.stringify(tempData || data));
+    
+    // Update the specific node that was clicked
+    checkNode(dataCopy, currentNode.path, currentNode.checked);
+    
+    // If it's a parent node, also update all children
+    if (currentNode.children && currentNode.children.length > 0) {
+      const updateChildren = (node, checked) => {
+        if (node.children) {
+          node.children.forEach(child => {
+            child.checked = checked;
+            updateChildren(child, checked);
+          });
+        }
+      };
+      updateChildren(currentNode, currentNode.checked);
+    }
+    
+    setTempData(dataCopy);
+  };
+
+  // Function to filter data based on search term
+  const filterData = (data, searchTerm) => {
+    if (!searchTerm || !Array.isArray(data)) return data;
+    
+    const filterNode = (node) => {
+      if (!node || !node.label) return null;
+      
+      const matchesSearch = node.label.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (node.children && Array.isArray(node.children)) {
+        const filteredChildren = node.children.map(filterNode).filter(Boolean);
+        if (filteredChildren.length > 0 || matchesSearch) {
+          return { ...node, children: filteredChildren, expanded: true };
+        }
+        return null;
+      }
+      
+      return matchesSearch ? node : null;
+    };
+    
+    return data.map(filterNode).filter(Boolean);
+  };
+
+  // Function to ensure all nodes are expanded
+  const ensureExpanded = (data) => {
+    if (!Array.isArray(data)) {
+      return data;
+    }
+    return data.map(node => ({
+      ...node,
+      expanded: true,
+      children: node.children ? ensureExpanded(node.children) : undefined
+    }));
+  };
 
   useEffect(() => {
     setSelectedPage(1);
@@ -293,14 +364,23 @@ const GeneSetEnrichmentTable = ({
     sorts
   );
 
-  const ClusterInfoForm = ({ title, value, value2 }) => (
+  const ClusterInfoForm = ({ title, subtitle, value, value2 }) => (
     <>
       <div style={{ width: "400px", height: "100%" }}>
-        <Card heading={<Heading top> {title} </Heading>}>
+        <Card
+          heading={
+            <div>
+              <Heading marginBottom={0} top>
+                {title}
+              </Heading>
+              <div style={{ color: "green" }}>{subtitle}</div>
+            </div>
+          }
+        >
           <Field label="Enriched Genes">
             <TextArea value={value} cols={100} rows={5} />
           </Field>
-          <Field label="Missing Genes">
+          <Field label="Missing Genes (in the cluster but not annotated in this process)">
             <TextArea value={value2} cols={100} rows={5} />
           </Field>
         </Card>
@@ -314,13 +394,16 @@ const GeneSetEnrichmentTable = ({
       ? genelistOptions
           .find((item) => item?.value === selectedCluster)
           .genes?.replaceAll("_2", "")
+          .replaceAll(" ", "")
           .split(",")
       : [];
+  allGenes = [...new Set(allGenes)];
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
       .map((dataRow) => {
         const datasetName = dataRow["Dataset"];
+        const subdatasetName = dataRow["Term name"];
         const rowsCells = Object.entries(dataRow).map(([key, value]) =>
           key === "GC"
             ? {
@@ -331,11 +414,10 @@ const GeneSetEnrichmentTable = ({
                 content: (
                   <ClusterInfoForm
                     title={datasetName}
+                    subtitle={subdatasetName}
                     value={value.join(", ")}
                     value2={allGenes
-                      .filter(
-                        (x) => !value.includes(x) && !value.includes(x + "_2")
-                      )
+                      .filter((x) => !value.includes(x.trim()))
                       .join(", ")}
                   />
                 ),
@@ -359,7 +441,7 @@ const GeneSetEnrichmentTable = ({
       }),
   ];
   const table = {
-    fixedWidth: "850px",
+    fixedWidth: "100%",
     headers: [
       {
         cells: dataSortCells,
@@ -801,38 +883,43 @@ const GeneSetEnrichmentTable = ({
   }, [keyedData]);
 
   const [options2, setOptions2] = useState({});
-  //In the first run set the selected cluter to cluster 0
+
+  // Update gene list options only when genesets changes
   useEffect(() => {
     if (Object.keys(genesets).length > 0) {
       let tempx = [];
       Object.keys(genesets).forEach((gl) => {
-        if (genesets[gl].trim(",").split(",").length > 2)
+        const geneCount = genesets[gl].trim(",").split(",").length;
+        // Filter: Only include gene lists with more than 2 genes and less than or equal to 400 genes
+        if (geneCount > 2 && geneCount <= 400) {
           tempx.push({
-            label:
-              gl + " (" + genesets[gl].trim(",").split(",").length + " genes)",
+            label: `${gl} (${geneCount} genes)`,
             value: gl,
             genes: genesets[gl],
           });
+        }
       });
-
       setGeneListOptions(tempx);
-      if (tempx.length > 0 && selectedCluster === tempx[0].value) {
-        performEnrichmentNow(tempx[0].genes);
+      // Always update selectedCluster when genesets change to trigger enrichment analysis
+      if (tempx.length > 0) {
+        setselectedCluster(tempx[0].value);
       }
-      if (tempx.length > 0) setselectedCluster(tempx[0].value);
-      //performEnrichmentNow(genesets[Object.keys(genesets)[0]]);
     }
+  }, [genesets]); // Notice: selectedCluster is no longer in the dependency array here
 
-    // setselectedCluster(Object.keys(clusters)[0] +  " ("+ clusters[Object.keys(clusters)[0]].trim(',').split(',').length + " genes)");
-    // performEnrichmentNow(clusters[Object.keys(clusters)[0]]);
-  }, [genesets]);
-
+  // Call performEnrichmentNow only when selectedCluster changes
   useEffect(() => {
-    let genesToEnrich = genelistOptions.find(
+    if (!selectedCluster) return;
+
+    // Rerun enrichment when either the selected list OR its gene contents change
+    const geneItem = genelistOptions.find(
       (item) => item.value === selectedCluster
-    )?.genes;
-    genesToEnrich && performEnrichmentNow(genesToEnrich);
-  }, [selectedCluster]);
+    );
+
+    if (geneItem?.genes) {
+      performEnrichmentNow(geneItem.genes);
+    }
+  }, [selectedCluster, genelistOptions]);
 
   const handleSaveGeneList = () => {
     let genesString = selectedCluster
@@ -848,6 +935,145 @@ const GeneSetEnrichmentTable = ({
       setgenesToSave(genesString);
       setNewListVisible(true);
     }
+  };
+
+  // Get current genes as a formatted string
+  const getCurrentGenes = () => {
+    if (!selectedCluster || genelistOptions.length === 0) return "";
+    const geneItem = genelistOptions.find((item) => item.value === selectedCluster);
+    if (!geneItem) return "";
+    
+    return geneItem.genes
+      .replaceAll("_2", "")
+      .split(",")
+      .filter((gene) => !gene.trim().startsWith("non-targeting"))
+      .map((gene) => gene.trim())
+      .join("\n");
+  };
+
+  // Handle navigation to different pages with genes
+  const handleNavigateWithGenes = (route, dataType = "genes") => {
+    const genesString = getCurrentGenes();
+    if (!genesString) {
+      toast({
+        message: {
+          type: "Warning",
+          icon: true,
+          heading: "No Genes Selected",
+          content: "Please select a gene list first.",
+        },
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    // Convert newline-separated genes to the format needed for each component
+    // For primary gene list, we use newline-separated format (as components expect)
+    const genesForPrimaryList = genesString; // Keep as newline-separated
+    const genesForSettings = genesString.split("\n").join(";"); // Semicolon-separated for Redux
+
+    // Determine which setting to update based on route
+    let settingToUpdate = null;
+    let settingValue = null;
+    
+    if (route === ROUTES.CORRELATION) {
+      // For correlation, primary list is perturbation list when dataType is "pert", otherwise target list
+      if (dataType === "pert") {
+        settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
+        settingValue = genesForPrimaryList; // Use newline format for primary list
+      } else {
+        settingToUpdate = CoreSettingsTypes.TARGET_LIST;
+        settingValue = genesForPrimaryList; // Use newline format for primary list
+      }
+      
+      // Store in localStorage with route-specific key so new tab can read it
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        dataType: dataType,
+        timestamp: Date.now()
+      }));
+    } else if (route === ROUTES.DR) {
+      // For DR & Clustering, primary list is perturbation list
+      settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
+      settingValue = genesForPrimaryList; // Use newline format for primary list
+      
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        timestamp: Date.now()
+      }));
+    } else if (route === ROUTES.PATHFINDER) {
+      // For Path Explorer, primary list is perturbation list
+      settingToUpdate = CoreSettingsTypes.PETURBATION_LIST;
+      settingValue = genesForPrimaryList; // Use newline format for primary list
+      
+      localStorage.setItem(`pendingGeneList_${route}`, JSON.stringify({
+        settingName: settingToUpdate,
+        value: settingValue,
+        timestamp: Date.now()
+      }));
+    }
+
+    // Open in new tab
+    const newTab = window.open(route, '_blank');
+    
+    // Close the dropdown menu
+    setShowNavigationMenu(false);
+    
+    // Show success message
+    toast({
+      message: {
+        type: "Success",
+        icon: true,
+        heading: "Opening in New Tab",
+        content: `Gene list will be copied to the primary gene list in the new tab.`,
+      },
+      autoClose: 2000,
+    });
+  };
+
+  // Close navigation menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navigationMenuRef.current && !navigationMenuRef.current.contains(event.target)) {
+        setShowNavigationMenu(false);
+      }
+    };
+
+    if (showNavigationMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNavigationMenu]);
+
+  // Handle accepting dataset changes
+  const handleAcceptDatasets = () => {
+    if (tempData) {
+      // Apply the temporary changes to the original data
+      Object.assign(data, tempData);
+      setTempData(null);
+    }
+    setdatasetVisible(false);
+    
+    // Refresh enrichment with new datasets
+    if (selectedCluster) {
+      const geneItem = genelistOptions.find(
+        (item) => item.value === selectedCluster
+      );
+      if (geneItem && geneItem.genes) {
+        performEnrichmentNow(geneItem.genes);
+      }
+    }
+  };
+
+  // Handle canceling dataset changes
+  const handleCancelDatasets = () => {
+    setTempData(null);
+    setdatasetVisible(false);
   };
 
   return (
@@ -888,48 +1114,125 @@ const GeneSetEnrichmentTable = ({
               }}
             >
               <Modal centered={true} visible={datasetVisible}>
-                <Flex flex direction={"column"}>
+                <div
+                  style={{
+                    backgroundColor: "white",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    minWidth: "600px",
+                    maxWidth: "800px",
+                    maxHeight: "80vh",
+                    overflow: "auto",
+                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
                   <div
                     style={{
-                      backgroundColor: "white",
-                      border: "solid",
-                      borderColor: "orange",
-                      alignItems: "flex-end",
                       display: "flex",
-                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      borderBottom: "1px solid #f3f4f6",
+                      paddingBottom: "12px",
                     }}
                   >
-                    <div
-                      style={{
-                        backgroundColor: "white",
-                        alignItems: "flex-end",
-                        display: "flex",
-                        padding: "2px",
-                      }}
-                    >
-                      <Button
-                        padding
-                        colored
-                        round
-                        small
-                        margin-top={20}
-                        onClick={() => {
-                          setdatasetVisible(false);
+                    <Heading size="medium" style={{ color: "#1f2937", margin: 0 }}>
+                      Select Datasets for Enrichment
+                    </Heading>
+                    <Button
+                      padding
+                      colored
+                      round
+                      small
+                      onClick={handleCancelDatasets}
+                      icon={<FaTimesCircle />}
+                      style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
+                    />
+                  </div>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <div style={{ marginBottom: "8px" }}>
+                      <input
+                        type="text"
+                        placeholder="Search datasets..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          color: "#374151",
+                          backgroundColor: "white",
+                          outline: "none",
+                          transition: "border-color 0.2s ease, box-shadow 0.2s ease",
                         }}
-                        icon={<FaTimesCircle />}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#3b82f6";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#e5e7eb";
+                          e.target.style.boxShadow = "none";
+                        }}
                       />
                     </div>
                     <DropdownTreeSelect
-                      data={data}
-                      onChange={onChange}
-                      //onAction={onAction}
+                      data={ensureExpanded(filterData(tempData || data, searchTerm)) || []}
+                      onChange={handleDatasetChange}
                       showDropdown="always"
                       className="mdl-demo"
-                      //keepChildrenOnSearch={true}
-                      //keepOpenOnSelect ={true}
+                      keepOpenOnSelect={true}
+                      keepChildrenOnSearch={true}
+                      mode="multiSelect"
+                      showDropdownButton={false}
+                      keepTreeOnSearch={true}
                     />
                   </div>
-                </Flex>
+                  
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "12px",
+                      marginTop: "16px",
+                      borderTop: "1px solid #f3f4f6",
+                      paddingTop: "12px",
+                    }}
+                  >
+                    <Button
+                      label="Cancel"
+                      small
+                      onClick={handleCancelDatasets}
+                      style={{ 
+                        backgroundColor: "#f3f4f6", 
+                        color: "#374151",
+                        border: "1px solid #d1d5db",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        fontWeight: "500"
+                      }}
+                    />
+                    <Button
+                      label="Accept"
+                      colored
+                      small
+                      onClick={handleAcceptDatasets}
+                      style={{ 
+                        backgroundColor: "#3b82f6", 
+                        color: "white",
+                        border: "1px solid #2563eb",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        fontWeight: "500"
+                      }}
+                    />
+                  </div>
+                </div>
               </Modal>
 
               <Button
@@ -938,6 +1241,8 @@ const GeneSetEnrichmentTable = ({
                 small
                 width={80}
                 onClick={() => {
+                  // Initialize tempData with current data when opening modal
+                  setTempData(JSON.parse(JSON.stringify(data)));
                   setdatasetVisible(true);
                 }}
                 icon={<FaDatabase />}
@@ -995,6 +1300,7 @@ const GeneSetEnrichmentTable = ({
                         ? genelistOptions
                             .find((item) => item.value === selectedCluster)
                             .genes.replaceAll("_2", "")
+                            .replaceAll(" ", "")
                             .split(",")
                             .filter(
                               (gene) => !gene.trim().startsWith("non-targeting")
@@ -1015,6 +1321,93 @@ const GeneSetEnrichmentTable = ({
                   icon={<PlaylistAddCircleRoundedIcon />}
                 />
               </Popover>
+              <Spacer width="6px" />
+
+              {/* Navigation dropdown button */}
+              <div ref={navigationMenuRef} style={{ position: "relative", display: "inline-block" }}>
+                <Button
+                  label="Open in..."
+                  colored="info"
+                  small
+                  width={100}
+                  icon={<FaExternalLinkAlt />}
+                  onClick={() => setShowNavigationMenu(!showNavigationMenu)}
+                />
+                {showNavigationMenu && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "4px",
+                      backgroundColor: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                      zIndex: 1000,
+                      minWidth: "200px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.CORRELATION, "pert")}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      Correlation
+                    </button>
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.DR)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      DR & Clustering
+                    </button>
+                    <button
+                      onClick={() => handleNavigateWithGenes(ROUTES.PATHFINDER)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        border: "none",
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#374151",
+                        transition: "background-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+                    >
+                      Path Explorer
+                    </button>
+                  </div>
+                )}
+              </div>
               <Spacer width="6px" />
               <Toggle
                 label="Bar Graph"
@@ -1066,7 +1459,6 @@ const mapStateToProps = ({ settings, calcResults }) => ({
 
 const mapDispatchToProps = {
   genesetEnrichmentSettingsChanged,
-  performEnrichment,
 };
 
 const MainContainer = connect(

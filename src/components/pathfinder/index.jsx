@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import * as echarts from "echarts/core";
 import { ButtonGroup } from "@oliasoft-open-source/react-ui-library";
-//import GraphChart from 'echarts/charts';
 import { GraphChart } from "echarts/charts";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../../components/enrichment-table-new";
+import { createGeneTooltipFormatter } from "../../utils/geneFunctionUtils";
 import {
   GridComponent,
   TooltipComponent,
@@ -14,22 +14,25 @@ import {
   DatasetComponent,
   ToolboxComponent,
 } from "echarts/components";
-import {
-  CanvasRenderer,
-  // SVGRenderer,
-} from "echarts/renderers";
+import { CanvasRenderer } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
-// import text from './sample.json';
 import dagre from "dagre";
 import styles from "./pathfinder.module.scss";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
-const helps = {
-  "Regulation Type":
-    "Cor: Correlation; Exp: Expression; Int: Protein-Protein Interaction",
-  Score: "r Value for correlation\n Z Score for expression",
-  "Source NC": "Source Neighbour Count",
-  "Target NC": "Target Neighbour Count",
-  "Total NC": "Total Neighbour Count",
+// Add module description for PathFinder (Pathway Explorer)
+const moduleDescription = {
+  title: "Pathway Explorer",
+  description: "This module maps pathways among submitted genes using GWPS data, particularly useful for RNA-seq data analyses. It examines down-regulated genes to determine which genes are up- or down-regulated following perturbation, creating pathway networks that reveal key regulatory relationships and interactions.",
+  description2: "Interactive network shows regulatory relationships. Node sizes reflect the number of interaction partners (neighbours), node opacity shows knockdown efficiency, and edge width/color indicate effect strength (e.g a green arrow from gene A to gene B indicates that knockdown of gene A leads to down-regulation of gene B).",
+  features: [
+    "Maps regulatory pathways between submitted genes",
+    "Identifies key nodes that mediate observed phenotypes", 
+    "Visualizes gene-gene interactions with effect sizes",
+    "Integrates correlation data from GWPS",
+    "Integrates protein-protein interaction data from BioGRID"
+  ],  
 };
 
 echarts.use([
@@ -43,7 +46,19 @@ echarts.use([
   ToolboxComponent,
 ]);
 
-const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
+const isDevEnv = process.env.NODE_ENV !== "production";
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+const debugWarn = (...args) => {
+  if (isDevEnv) {
+    console.warn(...args);
+  }
+};
+
+const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
   //Import json file. Used in {options}.
 
   const [options, setOptions] = useState({});
@@ -173,9 +188,24 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
     return content;
   }
 
-  console.log("pathfinderSettings", pathfinderSettings);
+  debugLog("pathfinderSettings", pathfinderSettings);
 
   useEffect(() => {
+    debugLog('PathFinder - Main useEffect triggered:', {
+      hasPathFinderGraph: !!pathFinderGraph,
+      nodesCount: pathFinderGraph?.nodes?.length || 0,
+      edgesCount: pathFinderGraph?.edges?.length || 0,
+      filterSettings: {
+        filter1Enabled: pathfinderSettings.filter1Enabled,
+        filter2Enabled: pathfinderSettings.filter2Enabled,
+        filter3Enabled: pathfinderSettings.filter3Enabled,
+        filter4Enabled: pathfinderSettings.filter4Enabled,
+        cutoff: pathfinderSettings.cutoff,
+        checkCorr: pathfinderSettings.checkCorr,
+        BioGridData: pathfinderSettings.BioGridData
+      }
+    });
+    
     if (
       pathFinderGraph &&
       pathFinderGraph.nodes &&
@@ -247,24 +277,214 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
 
       let edgesFiltered = [];
 
-      for (let edge in edges) {
-        if (edges[edge].type === "Cor") {
+      for (let m = edges.length - 1; m > -1; m--) {
+        const edge = edges[m];
+        
+        // Basic filtering
+        if (edge.type === "Cor") {
           if (pathfinderSettings.checkCorr === false) continue;
-
-          if (Math.abs(edges[edge].value) < pathfinderSettings.corrCutOff)
-            continue;
-        } else if (
-          edges[edge].type === "Int" &&
-          pathfinderSettings.BioGridData === false
-        ) {
+          if (Math.abs(edge.value) < pathfinderSettings.corrCutOff) continue;
+        } else if (edge.type === "Int" && pathfinderSettings.BioGridData === false) {
           continue;
         } else {
-          if (Math.abs(edges[edge].value) < pathfinderSettings.cutoff) continue;
+          if (Math.abs(edge.value) < pathfinderSettings.cutoff) continue;
         }
-        edgesFiltered.push(edges[edge]);
+
+        // Apply noise filters if enabled
+        if (pathfinderSettings.filter1Enabled || pathfinderSettings.filter2Enabled || pathfinderSettings.filter3Enabled || pathfinderSettings.filter4Enabled) {
+          // Filter 1: Black Listed sgRNAs
+          if (pathfinderSettings.filter1Enabled && !pathfinderSettings.filter1Directional) {
+            if (edge.type !== "Cor" && edge.type !== "Int") {
+              // Check source gene
+              if (blacklistData?.blackListDown?.[edge.source] !== undefined &&
+                  blacklistData.blackListDown[edge.source] > pathfinderSettings.filterBlackListed) {
+                debugLog('PathFinder - Filtered out edge (Filter 1, source down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
+                continue;
+              }
+              if (blacklistData?.blackListUp?.[edge.source] !== undefined &&
+                  blacklistData.blackListUp[edge.source] > pathfinderSettings.filterBlackListed) {
+                debugLog('PathFinder - Filtered out edge (Filter 1, source up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.source], 'threshold:', pathfinderSettings.filterBlackListed);
+                continue;
+              }
+              
+              // Check target gene
+              if (blacklistData?.blackListDown?.[edge.target] !== undefined &&
+                  blacklistData.blackListDown[edge.target] > pathfinderSettings.filterBlackListed) {
+                debugLog('PathFinder - Filtered out edge (Filter 1, target down):', edge.source, '->', edge.target, 'value:', blacklistData.blackListDown[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
+                continue;
+              }
+              if (blacklistData?.blackListUp?.[edge.target] !== undefined &&
+                  blacklistData.blackListUp[edge.target] > pathfinderSettings.filterBlackListed) {
+                debugLog('PathFinder - Filtered out edge (Filter 1, target up):', edge.source, '->', edge.target, 'value:', blacklistData.blackListUp[edge.target], 'threshold:', pathfinderSettings.filterBlackListed);
+                continue;
+              }
+            }
+          }
+
+          // Filter 2: Expression Black Listed
+          if (pathfinderSettings.filter2Enabled && !pathfinderSettings.filter2Directional) {
+            if (edge.type !== "Cor" && edge.type !== "Int") {
+              // Check source gene
+              if (blacklistData?.blackListExpDown?.[edge.source] !== undefined &&
+                  blacklistData.blackListExpDown[edge.source] > pathfinderSettings.filterBlackListedExp) {
+                continue;
+              }
+              if (blacklistData?.blackListExpUp?.[edge.source] !== undefined &&
+                  blacklistData.blackListExpUp[edge.source] > pathfinderSettings.filterBlackListedExp) {
+                continue;
+              }
+              
+              // Check target gene
+              if (blacklistData?.blackListExpDown?.[edge.target] !== undefined &&
+                  blacklistData.blackListExpDown[edge.target] > pathfinderSettings.filterBlackListedExp) {
+                continue;
+              }
+              if (blacklistData?.blackListExpUp?.[edge.target] !== undefined &&
+                  blacklistData.blackListExpUp[edge.target] > pathfinderSettings.filterBlackListedExp) {
+                continue;
+              }
+            }
+          }
+
+          // Filter 3: Perturbation Count
+          if (pathfinderSettings.filter3Enabled) {
+            if (blacklistData?.blackListPCount?.[edge.source] !== undefined &&
+                blacklistData.blackListPCount[edge.source] > pathfinderSettings.filterCount) {
+              continue;
+            }
+            if (blacklistData?.blackListPCount?.[edge.target] !== undefined &&
+                blacklistData.blackListPCount[edge.target] > pathfinderSettings.filterCount) {
+              continue;
+            }
+          }
+
+          // Filter 4: Expression Count
+          if (pathfinderSettings.filter4Enabled) {
+            if (blacklistData?.blackListECount?.[edge.source] !== undefined &&
+                blacklistData.blackListECount[edge.source] > pathfinderSettings.filterCountExp) {
+              continue;
+            }
+            if (blacklistData?.blackListECount?.[edge.target] !== undefined &&
+                blacklistData.blackListECount[edge.target] > pathfinderSettings.filterCountExp) {
+              continue;
+            }
+          }
+        }
+
+        // If we reach here, the edge passed all filters
+        edgesFiltered.push(edge);
+        
+        // Debug: Log first few edges that pass filters
+        if (edgesFiltered.length <= 3) {
+          debugLog('PathFinder - Edge passed filters:', {
+            source: edge.source,
+            target: edge.target,
+            type: edge.type,
+            value: edge.value,
+            blacklistValues: {
+              sourceDown: blacklistData?.blackListDown?.[edge.source],
+              sourceUp: blacklistData?.blackListUp?.[edge.source],
+              targetDown: blacklistData?.blackListDown?.[edge.target],
+              targetUp: blacklistData?.blackListUp?.[edge.target],
+              sourceExpDown: blacklistData?.blackListExpDown?.[edge.source],
+              sourceExpUp: blacklistData?.blackListExpUp?.[edge.source],
+              targetExpDown: blacklistData?.blackListExpDown?.[edge.target],
+              targetExpUp: blacklistData?.blackListExpUp?.[edge.target],
+              sourcePCount: blacklistData?.blackListPCount?.[edge.source],
+              targetPCount: blacklistData?.blackListPCount?.[edge.target],
+              sourceECount: blacklistData?.blackListECount?.[edge.source],
+              targetECount: blacklistData?.blackListECount?.[edge.target]
+            }
+          });
+        }
       }
 
+      debugLog('PathFinder - Filtering results:', {
+        totalEdges: edges.length,
+        edgesAfterFiltering: edgesFiltered.length,
+        cutoff: pathfinderSettings.cutoff,
+        checkCorr: pathfinderSettings.checkCorr,
+        BioGridData: pathfinderSettings.BioGridData,
+
+        filter1Enabled: pathfinderSettings.filter1Enabled,
+        filter2Enabled: pathfinderSettings.filter2Enabled,
+        filter3Enabled: pathfinderSettings.filter3Enabled,
+        filter4Enabled: pathfinderSettings.filter4Enabled
+      });
+
       let nodesFiltered = nodes;
+
+      // Filter nodes based on blacklist data if filters are enabled
+      if (pathfinderSettings.filter1Enabled || pathfinderSettings.filter2Enabled || pathfinderSettings.filter3Enabled || pathfinderSettings.filter4Enabled) {
+        debugLog('PathFinder - Filtering nodes based on blacklist data');
+        const originalNodeCount = nodesFiltered.length;
+        
+        nodesFiltered = nodesFiltered.filter((node) => {
+          const nodeId = node.id;
+          
+          // Filter 1: Black Listed sgRNAs
+          if (pathfinderSettings.filter1Enabled && blacklistData) {
+            if (blacklistData?.blackListDown?.[nodeId] !== undefined &&
+                blacklistData.blackListDown[nodeId] > pathfinderSettings.filterBlackListed) {
+              if (!pathfinderSettings.filter1Directional) {
+                debugLog('PathFinder - Filtered out node (down):', nodeId);
+                return false;
+              }
+            }
+            if (blacklistData?.blackListUp?.[nodeId] !== undefined &&
+                blacklistData.blackListUp[nodeId] > pathfinderSettings.filterBlackListed) {
+              if (!pathfinderSettings.filter1Directional) {
+                debugLog('PathFinder - Filtered out node (up):', nodeId);
+                return false;
+              }
+            }
+          }
+
+          // Filter 2: Expression Black Listed
+          if (pathfinderSettings.filter2Enabled && blacklistData) {
+            if (blacklistData?.blackListExpDown?.[nodeId] !== undefined &&
+                blacklistData.blackListExpDown[nodeId] > pathfinderSettings.filterBlackListedExp) {
+              if (!pathfinderSettings.filter2Directional) {
+                debugLog('PathFinder - Filtered out node (exp down):', nodeId);
+                return false;
+              }
+            }
+            if (blacklistData?.blackListExpUp?.[nodeId] !== undefined &&
+                blacklistData.blackListExpUp[nodeId] > pathfinderSettings.filterBlackListedExp) {
+              if (!pathfinderSettings.filter2Directional) {
+                debugLog('PathFinder - Filtered out node (exp up):', nodeId);
+                return false;
+              }
+            }
+          }
+
+          // Filter 3: Perturbation Count
+          if (pathfinderSettings.filter3Enabled && blacklistData) {
+            if (blacklistData?.blackListPCount?.[nodeId] !== undefined &&
+                blacklistData.blackListPCount[nodeId] > pathfinderSettings.filterCount) {
+              debugLog('PathFinder - Filtered out node (pcount):', nodeId);
+              return false;
+            }
+          }
+
+          // Filter 4: Expression Count
+          if (pathfinderSettings.filter4Enabled && blacklistData) {
+            if (blacklistData?.blackListECount?.[nodeId] !== undefined &&
+                blacklistData.blackListECount[nodeId] > pathfinderSettings.filterCountExp) {
+              debugLog('PathFinder - Filtered out node (ecount):', nodeId);
+              return false;
+            }
+          }
+
+          return true;
+        });
+        
+        debugLog('PathFinder - Node filtering results:', {
+          originalNodeCount,
+          filteredNodeCount: nodesFiltered.length,
+          removedNodeCount: originalNodeCount - nodesFiltered.length
+        });
+      }
 
       if (!pathfinderSettings.isolatednodes) {
         let uniqueNodeNamesWithEdges = new Set();
@@ -274,7 +494,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
             uniqueNodeNamesWithEdges.add(edge.target);
           }
         });
-        nodesFiltered = nodes.filter(function (node) {
+        nodesFiltered = nodesFiltered.filter(function (node) {
           return uniqueNodeNamesWithEdges.has(node.id);
         });
       }
@@ -302,7 +522,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         );
       });
 
-      console.log("maxNodeCount", maxNodeCount);
+      debugLog("maxNodeCount", maxNodeCount);
 
       // Update node counts in nodes array
       nodesFiltered.forEach((node) => {
@@ -339,7 +559,28 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         return node["neighbours"] > pathfinderSettings.minNeighbourCount;
       });
 
-      console.log(edgesFiltered);
+      // Apply node limit to prevent crashes with large networks
+      const MAX_NODES = pathfinderSettings.maxNodes || 1000;
+      if (nodesFiltered.length > MAX_NODES) {
+        debugWarn(`PathFinder - Network too large (${nodesFiltered.length} nodes). Limiting to top ${MAX_NODES} nodes by neighbour count.`);
+        
+        // Sort nodes by neighbour count and take top MAX_NODES
+        nodesFiltered.sort((a, b) => b.neighbours - a.neighbours);
+        nodesFiltered = nodesFiltered.slice(0, MAX_NODES);
+        
+        // Create a set of kept node IDs for filtering edges
+        const keptNodeIds = new Set(nodesFiltered.map(node => node.id));
+        
+        // Filter edges to only include connections between kept nodes
+        edgesFiltered = edgesFiltered.filter(edge => 
+          keptNodeIds.has(edge.source) && keptNodeIds.has(edge.target)
+        );
+      }
+
+      debugLog('PathFinder - After filtering:', {
+        nodesCount: nodesFiltered.length,
+        edgesCount: edgesFiltered.length
+      });
 
       //For Dagre Layout
       let nodesFinal = [];
@@ -413,21 +654,27 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
 
       tableInfo.sort((edge1, edge2) => edge2["Total NC"] - edge1["Total NC"]);
 
-      console.log(nodesFinal, edgesFiltered);
+      debugLog(nodesFinal, edgesFiltered);
 
       setOptions({
         tooltip: {
-          formatter: function (params) {
-            let kd = "";
-            if (params.data.kd)
-              kd =
-                "Knockdown: " +
-                params.data.kd +
-                (params.data.neighbours
-                  ? "<br>Neighbour Count: " + params.data.neighbours
-                  : "");
-            return params.data.name + "<br>" + kd;
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
+          confine: true,
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
+          textStyle: {
+            fontSize: 13,
+            color: "#333333",
+            lineHeight: 1.4,
           },
+          formatter: createGeneTooltipFormatter({
+            parseData: (params) => ({
+              geneSymbol: params.data.name,
+              knockdown: params.data.kd,
+              neighbourCount: params.data.neighbours
+            })
+          }),
         },
         //legend: [
         //  {
@@ -509,10 +756,94 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
         ],
       });
     }
-  }, [pathFinderGraph, pathfinderSettings]);
+  }, [pathFinderGraph, pathfinderSettings, blacklistData]);
+
+  // Debug logging for settings changes
+  useEffect(() => {
+    debugLog('PathFinder - Settings changed:', {
+      filter1Enabled: pathfinderSettings.filter1Enabled,
+      filter2Enabled: pathfinderSettings.filter2Enabled,
+      filter3Enabled: pathfinderSettings.filter3Enabled,
+      filter4Enabled: pathfinderSettings.filter4Enabled,
+      cutoff: pathfinderSettings.cutoff,
+      checkCorr: pathfinderSettings.checkCorr,
+      BioGridData: pathfinderSettings.BioGridData
+    });
+  }, [pathfinderSettings]);
+
+  // Debug logging for blacklist data
+  useEffect(() => {
+    debugLog('PathFinder - Blacklist data received:', {
+      hasBlacklistData: !!blacklistData,
+      blacklistDataKeys: blacklistData ? Object.keys(blacklistData) : [],
+      blacklistDataStructure: blacklistData ? {
+        blackListDown: blacklistData.blackListDown ? Object.keys(blacklistData.blackListDown).length : 0,
+        blackListUp: blacklistData.blackListUp ? Object.keys(blacklistData.blackListUp).length : 0,
+        blackListExpDown: blacklistData.blackListExpDown ? Object.keys(blacklistData.blackListExpDown).length : 0,
+        blackListExpUp: blacklistData.blackListExpUp ? Object.keys(blacklistData.blackListExpUp).length : 0,
+        blackListPCount: blacklistData.blackListPCount ? Object.keys(blacklistData.blackListPCount).length : 0,
+        blackListECount: blacklistData.blackListECount ? Object.keys(blacklistData.blackListECount).length : 0
+      } : null,
+      sampleBlacklistEntries: blacklistData ? {
+        blackListDown: blacklistData.blackListDown ? Object.entries(blacklistData.blackListDown).slice(0, 3) : [],
+        blackListUp: blacklistData.blackListUp ? Object.entries(blacklistData.blackListUp).slice(0, 3) : []
+      } : null
+    });
+  }, [blacklistData]);
 
   return (
     <>
+      {/* Add module description header */}
+      <Accordion 
+        sx={{
+          marginBottom: '14px',
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #e9ecef',
+          borderRadius: '8px',
+          '&:before': {
+            display: 'none',
+          },
+              '& .MuiAccordionSummary-root': {
+        minHeight: '30px',
+        height: '30px',
+      }
+      , '& .MuiAccordionSummary-root.Mui-expanded': {
+        minHeight:  '30px',
+        height: '30px',
+      }
+        }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+            '&.Mui-expanded': {
+              minHeight: '30px'
+            }
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+        </AccordionSummary>
+        <AccordionDetails sx={{ padding: '6px 14px 5px' }}>
+          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+            {moduleDescription.description}
+          </p>
+          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+            {moduleDescription.description2}
+          </p>
+          <div style={{ fontSize: '13px', color: '#424242' }}>
+            <strong>Key Features:</strong>
+            <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
+              {moduleDescription.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '2px' }}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+        </AccordionDetails>
+      </Accordion>
+
       <ButtonGroup
         items={[
           {
@@ -533,6 +864,21 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings }) => {
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
       )}
+      
+      {/* Show warning if node limit was applied */}
+      {pathFinderGraph?.nodes?.length > (pathfinderSettings.maxNodes || 1000) && (
+        <div style={{ 
+          padding: '12px', 
+          backgroundColor: '#fff3e0', 
+          borderLeft: '4px solid #ff9800',
+          borderRadius: '4px',
+          color: '#e65100',
+          marginBottom: '8px'
+        }}>
+          ⚠️ Network too large ({pathFinderGraph.nodes.length} nodes). Showing top {pathfinderSettings.maxNodes || 1000} nodes by neighbour count to prevent performance issues.
+        </div>
+      )}
+      
       {selectedView === 0 &&
         options.series &&
         options.series.length > 0 &&
@@ -592,6 +938,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   pathFinderGraph: calcResults?.pathFinderGraph?.result ?? null,
   graphmapSettings: settings?.graphmap ?? {},
   pathfinderSettings: settings?.pathfinder ?? {},
+  // Note: blacklistData is passed as a prop from the parent page component
 });
 
 const MainContainer = connect(mapStateToProps)(PathFinder);

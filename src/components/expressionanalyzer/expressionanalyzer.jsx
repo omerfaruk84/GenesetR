@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   Table,
   Spacer,
@@ -12,6 +13,8 @@ import {
   Select,
 } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable } from "react-icons/fa";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import styles from "../../pages/expressionanalyzer/expression-analyzer.module.scss";
 import { connect } from "react-redux";
 import { useEffect } from "react";
@@ -20,7 +23,7 @@ import * as echarts from "echarts/core";
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
-import { getBlackList } from "../../store/api";
+
 import {
   GridComponent,
   TooltipComponent,
@@ -35,6 +38,7 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
 import { download } from "export-to-csv";
 import { ModulePathNames } from "../../store/results/enums";
 import { set } from "idb-keyval";
@@ -43,6 +47,23 @@ import { useFetcher } from "react-router-dom";
 import { runCalculation } from "../../store/results";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../side-bar/settings/enums";
+
+// Add module description for Expression Analyzer
+const moduleDescription = {
+  title: "Gene Expression Analyzer",
+  description: "This module enables comprehensive analysis of a selected gene to explore its regulatory dynamics. It identifies upstream regulators, downstream targets, and genes with similar expression responses across perturbation datasets.",
+  capabilities: [
+    "Identify genes up/down-regulated upon targeting your GOI (downstream targets)",
+    "Find perturbations that regulate expression of your GOI (upstream regulators)", 
+    "Discover perturbations that correlate with targeting of your GOI",
+    "Identify genes with similar expression responses as your GOI"
+  ],
+  tabs: {
+    perturbationEffects: "Shows genes affected by perturbation of your gene of interest - these are the downstream targets",
+    perturbedBy: "Shows perturbations that affect expression of your gene of interest - these are upstream regulators",
+  }
+};
+
 echarts.use([
   TitleComponent,
   DataZoomSliderComponent,
@@ -62,7 +83,15 @@ const ExpressionAnalyzer = ({
   data,
   calcResults,
   coreSettingsChanged,
+  blacklistData,
+  blacklistLoading,
 }) => {
+  console.log('ExpressionAnalyzer - Component props:', {
+    hasData: !!data,
+    dataType: typeof data,
+    dataKeys: data ? Object.keys(data) : [],
+    dataPreview: data ? JSON.stringify(data).substring(0, 200) + '...' : null
+  });
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
@@ -71,16 +100,15 @@ const ExpressionAnalyzer = ({
   const [pointDistribution, setPointDistribution] = useState([]);
   const [keyedData, setkeyedData] = useState([{}]);
   const [selectedTab, setSelectedTab] = useState({
-    label: "Perturbation Effects",
+    label: "Perturbation Effects (Downstream Effects)",
     value: 0,
   });
   const [selectedInnerTab, setSelectedInnerTab] = useState({
-    label: "Expression",
+    label: "Downstream Targets",
     value: 0,
   });
   const [genelists, setGeneLists] = useState([]);
-  const [blackListDown, setblackListDown] = useState({});
-  const [blackListUp, setblackListUp] = useState({});
+
   const [downstream, setdownStream] = useState({});
   const [upstream, setupStream] = useState({});
   const [pertCorr, setpertCorr] = useState({});
@@ -88,32 +116,60 @@ const ExpressionAnalyzer = ({
   const [isCalcRunning, setisRunning] = useState(false);
   const [tabOptions, settabOptions] = useState([
     {
-      label: "Perturbation Effects",
+      label: "Perturbation Effects (Downstream Effects)",
       value: 0,
       disabled: false,
     },
     {
-      label: "Perturbed by",
+      label: "Perturbed By (Upstream Regulators)",
       value: 1,
       disabled: false,
     },
   ]);
-  const [innerTabOptions, setinnerTabOptions] = useState([
-    {
-      label: "Expression",
-      value: 0,
-      disabled: false,
-    },
-    {
-      label: "Correlation",
-      value: 1,
-      disabled: false,
-    },
-  ]);
+  // Dynamic inner tab options based on selected outer tab
+  const getInnerTabOptions = () => {
+    if (selectedTab.value === 0) {
+      // Perturbation Effects (Downstream Effects)
+      return [
+        {
+          label: "Downstream Targets",
+          value: 0,
+          disabled: false,
+        },
+        {
+          label: "Correlation (Similar Perturbations)",
+          value: 1,
+          disabled: false,
+        },
+      ];
+    } else {
+      // Perturbed By (Upstream Regulators)
+      return [
+        {
+          label: "Upstream Regulators",
+          value: 0,
+          disabled: false,
+        },
+        {
+          label: "Correlation (Similar Expressional Profile)",
+          value: 1,
+          disabled: false,
+        },
+      ];
+    }
+  };
+
+  const [innerTabOptions, setinnerTabOptions] = useState(getInnerTabOptions());
   const location = useLocation();
   const { pathname } = location;
 
-  //console.log(coreSettings.cellLine);
+  // Update inner tab options when outer tab changes
+  useEffect(() => {
+    const newInnerTabOptions = getInnerTabOptions();
+    setinnerTabOptions(newInnerTabOptions);
+    // Reset to first inner tab when outer tab changes
+    setSelectedInnerTab({ value: 0, label: newInnerTabOptions[0].label });
+  }, [selectedTab.value]);
 
   useEffect(() => {
     runCalculation(pathname);
@@ -121,7 +177,7 @@ const ExpressionAnalyzer = ({
       settingName: CoreSettingsTypes.SHOW_HELP,
       newValue: false,
     });
-  }, [coreSettings.cellLine[0]]);
+  }, [coreSettings.cellLine.id, runCalculation, pathname, coreSettingsChanged]);
 
   useEffect(() => {
     setisRunning(
@@ -130,14 +186,28 @@ const ExpressionAnalyzer = ({
   }, [calcResults?.[ModulePathNames["/expressionanalyzer"]]?.running]);
 
   useEffect(() => {
-    if (!isCalcRunning && data && data.geneRegulationResults) {
-      //console.log("Updating");
-      if (data.geneRegulationResults.downstream.length > 0) {
+    console.log('ExpressionAnalyzer - Data processing useEffect triggered:', {
+      hasData: !!data,
+      isCalcRunning,
+      dataKeys: data ? Object.keys(data) : [],
+      hasUpstream: !!(data?.upstream),
+      hasDownstream: !!(data?.downstream),
+      hasPertCorr: !!(data?.pertCorr),
+      hasExpCorr: !!(data?.expCorr)
+    });
+    
+    if (!isCalcRunning && data) {
+      // Process downstream data
+      if (data.downstream && data.downstream.length > 0) {
+        console.log('ExpressionAnalyzer - Processing downstream data:', {
+          downstreamType: typeof data.downstream,
+          downstreamLength: data.downstream.length
+        });
         const newTabs2 = tabOptions;
         newTabs2[0].disabled = false;
         settabOptions(newTabs2);
         setSelectedTab(selectedTab);
-        setdownStream(JSON.parse(data.geneRegulationResults.downstream));
+        setdownStream(safeJsonParse(data.downstream, { defaultValue: {} }));
       } else {
         setdownStream({});
         const newTabs = tabOptions;
@@ -146,19 +216,34 @@ const ExpressionAnalyzer = ({
         setSelectedTab(tabOptions[1]);
       }
 
-      if (data.geneRegulationResults.upstream.length > 0)
-        setupStream(JSON.parse(data.geneRegulationResults.upstream));
-      else setupStream({});
+      // Process upstream data
+      if (data.upstream && data.upstream.length > 0) {
+        console.log('ExpressionAnalyzer - Processing upstream data:', {
+          upstreamType: typeof data.upstream,
+          upstreamLength: data.upstream.length
+        });
+        setupStream(safeJsonParse(data.upstream, { defaultValue: {} }));
+      } else setupStream({});
 
-      if (data.geneRegulationResults.pertCorr.length > 0)
-        setpertCorr(JSON.parse(data.geneRegulationResults.pertCorr));
-      else setpertCorr({});
+      // Process pertCorr data
+      if (data.pertCorr && data.pertCorr.length > 0) {
+        console.log('ExpressionAnalyzer - Processing pertCorr data:', {
+          pertCorrType: typeof data.pertCorr,
+          pertCorrLength: data.pertCorr.length
+        });
+        setpertCorr(safeJsonParse(data.pertCorr, { defaultValue: {} }));
+      } else setpertCorr({});
 
-      if (data.geneRegulationResults.expCorr.length > 0)
-        setexpCorr(JSON.parse(data.geneRegulationResults.expCorr));
-      else setexpCorr({});
+      // Process expCorr data
+      if (data.expCorr && data.expCorr.length > 0) {
+        console.log('ExpressionAnalyzer - Processing expCorr data:', {
+          expCorrType: typeof data.expCorr,
+          expCorrLength: data.expCorr.length
+        });
+        setexpCorr(safeJsonParse(data.expCorr, { defaultValue: {} }));
+      } else setexpCorr({});
     }
-  }, [data.geneRegulationResults?.upstream, isCalcRunning]);
+  }, [data, isCalcRunning]);
 
   const columns = useMemo(
     () => [
@@ -284,24 +369,7 @@ const ExpressionAnalyzer = ({
     return { mean: mean, std: std };
   }
 
-  useEffect(() => {
-    getBlackList().then((result) => {
-      const genesUp = {};
-      const genesDown = {};
 
-      for (const gene in result.blacklist.ZS) {
-        if (result.blacklist.ZS[gene] > 0) {
-          genesUp[gene] = result.blacklist.ZS[gene];
-        } else {
-          genesDown[gene] = Math.abs(result.blacklist.ZS[gene]);
-        }
-      }
-      ////console.log("setblackListDown", genesDown);
-      ////console.log("setblackListUp", genesUp);
-      setblackListDown(genesDown);
-      setblackListUp(genesUp);
-    });
-  }, []);
 
   function calculateZscore(data) {
     var results = trimmedMean(data, 0.2);
@@ -357,8 +425,22 @@ const ExpressionAnalyzer = ({
     return { min, binSize, bins, pointDistribution, data };
   }
 
-  useEffect(() => {
-    if (!data) return;
+  // Memoize expensive calculations
+  const processedData = useMemo(() => {
+    console.log('ExpressionAnalyzer - Processing data:', {
+      hasData: !!data,
+      hasBlacklistData: !!blacklistData,
+      blacklistLoading,
+      selectedTab: selectedTab.value,
+      selectedInnerTab: selectedInnerTab.value,
+      downstream: !!downstream,
+      upstream: !!upstream,
+      pertCorr: !!pertCorr,
+      expCorr: !!expCorr
+    });
+    
+    if (!data) return null;
+    
     let highlightList = new Set(
       expressionanalyzerSettings?.genesTolabel
         .replaceAll(/[,\s;]+/g, "\n")
@@ -366,7 +448,6 @@ const ExpressionAnalyzer = ({
         .split("\n")
     );
     highlightList = new Set([...highlightList]);
-    //console.log("highlightList", highlightList);
 
     let selectedData;
     var zScoreConv = false;
@@ -396,256 +477,409 @@ const ExpressionAnalyzer = ({
           break;
       }
     }
-    //console.log("selectedData", selectedData, upstream, expCorr);
 
-    if (Object.keys(selectedData).length > 0) {
-      setProbes(Object.keys(selectedData));
-
-      if (Object.keys(selectedData).length === 1 && selectedProbe > 0)
-        setSelectedProbe(0);
+    if (!selectedData || Object.keys(selectedData).length === 0) {
+      return { geneLists: {}, keyedData: [], pointData: [], pointDistribution: [], probes: [] };
     }
 
-    console.log(selectedData, selectedProbe);
+    const probesData = Object.keys(selectedData);
+    const currentProbe = selectedProbe < probesData.length ? selectedProbe : 0;
+    
+    if (!selectedData[probesData[currentProbe]]) {
+      return { geneLists: {}, keyedData: [], pointData: [], pointDistribution: [], probes: probesData };
+    }
 
-    if (
-      selectedData &&
-      Object.keys(selectedData).length > 0 &&
-      Object.keys(selectedData).length > selectedProbe &&
-      selectedData[Object.keys(selectedData)[selectedProbe]]
-    ) {
-      //const chart = echarts.init(chartRef.current);
-      let xValues = Object.values(
-        selectedData[Object.keys(selectedData)[selectedProbe]]
-      );
-      const labels = Object.keys(
-        selectedData[Object.keys(selectedData)[selectedProbe]]
-      );
+    let xValues = Object.values(selectedData[probesData[currentProbe]]);
+    const labels = Object.keys(selectedData[probesData[currentProbe]]);
 
-      console.log(xValues, labels);
+    let tableInfo = [];
+    const pointData2 = [];
 
-      let tableInfo = [];
-      //setkeyedData(tableInfo);
-      const pointData2 = [];
+    let zScores = xValues;
+    let binSize = 0.01;
+    if (zScoreConv) {
+      binSize = 0.05;
+      zScores = calculateZscore(xValues);
+    }
 
-      let zScores = xValues;
-      let binSize = 0.01;
-      if (zScoreConv) {
-        binSize = 0.05;
-        zScores = calculateZscore(xValues);
+    var result = calculateDataDistribution(zScores, binSize);
+    
+    for (let i = 0; i < xValues.length; i++) {
+      if (
+        expressionanalyzerSettings.filter &&
+        blacklistData &&
+        xValues[i] < 0 &&
+        blacklistData.blackListDown?.[labels[i]] !== undefined &&
+        blacklistData.blackListDown[labels[i]] >
+          expressionanalyzerSettings.filterBlackListed
+      )
+        continue;
+      else if (
+        expressionanalyzerSettings.filter &&
+        blacklistData &&
+        xValues[i] > 0 &&
+        blacklistData.blackListUp?.[labels[i]] !== undefined &&
+        blacklistData.blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
+      )
+        continue;
+
+      if (
+        ((zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
+          (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1)) &&
+        !highlightList.has(labels[i])
+      ) {
+        let randomNum = Math.floor(Math.random() * 10) + 1;
+        if (randomNum < 7) continue;
       }
 
-      var result = calculateDataDistribution(zScores, binSize);
-      console.log(result);
-      //findNearestIndex(distX,distY, xValues[i])
-      for (let i = 0; i < xValues.length; i++) {
-        //if (!zScoreConv && xValues[i] === 1) continue;
-        if (
-          expressionanalyzerSettings.filter &&
-          xValues[i] < 0 &&
-          blackListDown[labels[i]] !== undefined &&
-          blackListDown[labels[i]] >
-            expressionanalyzerSettings.filterBlackListed
-        )
-          continue;
-        else if (
-          expressionanalyzerSettings.filter &&
-          xValues[i] > 0 &&
-          blackListUp[labels[i]] !== undefined &&
-          blackListUp[labels[i]] > expressionanalyzerSettings.filterBlackListed
-        )
-          continue;
+      let index = Math.floor((zScores[i] - result.min) / result.binSize);
+      if (index >= result.bins.length) index = result.bins.length - 1;
 
-        //For sgRNAs that are not significant we dont need to show all.
-        if (
-          ((zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
-            (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1)) &&
-          !highlightList.has(labels[i])
-        ) {
-          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
-          if (randomNum < 7) continue;
-        }
+      let binLoc = result.bins[Math.max(0, index)].count;
+      let histY = Math.random() * 2 * binLoc - binLoc;
+      pointData2.push([
+        zScores[i],
+        histY,
+        labels[i],
+        xValues[i],
+        highlightList.has(labels[i]),
+      ]);
 
-        console.log(
-          zScores[i],
-          result.min,
-          result.binSize,
-          Math.floor((zScores[i] - result.min) / result.binSize),
-          result
-        );
-
-        let index = Math.floor((zScores[i] - result.min) / result.binSize);
-        if (index >= result.bins.length) index = result.bins.length - 1;
-
-        let binLoc = result.bins[Math.max(0, index)].count;
-        let histY = Math.random() * 2 * binLoc - binLoc;
-        pointData2.push([
-          zScores[i],
-          histY,
-          labels[i],
-          xValues[i],
-          highlightList.has(labels[i]),
-        ]);
-
-        if (zScoreConv) {
-          tableInfo.push({
-            Gene: labels[i],
-            Effect:
-              zScores[i] > 2
+      if (zScoreConv) {
+        tableInfo.push({
+          Gene: labels[i],
+          Effect:
+            zScores[i] > 2
+              ? selectedTab.value === 0
+                ? "UPREGULATED"
+                : "UPREGULATES"
+              : zScores[i] < -2
                 ? selectedTab.value === 0
-                  ? "UPREGULATED"
-                  : "UPREGULATES"
-                : zScores[i] < -2
-                  ? selectedTab.value === 0
-                    ? "DOWN REGULATED"
-                    : "DOWN REGULATES"
-                  : "NO CHANGE",
-            Score: xValues[i],
-            "Z-Score": roundToThree(zScores[i]),
-          });
-        } else {
-          tableInfo.push({
-            Gene: labels[i],
-            Effect:
-              xValues[i] > 0.8
-                ? "STRONG POSITIVE CORR"
-                : xValues[i] > 0.5
-                  ? "POSITIVE CORR"
-                  : xValues[i] > 0.1
-                    ? "WEAK POSITIVE CORR"
-                    : xValues[i] < -0.8
-                      ? "STRONG NEGATIVE CORR"
-                      : xValues[i] < -0.5
-                        ? "NEGATIVE CORR"
-                        : xValues[i] < -0.1
-                          ? "WEAK NEGATIVE CORR"
-                          : "NO CORR",
-            Score: xValues[i],
-          });
-        }
-      }
-
-      if (zScoreConv) {
-        tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]);
-      } else {
-        tableInfo.sort((geneA, geneB) => geneB["Score"] - geneA["Score"]);
-      }
-
-      const temp = {};
-
-      if (selectedInnerTab.value === 0) {
-        const genesLength = tableInfo.length;
-        const upreg = [];
-        const dowreg = [];
-        // First pass to categorize genes based on upregulation or downregulation
-        tableInfo.forEach((gene, index) => {
-          if (gene.Effect.startsWith("UP")) {
-            upreg.push(gene.Gene);
-          } else if (gene.Effect.startsWith("DOWN")) {
-            dowreg.push(gene.Gene);
-          }
-          // For top and bottom genes, since it's based on position, no need to process here.
+                  ? "DOWN REGULATED"
+                  : "DOWN REGULATES"
+                : "NO CHANGE",
+          Score: xValues[i],
+          "Z-Score": roundToThree(zScores[i]),
         });
-        // Assigning top and bottom gene slices
-        const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
-        const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
-        const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
-        const bottom20 = tableInfo
-          .slice(Math.max(genesLength - 20, 0))
-          .map((gene) => gene.Gene);
-        const bottom50 = tableInfo
-          .slice(Math.max(genesLength - 50, 0))
-          .map((gene) => gene.Gene);
-        const bottom100 = tableInfo
-          .slice(Math.max(genesLength - 100, 0))
-          .map((gene) => gene.Gene);
-
-        if (upreg.length > 3) temp["Upregulated"] = upreg.join();
-        if (dowreg.length > 3) temp["Downregulated"] = dowreg.join();
-        if (top20.length > 3) temp["Top 20 Upregulated"] = top20.join();
-        if (top50.length > 3) temp["Top 50 Upregulated"] = top50.join();
-        if (top100.length > 3) temp["Top 100 Upregulated"] = top100.join();
-        if (bottom20.length > 3) temp["Top 20 Downregulated"] = bottom20.join();
-        if (bottom50.length > 3) temp["Top 50 Downregulated"] = bottom50.join();
-        if (bottom100.length > 3)
-          temp["Top 100 Downregulated"] = bottom100.join();
       } else {
-        // Since correlation calculations are separate, process them individually
-        const strongPosCorr = [];
-        const posCorr = [];
-        const weakPosCorr = [];
-        const strongNegCorr = [];
-        const negCorr = [];
-        const weakNegCorr = [];
-
-        tableInfo.forEach((gene) => {
-          const score = gene.Score;
-          const geneName = gene.Gene;
-          if (score > 0.8) {
-            strongPosCorr.push(geneName);
-          } else if (score > 0.5) {
-            posCorr.push(geneName);
-          } else if (score > 0.1) {
-            weakPosCorr.push(geneName);
-          } else if (score < -0.8) {
-            strongNegCorr.push(geneName);
-          } else if (score < -0.5) {
-            negCorr.push(geneName);
-          } else if (score < -0.1) {
-            weakNegCorr.push(geneName);
-          }
+        tableInfo.push({
+          Gene: labels[i],
+          Effect:
+            xValues[i] > 0.8
+              ? "STRONG POSITIVE CORR"
+              : xValues[i] > 0.5
+                ? "POSITIVE CORR"
+                : xValues[i] > 0.1
+                  ? "WEAK POSITIVE CORR"
+                  : xValues[i] < -0.8
+                    ? "STRONG NEGATIVE CORR"
+                    : xValues[i] < -0.5
+                      ? "NEGATIVE CORR"
+                      : xValues[i] < -0.1
+                        ? "WEAK NEGATIVE CORR"
+                        : "NO CORR",
+          Score: xValues[i],
         });
-
-        if (strongPosCorr.length > 3)
-          temp["STRONG POSITIVE CORR"] = strongPosCorr.join();
-        if (posCorr.length > 3) temp["POSITIVE CORR"] = posCorr.join();
-        if (weakPosCorr.length > 3)
-          temp["WEAK POSITIVE CORR"] = weakPosCorr.join();
-        if (strongNegCorr.length > 3)
-          temp["STRONG NEGATIVE CORR"] = strongNegCorr.join();
-        if (negCorr.length > 3) temp["NEGATIVE CORR"] = negCorr.join();
-        if (weakNegCorr.length > 3)
-          temp["WEAK NEGATIVE CORR"] = weakNegCorr.join();
       }
-
-      //console.log("Here we go #2");
-
-      setGeneLists(temp);
-      setPointDistribution(result.pointDistribution);
-
-      setkeyedData(tableInfo);
-
-      pointData2.sort((a, b) => b[0] - a[0]);
-
-      setPointData(pointData2);
     }
+
+    if (zScoreConv) {
+      tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]);
+    } else {
+      tableInfo.sort((geneA, geneB) => geneB["Score"] - geneA["Score"]);
+    }
+
+    const temp = {};
+
+    if (selectedInnerTab.value === 0) {
+      const genesLength = tableInfo.length;
+      const upreg = [];
+      const dowreg = [];
+      tableInfo.forEach((gene) => {
+        if (gene.Effect.startsWith("UP")) {
+          upreg.push(gene.Gene);
+        } else if (gene.Effect.startsWith("DOWN")) {
+          dowreg.push(gene.Gene);
+        }
+      });
+      const top20 = tableInfo.slice(0, 20).map((gene) => gene.Gene);
+      const top50 = tableInfo.slice(0, 50).map((gene) => gene.Gene);
+      const top100 = tableInfo.slice(0, 100).map((gene) => gene.Gene);
+      const bottom20 = tableInfo
+        .slice(Math.max(genesLength - 20, 0))
+        .map((gene) => gene.Gene);
+      const bottom50 = tableInfo
+        .slice(Math.max(genesLength - 50, 0))
+        .map((gene) => gene.Gene);
+      const bottom100 = tableInfo
+        .slice(Math.max(genesLength - 100, 0))
+        .map((gene) => gene.Gene);
+
+      if (upreg.length > 3) temp["Upregulated"] = upreg.join();
+      if (dowreg.length > 3) temp["Downregulated"] = dowreg.join();
+      if (top20.length > 3) temp["Top 20 Upregulated"] = top20.join();
+      if (top50.length > 3) temp["Top 50 Upregulated"] = top50.join();
+      if (top100.length > 3) temp["Top 100 Upregulated"] = top100.join();
+      if (bottom20.length > 3) temp["Top 20 Downregulated"] = bottom20.join();
+      if (bottom50.length > 3) temp["Top 50 Downregulated"] = bottom50.join();
+      if (bottom100.length > 3)
+        temp["Top 100 Downregulated"] = bottom100.join();
+    } else {
+      const strongPosCorr = [];
+      const posCorr = [];
+      const weakPosCorr = [];
+      const strongNegCorr = [];
+      const negCorr = [];
+      const weakNegCorr = [];
+
+      tableInfo.forEach((gene) => {
+        const score = gene.Score;
+        const geneName = gene.Gene;
+        if (score > 0.8) {
+          strongPosCorr.push(geneName);
+        } else if (score > 0.5) {
+          posCorr.push(geneName);
+        } else if (score > 0.1) {
+          weakPosCorr.push(geneName);
+        } else if (score < -0.8) {
+          strongNegCorr.push(geneName);
+        } else if (score < -0.5) {
+          negCorr.push(geneName);
+        } else if (score < -0.1) {
+          weakNegCorr.push(geneName);
+        }
+      });
+
+      if (strongPosCorr.length > 3)
+        temp["STRONG POSITIVE CORR"] = strongPosCorr.join();
+      if (posCorr.length > 3) temp["POSITIVE CORR"] = posCorr.join();
+      if (weakPosCorr.length > 3)
+        temp["WEAK POSITIVE CORR"] = weakPosCorr.join();
+      if (strongNegCorr.length > 3)
+        temp["STRONG NEGATIVE CORR"] = strongNegCorr.join();
+      if (negCorr.length > 3) temp["NEGATIVE CORR"] = negCorr.join();
+      if (weakNegCorr.length > 3)
+        temp["WEAK NEGATIVE CORR"] = weakNegCorr.join();
+    }
+
+    pointData2.sort((a, b) => b[0] - a[0]);
+
+    return {
+      geneLists: temp,
+      keyedData: tableInfo,
+      pointData: pointData2,
+      pointDistribution: result.pointDistribution,
+      probes: probesData
+    };
   }, [
     data,
     coreSettings.targetGeneList,
     expressionanalyzerSettings,
     selectedTab.value,
     selectedInnerTab.value,
-    data.geneRegulationResults,
     downstream,
+    upstream,
+    pertCorr,
+    expCorr,
     selectedProbe,
+    blacklistData,
+    blacklistLoading,
   ]);
 
-  //Set graph options
   useEffect(() => {
-    //console.log("Here we go #3");
-    if (!data.geneRegulationResults) return;
-    //console.log("Here we go #4");
-    setOptions({
+    if (processedData) {
+      setGeneLists(processedData.geneLists);
+      setkeyedData(processedData.keyedData);
+      setPointData(processedData.pointData);
+      setPointDistribution(processedData.pointDistribution);
+      setProbes(processedData.probes);
+      if (processedData.probes.length === 1 && selectedProbe > 0) {
+        setSelectedProbe(0);
+      }
+    }
+  }, [processedData, selectedProbe]);
+
+  //Set graph options
+  const chartOptions = useMemo(() => {
+    if (!data || !pointData.length) return {};
+    
+    return {
       tooltip: {
-        formatter: function (params) {
-          return params.data[2] + "<br> Score: " + params.data[0]?.toFixed(2);
+        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
+        confine: true,
+        backgroundColor: "#ffffff",
+        borderColor: "#e0e0e0",
+        borderWidth: 1,
+        formatter: function (params, ticket, callback) {
+          // params.data structure: [correlationScore, histY, geneSymbol, originalScore, isHighlighted]
+          const geneSymbol = params.data[2];
+          const correlationScore = params.data[0];
+          const originalScore = params.data[3];
+          const isHighlighted = params.data[4];
+          
+          if (!geneSymbol) return '';
+          
+          // Determine the analysis type and data interpretation based on current tab
+          const isCorrelationMode = selectedInnerTab.value === 1;
+          const score = params.data[0];
+          
+          let analysisType = "";
+          let analysisColor = "#666";
+          let scoreLabel = "";
+          
+          if (isCorrelationMode) {
+            // Correlation mode
+            scoreLabel = "Correlation Score";
+            if (score > 0.5) {
+              analysisType = "Strong Positive Correlation";
+              analysisColor = "#4caf50"; // green
+            } else if (score < -0.5) {
+              analysisType = "Strong Negative Correlation";
+              analysisColor = "#f44336"; // red
+            } else if (score > 0.2) {
+              analysisType = "Moderate Positive Correlation";
+              analysisColor = "#8bc34a"; // light green
+            } else if (score < -0.2) {
+              analysisType = "Moderate Negative Correlation";
+              analysisColor = "#ff5722"; // orange red
+            } else {
+              analysisType = "Weak Correlation";
+              analysisColor = "#9e9e9e"; // gray
+            }
+          } else {
+            // Expression mode
+            scoreLabel = "Expression Score";
+            if (score > 2) {
+              analysisType = "Strong Upregulation";
+              analysisColor = "#4caf50"; // green
+            } else if (score < -2) {
+              analysisType = "Strong Downregulation";
+              analysisColor = "#f44336"; // red
+            } else if (score > 0.5) {
+              analysisType = "Moderate Upregulation";
+              analysisColor = "#8bc34a"; // light green
+            } else if (score < -0.5) {
+              analysisType = "Moderate Downregulation";
+              analysisColor = "#ff5722"; // orange red
+            } else {
+              analysisType = "No Significant Change";
+              analysisColor = "#9e9e9e"; // gray
+            }
+          }
+          
+          // Create custom formatter with score information and gene data
+          const customFormatter = function(params, ticket, callback) {
+            // Create base tooltip with score information
+            let baseTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
+              ${geneSymbol}
+            </div>
+            <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
+              <strong>Analysis:</strong> ${analysisType}
+            </div>
+            <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+              <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
+            </div>`;
+            
+            if (originalScore !== undefined && originalScore !== score) {
+              baseTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
+              </div>`;
+            }
+            
+            if (isHighlighted) {
+              baseTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
+                <strong>★ Highlighted Gene</strong>
+              </div>`;
+            }
+            
+            // Add gene description placeholder
+            baseTooltip += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
+            
+            // Try to fetch gene information asynchronously
+            import('../../utils/geneFunctionUtils').then(({ fetchGeneInfo }) => {
+              fetchGeneInfo(geneSymbol).then(content => {
+                if (content) {
+                  let parsedContent;
+                  try {
+                    parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
+                  } catch (e) {
+                    parsedContent = { description: content };
+                  }
+                  
+                  // Update tooltip with gene information
+                  let enhancedTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
+                    ${geneSymbol}${parsedContent?.name ? ` (${parsedContent.name})` : ''}
+                  </div>
+                  <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
+                    <strong>Analysis:</strong> ${analysisType}
+                  </div>
+                  <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                    <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
+                  </div>`;
+                  
+                  if (originalScore !== undefined && originalScore !== score) {
+                    enhancedTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
+                      <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
+                    </div>`;
+                  }
+                  
+                  if (isHighlighted) {
+                    enhancedTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
+                      <strong>★ Highlighted Gene</strong>
+                    </div>`;
+                  }
+                  
+                  if (parsedContent?.description) {
+                    enhancedTooltip += `<div style="font-size:11px;color:#444;margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${parsedContent.description}</div>`;
+                  }
+                  
+                  callback(ticket, enhancedTooltip);
+                }
+              }).catch(() => {
+                // If gene info fetch fails, just show the base tooltip without the loading message
+                let finalTooltip = baseTooltip.replace('<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>', '');
+                callback(ticket, finalTooltip);
+              });
+            });
+            
+            return baseTooltip;
+          };
+          
+          return customFormatter(params, ticket, callback);
         },
       },
       xAxis: [
         {
           type: "value",
+          axisLine: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          axisLabel: {
+            color: "black",
+            fontSize: 16,
+          },
+          axisTick: {
+            lineStyle: {
+              color: "black",
+            },
+          },
+          name:
+            selectedInnerTab.value === 0
+              ? "Z-Score"
+              : "Correlation Coefficient",
+          nameTextStyle: {
+            fontSize: 16,
+            color: "black",
+          },
+          nameGap: 38,
+          nameLocation: "middle",
         },
       ],
-      yAxis: {},
+      yAxis: {
+        show: false,
+      },
       dataZoom: [
         {
           type: "slider",
@@ -658,12 +892,19 @@ const ExpressionAnalyzer = ({
         feature: {
           dataZoom: {
             yAxisIndex: "none",
+            slider: { endValue: 0.5 },
           },
           restore: {},
           saveAsImage: {},
         },
       },
-
+      grid: [
+        {
+          left: 50,
+          top: 20,
+          bottom: 100,
+        },
+      ],
       series: [
         {
           name: "Series 2",
@@ -673,7 +914,7 @@ const ExpressionAnalyzer = ({
           lineStyle: {
             width: 0,
           },
-          xAxisIndex: 0, // use the second x-axis for this series
+          xAxisIndex: 0,
           data: pointDistribution.map(function (x) {
             return [x[0], x[1]];
           }),
@@ -684,32 +925,31 @@ const ExpressionAnalyzer = ({
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return "rgba(216, 245, 39, 0.5)"; //yellow
+                return "rgba(216, 245, 39, 0.5)";
               else if (params.data[4] === true) {
                 return "rgba(39, 96, 245, 0.7)";
-              } //blue highlight
+              }
               else if (
                 (selectedInnerTab.value === 0 && params.data[0] > 2) ||
                 (selectedInnerTab.value === 1 && params.data[0] > 0.5)
               ) {
-                return "rgba(39, 245, 55, 0.7)"; //green
+                return "rgba(39, 245, 55, 0.7)";
               } else if (
                 (selectedInnerTab.value === 0 && params.data[0] < -2) ||
                 (selectedInnerTab.value === 1 && params.data[0] < -0.5)
               ) {
-                return "rgba(245, 55, 39, 0.7)"; //red
+                return "rgba(245, 55, 39, 0.7)";
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] > 0.15
               ) {
-                return "rgba(39, 245, 55, 0.4)"; //green
+                return "rgba(39, 245, 55, 0.4)";
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] < -0.5
               ) {
-                return "rgba(245, 55, 39, 0.4)"; //red
+                return "rgba(245, 55, 39, 0.4)";
               } else {
-                //if( params.data[3]> -2 &&params.data[3]<2 )
                 return (
                   "rgba(200, 200, 200," +
                   String((Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185) +
@@ -741,15 +981,88 @@ const ExpressionAnalyzer = ({
           type: "scatter",
         },
       ],
-    });
-  }, [pointData, data.geneRegulationResults, pointDistribution]);
+    };
+  }, [
+    pointData,
+    data,
+    pointDistribution,
+    selectedInnerTab.value,
+    selectedTab.value,
+  ]);
+
+  useEffect(() => {
+    setOptions(chartOptions);
+  }, [chartOptions]);
+
+  // Get progress state
+  const progressMessage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressMessage;
+  const progressPercentage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressPercentage;
 
   return (
     <>
-      {isCalcRunning ? (
-        <LoadingPage />
-      ) : (
+      {isCalcRunning && (
+        <LoadingPage 
+          progressMessage={progressMessage}
+          progressPercentage={progressPercentage}
+        />
+      )}
+      {!isCalcRunning && (
         <>
+          <Accordion defaultExpanded={true}
+            sx={{
+              marginBottom: '14px',
+              backgroundColor: '#f8f9fa', 
+              border: '1px solid #e9ecef',
+
+              borderRadius: '8px',
+              '&:before': {
+                display: 'none',
+              },
+              '& .MuiAccordionSummary-root': {
+      minHeight: '30px',
+      height: '30px',
+    }
+    , '& .MuiAccordionSummary-root.Mui-expanded': {
+      minHeight:  '30px',
+      height: '30px',
+    }
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+               sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+            '&.Mui-expanded': {
+              minHeight: '30px'
+            }
+          }}
+            >
+              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
+              <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+                {moduleDescription.description}
+              </p>
+              <div style={{ fontSize: '13px', color: '#424242' }}>
+                <strong>Analysis Capabilities:</strong>
+                <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
+                  {moduleDescription.capabilities.map((capability, index) => (
+                    <li key={index} style={{ marginBottom: '2px' }}>{capability}</li>
+                  ))}
+                </ul>
+              </div>
+              <p style={{ margin: '10px 0 0 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+
+                
+                <strong>Perturbation Effects: </strong> {moduleDescription.tabs.perturbationEffects}
+                <br/>
+                <strong>Perturbed By: </strong> {moduleDescription.tabs.perturbedBy}
+              </p>
+            </AccordionDetails>
+          </Accordion>
+
           {probes.length > 1 && (
             <>
               <Spacer height={5} />
@@ -786,7 +1099,7 @@ const ExpressionAnalyzer = ({
             <Tabs
               name="innertabs"
               value={selectedInnerTab}
-              options={innerTabOptions}
+              options={getInnerTabOptions()}
               onChange={(evt) => {
                 const { value, label } = evt.target;
                 setSelectedInnerTab({ value, label });
@@ -796,7 +1109,7 @@ const ExpressionAnalyzer = ({
               <>
                 <Text success>
                   Which perturbations show similar effects to
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
                     : " perturbation "}
                   of
@@ -809,11 +1122,12 @@ const ExpressionAnalyzer = ({
               <>
                 <Text success>
                   Which genes are up or down regulated upon{" "}
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
                     : " perturbation "}{" "}
                   of
                   {" " + expressionanalyzerSettings.selectedGene}?
+                 <span style={{ color: 'red', fontWeight: 'bold' }}> Red highlighted</span> genes are down regulated, while <span style={{ color: 'green', fontWeight: 'bold' }}>green highlighted</span> genes are up regulated.
                 </Text>
                 <Spacer height={5} />
               </>
@@ -821,18 +1135,18 @@ const ExpressionAnalyzer = ({
             {selectedInnerTab.value === 0 && selectedTab.value === 1 && (
               <>
                 <Text success>
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " Overexpression "
                     : " Perturbation "}{" "}
                   of which{" "}
-                  {coreSettings.cellLine[0] === "TFAtlas"
+                  {coreSettings.cellLine.id === "TFAtlas"
                     ? " transcription factors "
                     : " genes "}{" "}
                   up or down regulate
                   {" " +
                     expressionanalyzerSettings.selectedGene +
                     " expression"}
-                  ?
+                  ? <span style={{ color: 'red', fontWeight: 'bold' }}> Red highlighted</span> genes down regulate, while <span style={{ color: 'green', fontWeight: 'bold' }}>green highlighted</span> genes are up regulated.
                 </Text>
                 <Spacer height={5} />
               </>
@@ -865,6 +1179,18 @@ const ExpressionAnalyzer = ({
               onSelected={(key) => setSelectedView(key)}
               value={selectedView}
             />
+            {blacklistLoading && (
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#e8f5e8', 
+                borderLeft: '4px solid #4caf50',
+                borderRadius: '4px',
+                color: '#2e7d32',
+                marginBottom: '8px'
+              }}>
+                🔄 Loading blacklist data for filtering...
+              </div>
+            )}
             {keyedData && selectedView === 1 && (
               <>
                 <EnrichmentTable
@@ -904,6 +1230,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   calcResults,
   coreSettings: settings?.core ?? {},
   expressionanalyzerSettings: settings?.expressionanalyzer ?? {},
+  // Note: data is passed as a prop from the parent page component
 });
 const mapDispatchToProps = {
   runCalculation,

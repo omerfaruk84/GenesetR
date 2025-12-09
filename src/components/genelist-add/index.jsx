@@ -1,7 +1,7 @@
 import { InputGroup, Modal } from "@oliasoft-open-source/react-ui-library";
 import { Genelist } from "../genelist";
 
-import React, { useState } from "react";
+import React from "react";
 
 const GenelistAdd = ({
   visible = true,

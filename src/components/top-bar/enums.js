@@ -7,10 +7,12 @@ const TabNames = {
   UMAP: "UMAP",
   TSNE: "tSNE",
   GENE_REGULATION: "Gene-Regulation",
+  GENE_REGULATION_ENHANCED: "Gene-Regulation+",
   HEATMAP: "HeatMap",
   PATHFINDER: "Path Explorer",
   GENESIGNATURE: "Gene Signature",
   EXPRESSIONANALYZER: "Expression Analyzer",
+  MULTIDATASET_COMPARISON: "Multi-Dataset Comparison",
   GENELISTCOMPARE: "Genelists",
   ABOUT: "Help",
 };

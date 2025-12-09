@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -16,9 +16,14 @@ const csvConfig = mkConfig({
   useKeysAsHeaders: true,
 });
 
-const EnrichmentTable = ({ columns, data }) => {
+const EnrichmentTable = ({ columns, data, onSortedDataChange }) => {
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const debounceTimerRef = useRef(null);
+  
   const table = useMaterialReactTable({
     columns,
     data,
@@ -27,15 +32,24 @@ const EnrichmentTable = ({ columns, data }) => {
     //enableColumnResizing: true,
     enableDensityToggle: false,
     enableFacetedValues: true,
+    enableColumnActions: false, // Disable three dots menu on all columns
     displayColumnDefOptions: {
       "mrt-row-select": {
-        enableColumnActions: true,
+        enableColumnActions: false,
         enableHiding: true,
         size: "20px",
         maxSize: "40px",
         p: 5,
       },
     },
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     initialState: {
       density: "compact",
       showColumnFilters: true,
@@ -77,6 +91,29 @@ const EnrichmentTable = ({ columns, data }) => {
         m: "auto",
         maxWidth: "100%",
       },
+    },
+    // Custom styling to conditionally hide filters on grouped header cells
+    muiTableHeadCellFilterTextFieldProps: ({ column }) => {
+      // Hide filter if this is a grouped column (has children columns)
+      if (column.columns && column.columns.length > 0) {
+        return {
+          sx: {
+            display: 'none !important',
+          },
+        };
+      }
+      return {};
+    },
+    muiTableHeadCellFilterSliderProps: ({ column }) => {
+      // Hide filter slider if this is a grouped column
+      if (column.columns && column.columns.length > 0) {
+        return {
+          sx: {
+            display: 'none !important',
+          },
+        };
+      }
+      return {};
     },
     //columnFilterDisplayMode: "popover",
     paginationDisplayMode: "pages",
@@ -128,6 +165,27 @@ const EnrichmentTable = ({ columns, data }) => {
       </Box>
     ),
   });
+
+  // Debounced effect to notify parent of sorted/filtered data changes
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      if (onSortedDataChange && table) {
+        const sortedRows = table.getSortedRowModel().rows;
+        const sortedData = sortedRows.map(row => row.original);
+        onSortedDataChange(sortedData);
+      }
+    }, 1000); // 1 second debounce
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [sorting, columnFilters, globalFilter, data, onSortedDataChange]);
 
   const handleExportData = () => {
     const csv = generateCsv(csvConfig)(data);

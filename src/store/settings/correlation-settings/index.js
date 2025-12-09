@@ -1,16 +1,19 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const initialState = {  
-  filter: 0.3,
+const initialState = {
   row_linkage: 'average',
   column_linkage: 'average',
   row_distance: 'euclidean',
   column_distance: 'euclidean',
-  axis: 'both',  
+  axis: 'both',
   normalize: false,
   write_original: true,
   corrType:"spearman",
   row_col_sameorder:true,
+  trimEnabled: false,
+  trimThreshold: 0.1,
+  selectedDatasets: [],
+  combineMethod: 'average',
 };
 
 export const correlationSettingsSlice = createSlice({

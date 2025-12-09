@@ -44,7 +44,7 @@ const ExpressionAnalyzerSettings = ({
   useEffect(() => {
     async function fetchDataAndPopulate() {
       let check = new Set();
-      let cellline = coreSettings.cellLine[0];
+      let cellline = coreSettings.cellLine.id;
 
       try {
         await updateGeneLists(cellline);
@@ -79,10 +79,10 @@ const ExpressionAnalyzerSettings = ({
     };
 
     fetchDataAndPopulate();
-  }, [coreSettings.cellLine]);
+  }, [coreSettings.cellLine.id]);
   return (
     <>
-      <Field label="Select a gene">
+      <Field label="Select a gene" helpText="Choose a gene of interest to analyze its expression regulation patterns and discover upstream/downstream regulatory relationships.">
         <Select
           onChange={({ target: { value } }) => {
             expressionanalyzerSettingsChanged({
@@ -142,7 +142,7 @@ const ExpressionAnalyzerSettings = ({
         />
       </Field>
 
-      <Field>
+      <Field helpText="Filter out sgRNAs that are known to cause off-target effects or are generally unreliable in CRISPR screens.">
         <CheckBox
           label="Filter Black Listed sgRNAs"
           onChange={({ target: { checked } }) =>

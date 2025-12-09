@@ -1,18 +1,61 @@
-import { toast } from "@oliasoft-open-source/react-ui-library";
+//ignore TSC error
+/* eslint-disable */
+// @ts-nocheck
 import Axios from "axios";
 import { get, set } from "idb-keyval";
+import { store } from "../store";
+import { progressUpdateReceived } from "../results";
+// Import WebSocket support at the top
+import { waitForTaskCompletion, cancelTask } from "./websocket";
 
 let SERVER_ADRESS = "https://genesetr.uio.no/api";
 //const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
 
-if (process.env.NODE_ENV !== "production") {
-  console.log("WORKING IN PRODUCTION MODE");
+const isDevEnv = process.env.NODE_ENV !== "production";
+
+if (isDevEnv) {
   SERVER_ADRESS = "https://b74f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
   SERVER_ADRESS = "http://localhost:8443";
 }
 
-const getData = async (body) => {
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+
+const debugError = (...args) => {
+  if (isDevEnv) {
+    console.error(...args);
+  }
+};
+
+// Mapping from request type to module name
+const requestToModuleMap = {
+  "PCAGraph": "pcaGraph",
+  "MDEGraph": "mdeGraph",
+  "UMAPGraph": "umapGraph",
+  "tSNEGraph": "tsneGraph",
+  "biClustering": "biClusteringGraph",
+  "expandGene": "geneRegulationGraph",
+  "expandGeneEnhanced": "geneRegulationEnhancedGraph",
+  "findPath": "pathFinderGraph",
+  "corrCluster": "corrCluster",
+  "heatMap": "heatmapGraph",
+  "calcGeneSignature": "genesignatureGraph",
+  "calcGeneSignatureMultiDataset": "genesignatureMultiDataset",
+  "calcGeneSignatureMultiDatasetSimilar": "genesignatureSimilarGraph",
+  "geneExpression": "geneExpressionGraph",
+  "multiDatasetComparison": "multiDatasetComparison",
+};
+
+const getData = async (body, moduleName = null, options = {}) => {
   try {
+    // Determine module name from request type if not provided
+    if (!moduleName && body?.request) {
+      moduleName = requestToModuleMap[body.request];
+    }
+
     const response = await Axios.post(
       SERVER_ADRESS + "/getData",
       {
@@ -25,60 +68,57 @@ const getData = async (body) => {
       }
     );
 
-    //console.log("response", response)
     const { task_id } = response.data;
-    //console.log("task_id", task_id)
-    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-    let times = 1;
-    do {
-      const response2 = await Axios.get(SERVER_ADRESS + `/tasks/${task_id}`, {
-        headers: {
-          "ngrok-skip-browser-warning": "69420",
-        },
-      });
+    debugLog(`Task created: ${task_id} for ${body.request}`);
 
-      //console.log("response2", response2)
-      const { status, task_result } = response2.data;
-      console.log("task_status", status);
-      //console.log("task_result", task_result);
-
-      if (status === "PENDING") {
-        console.log("Still not started");
-      } else if (status === "FAILURE") {
-        throw new Error(task_result);
-      } else if (status === "PROGRESS") {
-        console.log("Processing", task_result.message);
-        /*toast({
-          message: {
-            type: "Info",
-            icon: false,
-            heading: "Completed:" + task_result.current,
-            content: task_result.message,
-          },
-          id: "process",
-          autoClose: "1000",
-        });*/
-      } else if (task_result !== undefined && task_result !== null) {
-        return task_result;
+    // Store task ID in Redux for cancellation support
+    if (moduleName && store && store.dispatch) {
+      try {
+        const resultsModule = await import("../results");
+        if (resultsModule.taskStarted) {
+          store.dispatch(resultsModule.taskStarted({ module: moduleName, taskId: task_id }));
+        }
+      } catch (e) {
+        // Ignore if taskStarted not available (backward compatibility)
+        debugLog("Could not dispatch taskStarted:", e);
       }
+    }
 
-      await delay(times * 250);
-      times++;
-    } while (times < 30);
+    // Use WebSocket with polling fallback for better performance
+    // Options: { useWebSocket: true, fallbackToPolling: true, useVersionedEndpoint: false }
+    // Legacy /getData endpoint uses /tasks/{task_id}, not /api/v1/tasks/{task_id}
+    const defaultOptions = {
+      useWebSocket: true,
+      fallbackToPolling: true,
+      useVersionedEndpoint: false, // Legacy endpoint format
+      ...options,
+    };
+
+    return await waitForTaskCompletion(task_id, moduleName, defaultOptions);
   } catch (error) {
-    console.log(error);
+    debugError("Error in getData:", error);
+    
+    // Handle standardized error format
+    if (error.response?.data?.error) {
+      const apiError = error.response.data.error;
+      const errorMessage = apiError.message || "An error occurred";
+      const fullError = new Error(errorMessage);
+      fullError.code = apiError.code;
+      fullError.details = apiError.details;
+      throw fullError;
+    }
+    
+    throw error;
   }
 };
 
 const runPcaGraphCalc = async (core, pca, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     numcomponents: pca.numberOfComponents,
     min_cluster_size: clustering.minimumClusterSize,
     clusteringMetric: clustering.clusteringMetric,
@@ -94,12 +134,10 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
 const runMdeGraphCalc = async (core, mde, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: mde.numcomponents,
     PreprocessingMethod: mde.preprocessingMethod,
@@ -121,12 +159,10 @@ const runMdeGraphCalc = async (core, mde, clustering) => {
 const runUMAPGraphCalc = async (core, umap, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: umap.numcomponents,
     n_neighbors: umap.n_neighbors,
@@ -147,12 +183,10 @@ const runUMAPGraphCalc = async (core, umap, clustering) => {
 const runtSNEGraphCalc = async (core, tsne, clustering) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     numcomponents: tsne.numcomponents,
     earlyExaggeration: tsne.earlyExaggeration,
@@ -180,7 +214,7 @@ const runbiClusteringCalc = async (core, biClustering) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
 
     n_clusters: biClustering.n_clusters, //Anyway to set this to default value is number of genes divided by 20
     n_init: biClustering.n_init,
@@ -192,7 +226,24 @@ const runbiClusteringCalc = async (core, biClustering) => {
 };
 
 const runPathFinderCalc = async (core, pathfinder) => {
-  console.log(core, pathfinder)
+  debugLog(core, pathfinder)
+  
+  // Extract selected datasets, ensuring we have an array of IDs
+  let selectedDatasets = pathfinder.selectedDatasets || [];
+  if (Array.isArray(selectedDatasets)) {
+    selectedDatasets = selectedDatasets.map((ds) => {
+      if (typeof ds === 'object' && ds !== null) {
+        return ds.value || ds.id || String(ds);
+      }
+      return String(ds);
+    });
+  }
+  
+  // If no datasets selected, use the current one
+  if (selectedDatasets.length === 0 && core.cellLine?.id) {
+    selectedDatasets = [core.cellLine.id];
+  }
+
   const body = {
     downgeneList: core.peturbationList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
@@ -200,12 +251,10 @@ const runPathFinderCalc = async (core, pathfinder) => {
       .filter(Boolean)
       .join(";"),
     dataType: core.dataType,
-    cellLine: core.cellLine[0],
-
-    upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+    cell_line: core.cellLine.id,
+    selectedDatasets: selectedDatasets,
+    combinationStrategy: pathfinder.combinationStrategy || 'intersection',
+    upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";"),
     cutoff: 0.2, //pathfinder.cutoff,
     depth: pathfinder.depth,
     checkCorr: pathfinder.checkCorr,
@@ -221,12 +270,10 @@ const runPathFinderCalc = async (core, pathfinder) => {
 const runCorrCalc = async (core, corr) => {
   const body = {
     geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     targetList: core.targetGeneList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -246,21 +293,52 @@ const runCorrCalc = async (core, corr) => {
   return await getData(body);
 };
 
+const runCorrCalcMultiDataset = async (core, corr) => {
+  // Ensure datasets is an array of strings
+  let datasets = core.selectedDatasets || [];
+  if (Array.isArray(datasets)) {
+    datasets = datasets.map((ds) => {
+      if (typeof ds === 'object' && ds !== null) {
+        return ds.id || ds.value || String(ds);
+      }
+      return String(ds);
+    });
+  }
+  
+  const body = {
+    geneList: core.peturbationList
+      ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
+    dataType: core.dataType,
+    datasets: datasets,
+    combineMethod: corr.combineMethod || "average",
+    targetList: core.targetGeneList
+      ? core.targetGeneList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+      : "",
+    row_distance: corr.row_distance,
+    column_distance: corr.column_distance,
+    row_linkage: corr.row_linkage,
+    column_linkage: corr.column_linkage,
+    axis: corr.axis,
+    normalize: corr.normalize,
+    write_original: corr.write_original,
+    processtype: corr.corrType,
+    request: "corrClusterMultiDataset",
+  };
+  
+  console.log('Multi-dataset correlation body:', body);
+  return await getData(body);
+};
+
 const runHeatMap = async (core, heatMap) => {
+  const geneList = core.peturbationList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";") || "";
+  const targetList = core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";") || "";
+
   const body = {
     //dataType: core.dataType,
-    cell_line: core.cellLine[0],
-    geneList: core.peturbationList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
-    targetList: core.targetGeneList
-      ?.replaceAll(/[\s,;\r\n]+/g, ";")
-      .split(";")
-      .filter(Boolean)
-      .join(";"),
-
+    cell_line: core.cellLine.id,
+    geneList: geneList,
+    targetList: targetList,
     row_distance: heatMap.row_distance,
     column_distance: heatMap.column_distance,
     row_linkage: heatMap.row_linkage,
@@ -270,23 +348,63 @@ const runHeatMap = async (core, heatMap) => {
     write_original: heatMap.write_original,
     request: "heatMap",
   };
-  console.log("Here we  go");
+  debugLog("Here we  go");
   return await getData(body);
 };
 
 const runGeneRegulation = async (core, geneRegulationCore) => {
   const body = {
     gene: geneRegulationCore.selectedGene,
+    cell_line: core.cellLine.id,
     request: "expandGene",
   };
+  return await getData(body);
+};
+
+const runGeneRegulationEnhanced = async (core, geneRegulationEnhanced) => {
+  const body = {
+    gene: geneRegulationEnhanced.selectedGene,
+    experiments: geneRegulationEnhanced.selectedExperiments,
+    exp_weights: geneRegulationEnhanced.experimentWeights,
+    combine: geneRegulationEnhanced.combineMethod,
+    filter: geneRegulationEnhanced.zFilter,
+    corrFilter: geneRegulationEnhanced.corrFilter,
+    topk_upstream: geneRegulationEnhanced.topkUpstream,
+    topk_downstream: geneRegulationEnhanced.topkDownstream,
+    corr_topk: geneRegulationEnhanced.corrTopk,
+    max_nodes: geneRegulationEnhanced.maxNodes,
+    max_edges: geneRegulationEnhanced.maxEdges,
+    request: "expandGeneEnhanced",
+  };
+  
   return await getData(body);
 };
 
 const runGeneSignature = async (core) => {
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     request: "calcGeneSignature",
+  };
+  return await getData(body);
+};
+
+const runGeneSignatureMultiDataset = async (core, genesignatureSettings) => {
+  const body = {
+    formula: core.targetGeneList.trim("\n", " "),
+    min_datasets: genesignatureSettings.minDatasets,
+    ranking_enabled: genesignatureSettings.rankingEnabled,
+    ranking_order: genesignatureSettings.rankingOrder,
+    request: "calcGeneSignatureMultiDataset",
+  };
+  return await getData(body);
+};
+
+const runGeneSignatureMultiDatasetSimilar = async (core, genesignatureSettings) => {
+  const body = {
+    formula: core.targetGeneList.trim("\n", " "),
+    ranking_order: genesignatureSettings.rankingOrder || "desc",
+    request: "calcGeneSignatureMultiDatasetSimilar",
   };
   return await getData(body);
 };
@@ -295,7 +413,7 @@ const runGeneExp = async (core, geneExp) => {
   const body = {
     gene: geneExp.selectedGene,
     dataType: core.dataType,
-    cell_line: core.cellLine[0],
+    cell_line: core.cellLine.id,
     targetList: geneExp.targetList
       ?.replaceAll(/[\s,;\r\n]+/g, ";")
       .split(";")
@@ -308,54 +426,100 @@ const runGeneExp = async (core, geneExp) => {
   return await getData(body);
 };
 
-const getBlackList = async (body) => {
+const fetchDatasets = async () => {
+  try {
+    const response = await Axios.get(SERVER_ADRESS + "/getDatasets", {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.datasets;
+  } catch (error) {
+    debugError("Failed to fetch datasets: ", error);
+    return [];
+  }
+};
+
+const fetchWholeGenomeDatasets = async () => {
+  try {
+    const response = await Axios.get(SERVER_ADRESS + "/getWholeGenomeDatasets", {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.datasets;
+  } catch (error) {
+    debugError("Failed to fetch whole genome datasets: ", error);
+    return [];
+  }
+};
+
+const runMultiDatasetComparison = async (core, multiDatasetSettings) => {
+  // Get list of whole genome datasets from backend
+  const wholeGenomeDatasets = await fetchWholeGenomeDatasets();
+  const datasetIds = wholeGenomeDatasets.map(dataset => dataset.id);
+
+  const body = {
+    gene: multiDatasetSettings.selectedGene,
+    targetList: multiDatasetSettings.targetList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    correlationType: multiDatasetSettings.corrType,
+    datasets: datasetIds,
+    request: "multiDatasetComparison",
+  };
+  return await getData(body);
+};
+
+const getBlackList = async () => {
   const response = await Axios.get(SERVER_ADRESS + "/getBlackList", {
     headers: {
       "ngrok-skip-browser-warning": "69420",
     },
-    body: JSON.stringify(body),
   }).then((response) => response.data);
 
   if (response === "FAILURE") throw new Error(response);
-  console.log(response);
-  return response; //JSON.parse(response)
+  return response;
 };
 
 const updateGeneLists = async (dataType) => {
   try {
-    console.log("Trying to update gene lists!");
     // Check if perturb already exists in DB
     const perturbVal = await get("geneList_" + dataType + "_perturb");
     const genesVal = await get("geneList_" + dataType + "_genes");
     if (perturbVal && perturbVal.size > 0 && genesVal && genesVal.size > 0)
       return;
 
-    console.log("Still Trying to update gene lists!");
     // If genes do not exist, download and save them
-    const response = await Axios.post(SERVER_ADRESS + "/getData", {
-      headers: {
-        "ngrok-skip-browser-warning": "69420",
-      },
-      body: JSON.stringify({
+    const response = await Axios.post(
+      SERVER_ADRESS + "/getData",
+      {
         dataset: dataType,
         request: "getAllGenes",
-      }),
-    });
+      },
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
 
     if (response && response.data) {
       set(
         "geneList_" + dataType + "_perturb",
-        new Set(response.data.result.perturbations)
+        new Set(response.data.result.perturbations.map((x) => x.split("_")[0].toUpperCase()))
       );
       set(
         "geneList_" + dataType + "_genes",
-        new Set(response.data.result.genes)
+        new Set(response.data.result.genes.map((x) => x.split("_")[0].toUpperCase()))
       );
     } else {
-      console.log("Something is wornge cant get genes", response);
+      debugError("Something is wornge cant get genes", response);
     }
   } catch (error) {
-    console.error("Error updating gene lists:", error);
+    debugError("Error updating gene lists:", error);
   }
 };
 
@@ -377,10 +541,69 @@ const fetchHugoGenes = async () => {
         set("allHugoGenes", new Set(response.data.result));
       }
     } catch (error) {
-      console.error("Failed to fetch Hugo genes: ", error);
+      debugError("Failed to fetch Hugo genes: ", error);
     }
   }
 };
+
+const fetchPrecomputedDR = async (params) => {
+  try {
+    const queryParams = new URLSearchParams();
+    // If filename is provided, use it directly (most reliable method)
+    if (params.filename) {
+      queryParams.append("filename", params.filename);
+    } else {
+      // Otherwise, use parameter matching
+      if (params.method) queryParams.append("method", params.method);
+      if (params.hvg_strategy) queryParams.append("hvg_strategy", params.hvg_strategy);
+      if (params.n_hvgs) queryParams.append("n_hvgs", params.n_hvgs.toString());
+      if (params.cell_lines) queryParams.append("cell_lines", params.cell_lines);
+    }
+
+    const response = await Axios.get(
+      `${SERVER_ADRESS}/getPrecomputedDR?${queryParams.toString()}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Error fetching pre-computed DR:", error);
+    throw error;
+  }
+};
+
+const listPrecomputedDR = async () => {
+  try {
+    const response = await Axios.get(`${SERVER_ADRESS}/listPrecomputedDR`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+
+    return response.data.available_results || [];
+  } catch (error) {
+    debugError("Error listing pre-computed DR:", error);
+    return [];
+  }
+};
+
+// Export task cancellation function
+export { cancelTask } from "./websocket";
+
+// Export new RESTful API functions (optional - can be used instead of legacy functions)
+export {
+  runCorrelationClusterV2,
+  runPCAGraphV2,
+  runMultiDatasetComparisonV2,
+  fetchDatasetsV2,
+  fetchWholeGenomeDatasetsV2,
+  getDatasetMetadataV2,
+  getDatasetGenesV2,
+} from "./v2";
 
 export {
   runPcaGraphCalc,
@@ -388,13 +611,23 @@ export {
   runUMAPGraphCalc,
   runtSNEGraphCalc,
   runCorrCalc,
+  runCorrCalcMultiDataset,
   runbiClusteringCalc,
   runPathFinderCalc,
   runGeneRegulation,
+  runGeneRegulationEnhanced,
   runHeatMap,
   runGeneSignature,
+  runGeneSignatureMultiDataset,
+  runGeneSignatureMultiDatasetSimilar,
   getBlackList,
   updateGeneLists,
   fetchHugoGenes,
   runGeneExp,
+  runMultiDatasetComparison,
+  fetchDatasets,
+  fetchWholeGenomeDatasets,
+  fetchPrecomputedDR,
+  listPrecomputedDR,
+  getData,
 };

@@ -48,7 +48,7 @@ const VideoHelpPage = ({ videoFile,  }) => {
 
         <div style={{ backgroundColor: 'white' , flex: 19, borderStyle:"solid", display:"grid" , margin: "3px" }} >
       
-          <video  ref={videoRef} onClick={handlePlayPause} width='100%' style={{objectPosition: "left top", objectFit:"cover", backgroundColor: '#fff;' }} preload="auto" autoPlay playsinline  muted loop >
+          <video  ref={videoRef} onClick={handlePlayPause} width='100%' style={{objectPosition: "left top", objectFit:"cover", backgroundColor: '#fff' }} preload="auto" autoPlay playsinline  muted loop >
           <source src={videoFile} type="video/webm" />
           Your browser does not support the video tag.
         </video>

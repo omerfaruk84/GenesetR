@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Field, Slider, TextArea, CheckBox , Toggle, Select, Divider} from '@oliasoft-open-source/react-ui-library';
+import { Field, Slider, TextArea, CheckBox , Toggle, Select, Divider, Spacer} from '@oliasoft-open-source/react-ui-library';
 import { PathFinderSettingsTypes } from './enums';
 import { pathfinderSettingsChanged } from '../../../store/settings/pathfinder-settings';
 import styles from './settings.module.scss';
@@ -169,6 +169,21 @@ const PathFinderSettings = ({
           />
         </div>
       </Field>
+      
+      <Field label='Maximum Nodes' labelLeft labelWidth="130px" helpText="Maximum number of nodes to display. Large networks will be limited to top nodes by neighbour count to prevent performance issues.">
+        <div className={styles.inputRange}>
+          <Slider
+            label={pathfinderSettings?.maxNodes || 1000}
+            max={2000}
+            min={100}
+            value={pathfinderSettings?.maxNodes || 1000}
+            onChange={({ target: { value } }) => pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.MAX_NODES,
+              newValue: value,
+            })}
+          />
+        </div>
+      </Field>
         
  
 
@@ -227,8 +242,157 @@ const PathFinderSettings = ({
         />
      </Field>
 
+      <Divider align="left"> Noise filters </Divider>
+      <Field
+        label="Filter Black Listed sgRNAs"
+        helpText="Enables or disables the filtering of blacklisted sgRNAs (sgRNAs that increase or decrease total mRNA levels). When 'Directional Only' is enabled, genes that downregulate or upregulate total mRNA levels will be removed from UPR and UNR genes, respectively."
+      >
+        <Spacer width="10px" />
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER1_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter1Enabled}
+          label="Enabled"
+        />
+        <Spacer width="16px" />
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER1_DIRECTIONAL,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter1Directional}
+          disabled={!pathfinderSettings?.filter1Enabled}
+          label="Directional Only"
+        />
+        <div className={styles.inputRange}>
+          <Slider
+            label={pathfinderSettings?.filterBlackListed}
+            max={60}
+            min={24}
+            disabled={!pathfinderSettings?.filter1Enabled}
+            value={pathfinderSettings?.filterBlackListed * 20}
+            onChange={({ target: { value } }) =>
+              pathfinderSettingsChanged({
+                settingName: PathFinderSettingsTypes.FILTER_BLACKLISTED,
+                newValue: value / 20,
+              })
+            }
+          />
+        </div>
+      </Field>
+      <Field
+        label="Filter Black Listed Genes"
+        helpText="Enables or disables the filtering of blacklisted genes (Genes that tend to be up or down regulated by abormally high number of sgRNAs). When 'Directional Only' is enabled, genes that tend to be nonspecifically up or downregulated will be removed from the genes that are up or downregulated by GOI, respectively"
+      >
+        <Spacer width="10px" />
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER2_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter2Enabled}
+          label="Enabled"
+        />
+        <Spacer width="16px" />
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER2_DIRECTIONAL,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter2Directional}
+          disabled={!pathfinderSettings?.filter2Enabled}
+          label="Directional Only"
+        />
+        <div className={styles.inputRange}>
+          <Slider
+            label={pathfinderSettings?.filterBlackListedExp}
+            disabled={!pathfinderSettings?.filter2Enabled}
+            max={60}
+            min={24}
+            value={pathfinderSettings?.filterBlackListedExp * 20}
+            onChange={({ target: { value } }) =>
+              pathfinderSettingsChanged({
+                settingName: PathFinderSettingsTypes.FILTER_BLACKLISTED_EXP,
+                newValue: value / 20,
+              })
+            }
+          />
+        </div>
+      </Field>
 
-      
+      <Field
+        label="Perturbation Count Filter"
+        helpText="Filters out genes that deregulate more than selected number of genes upon their knockdown. Default value is 750."
+      >
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER3_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter3Enabled}
+          label="Enabled"
+        />
+        <div className={styles.inputRange}>
+          <Slider
+            label={pathfinderSettings?.filterCount}
+            disabled={!pathfinderSettings?.filter3Enabled}
+            max={2500}
+            step={250}
+            min={250}
+            value={pathfinderSettings?.filterCount}
+            onChange={({ target: { value } }) =>
+              pathfinderSettingsChanged({
+                settingName: PathFinderSettingsTypes.FILTER_COUNT,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
+
+      <Field
+        label="Gene Expression Count Filter"
+        helpText="Filters out genes that are deregulated by more than selected number of perturbations. Default value is 750."
+      >
+        <Toggle
+          onChange={({ target: { checked } }) =>
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.FILTER4_ENABLED,
+              newValue: checked,
+            })
+          }
+          checked={pathfinderSettings?.filter4Enabled}
+          label="Enabled"
+        />
+        <div className={styles.inputRange}>
+          <Slider
+            label={pathfinderSettings?.filterCountExp}
+            disabled={!pathfinderSettings?.filter4Enabled}
+            max={1000}
+            step={250}
+            min={250}
+            value={pathfinderSettings?.filterCountExp}
+            onChange={({ target: { value } }) =>
+              pathfinderSettingsChanged({
+                settingName: PathFinderSettingsTypes.FILTER_COUNT_EXP,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
 
     </>
   );
@@ -237,6 +401,7 @@ const PathFinderSettings = ({
 
 const mapStateToProps = ({ settings }) => ({
   pathfinderSettings: settings?.pathfinder ?? {},
+  coreSettings: settings?.core ?? {},
 });
 
 const mapDispatchToProps = {

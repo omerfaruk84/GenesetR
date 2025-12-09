@@ -86,11 +86,71 @@ const AboutPage = () => {
             🎺 GeneSetR will push the heatmap limits to over 1000 X 1000,
             significantly larger than the current ~300 X 300 size limit.
           </p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-15</span>
+          <p>
+            We've made significant improvements to enhance your GeneSetR experience:
+            <br />
+            🔧 Fixed a severe bug that was causing memory leaks and freezing during heatmap plotting, ensuring smoother and more stable performance.
+            <br />
+            📱 Enhanced application responsiveness across different screen sizes for better accessibility on various devices.
+            <br />
+            🎨 Improved user interface with comprehensive guidelines for each module, making navigation and usage more intuitive.
+          </p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-14</span>
+          <p>A major bug leading to memory leak and crashes has been fixed.</p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-02-07</span>
+          <p>
+            We have added three new datasets to GeneSetR. And some small bugs
+            are fixed.
+          </p>
+
           <hr
             style={{
               height: 1,
             }}
           />
+
+          <span className={styles.updateDate}>2025-01-20</span>
+          <p>5 more datasets are added to GeneSetR. Several bugs are fixed.</p>
+          <hr style={{ height: 1 }} />
+          <span className={styles.updateDate}>2025-01-14</span>
+          <p>
+            We have added several new datasets to GeneSetR. And several other
+            ones will be coming very soon.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2025-01-10</span>
+          <p>
+            Several bugs are fixed. Now, left settings menu can be scrolled
+            independently form the main view.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-11-25</span>
+          <p>
+            Now in gene signature module it is possible to search online gene
+            signatures from the MSigDB, and add your own gene signature to our
+            gene signarue database.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-11-14</span>
+          <p>
+            Genelist module is updated. Now it is easier to manage your gene
+            lists.
+          </p>
+          <hr style={{ height: 1 }} />
+
+          <span className={styles.updateDate}>2024-06-15</span>
+          <p>
+            We have updated Heat Map component. Now the texts are more readable,
+            row names are more visible, and zooming is easier.
+          </p>
+          <hr style={{ height: 1 }} />
 
           <span className={styles.updateDate}>2024-03-11</span>
           <p>
@@ -187,6 +247,213 @@ const AboutPage = () => {
           </p>
         </div>
       </div>
+
+      <div className={styles.box}>
+        <h1> DATASETS </h1>
+        <div className={styles.tableContainer}>
+          <table>
+            <thead>
+              <tr>
+                <th>Dataset Name</th>
+                <th>Publication</th>
+                <th>Type</th>
+                <th>Cell Line</th>
+                <th>Number of Perturbations</th>
+                <th>Number of Detected Genes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>K562 Whole Genome</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>11,258</td>
+                <td>8,248</td>
+              </tr>
+              <tr>
+                <td>K562 Essential</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>2,285</td>
+                <td>8,563</td>
+              </tr>
+              <tr>
+                <td>K562 Essential - Mixscape</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>3,300</td>
+                <td>8,425</td>
+              </tr>
+              <tr>
+                <td>RPE1 Essential</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>RPE1</td>
+                <td>2,679</td>
+                <td>8,749</td>
+              </tr>
+              <tr>
+                <td>RPE1 Essential - Mixscape</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>RPE1</td>
+                <td>3,939</td>
+                <td>8,688</td>
+              </tr>
+              <tr>
+                <td>HepG2 Essential</td>
+                <td>
+                  Transcriptome-wide characterization of genetic perturbations
+                </td>
+                <td>CRISPRi</td>
+                <td>HepG2</td>
+                <td>3,667</td>
+                <td>9,503</td>
+              </tr>
+              <tr>
+                <td>Jurkat Essential</td>
+                <td>
+                  Decoding Heterogenous Single-cell Perturbation Responses
+                </td>
+                <td>CRISPRi</td>
+                <td>Jurkat</td>
+                <td>1,514</td>
+                <td>8,811</td>
+              </tr>
+              <tr>
+                <td>Transcription Factor Atlas - MixScape analyses</td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>142</td>
+                <td>11,796</td>
+              </tr>
+              <tr>
+                <td>
+                  Transcription Factor Atlas - ShareSeq (MixScape analyses)
+                </td>
+                <td>
+                  A transcription factor atlas of directed differentiation
+                </td>
+                <td>ORF Overexpression</td>
+                <td>hESCs</td>
+                <td>185</td>
+                <td>12,221</td>
+              </tr>
+              <tr>
+                <td>THP1 - regulators of immune check points</td>
+                <td>
+                  Characterizing the molecular regulation of inhibitory immune
+                  checkpoints with multimodal single-cell screens
+                </td>
+                <td>CRISPR KO</td>
+                <td>THP1</td>
+                <td>36</td>
+                <td>9873</td>
+              </tr>
+              <tr>
+                <td>Calu-3 SARS-CoV-2 host factors</td>
+                <td>
+                  Systematic functional interrogation of SARS-CoV-2 host factors
+                  using Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>Calu-3</td>
+                <td>175</td>
+                <td>11,486</td>
+              </tr>
+              <tr>
+                <td>THP1 - immune response to LPS CRISPRi</td>
+                <td>
+                  Compressed Perturb-seq: highly efficient screens for
+                  regulatory circuits using random composite perturbations
+                </td>
+                <td>CRISPRi</td>
+                <td>THP1</td>
+                <td>623</td>
+                <td>11,690</td>
+              </tr>
+              <tr>
+                <td>THP1 - immune response to LPS CRISPR-KO</td>
+                <td>
+                  Compressed Perturb-seq: highly efficient screens for
+                  regulatory circuits using random composite perturbations
+                </td>
+                <td>CRISPRKO</td>
+                <td>THP1</td>
+                <td>634</td>
+                <td>10,930</td>
+              </tr>
+              <tr>
+                <td>iPSC induced neurons-CRISPRa</td>
+                <td>
+                  Genome-wide CRISPRi/a screens in human neurons link lysosomal
+                  failure to ferroptosis
+                </td>
+                <td>CRISPRa</td>
+                <td>iPSC induced neurons</td>
+                <td>100</td>
+                <td>10,634</td>
+              </tr>
+              <tr>
+                <td>iPSC induced neurons-CRISPRi</td>
+                <td>
+                  Genome-wide CRISPRi/a screens in human neurons link lysosomal
+                  failure to ferroptosis
+                </td>
+                <td>CRISPRi</td>
+                <td>iPSC induced neurons</td>
+                <td>186</td>
+                <td>11,401</td>
+              </tr>
+              <tr>
+                <td>HEK293-idCas9</td>
+                <td>
+                  PerturbSci-Kinetics: Dissecting key regulators of
+                  transcriptome kinetics through scalable single-cell 2 RNA
+                  profiling of pooled CRISPR screens
+                </td>
+                <td>CRISPRi</td>
+                <td>HEK293</td>
+                <td>237</td>
+                <td>9,410</td>
+              </tr>
+              <tr>
+                <td>"Jurkat - TCR signaling</td>
+                <td>
+                  Pooled CRISPR screening with single-cell transcriptome
+                  read-out
+                </td>
+                <td>CRISPRi</td>
+                <td>Jurkat</td>
+                <td>32</td>
+                <td>9,949</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className={styles.box}>
         <h1> CONTACT US </h1>
         <div className={styles.contactBody}>

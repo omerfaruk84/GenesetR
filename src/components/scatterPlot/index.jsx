@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
+import { safeJsonParse } from "../../utils/jsonUtils";
+import { createGeneTooltipFormatter } from "../../utils/geneFunctionUtils";
 
 import { GeneSetEnrichmentTable } from "../enrichment/";
 import "echarts-gl";
@@ -53,111 +55,46 @@ echarts.use([
 
 registerTransform(transform.clustering);
 
+const isDevEnv = process.env.NODE_ENV !== "production";
+
 const ScatterPlot = ({
   graphData,
   scatterplotSettings,
   coreSettings,
   coreSettingsChanged,
+  precomputedDrSettings,
 }) => {
   const [options, setOptions] = useState({});
+  const [searchGene, setSearchGene] = useState("");
+  const [chartInstance, setChartInstance] = useState(null);
 
-  const data = [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
-  const genes = scatterplotSettings.genesTolabel
-    .replaceAll(/\s+|,\s+|,/g, ";")
-    ?.split(";");
-  const genesTolabel = new Set(genes);
-  var pieces = [];
-  const clusterData = [];
-  const minandmax = [0, 0, 0, 0, 0, 0];
+  // Memoize expensive gene processing
+  const genesTolabel = useMemo(() => {
+    const genes = scatterplotSettings.genesTolabel
+      .replaceAll(/\s+|,\s+|,/g, ";")
+      ?.split(";");
+    return new Set(genes);
+  }, [scatterplotSettings.genesTolabel]);
 
-  //const [clusters, setClusters] = useState();
-
-  const clusters = {};
-
-  let graphdata = graphData;
-  if (
-    graphdata &&
-    graphdata["PC1"] &&
-    graphdata["PC2"] &&
-    graphdata["GeneSymbols"]
-  ) {
-    // There's no real number bigger than plus Infinity
-    var lowest = Number.POSITIVE_INFINITY;
-    var highest = Number.NEGATIVE_INFINITY;
-    var tmp;
-    for (let i = graphdata["PC1"].length - 1; i >= 0; i--) {
-      tmp = graphdata["PC1"][i];
-      if (tmp < lowest) lowest = tmp;
-      if (tmp > highest) highest = tmp;
-    }
-
-    minandmax[0] = lowest;
-    minandmax[1] = highest;
-
-    lowest = Number.POSITIVE_INFINITY;
-    highest = Number.NEGATIVE_INFINITY;
-    for (let i = graphdata["PC2"].length - 1; i >= 0; i--) {
-      tmp = graphdata["PC2"][i];
-      if (tmp < lowest) lowest = tmp;
-      if (tmp > highest) highest = tmp;
-    }
-    minandmax[2] = lowest;
-    minandmax[3] = highest;
-
-    lowest = Number.POSITIVE_INFINITY;
-    highest = Number.NEGATIVE_INFINITY;
-    for (let i = graphdata["PC3"].length - 1; i >= 0; i--) {
-      tmp = graphdata["PC3"][i];
-      if (tmp < lowest) lowest = tmp;
-      if (tmp > highest) highest = tmp;
-    }
-    minandmax[4] = lowest;
-    minandmax[5] = highest;
-
-    if (graphdata["clusterCount"] > 0) {
-      let arrayOfArrays = Array.from(
-        Array(graphdata["clusterCount"]),
-        () => []
-      );
-      console.log("arrayOfArrays empty", arrayOfArrays);
-      for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
-        //collect the clusters
-        if (graphdata["clusterLabels"][i] > -1) {
-          arrayOfArrays[graphdata["clusterLabels"][i]].push(
-            graphdata["GeneSymbols"][i]
-          );
-          //console.log(i, arrayOfArrays)
-        }
-
-        data.push([
-          graphdata["PC1"][i],
-          graphdata["PC2"][i],
-          graphdata["PC3"][i],
-          graphdata["GeneSymbols"][i],
-          graphdata["clusterLabels"][i],
-          graphdata["clusterProb"][i],
-        ]);
-      }
-
-      //clusters = {}
-      console.log("arrayOfArrays", arrayOfArrays);
-      for (let i = 0; i < arrayOfArrays.length; i++) {
-        clusters["Cluster" + (i + 1)] = arrayOfArrays[i].join();
-      }
-
-      console.log("clusters", clusters);
-    } else {
-      for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
-        data.push([
-          graphdata["PC1"][i] ?? 0,
-          graphdata["PC2"][i] ?? 0,
-          graphdata["PC3"][i] ?? 0,
-          graphdata["GeneSymbols"][i] ?? 0,
-          -1,
-          1,
-        ]);
-      }
-    }
+  // Memoize data processing
+  const processedData = useMemo(() => {
+    // Check if we should color by cell line
+    const colorBy = precomputedDrSettings?.colorBy || "cluster";
+    // In 'genes' mode, cellLines should be None/empty - samples don't belong to specific cell lines
+    // Only allow cell line coloring if cellLines is a valid array with actual values
+    const hasCellLines = graphData?.cellLines && 
+                        Array.isArray(graphData.cellLines) && 
+                        graphData.cellLines.length > 0 &&
+                        graphData.cellLines.some(cl => cl !== null && cl !== undefined && cl !== "");
+    const shouldColorByCellLine = colorBy === "cellLine" && hasCellLines;
+    
+    const data = shouldColorByCellLine 
+      ? [["PC1", "PC2", "PC3", "GeneSymbol", "CellLine", "Cluster", "ClusterProb"]]
+      : [["PC1", "PC2", "PC3", "GeneSymbol", "Cluster", "ClusterProb"]];
+    var pieces = [];
+    const clusterData = [];
+    const minandmax = [0, 0, 0, 0, 0, 0];
+    const clusters = {};
 
     var COLOR_ALL = [
       "#9b9b9b",
@@ -180,56 +117,239 @@ const ScatterPlot = ({
       "#17becf",
     ];
 
-    if (graphdata["clusterCount"] > 0) {
-      for (let i = -1; i < graphdata["clusterCount"]; i++) {
-        if (i === -1) {
-          pieces.push({
-            value: i,
-            label: "Unclustered",
-            color: COLOR_ALL[0],
-            symbolSize: scatterplotSettings.symbolSize,
-            symbol: "circle",
-          });
-          continue;
-        }
+    let graphdata = graphData;
+    
+    if (isDevEnv) {
+      console.log('ScatterPlot - Received graphData:', graphdata);
+      console.log('ScatterPlot - Data structure check:', {
+        hasGraphData: !!graphdata,
+        hasPC1: !!graphdata?.["PC1"],
+        hasPC2: !!graphdata?.["PC2"],
+        hasGeneSymbols: !!graphdata?.["GeneSymbols"],
+        pc1Length: graphdata?.["PC1"]?.length,
+        pc2Length: graphdata?.["PC2"]?.length,
+        geneSymbolsLength: graphdata?.["GeneSymbols"]?.length,
+      });
+    }
+    
+    if (
+      !graphdata ||
+      !graphdata["PC1"] ||
+      !graphdata["PC2"] ||
+      !graphdata["GeneSymbols"]
+    ) {
+      if (isDevEnv) {
+        console.log('ScatterPlot - Data validation failed, returning empty data');
+      }
+      return { data, pieces, clusterData, minandmax, clusters };
+    }
 
+    // Calculate min/max for PC1
+    var lowest = Number.POSITIVE_INFINITY;
+    var highest = Number.NEGATIVE_INFINITY;
+    var tmp;
+    for (let i = graphdata["PC1"].length - 1; i >= 0; i--) {
+      tmp = graphdata["PC1"][i];
+      if (tmp < lowest) lowest = tmp;
+      if (tmp > highest) highest = tmp;
+    }
+
+    minandmax[0] = lowest;
+    minandmax[1] = highest;
+
+    // Calculate min/max for PC2
+    lowest = Number.POSITIVE_INFINITY;
+    highest = Number.NEGATIVE_INFINITY;
+    for (let i = graphdata["PC2"].length - 1; i >= 0; i--) {
+      tmp = graphdata["PC2"][i];
+      if (tmp < lowest) lowest = tmp;
+      if (tmp > highest) highest = tmp;
+    }
+
+    minandmax[2] = lowest;
+    minandmax[3] = highest;
+
+    // Calculate min/max for PC3 if exists
+    if (graphdata["PC3"]) {
+      lowest = Number.POSITIVE_INFINITY;
+      highest = Number.NEGATIVE_INFINITY;
+      for (let i = graphdata["PC3"].length - 1; i >= 0; i--) {
+        tmp = graphdata["PC3"][i];
+        if (tmp < lowest) lowest = tmp;
+        if (tmp > highest) highest = tmp;
+      }
+      minandmax[4] = lowest;
+      minandmax[5] = highest;
+    }
+
+    // Cell line color mapping
+    const cellLineColors = {
+      "K562gwps": "#1f77b4",      // Blue
+      "HEK293gwps": "#ff7f0e",    // Orange
+      "HCT116gwps": "#2ca02c",    // Green
+    };
+    
+    const cellLineNames = {
+      "K562gwps": "K562",
+      "HEK293gwps": "HEK293",
+      "HCT116gwps": "HCT116",
+    };
+    
+    // Process data based on coloring mode
+    if (shouldColorByCellLine) {
+      // Color by cell line
+      const uniqueCellLines = [...new Set(graphdata["cellLines"])].sort();
+      
+      // Create pieces for cell lines
+      uniqueCellLines.forEach((cellLine, idx) => {
         pieces.push({
-          value: i,
-          label: "Cluster " + (i + 1),
-          color: COLOR_ALL[(i + 1) % 18],
+          value: cellLine,
+          label: cellLineNames[cellLine] || cellLine,
+          color: cellLineColors[cellLine] || COLOR_ALL[idx % COLOR_ALL.length],
           symbolSize: scatterplotSettings.symbolSize,
           symbol: "circle",
         });
-
-        if (
-          graphdata["x" + i] &&
-          graphdata["x" + i].length > 0 &&
-          graphdata["y" + i] &&
-          graphdata["y" + i].length > 0
-        ) {
-          clusterData.push([i / 10000]);
+      });
+      
+      // Build data array with cell line info
+      for (let i = 0; i < graphdata["GeneSymbols"].length; i++) {
+        const cellLine = graphdata["cellLines"][i];
+        data.push([
+          graphdata["PC1"][i],
+          graphdata["PC2"][i],
+          graphdata["PC3"][i] || "",
+          graphdata["GeneSymbols"][i],
+          cellLine,
+          graphdata["clusterLabels"]?.[i] ?? -1,
+          graphdata["clusterProb"]?.[i] ?? 1,
+        ]);
+      }
+      
+      // Still collect clusters for enrichment table
+      if (graphdata["clusterCount"] > 0) {
+        let arrayOfArrays = Array.from(
+          Array(graphdata["clusterCount"]),
+          () => []
+        );
+        for (var i = 0; i < graphdata["GeneSymbols"].length; i++) {
+          if (graphdata["clusterLabels"][i] > -1) {
+            arrayOfArrays[graphdata["clusterLabels"][i]].push(
+              graphdata["GeneSymbols"][i]
+            );
+          }
+        }
+        for (let i = 0; i < arrayOfArrays.length; i++) {
+          clusters["Cluster" + (i + 1)] = arrayOfArrays[i].join();
         }
       }
-    } //if there is no cluster we will have all of them same color
-    else {
-      pieces.push({
-        value: -1,
-        label: "Unclustered",
-        color: COLOR_ALL[1],
-      });
+    } else {
+      // Color by cluster (original behavior)
+      if (graphdata["clusterCount"] > 0) {
+        let arrayOfArrays = Array.from(
+          Array(graphdata["clusterCount"]),
+          () => []
+        );
+        
+        for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
+          //collect the clusters
+          if (graphdata["clusterLabels"][i] > -1) {
+            arrayOfArrays[graphdata["clusterLabels"][i]].push(
+              graphdata["GeneSymbols"][i]
+            );
+          }
+
+          data.push([
+            graphdata["PC1"][i],
+            graphdata["PC2"][i],
+            graphdata["PC3"][i],
+            graphdata["GeneSymbols"][i],
+            graphdata["clusterLabels"][i],
+            graphdata["clusterProb"][i],
+          ]);
+        }
+
+        //clusters = {}
+        for (let i = 0; i < arrayOfArrays.length; i++) {
+          clusters["Cluster" + (i + 1)] = arrayOfArrays[i].join();
+        }
+      } else {
+        for (let i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
+          data.push([
+            graphdata["PC1"][i] ?? 0,
+            graphdata["PC2"][i] ?? 0,
+            graphdata["PC3"][i] ?? 0,
+            graphdata["GeneSymbols"][i] ?? 0,
+            -1,
+            1,
+          ]);
+        }
+      }
     }
-  }
+
+    // Create pieces for clusters (if not coloring by cell line)
+    if (!shouldColorByCellLine) {
+      if (graphdata["clusterCount"] > 0) {
+        for (let i = -1; i < graphdata["clusterCount"]; i++) {
+          if (i === -1) {
+            pieces.push({
+              value: i,
+              label: "Unclustered",
+              color: COLOR_ALL[0],
+              symbolSize: scatterplotSettings.symbolSize,
+              symbol: "circle",
+            });
+            continue;
+          }
+
+          pieces.push({
+            value: i,
+            label: "Cluster " + (i + 1),
+            color: COLOR_ALL[(i + 1) % 18],
+            symbolSize: scatterplotSettings.symbolSize,
+            symbol: "circle",
+          });
+
+          if (
+            graphdata["x" + i] &&
+            graphdata["x" + i].length > 0 &&
+            graphdata["y" + i] &&
+            graphdata["y" + i].length > 0
+          ) {
+            clusterData.push([i / 10000]);
+          }
+        }
+      } //if there is no cluster we will have all of them same color
+      else {
+        pieces.push({
+          value: -1,
+          label: "Unclustered",
+          color: COLOR_ALL[1],
+        });
+      }
+    }
+
+    return { data, pieces, clusterData, minandmax, clusters, COLOR_ALL, shouldColorByCellLine };
+  }, [graphData, scatterplotSettings.symbolSize, precomputedDrSettings?.colorBy]);
+
+  const data = processedData.data;
+  const pieces = processedData.pieces;
+  const clusterData = processedData.clusterData;
+  const minandmax = processedData.minandmax;
+  const clusters = processedData.clusters;
+  const COLOR_ALL = processedData.COLOR_ALL;
+  const shouldColorByCellLine = processedData.shouldColorByCellLine;
+
   useEffect(() => {
     function renderItem(params, api) {
       var curIndex = api.value(0) * 10000;
 
       const points = [];
-      if (graphdata["x" + curIndex]) {
-        for (var i = 0; i < graphdata["x" + curIndex].length; i++) {
+      if (graphData["x" + curIndex]) {
+        for (var i = 0; i < graphData["x" + curIndex].length; i++) {
           points.push(
             api.coord([
-              graphdata["x" + curIndex][i],
-              graphdata["y" + curIndex][i],
+              graphData["x" + curIndex][i],
+              graphData["y" + curIndex][i],
             ])
           );
         }
@@ -255,7 +375,12 @@ const ScatterPlot = ({
       };
     }
 
-    if (coreSettings.graphType === "2D") {
+    // Determine if we should show 2D or 3D
+    // Use 3D if PC3 is available and graphType is not explicitly "2D"
+    const hasPC3 = graphData?.PC3 && Array.isArray(graphData.PC3) && graphData.PC3.length > 0 && graphData.PC3.some(v => v !== "" && v != null);
+    const use2D = coreSettings.graphType === "2D" || !hasPC3;
+    
+    if (use2D) {
       //2D chart
       setOptions({
         dataset: [
@@ -269,55 +394,54 @@ const ScatterPlot = ({
 
         tooltip: {
           position: "top",
-          extraCssText: "width:auto; white-space:pre-wrap;",
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#FFFFFF",
-            width: 100,
-            overflow: "break",
+            color: "#333333",
+            lineHeight: 1.4,
           },
-          formatter: function (params, ticket, callback) {
-            //console.log("Check", params)
-            var res = localStorage.getItem(params.data[3]);
-            if (res !== null) {
-              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
-              return localStorage.getItem(params.data[3]);
+          formatter: createGeneTooltipFormatter({
+            parseData: (params) => {
+              if (shouldColorByCellLine) {
+                // When coloring by cell line, data structure is: [PC1, PC2, PC3, GeneSymbol, CellLine, Cluster, ClusterProb]
+                const cellLineNames = {
+                  "K562gwps": "K562",
+                  "HEK293gwps": "HEK293",
+                  "HCT116gwps": "HCT116",
+                };
+                return {
+                  geneSymbol: params.data[3],
+                  cellLine: cellLineNames[params.data[4]] || params.data[4],
+                  cluster: params.data[5],
+                  clusterProb: params.data[6],
+                  neighbourCount: undefined,
+                  geneType: undefined,
+                  knockdown: undefined
+                };
+              } else {
+                // Original structure: [PC1, PC2, PC3, GeneSymbol, Cluster, ClusterProb]
+                return {
+                  geneSymbol: params.data[3],
+                  cluster: params.data[4],
+                  clusterProb: params.data[5],
+                  cellLine: undefined,
+                  neighbourCount: undefined,
+                  geneType: undefined,
+                  knockdown: undefined
+                };
+              }
             }
-
-            $.get(
-              "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3]
-            )
-              .done(function (content) {
-                let parsedContent =
-                  typeof content === "string" ? JSON.parse(content) : content;
-                console.log(content);
-                res =
-                  '<span style="color: #e28743";> <b>' +
-                  params.data[3] +
-                  "(" +
-                  parsedContent?.name +
-                  "): </b></span>" +
-                  parsedContent?.description;
-
-                localStorage.setItem(params.data[3], res);
-                callback(ticket, res);
-              })
-              .fail(function (jqXHR, textStatus, errorThrown) {
-                console.error(
-                  "Request failed: " + textStatus + ", " + errorThrown
-                );
-              });
-            return "Loading";
-          },
+          }),
         },
         visualMap: {
           type: "piecewise",
           top: "top",
           left: "right",
-          dimension: 4,
+          dimension: shouldColorByCellLine ? 4 : 4, // CellLine or Cluster is at index 4
           pieces: pieces,
           orient: "vertical",
           seriesIndex: 1,
@@ -430,8 +554,8 @@ const ScatterPlot = ({
           },
         ],
       });
-    } else {
-      //3D chart
+    } else if (hasPC3) {
+      //3D chart (only if PC3 is available)
       setOptions({
         grid3D: {
           viewControl: {
@@ -512,49 +636,23 @@ const ScatterPlot = ({
           formatter: "{GeneSymbol}",
         },
         tooltip: {
-          extraCssText: "width:auto; white-space:pre-wrap;",
+          extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          borderColor: "#e0e0e0",
+          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#FFFFFF",
-            width: 100,
-            overflow: "break",
+            color: "#333333",
+            lineHeight: 1.4,
           },
-          formatter: function (params, ticket, callback) {
-            var res = localStorage.getItem(params.data[3]);
-            //console.log("Check", params)
-            if (res !== null) {
-              //console.log("From Local Storage:", localStorage.getItem(params.data[3]),params)
-              return localStorage.getItem(params.data[3]);
-            }
-
-            $.get(
-              "https://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/" +
-                params.data[3]
-            )
-              .done(function (content) {
-                let parsedContent =
-                  typeof content === "string" ? JSON.parse(content) : content;
-                console.log(content);
-                res =
-                  '<span style="color: #e28743";> <b>' +
-                  params.data[3] +
-                  "(" +
-                  parsedContent?.name +
-                  "): </b></span>" +
-                  parsedContent?.description;
-                localStorage.setItem(params.data[3], res);
-                callback(ticket, res);
-              })
-              .fail(function (jqXHR, textStatus, errorThrown) {
-                console.error(
-                  "Request failed: " + textStatus + ", " + errorThrown
-                );
-              });
-
-            return "Loading";
-          },
+          formatter: createGeneTooltipFormatter({
+            parseData: (params) => ({
+              geneSymbol: params.data[3],
+              cluster: params.data[4],
+              clusterProb: params.data[5]
+            })
+          }),
         },
         dataset: {
           dimensions: [
@@ -615,7 +713,183 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings, scatterplotSettings, graphdata]);
+  }, [coreSettings, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData]);
+
+  // Function to search and zoom to a gene
+  const handleSearchGene = () => {
+    if (!searchGene || !chartInstance || !graphData || !graphData.GeneSymbols) {
+      return;
+    }
+    
+    const geneSymbol = searchGene.trim().toUpperCase();
+    const geneIndex = graphData.GeneSymbols.findIndex(
+      (g) => g && g.toUpperCase() === geneSymbol
+    );
+    
+    if (geneIndex === -1) {
+      alert(`Gene "${searchGene}" not found in the dataset.`);
+      return;
+    }
+    
+    // Get the coordinates for this gene
+    const pc1 = graphData.PC1[geneIndex];
+    const pc2 = graphData.PC2[geneIndex];
+    const pc3 = graphData.PC3 ? graphData.PC3[geneIndex] : 0;
+    
+    // Get current option
+    const currentOption = chartInstance.getOption();
+    
+    // Calculate zoom range (show area around the gene)
+    const zoomRange = 0.2; // Show 20% of the data range around the gene
+    const pc1Min = Math.min(...graphData.PC1);
+    const pc1Max = Math.max(...graphData.PC1);
+    const pc2Min = Math.min(...graphData.PC2);
+    const pc2Max = Math.max(...graphData.PC2);
+    const pc3Min = graphData.PC3 ? Math.min(...graphData.PC3) : 0;
+    const pc3Max = graphData.PC3 ? Math.max(...graphData.PC3) : 0;
+    
+    const pc1Range = pc1Max - pc1Min;
+    const pc2Range = pc2Max - pc2Min;
+    const pc3Range = pc3Max - pc3Min;
+    const maxRange = Math.max(pc1Range, pc2Range, pc3Range);
+    
+    // Check if it's a 3D chart
+    if (currentOption.grid3D && currentOption.grid3D[0]) {
+      // 3D chart - update view control and axis ranges
+      const newOption = {
+        grid3D: [{
+          ...currentOption.grid3D[0],
+          viewControl: {
+            ...currentOption.grid3D[0].viewControl,
+            target: [pc1, pc2, pc3],
+            distance: maxRange * 1.5, // Zoom in by reducing distance
+          }
+        }],
+        xAxis3D: [{
+          ...currentOption.xAxis3D[0],
+          min: pc1 - pc1Range * zoomRange,
+          max: pc1 + pc1Range * zoomRange,
+        }],
+        yAxis3D: [{
+          ...currentOption.yAxis3D[0],
+          min: pc2 - pc2Range * zoomRange,
+          max: pc2 + pc2Range * zoomRange,
+        }]
+      };
+      
+      if (graphData.PC3 && currentOption.zAxis3D && currentOption.zAxis3D[0]) {
+        newOption.zAxis3D = [{
+          ...currentOption.zAxis3D[0],
+          min: pc3 - pc3Range * zoomRange,
+          max: pc3 + pc3Range * zoomRange,
+        }];
+      }
+      
+      chartInstance.setOption(newOption, false);
+    } else {
+      // 2D chart - use dataZoom
+      chartInstance.dispatchAction({
+        type: 'dataZoom',
+        startValue: pc1 - pc1Range * zoomRange,
+        endValue: pc1 + pc1Range * zoomRange,
+        xAxisIndex: 0
+      });
+      
+      chartInstance.dispatchAction({
+        type: 'dataZoom',
+        startValue: pc2 - pc2Range * zoomRange,
+        endValue: pc2 + pc2Range * zoomRange,
+        yAxisIndex: 0
+      });
+    }
+    
+    // Highlight the gene by selecting it and showing label
+    // Use select action which works better with 3D charts
+    setTimeout(() => {
+      // Select the data point
+      chartInstance.dispatchAction({
+        type: 'select',
+        seriesIndex: 0,
+        dataIndex: geneIndex
+      });
+      
+      // Show tooltip
+      chartInstance.dispatchAction({
+        type: 'showTip',
+        seriesIndex: 0,
+        dataIndex: geneIndex
+      });
+      
+      // Update the series to show label for this specific gene
+      const updatedOption = chartInstance.getOption();
+      if (updatedOption.series && updatedOption.series[0]) {
+        const highlightOption = {
+          series: [{
+            ...updatedOption.series[0],
+            label: {
+              ...updatedOption.series[0].label,
+              show: true,
+              formatter: function(params) {
+                // Always show the searched gene label
+                if (params.dataIndex === geneIndex) {
+                  return graphData.GeneSymbols[geneIndex];
+                }
+                // Show other labels based on original logic
+                const showLabels = scatterplotSettings?.showLabels === true;
+                const geneSymbol = params.data && params.data[3] ? params.data[3] : '';
+                if (showLabels || (geneSymbol && genesTolabel.has(geneSymbol))) {
+                  return geneSymbol;
+                }
+                return ' ';
+              },
+              fontSize: function(params) {
+                return params.dataIndex === geneIndex ? 18 : (scatterplotSettings?.labelSize || 12);
+              },
+              fontWeight: function(params) {
+                return params.dataIndex === geneIndex ? 'bold' : 'normal';
+              },
+              color: function(params) {
+                return params.dataIndex === geneIndex ? '#ff0000' : 'black';
+              }
+            },
+            emphasis: {
+              ...updatedOption.series[0].emphasis,
+              itemStyle: {
+                color: '#ff0000',
+                borderColor: '#ff0000',
+                borderWidth: 4,
+                shadowBlur: 15,
+                shadowColor: 'rgba(255, 0, 0, 0.9)'
+              },
+              label: {
+                show: true,
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: '#ff0000'
+              }
+            },
+            select: {
+              itemStyle: {
+                color: '#ff0000',
+                borderColor: '#ff0000',
+                borderWidth: 4,
+                shadowBlur: 15,
+                shadowColor: 'rgba(255, 0, 0, 0.9)'
+              },
+              label: {
+                show: true,
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: '#ff0000'
+              }
+            }
+          }]
+        };
+        
+        chartInstance.setOption(highlightOption, false);
+      }
+    }, 300);
+  };
 
   return (
     /*<EchartsReact
@@ -625,6 +899,51 @@ const ScatterPlot = ({
 
     <>
       <div style={{ width: "100%", height: "100%" }}>
+        {/* Gene Search Box */}
+        <div style={{ 
+          padding: "10px", 
+          backgroundColor: "#f5f5f5", 
+          borderBottom: "1px solid #ddd",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px"
+        }}>
+          <label style={{ fontWeight: "bold", marginRight: "5px" }}>Search Gene:</label>
+          <input
+            type="text"
+            value={searchGene}
+            onChange={(e) => setSearchGene(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") {
+                handleSearchGene();
+              }
+            }}
+            placeholder="Enter gene symbol (e.g., TP53)"
+            style={{
+              padding: "6px 12px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              fontSize: "14px",
+              flex: "1",
+              maxWidth: "300px"
+            }}
+          />
+          <button
+            onClick={handleSearchGene}
+            style={{
+              padding: "6px 16px",
+              backgroundColor: "#1976d2",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "500"
+            }}
+          >
+            Search & Zoom
+          </button>
+        </div>
         <Row spacing={0} width="100%" height="80vh">
           <ReactEChartsCore
             echarts={echarts}
@@ -632,6 +951,9 @@ const ScatterPlot = ({
             style={{ height: "100%", width: "100%" }}
             notMerge={true}
             lazyUpdate={true}
+            onChartReady={(chart) => {
+              setChartInstance(chart);
+            }}
           />
         </Row>
         <Spacer height="2em" />
@@ -648,6 +970,7 @@ const ScatterPlot = ({
 const mapStateToProps = ({ settings }) => ({
   scatterplotSettings: settings?.scatterplot ?? {},
   coreSettings: settings?.core ?? {},
+  precomputedDrSettings: settings?.precomputedDr ?? {},
 });
 const mapDispatchToProps = {
   coreSettingsChanged,

@@ -12,7 +12,7 @@ const BiClusteringSettings = ({
 
   return (
     <>
-      <Field label='Cluster Count'>
+      <Field label='Cluster Count' helpText="Number of biclusters to identify. Higher values find more specific patterns but may lead to overfitting.">
         <Input
           onChange={({ target: { value } }) => biClusteringSettingsChanged({ 
             settingName: BiClusteringSettingsTypes.CLUSTER_COUNT,
@@ -24,7 +24,7 @@ const BiClusteringSettings = ({
         />
       </Field>
 
-      <Field label='Random Initialization Count'>
+      <Field label='Random Initialization Count' helpText="Number of random initializations for the algorithm. Higher values improve results but increase computation time.">
         <Input
           onChange={({ target: { value } }) => biClusteringSettingsChanged({ 
             settingName: BiClusteringSettingsTypes.INIT_COUNT,

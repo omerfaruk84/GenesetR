@@ -1,7 +1,10 @@
 .mainView {
-  padding: 25px;
+  position: relative;
+  padding: 10px;
+  padding-top: 0px;
   width: 100%;
   overflow: auto;
+  min-height: calc(100vh - 60px);
   height: 100%;
   font-size: 17px;
 }
@@ -20,7 +23,6 @@
   padding-top: 0px;
   width: 100%;
   overflow: auto;
-  height: 100%;
   font-size: 17px;
 }
 

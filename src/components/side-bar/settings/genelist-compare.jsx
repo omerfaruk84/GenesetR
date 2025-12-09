@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { FaTrash } from "react-icons/fa";
 import { get, set } from "idb-keyval";
@@ -8,34 +8,68 @@ import {
   Select,
   Slider,
   InputGroup,
-  List,
+  // List,
   toast,
   Modal,
   CheckBox,
   Spacer,
 } from "@oliasoft-open-source/react-ui-library";
-import { useState } from "react";
 import { genelistcompareSettingsChanged } from "../../../store/settings/genelist-compare-settings";
 import { GenelistCompareSettingsTypes } from "./enums";
 import styles from "./settings.module.scss";
 import { Genelist } from "../../genelist";
+import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
+  IconButton,
+  Button,
+  Paper,
+  Box,
+} from "@mui/material";
+import {
+  Delete as DeleteIcon,
+  DragHandle as DragHandleIcon,
+  Add as AddIcon,
+} from "@mui/icons-material";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+
+const reorder = (list, startIndex, endIndex) => {
+  console.log("reorder", list, startIndex, endIndex);
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
+};
 
 const GenelistCompareSettings = ({
   genelistcompareSettings,
   genelistcompareSettingsChanged,
 }) => {
-  const [triggerScroll, setTriggerScroll] = useState(false);
-  const onClickItem = (headingKey, itemIndex) => {
-    //setTriggerScroll(true);
-    const items = [...genelists];
-    items.forEach((item, i) => {
-      item.active = i === itemIndex;
-    });
-    setGeneLists(items);
-    // will execute after stack is cleared
-    //setTimeout(() => setTriggerScroll(false), 0);
+  const [genelists, setGeneLists] = useState(genelistcompareSettings.genelists);
+
+  const handleToggle = (name) => {
+    setGeneLists((prevLists) =>
+      prevLists.map((item) =>
+        item.name === name ? { ...item, checked: !item.checked } : item
+      )
+    );
+    refreshList();
   };
-  const onAddItem = (headingKey) => {};
+
+  const handleDragEnd = (result) => {
+    // Dropped outside the list
+    if (!result.destination) return;
+    const newItems = reorder(
+      genelists,
+      result.source.index,
+      result.destination.index
+    );
+    setGeneLists(newItems);
+  };
+
   const onDeleteItem = (headingKey, itemIndex, item) => {
     console.log(headingKey, itemIndex, item);
     const items = [...genelists.filter((obj) => obj.name !== item.name)];
@@ -43,23 +77,7 @@ const GenelistCompareSettings = ({
     setGeneLists(items);
   };
 
-  const [genelists, setGeneLists] = useState(genelistcompareSettings.genelists);
-
-  const [selectedGeneList, setSelectedGeneList] = useState(); //sets the currently selected gene list in the select box
-
-  const arraymove = (arr, from, to) => {
-    if ((from && isNaN(from)) || (to && isNaN(to)) || from === to) {
-      return arr;
-    }
-    const copy = [...arr];
-    if (typeof to === "number" && typeof from === "number") {
-      copy.splice(to, 0, copy.splice(from, 1)[0]);
-    }
-    return copy;
-  };
-
   const [newListVisible, setNewListVisible] = useState(false);
-  const [geneListNames, setGeneListNames] = useState();
   const SetCombinationType = [
     "Intersection",
     "Union",
@@ -73,20 +91,9 @@ const GenelistCompareSettings = ({
     refreshList();
   }, []);
 
-  console.log("geneListNames", geneListNames);
-
   // Get all available genelists from the database
   const getAllGenelists = () => {
     return get("geneListNames");
-  };
-
-  const onListReorder = (reorderData) => {
-    const { to, from } = reorderData;
-    setGeneLists(arraymove(genelists, from, to));
-  };
-
-  const saveGeneListNames = () => {
-    set("geneListNames", geneListNames);
   };
 
   //Retrieves local genelists from database
@@ -96,7 +103,7 @@ const GenelistCompareSettings = ({
         .then((genelists) => {
           //console.log("refreshList", genelists);
           if (genelists) {
-            setGeneListNames([...genelists]); //converts sets to array
+            //setGeneListNames([...genelists]); //converts sets to array
             resolve();
           } else {
             return;
@@ -121,6 +128,7 @@ const GenelistCompareSettings = ({
   };
 
   useEffect(() => {
+    console.log("genelists changed", genelists);
     genelistcompareSettingsChanged({
       settingName: GenelistCompareSettingsTypes.GENELISTS,
       newValue: genelists,
@@ -140,6 +148,7 @@ const GenelistCompareSettings = ({
       const temp = [...genelists];
       temp.push({
         name: genelist?.name,
+        checked: true,
         content: genelist.description,
         genes: genelist.genes.split("\n"),
       });
@@ -150,65 +159,132 @@ const GenelistCompareSettings = ({
 
   return (
     <>
-      <List
-        onListReorder={onListReorder}
-        expanding
-        draggable
-        marginBottom={20}
-        bordered
-        drawer
-        list={{
-          actions: [
-            {
-              label: "More",
-              subActions: [
-                {
-                  icon: "times",
-                  disabled: genelists.length === 0,
-                  label: "Remove All",
-                  onClick: function Ba() {},
-                },
-              ],
-            },
-            {
-              icon: "add",
-              label: "Add",
-              onClick: () => setNewListVisible(true),
+      <Paper sx={{ p: 2, borderRadius: 2, boxShadow: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<AddIcon />}
+            onClick={() => setNewListVisible(true)}
+          >
+            Add List
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            disabled={genelists.length === 0}
+            onClick={() => setGeneLists([])}
+          >
+            Remove All
+          </Button>
+        </Box>
+        {genelists.length === 0 ? (
+          <Box sx={{ p: 2, textAlign: "center", color: "text.secondary" }}>
+            No gene lists added yet. Please add at least two gene lists to
+            compare.
+          </Box>
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="droppable-list">
+              {(provided) => (
+                <List
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  component={Paper}
+                  sx={{
+                    p: 0,
+                    bgcolor: "background.paper",
+                    borderRadius: 2,
+                    boxShadow: 1,
+                  }}
+                >
+                  {genelists.map((item, index) => (
+                    <Draggable
+                      key={item.name}
+                      draggableId={`draggable-${item.name}`}
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <ListItem
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            height: "40px",
+                          }}
+                          divider
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              onClick={() =>
+                                onDeleteItem(genelists.key, index, item)
+                              }
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          }
+                          sx={{
+                            py: 0.5, // reduce vertical padding
+                            transition: "background-color 0.3s",
+                            bgcolor: snapshot.isDragging
+                              ? "action.hover"
+                              : "transparent",
+                            "&:hover": {
+                              bgcolor: "action.hover", // lighter color on hover
+                            },
+                          }}
+                        >
+                          {/* Drag handle area */}
+                          <ListItemIcon
+                            {...provided.dragHandleProps}
+                            sx={{ minWidth: "auto", pr: 1, ml: -1 }} // reduce space if needed
+                          >
+                            <DragHandleIcon
+                              color="primary"
+                              style={{ cursor: "grab" }}
+                            />
+                          </ListItemIcon>
 
-              primary: true,
-            },
-          ],
-          items:
-            genelists.length > 0
-              ? genelists?.map((item, itemIndex) => {
-                  if (item?.type === "Heading") {
-                    return {
-                      ...item,
-                      id: itemIndex,
-                    };
-                  }
-                  if (item)
-                    return {
-                      ...item,
-                      id: itemIndex,
-                      onClick: () => onClickItem(genelists.key, itemIndex),
-                      actions: [
-                        {
-                          label: "Delete",
-                          icon: <FaTrash />,
-                          onClick: () =>
-                            onDeleteItem(genelists.key, itemIndex, item),
-                        },
-                      ],
-                    };
-                })
-              : [],
-          name:
-            genelists.length === 0
-              ? "Add a genelist ==> "
-              : "Selected Gene Lists",
-        }}
-      />
+                          {/* Checkbox */}
+                          <ListItemIcon sx={{ minWidth: "auto", pr: 1 }}>
+                            <Checkbox
+                              edge="start"
+                              checked={item.checked}
+                              tabIndex={-1}
+                              disableRipple
+                              onClick={() => handleToggle(item.name)}
+                              sx={{
+                                p: 0.5, // adjust size of checkbox area
+                              }}
+                            />
+                          </ListItemIcon>
+
+                          {/* Two-line text */}
+                          <ListItemText
+                            primary={item.name}
+                            secondary={`${item.genes.length} genes`}
+                            sx={{
+                              "& .MuiListItemText-primary": {
+                                fontSize: "0.9rem",
+                                fontWeight: 500,
+                              },
+                              "& .MuiListItemText-secondary": {
+                                fontSize: "0.75rem",
+                                color: "text.secondary",
+                              },
+                            }}
+                          />
+                        </ListItem>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </List>
+              )}
+            </Droppable>
+          </DragDropContext>
+        )}
+      </Paper>
 
       <Modal visible={newListVisible} centered={true}>
         <InputGroup width={400}>
@@ -228,6 +304,7 @@ const GenelistCompareSettings = ({
           />
         </InputGroup>
       </Modal>
+      <Spacer height={20} />
 
       <Field //MODE
         label="Mode"
@@ -252,6 +329,7 @@ const GenelistCompareSettings = ({
 
       <CheckBox
         label="Comparison Graph"
+        helpText="Display a comparison graph showing relationships between gene lists."
         onChange={({ target: { checked } }) =>
           genelistcompareSettingsChanged({
             settingName: GenelistCompareSettingsTypes.SHOW,
@@ -263,6 +341,7 @@ const GenelistCompareSettings = ({
       <Spacer width={20} />
       <CheckBox
         label="Venn Diagram"
+        helpText="Display a Venn diagram showing overlaps between gene lists (works best with 2-3 lists)."
         onChange={({ target: { checked } }) =>
           genelistcompareSettingsChanged({
             settingName: GenelistCompareSettingsTypes.SHOWVENN,
@@ -276,7 +355,7 @@ const GenelistCompareSettings = ({
         label="Minimum number of set members"
         labelLeft
         labelWidth={150}
-        helpText="Set the threshold for minimum number od"
+        helpText="Set the threshold for minimum number of genes required in an intersection to be displayed in the comparison."
       >
         <div className={styles.inputRange}>
           <Slider
@@ -298,7 +377,7 @@ const GenelistCompareSettings = ({
         label="Theme"
         labelLeft
         labelWidth={150}
-        helpText="Set the color theme."
+        helpText="Set the color theme for the comparison visualization."
       >
         <Select
           small
@@ -317,7 +396,7 @@ const GenelistCompareSettings = ({
         label="Bar Padding"
         labelLeft
         labelWidth={150}
-        //helpText="Set the threshold for maximum number set members for the visibility of the set / intersection"
+        helpText="Adjust spacing between bars in the comparison chart. Higher values create more space between elements."
       >
         <div className={styles.inputRange}>
           <Slider
@@ -399,6 +478,138 @@ const GenelistCompareSettings = ({
           />
         </div>
       </Field>
+
+      <Field //setlabelfontsize
+        label="Set Label Font Size"
+        labelLeft
+        labelWidth={150}
+        helpText="Set font size for set labels specifically"
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            label={genelistcompareSettings?.setlabelfontsize}
+            max={100}
+            min={5}
+            value={genelistcompareSettings?.setlabelfontsize}
+            onChange={({ target: { value } }) =>
+              genelistcompareSettingsChanged({
+                settingName: GenelistCompareSettingsTypes.SETLABELFONTSIZE,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
+
+      <Field //venndiagramfontsize
+        label="Venn Diagram Font Size"
+        labelLeft
+        labelWidth={150}
+        helpText="Set font size for Venn diagram text"
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            label={genelistcompareSettings?.venndiagramfontsize}
+            max={100}
+            min={5}
+            value={genelistcompareSettings?.venndiagramfontsize}
+            onChange={({ target: { value } }) =>
+              genelistcompareSettingsChanged({
+                settingName: GenelistCompareSettingsTypes.VENNDIAGRAMFONTSIZE,
+                newValue: value,
+              })
+            }
+          />
+        </div>
+      </Field>
+
+      <Field //fontfamily
+        label="Font Family"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font family for all text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTFAMILY,
+              newValue: value,
+            })
+          }
+          options={[
+            "Arial, sans-serif",
+            "Helvetica, sans-serif", 
+            "Times New Roman, serif",
+            "Georgia, serif",
+            "Verdana, sans-serif",
+            "Tahoma, sans-serif",
+            "Trebuchet MS, sans-serif",
+            "Courier New, monospace",
+            "Lucida Console, monospace",
+            "Impact, sans-serif"
+          ]}
+          value={genelistcompareSettings?.fontfamily}
+        />
+      </Field>
+
+      <Field //fontweight
+        label="Font Weight"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font weight for text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTWEIGHT,
+              newValue: value,
+            })
+          }
+          options={[
+            "normal",
+            "bold",
+            "bolder",
+            "lighter",
+            "100",
+            "200", 
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ]}
+          value={genelistcompareSettings?.fontweight}
+        />
+      </Field>
+
+      <Field //fontstyle
+        label="Font Style"
+        labelLeft
+        labelWidth={150}
+        helpText="Set the font style for text elements"
+      >
+        <Select
+          small
+          onChange={({ target: { value } }) =>
+            genelistcompareSettingsChanged({
+              settingName: GenelistCompareSettingsTypes.FONTSTYLE,
+              newValue: value,
+            })
+          }
+          options={[
+            "normal",
+            "italic",
+            "oblique"
+          ]}
+          value={genelistcompareSettings?.fontstyle}
+        />
+      </Field>
+
+
 
       <Field //setheightratio
         label="Combination to Set Height Ratio"

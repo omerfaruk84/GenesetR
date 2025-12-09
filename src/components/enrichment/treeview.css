@@ -40,10 +40,15 @@ body {
 }
 
 .mdl-demo .toggle {
-  font: normal normal normal 18px/1 "Material Icons";
-  color: #555;
+  font: normal normal normal 16px/1 "Material Icons";
+  color: #6b7280;
   white-space: pre;
-  margin-right: 4px;
+  margin-right: 6px;
+  transition: color 0.2s ease;
+}
+
+.mdl-demo .toggle:hover {
+  color: #374151;
 }
 
 .mdl-demo .toggle.collapsed::after {
@@ -80,17 +85,25 @@ body {
   z-index: 1;
   width: 100%;
   height: 100%;
-  border: 2px solid #aaa;
-  transition: all 0.3s ease-in-out;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background-color: white;
+  transition: all 0.2s ease-in-out;
 }
 
 .mdl-demo .checkbox-item:checked:before {
-  height: 50%;
-  -webkit-transform: rotate(-45deg);
-  transform: rotate(-45deg);
-  border-top-style: none;
-  border-right-style: none;
-  border-color: #2196f3;
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.mdl-demo .checkbox-item:checked:after {
+  content: "✓";
+  position: absolute;
+  left: 2px;
+  top: -1px;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .mdl-demo .tag {
@@ -102,14 +115,147 @@ body {
 }
 
 .mdl-demo {
-  width: 400px;
-  height: 300px;
+  width: 100%;
+  min-height: 300px;
+  max-height: 400px;
   overflow: auto;
-
-  background-color: rgb(146, 111, 64);
-  padding-top: 10px;
+  background-color: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
-.mdl-demo .tag-item:nth-last-of-type(1) {
-  visibility: visible;
-  display: inherit;
+
+/* Hide tag elements that create extra layers */
+.mdl-demo .tag,
+.mdl-demo .tag-item,
+.mdl-demo .tag-list {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Clean tree structure */
+.mdl-demo .tree,
+.mdl-demo .tree-node {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Hide the original dropdown trigger since we have our own search input */
+.mdl-demo .dropdown-trigger {
+  display: none !important;
+}
+
+/* Clean dropdown content */
+.mdl-demo .dropdown-content,
+.mdl-demo .dropdown {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure the tree stays open and behaves as multi-select */
+.mdl-demo .dropdown {
+  position: static !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.mdl-demo .dropdown-content {
+  position: static !important;
+  display: block !important;
+  visibility: visible !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Prevent tree from closing on selection */
+.mdl-demo .tree-node {
+  position: relative !important;
+}
+
+.mdl-demo .node {
+  cursor: pointer;
+}
+
+.mdl-demo .node:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Ensure checkboxes work properly */
+.mdl-demo .checkbox-item {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Prevent tree collapse on click */
+.mdl-demo .toggle {
+  pointer-events: none !important;
+}
+
+.mdl-demo .toggle::after {
+  pointer-events: none !important;
+}
+
+/* Keep all nodes expanded */
+.mdl-demo .tree-node {
+  display: block !important;
+}
+
+.mdl-demo .tree-node .children {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Prevent any collapse animations */
+.mdl-demo .tree-node.collapsed {
+  display: block !important;
+}
+
+.mdl-demo .tree-node.collapsed .children {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+}
+
+/* Tree node styling */
+.mdl-demo .node {
+  padding: 4px 8px;
+  color: #374151;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+  margin: 1px 0;
+  background: transparent !important;
+}
+
+.mdl-demo .node:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.mdl-demo .node-label {
+  font-weight: 500;
+  color: #1f2937;
+  margin-left: 6px;
+}
+
+.mdl-demo .node-content {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+}
+
+/* Ensure proper display */
+.mdl-demo .tree,
+.mdl-demo .tree-node,
+.mdl-demo .node {
+  display: block !important;
+  visibility: visible !important;
 }

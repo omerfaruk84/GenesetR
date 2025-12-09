@@ -12,9 +12,6 @@ import {
 //import { OQL } from './OQLTextArea';
 
 import classNames from "classnames";
-import { groupBy, reduce } from "lodash";
-import DropdownButton from "react-bootstrap/DropdownButton";
-import Dropdown from "react-bootstrap/Dropdown";
 
 const RenderSuggestion = function (props) {
   if (
@@ -96,45 +93,10 @@ const RenderSuggestion = function (props) {
     );
   }
 
-  return;
-
-  //NEED TO FIX THIS LATER HUGO GENESYMBOL AND ALIAS NEED TO BE CHANGED
-  let title =
-    "Ambiguous gene symbol. Click on one of the alternatives to replace it.";
-  let options = props.genes.map((gene) => ({
-    label: gene.hugoGeneSymbol,
-    value: gene.hugoGeneSymbol,
-  }));
-  return (
-    <div className={styles.suggestionBubble} title={title}>
-      <FaQuestionCircle className={styles.icon} />
-      <span className={styles.multiChoiceLabel}>{props.alias}</span>
-      <span>{":"}&nbsp;</span>
-      <DropdownButton
-        variant={title.toLowerCase()}
-        size="sm"
-        title="Select symbol"
-        id={`geneReplace_${props.alias}`}
-      >
-        {options.map((item, i) => {
-          return (
-            <Dropdown.Item
-              onClick={() => {
-                props.replaceGene(props.alias, item.value);
-              }}
-              eventKey={i + 1}
-            >
-              {item.label}
-            </Dropdown.Item>
-          );
-        })}
-      </DropdownButton>
-    </div>
-  );
+  return null;
 };
 
 const GeneSymbolValidatorMessageChild = (props) => {
-  console.log("props in ge", props);
   if (props.isEmpty) {
     return null;
   }

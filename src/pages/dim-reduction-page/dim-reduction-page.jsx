@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { connect } from "react-redux";
 import { ScatterPlot } from "../../components/scatterPlot";
-import { Spacer, Tabs, Row } from "@oliasoft-open-source/react-ui-library";
+import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import styles from "./dim-reduction-page.module.scss";
 import "echarts-gl";
 import * as echarts from "echarts/core";
@@ -32,6 +32,24 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { LoadingPage } from "../../components/loading-page";
+
+
+// Add module description for Dimensionality Reduction
+const moduleDescription = {
+  title: "Dimensionality Reduction & Clustering Module",
+  description: "High dimensionality in large datasets makes visualization challenging and increases computational burden. This module reduces the number of features while preserving original information, then applies clustering to identify patterns in gene perturbation data.",
+  features: [
+    "PCA: Linear method using variance threshold to determine minimum components needed",
+    "t-SNE, UMAP, MDE: Non-linear methods that preserve complex feature relationships", 
+    "HDBSCAN clustering: Identifies clusters of varied shapes and sizes without specifying cluster number",
+    "Gene Set Enrichment Analysis (GSEA) on identified clusters using EnrichR API",
+    "Interactive visualizations with customizable parameters for optimization",
+    "Filtering options for cluster size, sample numbers, and clustering metrics"
+  ]
+};
 
 echarts.use([
   TitleComponent,
@@ -56,40 +74,132 @@ const DimReductionPage = ({
   umapResults,
   mdeResults,
   pcaResults,
+  precomputedResults,
   coreSettingsChanged,
   coreSettings,
+  calcResults,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
 
-  const options = [
-    {
-      label: "PCA",
-      value: "pca",
-    },
-    {
-      label: "MDE",
-      value: "mde",
-    },
-    {
-      label: "UMAP",
-      value: "umap",
-    },
-    {
-      label: "tSNE",
-      value: "tsne",
-    },
-  ];
-  const [selectedTab, setSelectedTab] = useState(options[0]);
+  // Get current DR method from settings
+  const currentMethod = coreSettings?.currentModule || "pca";
+
+  // Check if any calculation is running
+  const isCalculationRunning =
+    calcResults?.["tsneGraph"]?.running ||
+    calcResults?.["umapGraph"]?.running ||
+    calcResults?.["mdeGraph"]?.running ||
+    calcResults?.["pcaGraph"]?.running;
+
+  // Auto-close description after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsDescriptionExpanded(false);
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Close description when calculation runs or results appear
+  useEffect(() => {
+    if (isCalculationRunning || tsneResults || umapResults || mdeResults || pcaResults) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [isCalculationRunning, tsneResults, umapResults, mdeResults, pcaResults]);
+
+  // Effect to load pending gene list from localStorage (when opened from enrichment table)
+  useEffect(() => {
+    // Add a small delay to ensure page is fully loaded
+    const timer = setTimeout(() => {
+      const pendingDataKey = `pendingGeneList_/dr`;
+      const pendingData = localStorage.getItem(pendingDataKey);
+      
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          // Check if data is recent (within last 30 seconds) to avoid stale data
+          if (Date.now() - data.timestamp < 30000) {
+            console.log('Loading gene list from localStorage:', data);
+            
+            // For DR, we're setting perturbation list, so clear target gene list first
+            // to avoid showing genes in both lists
+            if (data.settingName === CoreSettingsTypes.PETURBATION_LIST) {
+              // Clear target gene list first (synchronously)
+              coreSettingsChanged({
+                settingName: CoreSettingsTypes.TARGET_LIST,
+                newValue: "",
+              });
+              
+              // Set the perturbation list in Redux immediately after clearing
+              // Use a small delay to ensure Redux state updates properly
+              setTimeout(() => {
+                coreSettingsChanged({
+                  settingName: data.settingName,
+                  newValue: data.value,
+                });
+              }, 100);
+            } else {
+              // Set the gene list in Redux immediately for other cases
+              coreSettingsChanged({
+                settingName: data.settingName,
+                newValue: data.value,
+              });
+            }
+            
+            // Remove from localStorage after using
+            localStorage.removeItem(pendingDataKey);
+          } else {
+            console.log('Pending gene list expired, removing from localStorage');
+            localStorage.removeItem(pendingDataKey);
+          }
+        } catch (error) {
+          console.error('Error loading pending gene list:', error);
+          localStorage.removeItem(pendingDataKey);
+        }
+      }
+    }, 100); // 100ms delay to ensure page is loaded
+
+    return () => clearTimeout(timer);
+  }, [coreSettingsChanged]);
+
   const [graphoptions, setOptions] = useState({});
 
-  useEffect(() => {
-    //navigate("../dr/"+selectedTab.value)
-    coreSettingsChanged({
-      settingName: CoreSettingsTypes.CURRENT_MODULE,
-      newValue: selectedTab.value,
-    });
-  }, [selectedTab]);
+  // Check if any DR calculation is running
+  const isAnyCalculationRunning =
+    calcResults?.["pcaGraph"]?.running ||
+    calcResults?.["mdeGraph"]?.running ||
+    calcResults?.["tsneGraph"]?.running ||
+    calcResults?.["umapGraph"]?.running;
+
+  // Get progress state from the currently running calculation
+  const getProgressState = () => {
+    if (calcResults?.["pcaGraph"]?.running) {
+      return {
+        message: calcResults["pcaGraph"].progressMessage,
+        percentage: calcResults["pcaGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["mdeGraph"]?.running) {
+      return {
+        message: calcResults["mdeGraph"].progressMessage,
+        percentage: calcResults["mdeGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["tsneGraph"]?.running) {
+      return {
+        message: calcResults["tsneGraph"].progressMessage,
+        percentage: calcResults["tsneGraph"].progressPercentage,
+      };
+    } else if (calcResults?.["umapGraph"]?.running) {
+      return {
+        message: calcResults["umapGraph"].progressMessage,
+        percentage: calcResults["umapGraph"].progressPercentage,
+      };
+    }
+    return { message: null, percentage: null };
+  };
+
+  const progressState = getProgressState();
 
   useEffect(() => {
     var cumulative_ratio = [];
@@ -209,12 +319,13 @@ const DimReductionPage = ({
   let graphdata = undefined;
   let content = undefined;
 
-  if (selectedTab.value === "tsne") graphdata = tsneResults;
-  else if (selectedTab.value === "umap") graphdata = umapResults;
-  else if (selectedTab.value === "pca") graphdata = pcaResults;
-  else if (selectedTab.value === "mde") graphdata = mdeResults;
+  if (currentMethod === "tsne") graphdata = tsneResults;
+  else if (currentMethod === "umap") graphdata = umapResults;
+  else if (currentMethod === "pca") graphdata = pcaResults;
+  else if (currentMethod === "mde") graphdata = mdeResults;
+  else if (currentMethod === "precomputed") graphdata = precomputedResults;
 
-  if (selectedTab.value === "tsne" && graphdata === null) {
+  if (currentMethod === "tsne" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -240,12 +351,20 @@ const DimReductionPage = ({
                 research.
               </span>
             </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform t-SNE analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The t-SNE results will be displayed in this panel. You can
+              run the calculation multiple times with different parameters, or you
+              can run different DR methods sequentially by selecting the result
+              from the dataset selector.
+            </p>
           </div>
           <img alt="MDE" src="/images/correlation.png" />
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "umap" && graphdata === null) {
+  } else if (currentMethod === "umap" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -275,13 +394,21 @@ const DimReductionPage = ({
                 relationships in the data.
               </span>
             </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform UMAP analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The UMAP results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+            </p>
           </div>
 
           <img alt="UMAP" src="/images/correlation.png" />
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "mde" && graphdata === null) {
+  } else if (currentMethod === "mde" && graphdata === null) {
     content = (
       <>
         <div style={{ display: "flex" }}>
@@ -323,6 +450,14 @@ const DimReductionPage = ({
               clustering, PCA-MDE integration appears to be the most efficient
               approach in our tests.
             </p>
+            <p className={styles.moduleTextInfos}>
+              <strong>To perform MDE analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The MDE results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+            </p>
           </div>
           <img
             style={{ objectFit: "scale-down" }}
@@ -332,8 +467,9 @@ const DimReductionPage = ({
         </div>{" "}
       </>
     );
-  } else if (selectedTab.value === "pca") {
+  } else if (currentMethod === "pca") {
     content = (
+
       <div className={styles.submainView}>
         {pcaResults ? (
           <>
@@ -372,82 +508,141 @@ const DimReductionPage = ({
               successively maximize variance from the original matrix and
               graphically simplify the identification of trends, clusters, and
               correlation among the subjects to analysis.
-              <p style={{ color: "DodgerBlue" }}>
-                {" "}
-                <a
-                  href="https://en.wikipedia.org/wiki/Principal_component_analysis"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Read More
-                </a>{" "}
-              </p>
+              <br />
+              <br />
+              <strong>To perform PCA analysis,</strong> please enter your gene list to the
+              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              button. The PCA results will be displayed in this panel. For other
+              dimensionality reduction methods, you can choose one of the tabs
+              above. You can run the calculation multiple times with different
+              parameters, or you can run different methods sequentially.
+
             </p>
           </div>
         )}
+         
       </div>
+     
+
     );
   }
 
   return (
     <div className={styles.mainView}>
-      {graphdata === null ? (
-        /*<div >
-      <h2><strong>Dimensionality Reduction and Clustering Module</strong></h2>
-      <p>Handling high-dimensional data can complicate visualization and increase the computational load. <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Dimensionality_reduction"><strong>Dimensionality reduction</strong></a></span> (DR) techniques address this issue by minimizing the number of features while preserving most of the original information. Two main types of DR algorithms exist:</p>
-      <ul>
-      <li>Linear DR algorithms, such as <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Principal_component_analysis"><strong>Principal Component Analysis</strong></a></span> (PCA), create linear combinations of the original features.</li>
-      </ul>
-      <ul>
-      <li>Non-linear DR methods, such as <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding"><strong>t-Distributed Stochastic Neighbor Embedding</strong></a></span> (tSNE), <span style={{color: "black"}}><a target="_blank" href="https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction#Uniform_manifold_approximation_and_projection"><strong>Uniform Manifold Approximation and Projection</strong></a></span> (UMAP), and <span style={{color: "black"}}><a target="_blank" href="https://web.stanford.edu/~boyd/papers/pdf/min_dist_emb.pdf"><strong>Minimum-Distortion Embedding</strong></a></span> (MDE), can capture more complex relationships and preserve non-linear relationships.</li>
-      </ul>
-      <p>After dimensionality reduction, GeneSetR uses <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">the HDBSCAN</a> algorithm to cluster the data. This method generates clusters of different shapes, sizes, and densities without prior knowledge of the data, making it advantageous for high-dimensional data with complex cluster shapes. <a target="_blank" href="https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html">HDBSCAN</a> does not require the user to specify the number of clusters, however, users still need to adjust certain parameters, such as<strong> minimum cluster size</strong>, <strong>minimum number of samples per cluster</strong>, and<strong> clustering metric</strong>, to find the optimal number of clusters.</p>
-      
-      */
-        <>
-          <VideoHelpPage videoFile={helpVideo} />
-          <div>
-            <h4>
-              <span style={{ color: "black" }}>
-                <span style={{ color: "#0000ff" }}>
-                  <strong>
-                    Please choose one of the tabs below to perform DR and
-                    Clustering on your gene lists.
-                  </strong>
-                </span>
-              </span>
-            </h4>
+      {/* Module Description */}
+      <Accordion 
+        expanded={isDescriptionExpanded}
+        onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
+       sx={{
+         marginBottom: '14px',
+         backgroundColor: '#f8f9fa', 
+         border: '1px solid #e9ecef',
+         borderRadius: '8px',
+         '&:before': {
+           display: 'none',
+         },
+         '& .MuiAccordionSummary-root': {
+           minHeight: '30px',
+           height: '30px',
+         },
+         '& .MuiAccordionSummary-root.Mui-expanded': {
+           minHeight: '30px',
+           height: '30px',
+         }
+       }}
+      >
+        <AccordionSummary 
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ 
+            backgroundColor: '#f5f5f5',
+            borderBottom: '1px solid #e0e0e0',
+            minHeight: '30px',
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
+        </AccordionSummary>
+        <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
+          <div style={{fontSize: '13px', marginBottom: '0px' }}>
+            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
+            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
+            <ul style={{ marginBottom: '0px', paddingLeft: '20px' }}>
+              {moduleDescription.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
+              ))}
+            </ul>
           </div>
-        </>
-      ) : null}
-      <Tabs
-        name="Main Tabs"
-        value={selectedTab}
-        options={options}
-        onChange={(evt) => {
-          const { value, label } = evt.target;
-          setSelectedTab({ value, label });
-        }}
-      />
+        </AccordionDetails>
+      </Accordion>
+      
+      {isAnyCalculationRunning && (
+        <LoadingPage 
+          progressMessage={progressState.message}
+          progressPercentage={progressState.percentage}
+        />
+      )}
+      
+      {!isAnyCalculationRunning && (
+        <>
+      {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#e3f2fd',
+          borderLeft: '4px solid #1976d2',
+          borderRadius: '4px',
+          color: '#1565c0',
+          marginBottom: '8px',
+          fontSize: '13px'
+        }}>
+          💡 To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"Run Calculation"</strong> button.
+        </div>
+      )}
 
-      {console.log("graphdata", graphdata)}
-      {console.log("content", content)}
-      <Spacer />
-      {selectedTab.value === "pca" || graphdata === null ? (
-        content
-      ) : (
+      {currentMethod === "pca" ? (
+        <>
+        {content}
+        <VideoHelpPage videoFile={helpVideo} />
+        </>
+      ) : currentMethod === "precomputed" ? (
+        graphdata !== null ? (
+          <ScatterPlot graphData={graphdata} />
+        ) : (
+          <>
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#e3f2fd',
+              borderLeft: '4px solid #1976d2',
+              borderRadius: '4px',
+              color: '#1565c0',
+              marginBottom: '8px',
+              fontSize: '13px'
+            }}>
+              💡 Select your parameters in the left sidebar and click "Load Pre-computed Data" to view the all-genes DR visualization.
+            </div>
+            <VideoHelpPage videoFile={helpVideo} />
+          </>
+        )
+      ) : graphdata !== null ? (
         <ScatterPlot graphData={graphdata} />
+      ) : (
+        <>
+        {content}
+        <VideoHelpPage videoFile={helpVideo} />
+        </>
+      )}
+        </>
       )}
     </div>
   );
 };
-//{selectedTab.value === "pca"? content : graphdata ? (<ScatterPlot graphData={graphdata} />):<></> }
+//{currentMethod === "pca"? content : graphdata ? (<ScatterPlot graphData={graphdata} />):<></> }
 const mapStateToProps = ({ calcResults, settings }) => ({
+  calcResults,
   coreSettings: settings?.core ?? {},
   tsneResults: calcResults?.["tsneGraph"]?.result ?? null,
   mdeResults: calcResults?.["mdeGraph"]?.result ?? null,
   pcaResults: calcResults?.["pcaGraph"]?.result ?? null,
   umapResults: calcResults?.["umapGraph"]?.result ?? null,
+  precomputedResults: calcResults?.["precomputedDrGraph"]?.result ?? null,
 });
 
 const mapDispatchToProps = {

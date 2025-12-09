@@ -2,12 +2,22 @@ import pLimit from 'p-limit';
 import axios from 'axios';
 import { set, get } from 'idb-keyval';
 
-
 const batchSize = 5;
 const limit = pLimit(5); // limit to 5 requests at a time
+const isDevEnv = process.env.NODE_ENV !== "production";
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    console.log(...args);
+  }
+};
+const debugError = (...args) => {
+  if (isDevEnv) {
+    console.error(...args);
+  }
+};
 
 async function getAliasesForGeneList(genes) {
-  console.log("Checking alliases for ", genes)
+  debugLog("Checking alliases for ", genes)
   let aliases = new Map();
   const remainingGenes = [];
     //first chek aliases from local db
@@ -47,7 +57,7 @@ async function getAliasesForGeneList(genes) {
           const url = `https://www.cbioportal.org/api/genes?alias=${gene}`;
           try {
             const response = await limit(() => axios.get(url));
-            console.log("Got resposne ", response)
+            debugLog("Got resposne ", response)
             if(response.status ===200) 
             {           
             const data = response.data[0];            
@@ -55,7 +65,7 @@ async function getAliasesForGeneList(genes) {
                 aliases.set(gene, data.hugoGeneSymbol);
             }
           } catch (error) {
-            console.error(`Error getting alias for ${gene}: ${error.message}`);
+            debugError(`Error getting alias for ${gene}: ${error.message}`);
           }
         })
       );
@@ -76,16 +86,16 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
   let notFound = [];
   let notExist = [];
   let notInPerturbSeq = [];
-  let found = []
+  //let found = []
   let suggestions =[]
-  let query = []
+  //let query = []
   
 
   let extension =  "_perturb";
   if(!isPerturbationList || isGeneSignature ) 
     extension = "_genes"
   let perturbDict = await get("geneList_" + cellLine + extension)
-  console.log("perturbDict"+ cellLine + extension , perturbDict)
+  debugLog("perturbDict"+ cellLine + extension , perturbDict)
   
   if (perturbDict && perturbDict.size > 0) { 
     let genes  = ""
@@ -94,9 +104,10 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
       else
         genes = currentGenes.replace(/^\\n+|\\n+$/g, '').split("\n").filter(gene => gene.trim().length>0);
       
-      console.log("genes" , genes)
+     
       notFound = genes.filter(gene => !perturbDict.has(gene));
-      found = genes.filter(gene => perturbDict.has(gene));
+      //found = genes.filter(gene => perturbDict.has(gene));
+ 
   
       
       let allGenes = await get("allHugoGenes");
@@ -209,7 +220,7 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
           }
 
       }else {
-        console.log("Upps where is the list for genes?")
+        debugLog("Upps where is the list for genes?")
         suggestions = Error();
       }
   
