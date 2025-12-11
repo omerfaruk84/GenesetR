@@ -11,6 +11,7 @@ import { GeneRegulationPage } from "../../pages/gene-regulation/gene-regulation-
 import { GeneRegulationEnhancedPage } from "../../pages/gene-regulation-enhanced/gene-regulation-enhanced-page";
 import { PathFinderPage } from "../../pages/pathfinder/pathfinder";
 import { GeneSignaturePage } from "../../pages/genesignature/gene-signature-page";
+import { DeregulatedGenesPage } from "../../pages/deregulated-genes/deregulated-genes-page";
 import { HeatMapPage } from "../../pages/heatmap/heatmap-page";
 import { MainPage } from "../../pages/mainpage/mainpage";
 import { DimReductionPage } from "../../pages/dim-reduction-page/dim-reduction-page";
@@ -59,6 +60,10 @@ const MainView = () => {
             <Route
               path={ROUTES.GENESIGNATURE}
               element={<GeneSignaturePage path={ROUTES.GENESIGNATURE} />}
+            />
+            <Route
+              path={ROUTES.DEREGULATED_GENES}
+              element={<DeregulatedGenesPage path={ROUTES.DEREGULATED_GENES} />}
             />
             <Route
               path={ROUTES.EXPRESSIONANALYZER}

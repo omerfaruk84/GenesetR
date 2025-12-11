@@ -11,6 +11,7 @@ const TabNames = {
   HEATMAP: "HeatMap",
   PATHFINDER: "Path Explorer",
   GENESIGNATURE: "Gene Signature",
+  DEREGULATED_GENES: "Deregulated Genes",
   EXPRESSIONANALYZER: "Expression Analyzer",
   MULTIDATASET_COMPARISON: "Multi-Dataset Comparison",
   GENELISTCOMPARE: "Genelists",

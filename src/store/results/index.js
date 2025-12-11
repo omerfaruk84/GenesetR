@@ -18,6 +18,8 @@ import {
   runGeneSignatureMultiDataset,
   runGeneSignatureMultiDatasetSimilar,
   runMultiDatasetComparison,
+  runDeregulatedGenes,
+  runDeregulatedGenesMultiDataset,
   cancelTask,
 } from "../api";
 import { ModulePathNames } from "./enums";
@@ -102,6 +104,8 @@ const initialState = {
   geneExpressionGraph: { ...resultState },
   multiDatasetComparison: { ...resultState },
   precomputedDrGraph: { ...resultState },
+  deregulatedGenesGraph: { ...resultState },
+  deregulatedGenesMultiDataset: { ...resultState },
 };
 
 export const calculationResults = createSlice({
@@ -338,8 +342,18 @@ const runCalculation = (module) => async (dispatch, getState) => {
         // Clear downstream multi-dataset results when starting a new gene signature calculation
         dispatch(clearResult({ module: "genesignatureMultiDataset" }));
         dispatch(clearResult({ module: "genesignatureSimilarGraph" }));
-        
+
         const result = await runGeneSignature(core);
+        return dispatch(
+          resultReceived({ result, module: ModulePathNames[module] })
+        );
+      }
+      case ROUTES.DEREGULATED_GENES: {
+        // Clear downstream multi-dataset results when starting a new deregulated genes calculation
+        dispatch(clearResult({ module: "deregulatedGenesMultiDataset" }));
+
+        const deregulatedGenesSettings = getState().settings.deregulatedGenes;
+        const result = await runDeregulatedGenes(core, deregulatedGenesSettings);
         return dispatch(
           resultReceived({ result, module: ModulePathNames[module] })
         );

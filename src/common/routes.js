@@ -15,6 +15,7 @@ const ROUTES = Object.freeze({
   EXPRESSIONANALYZER: "/expressionanalyzer",
   GENELISTCOMPARE: "/genelists",
   MULTIDATASET_COMPARISON: "/multidataset-comparison",
+  DEREGULATED_GENES: "/deregulated-genes",
   ABOUTUS: "/about",
 });
 

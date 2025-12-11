@@ -409,6 +409,44 @@ const runGeneSignatureMultiDatasetSimilar = async (core, genesignatureSettings) 
   return await getData(body);
 };
 
+const runDeregulatedGenes = async (core, deregulatedGenesSettings) => {
+  const body = {
+    perturbation_list: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    cell_line: core.cellLine.id,
+    top_n_genes: deregulatedGenesSettings.topNGenes,
+    min_perturbations: deregulatedGenesSettings.minPerturbations,
+    min_perturbations_type: deregulatedGenesSettings.minPerturbationsType,
+    z_score_threshold: deregulatedGenesSettings.zScoreThreshold,
+    average_method: deregulatedGenesSettings.averageMethod,
+    require_same_direction: deregulatedGenesSettings.requireSameDirection,
+    request: "calcDeregulatedGenes",
+  };
+  return await getData(body);
+};
+
+const runDeregulatedGenesMultiDataset = async (core, deregulatedGenesSettings) => {
+  const body = {
+    perturbation_list: core.peturbationList
+      ?.replaceAll(/[\s,;\r\n]+/g, ";")
+      .split(";")
+      .filter(Boolean)
+      .join(";"),
+    top_n_genes: deregulatedGenesSettings.topNGenes,
+    min_perturbations: deregulatedGenesSettings.minPerturbations,
+    min_perturbations_type: deregulatedGenesSettings.minPerturbationsType,
+    z_score_threshold: deregulatedGenesSettings.zScoreThreshold,
+    average_method: deregulatedGenesSettings.averageMethod,
+    require_same_direction: deregulatedGenesSettings.requireSameDirection,
+    min_datasets: deregulatedGenesSettings.minDatasets,
+    request: "calcDeregulatedGenesMultiDataset",
+  };
+  return await getData(body);
+};
+
 const runGeneExp = async (core, geneExp) => {
   const body = {
     gene: geneExp.selectedGene,
@@ -620,6 +658,8 @@ export {
   runGeneSignature,
   runGeneSignatureMultiDataset,
   runGeneSignatureMultiDatasetSimilar,
+  runDeregulatedGenes,
+  runDeregulatedGenesMultiDataset,
   getBlackList,
   updateGeneLists,
   fetchHugoGenes,

@@ -92,6 +92,11 @@ const TopBar = () => {
       toLink: ROUTES.GENESIGNATURE,
     },
     {
+      icon: () => <FcElectricalSensor size={"2em"} style={{ filter: "hue-rotate(180deg)" }} />,
+      name: TabNames.DEREGULATED_GENES,
+      toLink: ROUTES.DEREGULATED_GENES,
+    },
+    {
       icon: () => <FcAbout size={"2em"} />,
       name: TabNames.ABOUT,
       toLink: ROUTES.ABOUTUS,

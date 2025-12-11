@@ -271,6 +271,16 @@ const MultiDatasetComparisonSettingsTypes = {
   TARGET_LIST: "targetList",
 };
 
+const DeregulatedGenesSettingsTypes = {
+  TOP_N_GENES: "topNGenes",
+  MIN_PERTURBATIONS: "minPerturbations",
+  MIN_PERTURBATIONS_TYPE: "minPerturbationsType",
+  Z_SCORE_THRESHOLD: "zScoreThreshold",
+  AVERAGE_METHOD: "averageMethod",
+  REQUIRE_SAME_DIRECTION: "requireSameDirection",
+  MIN_DATASETS: "minDatasets",
+};
+
 const PrecomputedDrSettingsTypes = {
   HVG_STRATEGY: "hvgStrategy",
   N_HVGS: "nHvgs",
@@ -353,4 +363,5 @@ export {
   GenelistCompareSettingsTypes,
   InchlibSettingsTypes,
   MultiDatasetComparisonSettingsTypes,
+  DeregulatedGenesSettingsTypes,
 };

@@ -7,6 +7,7 @@ import { GeneRegulationSettings } from "./gene-regulation-core-settings";
 import { GeneRegulationEnhancedSettings } from "./gene-regulation-enhanced-settings";
 import { CorrelationSettings } from "./correlation-settings";
 import { GeneSignatureSettings } from "./genesignature-settings";
+import { DeregulatedGenesSettings } from "./deregulated-genes-settings";
 import { ExpressionAnalyzerSettings } from "./expression-analyzer-settings";
 import { ClusteringSettings } from "./clustering-settings";
 import { PcaSettings } from "./pca-settings";
@@ -277,6 +278,25 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.GENE_SIGNATURE_SETTINGS,
         settings: <GeneSignatureSettings />,
+      },
+    ],
+    [ROUTES.DEREGULATED_GENES]: [
+      {
+        settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: (
+          <CoreSettings
+            showcellLineOptions={true}
+            showdataTypeOptions={false}
+            showgraphTypeOptions={false}
+            showPerturbationList={true}
+            showGeneList={false}
+            wholeGenomeOnly={true}
+          />
+        ),
+      },
+      {
+        settingsName: "Deregulated Genes Settings",
+        settings: <DeregulatedGenesSettings />,
       },
     ],
     [ROUTES.EXPRESSIONANALYZER]: [
