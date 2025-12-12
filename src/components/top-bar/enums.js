@@ -13,6 +13,7 @@ const TabNames = {
   GENESIGNATURE: "Gene Signature",
   EXPRESSIONANALYZER: "Expression Analyzer",
   MULTIDATASET_COMPARISON: "Multi-Dataset Comparison",
+  PERTURBATION_SIGNATURES: "Perturbation Signatures",
   GENELISTCOMPARE: "Genelists",
   ABOUT: "Help",
 };

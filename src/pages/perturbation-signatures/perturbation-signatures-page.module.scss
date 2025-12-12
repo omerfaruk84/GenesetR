@@ -1,0 +1,190 @@
+.mainView {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px;
+  overflow: auto;
+}
+
+.instructions {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+
+  h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 20px;
+    color: #424242;
+
+    li {
+      margin-bottom: 8px;
+    }
+  }
+}
+
+.resultsContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.controlBar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.resultsSummary {
+  display: flex;
+  gap: 15px;
+  font-size: 13px;
+  color: #666;
+
+  span {
+    background-color: #e9ecef;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+}
+
+.heatmapContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.heatmapControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.zoomControls {
+  display: flex;
+  gap: 10px;
+}
+
+.zoomButton {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+  }
+}
+
+.colorLegend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #666;
+}
+
+.gradientBar {
+  width: 120px;
+  height: 16px;
+  background: linear-gradient(to right, #2166ac, #67a9cf, #f7f7f7, #ef8a62, #b2182b);
+  border-radius: 3px;
+  border: 1px solid #ccc;
+}
+
+.heatmapGrid {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  min-width: fit-content;
+}
+
+.heatmapRow {
+  display: flex;
+  align-items: center;
+}
+
+.rowLabel {
+  min-width: 100px;
+  max-width: 100px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colLabel {
+  min-width: 30px;
+  max-width: 30px;
+  height: 120px;
+  padding: 4px;
+  font-size: 10px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.heatmapCell {
+  min-width: 30px;
+  max-width: 30px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #333;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.1s;
+
+  &:hover {
+    transform: scale(1.1);
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.tableContainer {
+  flex: 1;
+  overflow: auto;
+}
+
+.noData {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #666;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #ccc;
+}

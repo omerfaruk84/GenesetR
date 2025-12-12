@@ -21,6 +21,7 @@ import { GenelistCompareSettings } from "./genelist-compare";
 import { MultiDatasetComparisonSettings } from "./multidataset-comparison-settings";
 import { PrecomputedDrSettings } from "./precomputed-dr-settings";
 import { DrMethodSelector } from "./dr-method-selector";
+import { PerturbationSignaturesSettings } from "./perturbation-signatures-settings";
 
 const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
@@ -308,6 +309,12 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.MULTIDATASET_COMPARISON_SETTINGS,
         settings: <MultiDatasetComparisonSettings />,
+      },
+    ],
+    [ROUTES.PERTURBATION_SIGNATURES]: [
+      {
+        settingsName: SettingsTypes.PERTURBATION_SIGNATURES_SETTINGS,
+        settings: <PerturbationSignaturesSettings />,
       },
     ],
   };

@@ -18,6 +18,7 @@ import AboutPage from "../../pages/aboutus/about";
 import { ExpressionAnalyzerPage } from "../../pages/expressionanalyzer/expression-analyzer";
 import { MultiDatasetComparisonPage } from "../../pages/multidataset-comparison/multidataset-comparison-page";
 import { GenelistCompare } from "../genelist-compare";
+import { PerturbationSignaturesPage } from "../../pages/perturbation-signatures/perturbation-signatures-page";
 
 const SideBarLayout = () => (
   <div className={styles.contentWrapper}>
@@ -91,6 +92,14 @@ const MainView = () => {
               element={
                 <GeneRegulationEnhancedPage
                   path={ROUTES.GENE_REGULATION_ENHANCED}
+                />
+              }
+            />
+            <Route
+              path={ROUTES.PERTURBATION_SIGNATURES}
+              element={
+                <PerturbationSignaturesPage
+                  path={ROUTES.PERTURBATION_SIGNATURES}
                 />
               }
             />

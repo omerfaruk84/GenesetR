@@ -20,6 +20,7 @@ import { expressionanalyzerSettingsReducer } from "./expression-analyzer-setting
 import { genelistcompareSettingsReducer } from "./genelist-compare-settings";
 import { multidatasetComparisonSettingsReducer } from "./multidataset-comparison-settings";
 import { precomputedDrSettingsReducer } from "./precomputed-dr-settings";
+import { perturbationSignaturesSettingsReducer } from "./perturbation-signatures-settings";
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -42,6 +43,7 @@ const settingsReducer = combineReducers({
   genelistcompare: genelistcompareSettingsReducer,
   multidatasetComparison: multidatasetComparisonSettingsReducer,
   precomputedDr: precomputedDrSettingsReducer,
+  perturbationSignatures: perturbationSignaturesSettingsReducer,
 });
 
 export { settingsReducer };

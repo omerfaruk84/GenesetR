@@ -14,6 +14,7 @@ const ModulePathNames = {
   [ROUTES.HEATMAP]: "heatmapGraph",
   [ROUTES.GENESIGNATURE]: "genesignatureGraph",
   [ROUTES.MULTIDATASET_COMPARISON]: "multiDatasetComparison",
+  [ROUTES.PERTURBATION_SIGNATURES]: "perturbationSignaturesGraph",
 };
 
 export { ModulePathNames };

@@ -18,6 +18,7 @@ import {
   runGeneSignatureMultiDataset,
   runGeneSignatureMultiDatasetSimilar,
   runMultiDatasetComparison,
+  runPerturbationSignatures,
   cancelTask,
 } from "../api";
 import { ModulePathNames } from "./enums";
@@ -102,6 +103,7 @@ const initialState = {
   geneExpressionGraph: { ...resultState },
   multiDatasetComparison: { ...resultState },
   precomputedDrGraph: { ...resultState },
+  perturbationSignaturesGraph: { ...resultState },
 };
 
 export const calculationResults = createSlice({
@@ -208,7 +210,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
     heatMap,
     umap,
     mde,
-    tsne,  
+    tsne,
     geneRegulationCore,
     geneRegulationEnhanced,
     clustering,
@@ -217,6 +219,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
     expressionanalyzer,
     multidatasetComparison,
     genesignature,
+    perturbationSignatures,
   } = settings;
 
 
@@ -346,6 +349,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
       }
       case ROUTES.MULTIDATASET_COMPARISON: {
         const result = await runMultiDatasetComparison(core, multidatasetComparison);
+        return dispatch(
+          resultReceived({ result, module: ModulePathNames[module] })
+        );
+      }
+      case ROUTES.PERTURBATION_SIGNATURES: {
+        const result = await runPerturbationSignatures(perturbationSignatures);
         return dispatch(
           resultReceived({ result, module: ModulePathNames[module] })
         );

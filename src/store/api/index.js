@@ -47,6 +47,7 @@ const requestToModuleMap = {
   "calcGeneSignatureMultiDatasetSimilar": "genesignatureSimilarGraph",
   "geneExpression": "geneExpressionGraph",
   "multiDatasetComparison": "multiDatasetComparison",
+  "perturbationSignatures": "perturbationSignaturesGraph",
 };
 
 const getData = async (body, moduleName = null, options = {}) => {
@@ -591,6 +592,50 @@ const listPrecomputedDR = async () => {
   }
 };
 
+const runPerturbationSignatures = async (perturbationSignaturesSettings) => {
+  const body = {
+    genes: perturbationSignaturesSettings.geneList
+      ? perturbationSignaturesSettings.geneList
+          .replaceAll(/[\s,;\r\n]+/g, ";")
+          .split(";")
+          .filter(Boolean)
+          .join(";")
+      : "",
+    cell_lines: perturbationSignaturesSettings.selectedCellLines?.join(";") || "",
+    signatures: perturbationSignaturesSettings.selectedSignatures?.join(";") || "",
+    request: "perturbationSignatures",
+  };
+  return await getData(body);
+};
+
+const fetchAvailableSignatures = async () => {
+  try {
+    const response = await Axios.get(`${SERVER_ADRESS}/api/v1/perturbation-signatures/signatures`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.signatures || [];
+  } catch (error) {
+    debugError("Error fetching available signatures:", error);
+    return [];
+  }
+};
+
+const fetchSignatureCellLines = async () => {
+  try {
+    const response = await Axios.get(`${SERVER_ADRESS}/api/v1/perturbation-signatures/cell-lines`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.cell_lines || [];
+  } catch (error) {
+    debugError("Error fetching signature cell lines:", error);
+    return [];
+  }
+};
+
 // Export task cancellation function
 export { cancelTask } from "./websocket";
 
@@ -630,4 +675,7 @@ export {
   fetchPrecomputedDR,
   listPrecomputedDR,
   getData,
+  runPerturbationSignatures,
+  fetchAvailableSignatures,
+  fetchSignatureCellLines,
 };

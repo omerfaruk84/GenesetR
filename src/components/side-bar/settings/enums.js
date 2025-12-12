@@ -20,6 +20,7 @@ const SettingsTypes = {
   GENELIST_COMPARE_SETTINGS: "Genelist Comparer Settings",
   MULTIDATASET_COMPARISON_SETTINGS: "Multi-Dataset Comparison Settings",
   PRECOMPUTED_DR_SETTINGS: "Pre-computed DR Settings",
+  PERTURBATION_SIGNATURES_SETTINGS: "Perturbation Signatures Settings",
 };
 
 const BiClusteringSettingsTypes = {
@@ -330,6 +331,20 @@ const GeneRegulationEnhancedSettingsTypes = {
   SIMPLIFIED_VIEW_MIN_NEIGHBORS: "simplifiedViewMinNeighbors",
 };
 
+const PerturbationSignaturesSettingsTypes = {
+  GENE_LIST: "geneList",
+  SELECTED_CELL_LINES: "selectedCellLines",
+  SELECTED_SIGNATURES: "selectedSignatures",
+  DISPLAY_MODE: "displayMode",
+  SHOW_VALUES: "showValues",
+  Z_SCORE_CUTOFF: "zScoreCutoff",
+  CLUSTER_ROWS: "clusterRows",
+  CLUSTER_COLUMNS: "clusterColumns",
+  COLOR_SCALE: "colorScale",
+  SORT_BY: "sortBy",
+  SORT_ORDER: "sortOrder",
+};
+
 export {
   SettingsTypes,
   BiClusteringSettingsTypes,
@@ -353,4 +368,5 @@ export {
   GenelistCompareSettingsTypes,
   InchlibSettingsTypes,
   MultiDatasetComparisonSettingsTypes,
+  PerturbationSignaturesSettingsTypes,
 };
