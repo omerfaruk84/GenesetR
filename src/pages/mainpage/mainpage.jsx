@@ -322,12 +322,7 @@ const MainPage = ({ coreSettingsChanged }) => {
               </span>
             </a>
 
-            <a
-              style={{ fontSize: "1em", marginLeft: "3%" }}
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://github.com/omerfaruk84/GenesetR"
-            >
+            <span style={{ fontSize: "1em", marginLeft: "3%" }}>
               <span style={{ color: "black" }}>
                 Would you like to contribute?
               </span>{" "}
@@ -344,7 +339,7 @@ const MainPage = ({ coreSettingsChanged }) => {
                 />
               </a>
               <span style={{ marginLeft: "3px" }}>page.</span>
-            </a>
+            </span>
           </div>
         </div>
       </div>

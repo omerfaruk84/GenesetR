@@ -11,7 +11,8 @@ import { FaTrash } from "react-icons/fa";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { correlationSettingsChanged } from "../../store/settings/correlation-settings";
 import { pathfinderSettingsChanged } from "../../store/settings/pathfinder-settings";
-import { CoreSettingsTypes, CorrelationSettingsTypes, PathFinderSettingsTypes } from "../side-bar/settings/enums";
+import { deregulatedGenesSettingsChanged } from "../../store/settings/deregulated-genes-settings";
+import { CoreSettingsTypes, CorrelationSettingsTypes, DeregulatedGenesSettingsTypes, PathFinderSettingsTypes } from "../side-bar/settings/enums";
 import styles from "./AccordionMenu.scss";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
@@ -110,11 +111,12 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
 };
 
 const DatasetSelector = forwardRef(
-  ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
+  ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, deregulatedGenesSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, deregulatedGenesSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
     const location = useLocation();
     const isCorrelationModule = location.pathname === ROUTES.CORRELATION;
     const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
-    const isMultiSelectMode = isCorrelationModule || isPathFinderModule;
+    const isDeregulatedModule = location.pathname === ROUTES.DEREGULATED_GENES;
+    const isMultiSelectMode = isCorrelationModule || isPathFinderModule || isDeregulatedModule;
 
     const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
       setDatasetList(prevList => 
@@ -153,6 +155,10 @@ const DatasetSelector = forwardRef(
         current = pathfinderSettings?.selectedDatasets || [];
         settingName = PathFinderSettingsTypes.SELECTED_DATASETS;
         changeHandler = pathfinderSettingsChanged;
+      } else if (isDeregulatedModule) {
+        current = deregulatedGenesSettings?.selectedDatasets || [];
+        settingName = DeregulatedGenesSettingsTypes.SELECTED_DATASETS;
+        changeHandler = deregulatedGenesSettingsChanged;
       } else {
         return;
       }
@@ -169,7 +175,7 @@ const DatasetSelector = forwardRef(
         settingName: settingName,
         newValue: newSelection,
       });
-    }, [isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets, correlationSettingsChanged, pathfinderSettingsChanged]);
+    }, [isMultiSelectMode, isCorrelationModule, isPathFinderModule, isDeregulatedModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets, deregulatedGenesSettings?.selectedDatasets, correlationSettingsChanged, pathfinderSettingsChanged, deregulatedGenesSettingsChanged]);
 
     // Function to transform backend dataset to frontend format
     // NOTE: We removed coreSettings.cellLine?.id from dependencies to prevent
@@ -226,7 +232,7 @@ const DatasetSelector = forwardRef(
 
       loadDatasets();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode]);
+    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode, isDeregulatedModule]);
 
     const deleteItemAndChildren = (id) => {
       let parent = "";
@@ -366,6 +372,8 @@ const DatasetSelector = forwardRef(
         let selectedDatasets = [];
         if (isCorrelationModule) selectedDatasets = correlationSettings?.selectedDatasets || [];
         else if (isPathFinderModule) selectedDatasets = pathfinderSettings?.selectedDatasets || [];
+        else if (isDeregulatedModule) selectedDatasets = deregulatedGenesSettings?.selectedDatasets || [];
+        else if (isDeregulatedModule) selectedDatasets = deregulatedGenesSettings?.selectedDatasets || [];
 
         if (selectedDatasets.length > 0) {
           const firstSelectedId = selectedDatasets[0];
@@ -384,7 +392,7 @@ const DatasetSelector = forwardRef(
         }
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [coreSettings.cellLine.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets?.[0], pathfinderSettings?.selectedDatasets?.[0]]);
+    }, [coreSettings.cellLine.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, isDeregulatedModule, correlationSettings?.selectedDatasets?.[0], pathfinderSettings?.selectedDatasets?.[0], deregulatedGenesSettings?.selectedDatasets?.[0]]);
 
     // Sync active/checked state when settings change
     useEffect(() => {
@@ -410,7 +418,7 @@ const DatasetSelector = forwardRef(
           }))
         );
       }
-    }, [coreSettings.cellLine?.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets]);
+    }, [coreSettings.cellLine?.id, isMultiSelectMode, isCorrelationModule, isPathFinderModule, isDeregulatedModule, correlationSettings?.selectedDatasets, pathfinderSettings?.selectedDatasets, deregulatedGenesSettings?.selectedDatasets]);
 
     useEffect(() => {
       if (
@@ -453,6 +461,9 @@ const DatasetSelector = forwardRef(
       } else if (isPathFinderModule) {
         selectedCount = pathfinderSettings?.selectedDatasets?.length || 0;
         changeHandler = pathfinderSettingsChanged;
+      } else if (isDeregulatedModule) {
+        selectedCount = deregulatedGenesSettings?.selectedDatasets?.length || 0;
+        changeHandler = deregulatedGenesSettingsChanged;
       }
       
       return (
@@ -506,6 +517,7 @@ const DatasetSelector = forwardRef(
                   let isSelected = false;
                   if (isCorrelationModule) isSelected = correlationSettings?.selectedDatasets?.includes(dataset.id);
                   else if (isPathFinderModule) isSelected = pathfinderSettings?.selectedDatasets?.includes(dataset.id);
+                  else if (isDeregulatedModule) isSelected = deregulatedGenesSettings?.selectedDatasets?.includes(dataset.id);
                   
                   return (
                     <label
@@ -569,7 +581,7 @@ const DatasetSelector = forwardRef(
                     border: "1px solid #ffc107"
                   }}>
                     <Text size="small" style={{ color: "#856404", fontStyle: "italic" }}>
-                      ⚠️ No datasets selected. Select at least one dataset to calculate.
+                      No datasets selected. Select at least one dataset to calculate.
                     </Text>
                   </div>
                 )}
@@ -875,12 +887,14 @@ const mapStateToProps = ({ settings }) => ({
   coreSettings: settings?.core ?? {},
   correlationSettings: settings?.correlation ?? {},
   pathfinderSettings: settings?.pathfinder ?? {},
+  deregulatedGenesSettings: settings?.deregulatedGenes ?? {},
 });
 
 const mapDispatchToProps = { 
   coreSettingsChanged,
   correlationSettingsChanged,
   pathfinderSettingsChanged,
+  deregulatedGenesSettingsChanged,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps, null, {

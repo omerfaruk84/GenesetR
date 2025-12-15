@@ -9,7 +9,7 @@ import { LoadingPage } from '../../components/loading-page';
 
 const moduleDescription = {
   title: "Deregulated Genes Analysis",
-  description: "This module identifies genes that are commonly deregulated across multiple perturbations. By selecting specific perturbations (e.g., cholesterol synthesis gene knockdowns), you can discover which genes are consistently up- or down-regulated. This helps identify robust biomarkers and downstream effects of perturbing specific pathways.",
+  description: "This module identifies genes commonly deregulated across your selected perturbations. It reports Perturbation Count (how many perturbations a gene appears in), Frequency (that count as a % of all selected perturbations), Direction (more often up or down), and Avg Z-Score/Rank across appearances. Select multiple datasets in the sidebar to also compute a multi-dataset aggregate.",
   tabs: {
     table: "Table showing commonly deregulated genes across selected perturbations with their average z-scores and frequency of appearance.",
     heatmap: "Heatmap visualization of gene expression across perturbations, showing patterns of co-regulation."

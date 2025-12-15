@@ -279,6 +279,10 @@ const DeregulatedGenesSettingsTypes = {
   AVERAGE_METHOD: "averageMethod",
   REQUIRE_SAME_DIRECTION: "requireSameDirection",
   MIN_DATASETS: "minDatasets",
+  SELECTED_DATASETS: "selectedDatasets",
+  DIRECTION_MODE: "directionMode",
+  FILTER_BLACKLISTED: "filterBlackListed",
+  FILTER_BLACKLIST_ENABLED: "filterBlacklistEnabled",
 };
 
 const PrecomputedDrSettingsTypes = {

@@ -8,6 +8,10 @@ const initialState = {
   averageMethod: "zscore", // "zscore" or "rank"
   requireSameDirection: true,
   minDatasets: 2,
+  selectedDatasets: [],
+  directionMode: "downstream",
+  filterBlackListed: 2,
+  filterBlacklistEnabled: true,
 };
 
 export const deregulatedGenesSettingsSlice = createSlice({

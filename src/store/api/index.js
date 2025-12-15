@@ -47,6 +47,8 @@ const requestToModuleMap = {
   "calcGeneSignatureMultiDatasetSimilar": "genesignatureSimilarGraph",
   "geneExpression": "geneExpressionGraph",
   "multiDatasetComparison": "multiDatasetComparison",
+  "calcDeregulatedGenes": "deregulatedGenesGraph",
+  "calcDeregulatedGenesMultiDataset": "deregulatedGenesMultiDataset",
 };
 
 const getData = async (body, moduleName = null, options = {}) => {
@@ -423,6 +425,7 @@ const runDeregulatedGenes = async (core, deregulatedGenesSettings) => {
     z_score_threshold: deregulatedGenesSettings.zScoreThreshold,
     average_method: deregulatedGenesSettings.averageMethod,
     require_same_direction: deregulatedGenesSettings.requireSameDirection,
+    direction_mode: deregulatedGenesSettings.directionMode,
     request: "calcDeregulatedGenes",
   };
   return await getData(body);
@@ -435,6 +438,7 @@ const runDeregulatedGenesMultiDataset = async (core, deregulatedGenesSettings) =
       .split(";")
       .filter(Boolean)
       .join(";"),
+    datasets: deregulatedGenesSettings.selectedDatasets,
     top_n_genes: deregulatedGenesSettings.topNGenes,
     min_perturbations: deregulatedGenesSettings.minPerturbations,
     min_perturbations_type: deregulatedGenesSettings.minPerturbationsType,
@@ -442,6 +446,7 @@ const runDeregulatedGenesMultiDataset = async (core, deregulatedGenesSettings) =
     average_method: deregulatedGenesSettings.averageMethod,
     require_same_direction: deregulatedGenesSettings.requireSameDirection,
     min_datasets: deregulatedGenesSettings.minDatasets,
+    direction_mode: deregulatedGenesSettings.directionMode,
     request: "calcDeregulatedGenesMultiDataset",
   };
   return await getData(body);

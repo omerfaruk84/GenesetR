@@ -40,6 +40,59 @@ const DeregulatedGenesSettings = ({
   return (
     <>
       <Field
+        label='Regulation Mode'
+        labelLeft
+        labelWidth="150px"
+        helpText="Downstream (perturbation effects on genes) or Upstream (genes regulating perturbations)."
+      >
+        <Select
+          value={deregulatedGenesSettings?.directionMode}
+          options={[
+            { label: "Downstream", value: "downstream" },
+            { label: "Upstream", value: "upstream" },
+          ]}
+          onChange={({ target: { value } }) =>
+            deregulatedGenesSettingsChanged({
+              settingName: DeregulatedGenesSettingsTypes.DIRECTION_MODE,
+              newValue: value,
+            })
+          }
+        />
+      </Field>
+
+      <Field
+        label='Filter Blacklisted'
+        labelLeft
+        labelWidth="150px"
+        helpText="Hide genes flagged as global regulators/blacklist above this z-score count."
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            label={deregulatedGenesSettings?.filterBlackListed}
+            max={10}
+            min={0}
+            value={deregulatedGenesSettings?.filterBlackListed}
+            onChange={({ target: { value } }) =>
+              deregulatedGenesSettingsChanged({
+                settingName: DeregulatedGenesSettingsTypes.FILTER_BLACKLISTED,
+                newValue: parseFloat(value),
+              })
+            }
+          />
+        </div>
+        <CheckBox
+          label="Enable blacklist filter"
+          checked={!!deregulatedGenesSettings?.filterBlacklistEnabled}
+          onChange={({ target: { checked } }) =>
+            deregulatedGenesSettingsChanged({
+              settingName: DeregulatedGenesSettingsTypes.FILTER_BLACKLIST_ENABLED,
+              newValue: checked,
+            })
+          }
+        />
+      </Field>
+
+      <Field
         label='Top N Genes'
         labelLeft
         labelWidth="150px"

@@ -92,6 +92,8 @@ const SideBar = ({
       coreSettings.peturbationList?.trim().split("\n").length > 1) ||
     (pathname === ROUTES.GENESIGNATURE &&
       coreSettings.targetGeneList?.length > 1) ||
+    (pathname === ROUTES.DEREGULATED_GENES &&
+      coreSettings.peturbationList?.trim().split("\n").filter(line => line.trim().length > 0).length > 0) ||
     pathname === ROUTES.EXPRESSIONANALYZER ||
     pathname === ROUTES.GENELISTCOMPARE ||
     (pathname === ROUTES.MULTIDATASET_COMPARISON &&

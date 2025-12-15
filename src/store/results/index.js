@@ -353,10 +353,35 @@ const runCalculation = (module) => async (dispatch, getState) => {
         dispatch(clearResult({ module: "deregulatedGenesMultiDataset" }));
 
         const deregulatedGenesSettings = getState().settings.deregulatedGenes;
-        const result = await runDeregulatedGenes(core, deregulatedGenesSettings);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        const selectedDatasets = deregulatedGenesSettings.selectedDatasets || [];
+
+        // If user selected specific datasets, use the first one as the active dataset for the single-dataset run
+        const singleCore = selectedDatasets.length > 0
+          ? { ...core, cellLine: { ...core.cellLine, id: selectedDatasets[0] } }
+          : core;
+
+        const result = await runDeregulatedGenes(singleCore, deregulatedGenesSettings);
+        dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+
+        // Fire multi-dataset aggregation when more than one dataset is selected
+        if (selectedDatasets.length > 1) {
+          dispatch(calcRunningChanged({ module: "deregulatedGenesMultiDataset", status: true }));
+          try {
+            const multiResult = await runDeregulatedGenesMultiDataset(singleCore, deregulatedGenesSettings);
+            dispatch(resultReceived({ result: multiResult, module: "deregulatedGenesMultiDataset" }));
+          } catch (multiErr) {
+            dispatch(calcRunningChanged({ module: "deregulatedGenesMultiDataset", status: false }));
+            toast({
+              message: {
+                type: "Error",
+                icon: true,
+                content: "Multi-dataset calculation failed",
+                details: multiErr.message,
+              },
+            });
+          }
+        }
+        return;
       }
       case ROUTES.MULTIDATASET_COMPARISON: {
         const result = await runMultiDatasetComparison(core, multidatasetComparison);
