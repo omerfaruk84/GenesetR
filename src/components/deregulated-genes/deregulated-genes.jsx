@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, Tab, Box, Typography, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
 import Axios from "axios";
 import { waitForTaskCompletion } from "../../store/api/websocket";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchBlacklistData } from "../../store/blacklist";
+import { GeneSetEnrichmentTable } from "../enrichment";
 import { MaterialReactTable } from 'material-react-table';
 import ReactECharts from 'echarts-for-react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -231,6 +232,51 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
     setHeatmapData(option);
   };
 
+  const enrichmentGeneLists = useMemo(() => {
+    if (!tableData || tableData.length === 0) return null;
+    const takeNames = (arr, n) =>
+      arr
+        .slice(0, n)
+        .map((g) => g.gene)
+        .filter(Boolean)
+        .join(",");
+
+    // Group genes by direction label
+    const groups = {
+      "Upstream Positive": [],
+      "Upstream Negative": [],
+      "Downstream Positive": [],
+      "Downstream Negative": [],
+    };
+
+    const sortedGenes = [...tableData].sort(
+      (a, b) => (b.perturbationCount || 0) - (a.perturbationCount || 0)
+    );
+
+    sortedGenes.forEach((g) => {
+      const label = (g.direction_label || g.direction || "").toLowerCase();
+      if (label.includes("upstream") && label.includes("positive")) {
+        groups["Upstream Positive"].push(g);
+      } else if (label.includes("upstream") && label.includes("negative")) {
+        groups["Upstream Negative"].push(g);
+      } else if (label.includes("downstream") && label.includes("up")) {
+        groups["Downstream Positive"].push(g);
+      } else if (label.includes("downstream") && label.includes("down")) {
+        groups["Downstream Negative"].push(g);
+      }
+    });
+
+    const lists = {};
+    Object.entries(groups).forEach(([name, genes]) => {
+      if (genes.length) {
+        lists[`${name} (Top 20)`] = takeNames(genes, 20);
+        lists[`${name} (Top 50)`] = takeNames(genes, 50);
+      }
+    });
+
+    return Object.keys(lists).length ? lists : null;
+  }, [tableData]);
+
   const baseColumns = [
     {
       accessorKey: 'gene',
@@ -364,26 +410,33 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
               <div className={styles.datasetBadge}>Showing results for: {tableDatasetLabel}</div>
             )}
             {tableData.length > 0 ? (
-              <MaterialReactTable
-                columns={tableColumns}
-                data={tableData}
-                enableSorting
-                enablePagination
-                initialState={{
-                  pagination: {
-                    pageSize: 50,
-                    pageIndex: 0,
-                  },
-                  sorting: [{ id: tableDataset === "MULTI" ? 'datasetCount' : 'perturbationCount', desc: true }],
-                }}
-                muiTableContainerProps={{
-                  sx: { maxHeight: 'calc(100vh - 300px)' }
-                }}
-                muiTableBodyRowProps={({ row }) => ({
-                  onClick: () => openDetailForGene(row.original.gene),
-                  sx: { cursor: 'pointer' },
-                })}
-              />
+              <>
+                <MaterialReactTable
+                  columns={tableColumns}
+                  data={tableData}
+                  enableSorting
+                  enablePagination
+                  initialState={{
+                    pagination: {
+                      pageSize: 50,
+                      pageIndex: 0,
+                    },
+                    sorting: [{ id: tableDataset === "MULTI" ? 'datasetCount' : 'perturbationCount', desc: true }],
+                  }}
+                  muiTableContainerProps={{
+                    sx: { maxHeight: 'calc(100vh - 300px)' }
+                  }}
+                  muiTableBodyRowProps={({ row }) => ({
+                    onClick: () => openDetailForGene(row.original.gene),
+                    sx: { cursor: 'pointer' },
+                  })}
+                />
+                {enrichmentGeneLists && Object.keys(enrichmentGeneLists).length > 0 && (
+                  <div style={{ marginTop: "12px" }}>
+                    <GeneSetEnrichmentTable genesets={enrichmentGeneLists} />
+                  </div>
+                )}
+              </>
             ) : (
               <div className={styles.noData}>No results available</div>
             )}

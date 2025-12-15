@@ -187,40 +187,45 @@ const Genelist = ({
     });
   }, []);
 
-  const genesChanged = useCallback((value) => {
-    value = value.toUpperCase();
-    if (newGeneListName === selectedGeneList && !saveListChecked)
-      setsaveListChecked(true);
-    if (isGeneSignature)
-      value = value
-        ?.replaceAll(/\s+|,|\n+|;/g, "+")
-        .replaceAll(/\++/g, "+")
-        .replaceAll(/-+/g, "-")
-        .trimStart("+");
-    else console.log(value);
-    value = value
-      ?.toUpperCase()
-      .replaceAll(/NON-TARGETING_\d+/g, "")
-      .replaceAll(/\s+|,|;|\+/g, "\n") // Also replace plus signs with newlines when not a gene signature box
-      .replaceAll(/\n+/g, "\n")
-      .trimStart("\n")
-      .split("\n")
-      .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
-      .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
-      .join("\n"); // Join back into a string separated by newlines
+  const genesChanged = useCallback(
+    (value) => {
+      let normalizedValue = (value || "").toUpperCase();
+      if (newGeneListName === selectedGeneList && !saveListChecked)
+        setsaveListChecked(true);
 
-    setGenes(value, () => {
-      setProps(() => ({
-        validatingGenes: true,
-        replaceGene: replaceGene,
-        genes: {
-          found: [],
-          suggestions: [],
-        },
-        currentGenes: value,
-      }));
-    });
-  }, [newGeneListName, selectedGeneList, saveListChecked, isGeneSignature, replaceGene]);
+      if (isGeneSignature) {
+        normalizedValue = normalizedValue
+          .replaceAll(/NON-TARGETING_\d+/g, "")
+          .replaceAll(/\s+|,|\n+|;/g, "+")
+          .replaceAll(/\++/g, "+")
+          .replaceAll(/-+/g, "-")
+          .replace(/^\+/, "");
+      } else {
+        normalizedValue = normalizedValue
+          .replaceAll(/NON-TARGETING_\d+/g, "")
+          .replaceAll(/\s+|,|;|\+|-/g, "\n") // Convert plus/minus to new lines for regular gene lists
+          .replaceAll(/\n+/g, "\n")
+          .trimStart("\n")
+          .split("\n")
+          .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
+          .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
+          .join("\n"); // Join back into a string separated by newlines
+      }
+
+      setGenes(normalizedValue, () => {
+        setProps(() => ({
+          validatingGenes: true,
+          replaceGene: replaceGene,
+          genes: {
+            found: [],
+            suggestions: [],
+          },
+          currentGenes: normalizedValue,
+        }));
+      });
+    },
+    [newGeneListName, selectedGeneList, saveListChecked, isGeneSignature, replaceGene]
+  );
 
   // Get a genelist from the database based on ID
   const getGenelistById = (id) => {
