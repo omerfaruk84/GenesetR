@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { connect } from "react-redux";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaChevronRight, FaChevronDown } from "react-icons/fa";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { correlationSettingsChanged } from "../../store/settings/correlation-settings";
 import { pathfinderSettingsChanged } from "../../store/settings/pathfinder-settings";
@@ -20,46 +20,84 @@ import { updateGeneLists, fetchDatasets } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
 
 const DatasetTreeItem = ({ item, level = 0, activeId }) => {
-  // Treat local active flag as fallback while store update propagates
-  const isActive = String(item.id) === String(activeId) || item.active;
+  // Ensure consistent string comparison for active state
+  const isActive = activeId != null && (String(item.id) === String(activeId) || item.active === true);
   const hasChildren = item.children && item.children.length > 0;
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // Build className properly
+  const treeItemClassName = isActive 
+    ? `${styles.treeItem} ${styles.active}`.trim()
+    : styles.treeItem;
+
   return (
-    <div className={`${styles.treeLevel} ${level === 0 ? styles.root : ''}`}>
-      <div className={styles.treeItemContainer}>
+    <div
+      className={`${styles.treeLevel} ${level === 0 ? styles.root : ''}`}
+      role="treeitem"
+      aria-level={level + 1}
+      aria-expanded={hasChildren ? isExpanded : undefined}
+    >
+      <div
+        className={`${styles.treeItemContainer} ${isActive ? styles.activeContainer : ''}`.trim()}
+        style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: "8px", 
+          minHeight: "28px",
+          ...(isActive ? {
+            backgroundColor: '#e3f2fd',
+            border: '1px solid #90caf9',
+          } : {})
+        }}
+      >
         {hasChildren ? (
-          <span
+          <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
             className={styles.expandButton}
             aria-label={isExpanded ? "Collapse" : "Expand"}
-            role="button"
-            tabIndex={0}
+            aria-expanded={isExpanded}
           >
-            {isExpanded ? "▼" : "▶"}
-          </span>
+            {isExpanded ? (
+              <FaChevronDown aria-hidden="true" size={12} />
+            ) : (
+              <FaChevronRight aria-hidden="true" size={12} />
+            )}
+          </button>
         ) : (
-          <span className={styles.expandPlaceholder}></span>
+          <span className={styles.expandPlaceholder} aria-hidden="true"></span>
         )}
 
         <div
-          onClick={item.onClick}
-          className={`${styles.treeItem} ${isActive ? styles.active : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (item.onClick) {
+              item.onClick();
+            }
+          }}
+          className={treeItemClassName}
           role="button"
           tabIndex={0}
           aria-pressed={isActive}
         >
-          <Text size="small" className={styles.treeItemText}>
+          <Text 
+            size="small" 
+            className={styles.treeItemText}
+            style={isActive ? {
+              color: '#1976d2',
+              fontWeight: 500,
+            } : {}}
+          >
             {item.name} {item.id.toString().length > 17 ? "(DR Result)" : ""}
           </Text>
         </div>
       </div>
 
       {hasChildren && isExpanded && (
-        <div className={styles.treeChildren}>
+        <div className={styles.treeChildren} role="group">
           {item.children.map(child => (
             <DatasetTreeItem
               key={child.id}
@@ -382,14 +420,14 @@ const DatasetSelector = forwardRef(
         location.pathname === ROUTES.EXPRESSIONANALYZER || 
         location.pathname === ROUTES.GENESIGNATURE
       ) {
-        if (coreSettings.cellLine.id.length > 17)
+        if (coreSettings.cellLine?.id && String(coreSettings.cellLine.id).length > 17)
           updateActivityById("K562gwps", 11258, 8248, false);
       }
     }, [location.pathname]);
 
     // Filter datasets based on route
     const filteredDatasets = location.pathname !== ROUTES.DR
-      ? datasetList.filter((x) => x.id.length < 17)
+      ? datasetList.filter((x) => String(x.id).length < 17)
       : datasetList;
 
     // Helper to build tree hierarchy - memoized for performance
@@ -805,7 +843,7 @@ const DatasetSelector = forwardRef(
               No datasets are available.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <div role="tree" style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               {treeRoots.map(root => (
                 <DatasetTreeItem 
                   key={root.id} 

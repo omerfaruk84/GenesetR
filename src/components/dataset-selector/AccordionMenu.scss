@@ -50,41 +50,90 @@
 
 // Tree structure styles
 .treeLevel {
-  margin-left: 12px;
-  border-left: 1px solid #eee;
+  margin: 0;
+  padding: 0;
+  
+  &:not(.root) {
+    margin-left: 20px;
+    padding-left: 0;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background-color: #e0e0e0;
+    }
+  }
 
   &.root {
     margin-left: 0;
-    border-left: none;
+    padding-left: 0;
   }
 }
 
 .treeItemContainer {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 2px;
-  padding-left: 8px;
+  width: 100%;
+  padding: 2px 4px;
+  position: relative;
+  min-height: 28px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &.activeContainer {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    
+    .treeItem {
+      background-color: transparent !important;
+      
+      &:hover {
+        background-color: transparent !important;
+      }
+    }
+  }
 }
 
 .expandButton {
   cursor: pointer;
-  margin-right: 4px;
-  width: 14px;
-  display: flex;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #666;
-  font-size: 10px;
+  font-size: 11px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0;
 
   &:hover {
-    color: #333;
+    color: #1976d2;
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: #90caf9;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
   }
 }
 
 .expandPlaceholder {
-  width: 18px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-block;
 }
 
+// Tree item styling
 .treeItem {
   display: flex;
   align-items: center;
@@ -97,22 +146,18 @@
   transition: all 0.2s ease;
   flex: 1;
   min-height: 28px;
+  box-sizing: border-box;
 
-  &:hover {
+  &:hover:not(.active) {
     background-color: #f5f5f5;
   }
 
   &.active {
-    background-color: #e3f2fd;
-    border: 1px solid #90caf9;
+    background-color: transparent;
 
     .treeItemText {
       color: #1976d2;
       font-weight: 500;
-    }
-
-    &:hover {
-      background-color: #e3f2fd;
     }
   }
 }
@@ -126,7 +171,10 @@
 }
 
 .treeChildren {
-  margin-top: 2px;
+  margin-top: 0;
+  margin-left: 0;
+  padding-left: 0;
+  position: relative;
 }
 
 // Dataset container styles

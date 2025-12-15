@@ -201,9 +201,17 @@ const Genelist = ({
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         if (part === "+" || part === "-") {
-          // Store sign temporarily - we'll add it if the next gene is valid
+          // Always preserve signs - they're needed between genes and at the end for continued typing
+          // Check if there's a following non-empty gene part
           const nextIndex = i + 1;
-          if (nextIndex < parts.length && parts[nextIndex] && parts[nextIndex].trim().length > 0) {
+          const hasFollowingGene = nextIndex < parts.length && 
+                                    parts[nextIndex] && 
+                                    parts[nextIndex].trim().length > 0;
+          
+          // Add sign if: (1) there's a following gene, OR (2) it's at the end (trailing sign)
+          // This preserves trailing signs so users can continue typing
+          if (hasFollowingGene || nextIndex >= parts.length || 
+              (parts[nextIndex] && parts[nextIndex].trim().length === 0)) {
             processedParts.push(part);
           }
         } else if (part && part.trim().length > 0) {
