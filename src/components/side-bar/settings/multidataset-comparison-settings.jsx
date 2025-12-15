@@ -5,12 +5,15 @@ import {
   Field,
   Select,
   TextArea,
+  Slider,
+  CheckBox,
 } from "@oliasoft-open-source/react-ui-library";
 import { multidatasetComparisonSettingsChanged } from "../../../store/settings/multidataset-comparison-settings";
 import { get } from "idb-keyval";
 import { MultiDatasetComparisonSettingsTypes } from "./enums";
 import { useLocation } from "react-router-dom";
 import { ROUTES } from "../../../common/routes";
+import styles from "./settings.module.scss";
 
 const MultiDatasetComparisonSettings = ({
   multidatasetComparisonSettings,
@@ -148,6 +151,41 @@ const MultiDatasetComparisonSettings = ({
             });
           }}
         />
+      </Field>
+
+      <Field helpText="Filter out sgRNAs that are blacklisted in any selected dataset (union of blacklists).">
+        <CheckBox
+          label="Filter Black Listed sgRNAs"
+          onChange={({ target: { checked } }) =>
+            multidatasetComparisonSettingsChanged({
+              settingName: MultiDatasetComparisonSettingsTypes.FILTER,
+              newValue: checked,
+            })
+          }
+          checked={!!multidatasetComparisonSettings?.filter}
+        />
+      </Field>
+
+      <Field
+        labelLeft
+        label="Filter Threshold"
+        helpText="Minimum blacklist Z score required to drop a gene (applied across the union of datasets)."
+      >
+        <div className={styles.inputRange}>
+          <Slider
+            disabled={!multidatasetComparisonSettings?.filter}
+            label={multidatasetComparisonSettings?.filterBlackListed ?? 2}
+            max={100}
+            min={24}
+            value={(multidatasetComparisonSettings?.filterBlackListed ?? 2) * 20}
+            onChange={({ target: { value } }) =>
+              multidatasetComparisonSettingsChanged({
+                settingName: MultiDatasetComparisonSettingsTypes.FILTER_BLACKLISTED,
+                newValue: value / 20,
+              })
+            }
+          />
+        </div>
       </Field>
     </>
   );

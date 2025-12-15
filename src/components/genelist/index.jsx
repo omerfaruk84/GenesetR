@@ -179,22 +179,68 @@ const Genelist = ({
     value = value.toUpperCase();
     if (newGeneListName === selectedGeneList && !saveListChecked)
       setsaveListChecked(true);
-    if (isGeneSignature)
+    if (isGeneSignature) {
+      // For gene signatures, normalize separators to + but preserve + and - signs
       value = value
         ?.replaceAll(/\s+|,|\n+|;/g, "+")
         .replaceAll(/\++/g, "+")
         .replaceAll(/-+/g, "-")
         .trimStart("+");
-    value = value
-      ?.toUpperCase()
-      .replaceAll(/NON-TARGETING_\d+/g, "")
-      .replaceAll(/\s+|,|;|\+/g, "\n") // Also replace plus signs with newlines when not a gene signature box
-      .replaceAll(/\n+/g, "\n")
-      .trimStart("\n")
-      .split("\n")
-      .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
-      .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
-      .join("\n"); // Join back into a string separated by newlines
+      
+      // Remove NON-TARGETING genes and clean up underscores, but preserve + and - signs
+      value = value
+        .replaceAll(/NON-TARGETING_\d+/g, "")
+        .replaceAll(/[+-]NON-TARGETING_\d+/g, "") // Also remove with preceding sign
+        .replaceAll(/NON-TARGETING_\d+[+-]/g, ""); // Also remove with following sign
+      
+      // Process each gene while preserving signs - split by + and - but keep them
+      const parts = value.split(/([+-])/);
+      const processedParts = [];
+      const seenGenes = new Set();
+      
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part === "+" || part === "-") {
+          // Store sign temporarily - we'll add it if the next gene is valid
+          const nextIndex = i + 1;
+          if (nextIndex < parts.length && parts[nextIndex] && parts[nextIndex].trim().length > 0) {
+            processedParts.push(part);
+          }
+        } else if (part && part.trim().length > 0) {
+          // Clean up gene name (remove underscores and trailing parts)
+          const cleanedGene = part.replaceAll(/_.+/g, "").trim();
+          if (cleanedGene && !seenGenes.has(cleanedGene)) {
+            seenGenes.add(cleanedGene);
+            processedParts.push(cleanedGene);
+          } else if (cleanedGene && seenGenes.has(cleanedGene)) {
+            // Remove the preceding sign if gene is duplicate
+            if (processedParts.length > 0 && 
+                (processedParts[processedParts.length - 1] === "+" || 
+                 processedParts[processedParts.length - 1] === "-")) {
+              processedParts.pop();
+            }
+          }
+        }
+      }
+      
+      // Remove leading + if present (but keep -)
+      if (processedParts.length > 0 && processedParts[0] === "+") {
+        processedParts.shift();
+      }
+      
+      value = processedParts.join("");
+    } else {
+      value = value
+        ?.toUpperCase()
+        .replaceAll(/NON-TARGETING_\d+/g, "")
+        .replaceAll(/\s+|,|;|\+/g, "\n") // Also replace plus signs with newlines when not a gene signature box
+        .replaceAll(/\n+/g, "\n")
+        .trimStart("\n")
+        .split("\n")
+        .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
+        .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
+        .join("\n"); // Join back into a string separated by newlines
+    }
 
     setGenes(value, () => {
       setProps(() => ({

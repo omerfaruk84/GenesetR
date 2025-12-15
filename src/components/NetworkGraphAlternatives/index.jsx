@@ -65,11 +65,21 @@ try {
 try {
   circular = require("graphology-layout/circular");
   randomLayout = require("graphology-layout/random");
-  // eslint-disable-next-line
-  grid = require("graphology-layout/grid");
-  // eslint-disable-next-line
-  radial = require("graphology-layout/radial");
   noverlap = require("graphology-layout-noverlap");
+  // grid and radial may not be available in all graphology-layout versions
+  // Suppress webpack warnings for optional modules
+  try {
+    // eslint-disable-next-line
+    grid = require("graphology-layout/grid");
+  } catch (gridErr) {
+    // grid layout not available, will use fallback
+  }
+  try {
+    // eslint-disable-next-line
+    radial = require("graphology-layout/radial");
+  } catch (radialErr) {
+    // radial layout not available, will use fallback
+  }
 } catch (e) {
   console.log("Graphology extra layouts not available:", e?.message || e);
 }

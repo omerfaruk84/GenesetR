@@ -900,10 +900,17 @@ const GeneSetEnrichmentTable = ({
         }
       });
       setGeneListOptions(tempx);
-      // Always update selectedCluster when genesets change to trigger enrichment analysis
-      if (tempx.length > 0) {
-        setselectedCluster(tempx[0].value);
+      if (tempx.length === 0) {
+        setselectedCluster("");
+        return;
       }
+
+      // Preserve user selection if still available; otherwise fall back to first option
+      setselectedCluster((prev) => {
+        const stillExists = tempx.some((opt) => opt.value === prev);
+        if (stillExists && prev) return prev;
+        return tempx[0].value;
+      });
     }
   }, [genesets]); // Notice: selectedCluster is no longer in the dependency array here
 

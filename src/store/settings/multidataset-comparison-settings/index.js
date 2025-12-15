@@ -4,6 +4,8 @@ const initialState = {
   selectedGene: "",
   corrType: "pearson",
   targetList: "",
+  filter: true,
+  filterBlackListed: 2,
 };
 
 export const multidatasetComparisonSettingsSlice = createSlice({

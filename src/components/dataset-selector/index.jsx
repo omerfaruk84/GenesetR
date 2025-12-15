@@ -20,7 +20,8 @@ import { updateGeneLists, fetchDatasets } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
 
 const DatasetTreeItem = ({ item, level = 0, activeId }) => {
-  const isActive = item.id === activeId;
+  // Treat local active flag as fallback while store update propagates
+  const isActive = String(item.id) === String(activeId) || item.active;
   const hasChildren = item.children && item.children.length > 0;
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -74,18 +75,18 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
 };
 
 const DatasetSelector = forwardRef(
-  ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref) => {
+  ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
     const location = useLocation();
     const isCorrelationModule = location.pathname === ROUTES.CORRELATION;
     const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
     const isMultiSelectMode = isCorrelationModule || isPathFinderModule;
 
     const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
-      setDatasetList(prevList => 
+      setDatasetList(prevList =>
         prevList.map(item => ({
           ...item,
-          active: item.id === id
-        }))
+          active: String(item.id) === String(id),
+        })),
       );
       coreSettingsChanged({
         settingName: CoreSettingsTypes.CELL_LINE,
@@ -321,9 +322,7 @@ const DatasetSelector = forwardRef(
 
     useEffect(() => {
       if (!isMultiSelectMode) {
-        if (coreSettings.cellLine?.id) {
-          updateGeneLists(coreSettings.cellLine.id);
-        }
+        updateGeneLists(coreSettings.cellLine.id);
       } else {
         // For multi-select modules, use the first selected dataset for gene lists
         let selectedDatasets = [];
@@ -365,11 +364,11 @@ const DatasetSelector = forwardRef(
           }))
         );
       } else if (coreSettings.cellLine?.id) {
-        // For other modules, sync active state
+        // For other modules, sync active state - use type-safe comparison
         setDatasetList(prevList => 
           prevList.map(item => ({
             ...item,
-            active: item.id === coreSettings.cellLine.id
+            active: String(item.id) === String(coreSettings.cellLine.id)
           }))
         );
       }
@@ -389,33 +388,33 @@ const DatasetSelector = forwardRef(
     }, [location.pathname]);
 
     // Filter datasets based on route
-    // Must be calculated before any hooks to ensure consistent hook order
     const filteredDatasets = location.pathname !== ROUTES.DR
-      ? (datasetList || []).filter((x) => x.id.length < 17)
-      : (datasetList || []);
+      ? datasetList.filter((x) => x.id.length < 17)
+      : datasetList;
 
     // Helper to build tree hierarchy - memoized for performance
-    // Must be called before any conditional returns to follow Rules of Hooks
     const treeRoots = useMemo(() => {
-      if (!filteredDatasets || filteredDatasets.length === 0) {
-        return [];
-      }
-      
       const buildTree = (items) => {
         const itemMap = {};
         const roots = [];
 
-        // Deep copy and create map
+        // Deep copy and create map - use string keys for consistent lookup
         items.forEach(item => {
-          itemMap[item.id] = { ...item, children: [] };
+          itemMap[String(item.id)] = { ...item, children: [] };
         });
 
-        // Build hierarchy
+        // Build hierarchy - ensure type-safe parent lookup
         items.forEach(item => {
-          if (item.parent && itemMap[item.parent]) {
-            itemMap[item.parent].children.push(itemMap[item.id]);
+          if (item.parent) {
+            const parentKey = String(item.parent);
+            if (itemMap[parentKey]) {
+              itemMap[parentKey].children.push(itemMap[String(item.id)]);
+            } else {
+              // Parent not found, treat as root
+              roots.push(itemMap[String(item.id)]);
+            }
           } else {
-            roots.push(itemMap[item.id]);
+            roots.push(itemMap[String(item.id)]);
           }
         });
 

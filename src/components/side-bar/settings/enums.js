@@ -269,6 +269,8 @@ const MultiDatasetComparisonSettingsTypes = {
   SELECTED_GENE: "selectedGene",
   CORR_TYPE: "corrType",
   TARGET_LIST: "targetList",
+  FILTER: "filter",
+  FILTER_BLACKLISTED: "filterBlackListed",
 };
 
 const PrecomputedDrSettingsTypes = {

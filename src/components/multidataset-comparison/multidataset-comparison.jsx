@@ -1,15 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { connect } from "react-redux";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   Spacer,
   Tabs,
   Card,
   Text,
-  Badge,
   Toggle,
   Flex,
-  Select,
-  Field,
 } from "@oliasoft-open-source/react-ui-library";
 import { MaterialReactTable } from 'material-react-table';
 import { FaSortAmountUpAlt, FaSortAmountDownAlt, FaDownload } from 'react-icons/fa';
@@ -17,7 +15,7 @@ import { fetchGeneInfo, formatGeneTooltip, cleanGeneSymbol } from "../../utils/g
 import { GeneSetEnrichmentTable } from "../enrichment";
 import styles from "./multidataset-comparison.module.scss";
 
-const MultiDatasetComparison = ({ data }) => {
+const MultiDatasetComparison = ({ data, multidatasetComparisonSettings, blacklistData, blacklistLoading }) => {
   const [selectedMainTab, setSelectedMainTab] = useState({ value: 0, label: "Perturbation Effects (Downstream Effects)" });
   const [selectedSubTab, setSelectedSubTab] = useState({ value: 0, label: "Downstream Targets" });
   const [showRanks, setShowRanks] = useState(true);
@@ -195,6 +193,57 @@ const MultiDatasetComparison = ({ data }) => {
       return null;
     }
   }, [data]);
+
+  // Build a union blacklist across all datasets so we can drop any gene flagged in any dataset
+  const unionBlacklist = useMemo(() => {
+    if (!blacklistData) return null;
+
+    const datasets = parsedData?.datasets || [];
+    const combinedDown = {};
+    const combinedUp = {};
+
+    const mergeLists = (down = {}, up = {}) => {
+      if (down) {
+        Object.entries(down).forEach(([gene, score]) => {
+          if (score === undefined || score === null || isNaN(score)) return;
+          const current = combinedDown[gene] || 0;
+          combinedDown[gene] = Math.max(current, Math.abs(score));
+        });
+      }
+      if (up) {
+        Object.entries(up).forEach(([gene, score]) => {
+          if (score === undefined || score === null || isNaN(score)) return;
+          const current = combinedUp[gene] || 0;
+          combinedUp[gene] = Math.max(current, Math.abs(score));
+        });
+      }
+    };
+
+    // If blacklist data is organized per dataset, merge only the datasets we are comparing
+    if (blacklistData.byDataset && datasets.length > 0) {
+      datasets.forEach((datasetId) => {
+        const dsLists = blacklistData.byDataset[datasetId];
+        if (dsLists) {
+          mergeLists(dsLists.blackListDown, dsLists.blackListUp);
+        }
+      });
+    }
+
+    // Always merge the top-level lists as a fallback/default source
+    mergeLists(blacklistData.blackListDown, blacklistData.blackListUp);
+
+    if (Object.keys(combinedDown).length === 0 && Object.keys(combinedUp).length === 0) {
+      return null;
+    }
+
+    return {
+      blackListDown: combinedDown,
+      blackListUp: combinedUp,
+    };
+  }, [blacklistData, parsedData?.datasets]);
+
+  const blacklistThreshold = multidatasetComparisonSettings?.filterBlackListed ?? 0;
+  const isBlacklistFilteringEnabled = Boolean(multidatasetComparisonSettings?.filter && unionBlacklist);
 
   // Initialize selected datasets when data changes
   React.useEffect(() => {
@@ -375,6 +424,23 @@ const MultiDatasetComparison = ({ data }) => {
         const average = validValues.length > 0 
           ? Math.round((validValues.reduce((sum, val) => sum + val, 0) / validValues.length) * 1000) / 1000
           : null;
+
+        // Skip blacklisted genes when filtering is enabled (union across datasets)
+        let shouldInclude = true;
+        if (isBlacklistFilteringEnabled && average !== null) {
+          const downScore = unionBlacklist?.blackListDown?.[gene];
+          const upScore = unionBlacklist?.blackListUp?.[gene];
+
+          if (average < 0 && downScore !== undefined && downScore > blacklistThreshold) {
+            shouldInclude = false;
+          } else if (average > 0 && upScore !== undefined && upScore > blacklistThreshold) {
+            shouldInclude = false;
+          }
+        }
+
+        if (!shouldInclude) {
+          return;
+        }
         
         // Create row with only selected dataset columns
         const rowData = {};
@@ -866,6 +932,13 @@ const MultiDatasetComparison = ({ data }) => {
           {getDescription()}
         </Text>
 
+        {isBlacklistFilteringEnabled && (
+          <Text muted size="small" style={{ marginBottom: '4px' }}>
+            Filtering blacklisted sgRNAs across all selected datasets (union). Threshold: {blacklistThreshold}
+            {blacklistLoading ? " (loading blacklist data...)" : ""}
+          </Text>
+        )}
+
         
 
         {/* Controls for ranks and filtering */}
@@ -1126,4 +1199,15 @@ const MultiDatasetComparison = ({ data }) => {
   );
 };
 
-export { MultiDatasetComparison }; 
+const mapStateToProps = ({ settings, blacklist }) => ({
+  multidatasetComparisonSettings: settings?.multidatasetComparison ?? {},
+  blacklistData: blacklist?.data,
+  blacklistLoading: blacklist?.loading,
+});
+
+const MainContainer = connect(
+  mapStateToProps,
+  null
+)(MultiDatasetComparison);
+
+export { MainContainer as MultiDatasetComparison }; 
