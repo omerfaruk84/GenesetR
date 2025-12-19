@@ -223,7 +223,175 @@ export const getDatasetGenesV2 = async (datasetId) => {
 };
 
 /**
+ * Cell-cycle: compare perturbation vs control using aggregated histograms.
+ */
+export const fetchCellCycleComparisonV2 = async ({
+  datasetKey = null,
+  cellLine = null,
+  datasetId = null,
+  target,
+  control = "Non-Targeting",
+  level = "gene",
+  smooth = true,
+} = {}) => {
+  try {
+    const response = await Axios.get(`${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/compare`, {
+      params: {
+        target,
+        level,
+        dataset_key: datasetKey,
+        cell_line: cellLine,
+        dataset_id: datasetId,
+        control,
+        smooth,
+        include_hist: true,
+      },
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle comparison:", error);
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const fetchCellCycleCellLinesV2 = async () => {
+  try {
+    const response = await Axios.get(`${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/cell-lines`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.cell_lines || [];
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle cell lines:", error);
+    handleApiError(error);
+    return [];
+  }
+};
+
+export const fetchCellCycleAggregateV2 = async ({
+  cellLines = [],
+  control = "Non-Targeting",
+  minCells = 0,
+} = {}) => {
+  try {
+    const response = await Axios.post(
+      `${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/aggregate`,
+      {
+        cell_lines: cellLines,
+        control,
+        min_cells: minCells,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle aggregate:", error);
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const fetchCellCycleDatasetsV2 = async ({ cellLine = null, datasetKey = null, limit = 50 } = {}) => {
+  try {
+    const response = await Axios.get(`${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/datasets`, {
+      params: {
+        cell_line: cellLine,
+        dataset_key: datasetKey,
+        limit,
+      },
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.datasets || [];
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle datasets:", error);
+    handleApiError(error);
+    return [];
+  }
+};
+
+export const fetchCellCycleTargetsV2 = async ({
+  datasetId = null,
+  cellLine = null,
+  datasetKey = null,
+  level = "gene",
+  q = null,
+  minCells = 0,
+  limit = 50,
+  offset = 0,
+} = {}) => {
+  try {
+    const response = await Axios.get(`${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/targets`, {
+      params: {
+        dataset_id: datasetId,
+        cell_line: cellLine,
+        dataset_key: datasetKey,
+        level,
+        q,
+        min_cells: minCells,
+        limit,
+        offset,
+      },
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data.targets || [];
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle targets:", error);
+    handleApiError(error);
+    return [];
+  }
+};
+
+export const fetchCellCycleRankV2 = async ({
+  datasetId = null,
+  cellLine = null,
+  datasetKey = null,
+  metric = "max_abs_delta_phase",
+  order = "desc",
+  control = "Non-Targeting",
+  minCells = 100,
+  limit = 50,
+  offset = 0,
+} = {}) => {
+  try {
+    const response = await Axios.get(`${SERVER_ADDRESS}${API_V1_PREFIX}/cellcycle/rank`, {
+      params: {
+        dataset_id: datasetId,
+        cell_line: cellLine,
+        dataset_key: datasetKey,
+        metric,
+        order,
+        control,
+        min_cells: minCells,
+        limit,
+        offset,
+      },
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    debugError("Failed to fetch cell-cycle ranking:", error);
+    handleApiError(error);
+    throw error;
+  }
+};
+
+/**
  * Export task cancellation function.
  */
 export { cancelTask };
-

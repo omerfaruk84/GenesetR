@@ -19,6 +19,7 @@ import AboutPage from "../../pages/aboutus/about";
 import { ExpressionAnalyzerPage } from "../../pages/expressionanalyzer/expression-analyzer";
 import { MultiDatasetComparisonPage } from "../../pages/multidataset-comparison/multidataset-comparison-page";
 import { GenelistCompare } from "../genelist-compare";
+import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
 
 const SideBarLayout = () => (
   <div className={styles.contentWrapper}>
@@ -71,6 +72,7 @@ const MainView = () => {
                 <ExpressionAnalyzerPage path={ROUTES.EXPRESSIONANALYZER} />
               }
             />
+            <Route path={ROUTES.CELL_CYCLE} element={<CellCyclePage />} />
             <Route
               path={ROUTES.MULTIDATASET_COMPARISON}
               element={

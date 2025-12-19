@@ -4,6 +4,10 @@ const initialState = {
   filterBlackListed: 2,
   filter: true,
   genesTolabel: "",
+  selectedDatasets: [],
+  minDatasets: 1,
+  rankingEnabled: true,
+  rankingOrder: "desc",
 };
 
 export const genesignatureSettingsSlice = createSlice({

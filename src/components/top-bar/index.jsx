@@ -10,6 +10,7 @@ import {
   FcElectricalSensor,
   FcWorkflow,
   FcTodoList,
+  FcClock,
 } from "react-icons/fc";
 import { ROUTES, isActiveTab } from "../../common/routes";
 import { TabNames } from "./enums";
@@ -49,6 +50,11 @@ const TopBar = () => {
       icon: () => <FcWorkflow size={"2em"} />,
       name: TabNames.EXPRESSIONANALYZER,
       toLink: ROUTES.EXPRESSIONANALYZER,
+    },
+    {
+      icon: () => <FcClock size={"2em"} />,
+      name: TabNames.CELL_CYCLE,
+      toLink: ROUTES.CELL_CYCLE,
     },
     {
       icon: () => <FcSerialTasks size={"2em"} />,

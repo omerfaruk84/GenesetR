@@ -392,19 +392,45 @@ const runGeneSignature = async (core) => {
 };
 
 const runGeneSignatureMultiDataset = async (core, genesignatureSettings) => {
+  let datasets = genesignatureSettings.selectedDatasets || [];
+  if (Array.isArray(datasets)) {
+    datasets = datasets
+      .map((ds) => {
+        if (typeof ds === "object" && ds !== null) {
+          return ds.id || ds.value || String(ds);
+        }
+        return String(ds);
+      })
+      .filter(Boolean);
+  }
+
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
-    min_datasets: genesignatureSettings.minDatasets,
-    ranking_enabled: genesignatureSettings.rankingEnabled,
-    ranking_order: genesignatureSettings.rankingOrder,
+    datasets: datasets,
+    min_datasets: genesignatureSettings.minDatasets ?? 1,
+    ranking_enabled: genesignatureSettings.rankingEnabled ?? true,
+    ranking_order: genesignatureSettings.rankingOrder || "desc",
     request: "calcGeneSignatureMultiDataset",
   };
   return await getData(body);
 };
 
 const runGeneSignatureMultiDatasetSimilar = async (core, genesignatureSettings) => {
+  let datasets = genesignatureSettings.selectedDatasets || [];
+  if (Array.isArray(datasets)) {
+    datasets = datasets
+      .map((ds) => {
+        if (typeof ds === "object" && ds !== null) {
+          return ds.id || ds.value || String(ds);
+        }
+        return String(ds);
+      })
+      .filter(Boolean);
+  }
+
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
+    datasets: datasets,
     ranking_order: genesignatureSettings.rankingOrder || "desc",
     request: "calcGeneSignatureMultiDatasetSimilar",
   };

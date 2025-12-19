@@ -20,7 +20,7 @@ import { connect } from "react-redux";
 import { useEffect } from "react";
 import * as echarts from "echarts/core";
 //import GraphChart from 'echarts/charts';
-import { ScatterChart } from "echarts/charts";
+import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
 
@@ -28,6 +28,7 @@ import {
   GridComponent,
   TooltipComponent,
   TitleComponent,
+  LegendComponent,
   DataZoomSliderComponent,
   DataZoomComponent,
   DatasetComponent,
@@ -47,6 +48,7 @@ import { useFetcher } from "react-router-dom";
 import { runCalculation } from "../../store/results";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../side-bar/settings/enums";
+import { fetchCellCycleComparisonV2 } from "../../store/api/v2";
 
 // Add module description for Expression Analyzer
 const moduleDescription = {
@@ -66,10 +68,13 @@ const moduleDescription = {
 
 echarts.use([
   TitleComponent,
+  LegendComponent,
   DataZoomSliderComponent,
   TooltipComponent,
   GridComponent,
   ScatterChart,
+  LineChart,
+  BarChart,
   CanvasRenderer,
   DataZoomComponent,
   DatasetComponent,
@@ -114,6 +119,11 @@ const ExpressionAnalyzer = ({
   const [pertCorr, setpertCorr] = useState({});
   const [expCorr, setexpCorr] = useState({});
   const [isCalcRunning, setisRunning] = useState(false);
+
+  const [cellCycleData, setCellCycleData] = useState(null);
+  const [cellCycleLoading, setCellCycleLoading] = useState(false);
+  const [cellCycleError, setCellCycleError] = useState(null);
+  const [cellCycleView, setCellCycleView] = useState("overview");
   const [tabOptions, settabOptions] = useState([
     {
       label: "Perturbation Effects (Downstream Effects)",
@@ -178,6 +188,51 @@ const ExpressionAnalyzer = ({
       newValue: false,
     });
   }, [coreSettings.cellLine.id, runCalculation, pathname, coreSettingsChanged]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCellCycle = async () => {
+      const target = expressionanalyzerSettings?.selectedGene;
+      const datasetKey = coreSettings?.cellLine?.id;
+
+      if (!target || !datasetKey) {
+        setCellCycleData(null);
+        setCellCycleError(null);
+        return;
+      }
+
+      setCellCycleLoading(true);
+      setCellCycleError(null);
+
+      try {
+        const result = await fetchCellCycleComparisonV2({
+          datasetKey,
+          target,
+          level: "gene",
+          control: "Non-Targeting",
+          smooth: true,
+        });
+        if (!cancelled) {
+          setCellCycleData(result);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setCellCycleData(null);
+          setCellCycleError(e?.message || String(e));
+        }
+      } finally {
+        if (!cancelled) {
+          setCellCycleLoading(false);
+        }
+      }
+    };
+
+    loadCellCycle();
+    return () => {
+      cancelled = true;
+    };
+  }, [coreSettings?.cellLine?.id, expressionanalyzerSettings?.selectedGene]);
 
   useEffect(() => {
     setisRunning(
@@ -994,6 +1049,258 @@ const ExpressionAnalyzer = ({
     setOptions(chartOptions);
   }, [chartOptions]);
 
+  const cellCyclePhaseOption = useMemo(() => {
+    if (!cellCycleData?.target?.phase_pct || !cellCycleData?.control?.phase_pct) return null;
+
+    const pct = (x) => Math.round((x || 0) * 1000) / 10;
+    const c = cellCycleData.control.phase_pct;
+    const t = cellCycleData.target.phase_pct;
+
+    return {
+      title: {
+        text: "Cell-cycle phase composition (%, Control vs Perturbation)",
+        left: "center",
+        textStyle: { fontSize: 14, fontWeight: 600 },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        valueFormatter: (v) => `${v}%`,
+      },
+      legend: { top: 28 },
+      grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
+      xAxis: { type: "category", data: ["Control", "Perturbation"] },
+      yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
+      series: [
+        {
+          name: "G1",
+          type: "bar",
+          stack: "total",
+          data: [pct(c.g1), pct(t.g1)],
+          itemStyle: { color: "#4e79a7" },
+        },
+        {
+          name: "S",
+          type: "bar",
+          stack: "total",
+          data: [pct(c.s), pct(t.s)],
+          itemStyle: { color: "#59a14f" },
+        },
+        {
+          name: "G2M",
+          type: "bar",
+          stack: "total",
+          data: [pct(c.g2m), pct(t.g2m)],
+          itemStyle: { color: "#e15759" },
+        },
+      ],
+    };
+  }, [cellCycleData]);
+
+  const cellCyclePhaseGroupedOption = useMemo(() => {
+    if (!cellCycleData?.target?.phase_pct || !cellCycleData?.control?.phase_pct) return null;
+
+    const pct = (x) => Math.round((x || 0) * 1000) / 10;
+    const c = cellCycleData.control.phase_pct;
+    const t = cellCycleData.target.phase_pct;
+
+    return {
+      title: {
+        text: "Cell-cycle phase composition (%, grouped)",
+        left: "center",
+        textStyle: { fontSize: 14, fontWeight: 600 },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        valueFormatter: (v) => `${v}%`,
+      },
+      legend: { top: 28 },
+      grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
+      xAxis: { type: "category", data: ["G1", "S", "G2M"] },
+      yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
+      series: [
+        {
+          name: "Control",
+          type: "bar",
+          data: [pct(c.g1), pct(c.s), pct(c.g2m)],
+          itemStyle: { color: "#9aa0a6" },
+          barWidth: "35%",
+        },
+        {
+          name: "Perturbation",
+          type: "bar",
+          data: [pct(t.g1), pct(t.s), pct(t.g2m)],
+          itemStyle: { color: "#1a73e8" },
+          barWidth: "35%",
+        },
+      ],
+    };
+  }, [cellCycleData]);
+
+  const cellCycleScoreOption = useMemo(() => {
+    if (!cellCycleData?.bins?.s?.x?.length || !cellCycleData?.bins?.g2m?.x?.length) return null;
+
+    const makeOption = (scoreKey, title) => {
+      const x = cellCycleData.bins[scoreKey].x;
+      const yT = cellCycleData.bins[scoreKey].density_target;
+      const yC = cellCycleData.bins[scoreKey].density_control;
+
+      const t = cellCycleData.target;
+      const c = cellCycleData.control;
+
+      const meanT = scoreKey === "s" ? t.mean_s : t.mean_g2m;
+      const meanC = scoreKey === "s" ? c.mean_s : c.mean_g2m;
+      const medT = scoreKey === "s" ? t.q50_s : t.q50_g2m;
+      const medC = scoreKey === "s" ? c.q50_s : c.q50_g2m;
+
+      const toPairs = (xs, ys) => xs.map((v, i) => [v, ys[i] ?? 0]);
+
+      return {
+        title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 600 } },
+        tooltip: { trigger: "axis" },
+        legend: { top: 28 },
+        grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
+        xAxis: { type: "value", name: "Score" },
+        yAxis: { type: "value", name: "Density" },
+        series: [
+          {
+            name: "Control",
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            data: toPairs(x, yC),
+            lineStyle: { width: 2, color: "#9aa0a6" },
+            areaStyle: { opacity: 0.12, color: "#9aa0a6" },
+            markLine: {
+              symbol: ["none", "none"],
+              data: [
+                { xAxis: meanC, name: "mean (ctrl)" },
+                { xAxis: medC, name: "median (ctrl)" },
+              ],
+              lineStyle: { color: "#9aa0a6", type: "dashed" },
+              label: { formatter: "{b}" },
+            },
+          },
+          {
+            name: "Perturbation",
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            data: toPairs(x, yT),
+            lineStyle: { width: 2, color: "#1a73e8" },
+            areaStyle: { opacity: 0.12, color: "#1a73e8" },
+            markLine: {
+              symbol: ["none", "none"],
+              data: [
+                { xAxis: meanT, name: "mean (pert)" },
+                { xAxis: medT, name: "median (pert)" },
+              ],
+              lineStyle: { color: "#1a73e8", type: "dashed" },
+              label: { formatter: "{b}" },
+            },
+          },
+        ],
+      };
+    };
+
+    return {
+      s: makeOption("s", "S score distribution (density)"),
+      g2m: makeOption("g2m", "G2M score distribution (density)"),
+    };
+  }, [cellCycleData]);
+
+  const cellCycleViolinOption = useMemo(() => {
+    if (!cellCycleData?.bins?.s?.x?.length || !cellCycleData?.bins?.g2m?.x?.length) return null;
+
+    const toPairs = (xs, ys, sign = 1) => xs.map((v, i) => [v, sign * (ys?.[i] ?? 0)]);
+
+    const makeHalfViolin = (scoreKey, title) => {
+      const x = cellCycleData.bins[scoreKey].x;
+      const yT = cellCycleData.bins[scoreKey].density_target;
+      const yC = cellCycleData.bins[scoreKey].density_control;
+
+      const maxD = Math.max(
+        1e-12,
+        ...yT.map((v) => Math.abs(v || 0)),
+        ...yC.map((v) => Math.abs(v || 0))
+      );
+      const yMax = maxD * 1.12;
+
+      const t = cellCycleData.target;
+      const c = cellCycleData.control;
+      const meanT = scoreKey === "s" ? t.mean_s : t.mean_g2m;
+      const meanC = scoreKey === "s" ? c.mean_s : c.mean_g2m;
+
+      return {
+        title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 600 } },
+        tooltip: {
+          trigger: "axis",
+          valueFormatter: (v) => Math.abs(v).toExponential(2),
+        },
+        legend: { top: 28 },
+        grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
+        xAxis: { type: "value", name: "Score" },
+        yAxis: {
+          type: "value",
+          min: -yMax,
+          max: yMax,
+          name: "Density",
+          axisLabel: { show: false },
+          splitLine: { lineStyle: { color: "#eef1f4" } },
+        },
+        series: [
+          {
+            name: "Control",
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            data: toPairs(x, yC, -1),
+            lineStyle: { width: 1.5, color: "#9aa0a6" },
+            areaStyle: { opacity: 0.25, color: "#9aa0a6" },
+          },
+          {
+            name: "Perturbation",
+            type: "line",
+            smooth: true,
+            showSymbol: false,
+            data: toPairs(x, yT, 1),
+            lineStyle: { width: 1.5, color: "#1a73e8" },
+            areaStyle: { opacity: 0.25, color: "#1a73e8" },
+            markLine: {
+              symbol: ["none", "none"],
+              data: [
+                {
+                  xAxis: meanC,
+                  name: "mean (ctrl)",
+                  lineStyle: { color: "#9aa0a6", type: "dashed" },
+                  label: { formatter: "{b}" },
+                },
+                {
+                  xAxis: meanT,
+                  name: "mean (pert)",
+                  lineStyle: { color: "#1a73e8", type: "dashed" },
+                  label: { formatter: "{b}" },
+                },
+                {
+                  yAxis: 0,
+                  name: "",
+                  lineStyle: { color: "#cfd4da", type: "solid" },
+                  label: { show: false },
+                },
+              ],
+            },
+          },
+        ],
+      };
+    };
+
+    return {
+      s: makeHalfViolin("s", "S score half-violin (Control ↔ Perturbation)"),
+      g2m: makeHalfViolin("g2m", "G2M score half-violin (Control ↔ Perturbation)"),
+    };
+  }, [cellCycleData]);
+
   // Get progress state
   const progressMessage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressMessage;
   const progressPercentage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressPercentage;
@@ -1062,6 +1369,160 @@ const ExpressionAnalyzer = ({
               </p>
             </AccordionDetails>
           </Accordion>
+
+          <Card bordered className={styles.cellCyclePanel}>
+            <div className={styles.cellCycleHeader}>
+              <div>
+                <div className={styles.cellCycleTitle}>Cell-cycle impact</div>
+                <div className={styles.cellCycleSubtitle}>
+                  {coreSettings?.cellLine?.id ? `Dataset: ${coreSettings.cellLine.id}` : ""}
+                  {expressionanalyzerSettings?.selectedGene ? ` • Perturbation: ${expressionanalyzerSettings.selectedGene}` : ""}
+                  {cellCycleData?.control?.gene_target ? ` • Control: ${cellCycleData.control.gene_target}` : ""}
+                </div>
+              </div>
+              <div className={styles.cellCycleHeaderRight}>
+                <div className={styles.cellCycleHeaderControlLabel}>View</div>
+                <Select
+                  width={240}
+                  options={[
+                    { label: "Overview (bars + violins)", value: "overview" },
+                    { label: "Detailed (stacked + density)", value: "detailed" },
+                  ]}
+                  value={cellCycleView}
+                  onChange={({ target: { value } }) => setCellCycleView(value)}
+                />
+              </div>
+            </div>
+
+            {cellCycleLoading && (
+              <Text className={styles.cellCycleStatus}>Loading cell-cycle summaries…</Text>
+            )}
+
+            {!cellCycleLoading && cellCycleError && (
+              <Text className={styles.cellCycleStatusError}>
+                Cell-cycle data unavailable: {cellCycleError}
+              </Text>
+            )}
+
+            {!cellCycleLoading && !cellCycleError && !cellCycleData && (
+              <Text className={styles.cellCycleStatus}>
+                Select a dataset and perturbation to view cell-cycle effects.
+              </Text>
+            )}
+
+            {!cellCycleLoading && !cellCycleError && cellCycleData && (
+              <>
+                <div className={styles.cellCycleCards}>
+                  <div className={styles.cellCycleStatCard}>
+                    <div className={styles.cellCycleStatLabel}>Cells (pert)</div>
+                    <div className={styles.cellCycleStatValue}>
+                      {(cellCycleData.target?.n_cells || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className={styles.cellCycleStatCard}>
+                    <div className={styles.cellCycleStatLabel}>Cells (ctrl)</div>
+                    <div className={styles.cellCycleStatValue}>
+                      {(cellCycleData.control?.n_cells || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className={styles.cellCycleStatCard}>
+                    <div className={styles.cellCycleStatLabel}>Δ mean (S)</div>
+                    <div className={styles.cellCycleStatValue}>
+                      {(cellCycleData.deltas?.delta_mean_s ?? 0).toFixed(3)}
+                    </div>
+                  </div>
+                  <div className={styles.cellCycleStatCard}>
+                    <div className={styles.cellCycleStatLabel}>Δ mean (G2M)</div>
+                    <div className={styles.cellCycleStatValue}>
+                      {(cellCycleData.deltas?.delta_mean_g2m ?? 0).toFixed(3)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.cellCycleCharts}>
+                  {cellCycleView === "overview" && (
+                    <>
+                      {cellCyclePhaseGroupedOption && (
+                        <div className={styles.cellCycleChart}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCyclePhaseGroupedOption}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+
+                      {cellCycleViolinOption?.s && (
+                        <div className={styles.cellCycleChart}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCycleViolinOption.s}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+
+                      {cellCycleViolinOption?.g2m && (
+                        <div className={styles.cellCycleChart}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCycleViolinOption.g2m}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {cellCycleView === "detailed" && (
+                    <>
+                      {cellCyclePhaseOption && (
+                        <div className={styles.cellCycleChartWide}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCyclePhaseOption}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+
+                      {cellCycleScoreOption?.s && (
+                        <div className={styles.cellCycleChart}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCycleScoreOption.s}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+
+                      {cellCycleScoreOption?.g2m && (
+                        <div className={styles.cellCycleChart}>
+                          <ReactEChartsCore
+                            echarts={echarts}
+                            option={cellCycleScoreOption.g2m}
+                            notMerge={true}
+                            lazyUpdate={true}
+                            style={{ height: 260, width: "100%" }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </Card>
 
           {probes.length > 1 && (
             <>

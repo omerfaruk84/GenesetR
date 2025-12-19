@@ -1,0 +1,147 @@
+.mainView {
+  padding: 10px;
+  width: 100%;
+}
+
+.legendLine {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+  color: #111827;
+}
+
+.legendItem {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.legendSwatchControl {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #9aa0a6;
+  border: 1px solid #8b9197;
+}
+
+.legendSwatchPert {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #1a73e8;
+  border: 1px solid #1666cf;
+}
+
+.controls {
+  padding: 12px 14px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  align-items: end;
+}
+
+.controlsMeta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.datasetBadge {
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.status {
+  color: #444;
+  font-size: 13px;
+}
+
+.statusError {
+  color: #b00020;
+  font-size: 13px;
+}
+
+.tableContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.noData {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 280px;
+  color: #666;
+  font-size: 16px;
+}
+
+.detailHeaderRow {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.detailHeader {
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
+  text-align: center;
+}
+
+.detailRows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.detailCellLine {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.detailCellLineName {
+  font-weight: 900;
+  color: #111827;
+  font-size: 14px;
+}
+
+.detailCellLineMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.detailChart {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 6px;
+}
+
+@media (max-width: 1200px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+  .detailHeaderRow {
+    display: none;
+  }
+  .detailRow {
+    grid-template-columns: 1fr;
+  }
+}

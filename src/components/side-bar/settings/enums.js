@@ -227,6 +227,10 @@ const GeneSignatureSettingsTypes = {
   FILTER_BLACKLISTED: "filterBlackListed",
   FILTER: "filter",
   GENES_TO_LABEL: "genesTolabel",
+  SELECTED_DATASETS: "selectedDatasets",
+  MIN_DATASETS: "minDatasets",
+  RANKING_ENABLED: "rankingEnabled",
+  RANKING_ORDER: "rankingOrder",
 };
 
 const ExpressionAnalyzerSettingsTypes = {

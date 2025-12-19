@@ -78,6 +78,9 @@ const sanitizeInvalidJsonNumbers = (input) => {
   return sanitized;
 };
 
+const normalizeGeneSignatureFormula = (value = "") =>
+  (value || "").toString().replace(/\s+/g, "").toUpperCase();
+
 const resultState = {
   result: null,
   running: false,
@@ -106,6 +109,7 @@ const initialState = {
   precomputedDrGraph: { ...resultState },
   deregulatedGenesGraph: { ...resultState },
   deregulatedGenesMultiDataset: { ...resultState },
+  geneSignatureCache: {},
 };
 
 export const calculationResults = createSlice({
@@ -189,6 +193,14 @@ export const calculationResults = createSlice({
         state[module].taskId = null;
       }
     },
+    setGeneSignatureCache: (state, action) => {
+      const { formulaKey, datasetId, data } = action.payload || {};
+      if (!formulaKey || !datasetId || !data) return;
+      if (!state.geneSignatureCache[formulaKey]) {
+        state.geneSignatureCache[formulaKey] = {};
+      }
+      state.geneSignatureCache[formulaKey][datasetId] = data;
+    },
   },
 });
 
@@ -200,8 +212,9 @@ export const {
   progressUpdateReceived, 
   clearResult,
   taskStarted,
-  taskCancelled,
-} = calculationResults.actions;
+    taskCancelled,
+    setGeneSignatureCache,
+  } = calculationResults.actions;
 
 const runCalculation = (module) => async (dispatch, getState) => {
   console.log("Running");
@@ -343,10 +356,41 @@ const runCalculation = (module) => async (dispatch, getState) => {
         dispatch(clearResult({ module: "genesignatureMultiDataset" }));
         dispatch(clearResult({ module: "genesignatureSimilarGraph" }));
 
-        const result = await runGeneSignature(core);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
+        const selectedDatasets = genesignature?.selectedDatasets || [];
+        const primaryDatasetId = selectedDatasets[0] || core.cellLine.id;
+        const singleCore = {
+          ...core,
+          cellLine: {
+            ...core.cellLine,
+            id: primaryDatasetId,
+          },
+        };
+
+        const result = await runGeneSignature(singleCore);
+        dispatch(resultReceived({ result, module: ModulePathNames[module] }));
+
+        // Cache the primary dataset result for reuse in multi-dataset aggregation
+        const formulaKey = normalizeGeneSignatureFormula(singleCore.targetGeneList);
+        let parsedResult = result;
+        if (typeof result === "string") {
+          try {
+            parsedResult = JSON.parse(sanitizeInvalidJsonNumbers(result));
+          } catch (error) {
+            parsedResult = {};
+          }
+        } else if (typeof result === "object" && result !== null) {
+          parsedResult = JSON.parse(JSON.stringify(result));
+        } else {
+          parsedResult = {};
+        }
+        dispatch(
+          setGeneSignatureCache({
+            formulaKey,
+            datasetId: primaryDatasetId,
+            data: parsedResult,
+          })
         );
+        return;
       }
       case ROUTES.DEREGULATED_GENES: {
         // Clear downstream multi-dataset results when starting a new deregulated genes calculation
@@ -431,14 +475,15 @@ const runCalculation = (module) => async (dispatch, getState) => {
 // Add a separate function for multi-dataset gene signature calculation
 const runMultiDatasetGeneSignature = (settings) => async (dispatch, getState) => {
   const { settings: allSettings } = getState();
-  const { core } = allSettings;
+  const { core, genesignature } = allSettings;
+  const mergedSettings = { ...genesignature, ...settings };
   
   try {
     dispatch(
       calcRunningChanged({ module: "genesignatureMultiDataset", status: true })
     );
     
-    const result = await runGeneSignatureMultiDataset(core, settings);
+    const result = await runGeneSignatureMultiDataset(core, mergedSettings);
     
     return dispatch(
       resultReceived({ result, module: "genesignatureMultiDataset" })
@@ -465,15 +510,16 @@ export const runMultiDatasetGeneSignatureSimilar = (settings) => async (
   getState
 ) => {
   const {
-    settings: { core },
+    settings: { core, genesignature },
   } = getState();
+  const mergedSettings = { ...genesignature, ...settings };
   
   try {
     dispatch(
       calcRunningChanged({ module: "genesignatureSimilarGraph", status: true })
     );
     
-    const result = await runGeneSignatureMultiDatasetSimilar(core, settings);
+    const result = await runGeneSignatureMultiDatasetSimilar(core, mergedSettings);
     
     return dispatch(
       resultReceived({ result, module: "genesignatureSimilarGraph" })
@@ -492,6 +538,92 @@ export const runMultiDatasetGeneSignatureSimilar = (settings) => async (
         details: error.message,
       },
     });
+  }
+};
+
+const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = false }) => async (
+  dispatch,
+  getState
+) => {
+  const {
+    settings: { core },
+    calcResults,
+  } = getState();
+
+  if (!datasetId) {
+    return null;
+  }
+
+  const normalizedKey = formulaKey || normalizeGeneSignatureFormula(core.targetGeneList);
+  const cached =
+    calcResults?.geneSignatureCache?.[normalizedKey]?.[datasetId] || null;
+
+  if (cached) {
+    if (setPrimaryResult) {
+      dispatch(
+        resultReceived({
+          result: cached,
+          module: ModulePathNames[ROUTES.GENESIGNATURE],
+        })
+      );
+    }
+    return cached;
+  }
+
+  const coreForDataset = {
+    ...core,
+    cellLine: {
+      ...core.cellLine,
+      id: datasetId,
+    },
+  };
+
+  try {
+    const result = await runGeneSignature(coreForDataset);
+    let parsedResult = result;
+    if (typeof result === "string") {
+      try {
+        parsedResult = JSON.parse(sanitizeInvalidJsonNumbers(result));
+      } catch (error) {
+        parsedResult = {};
+      }
+    } else if (typeof result === "object" && result !== null) {
+      parsedResult = JSON.parse(JSON.stringify(result));
+    } else {
+      parsedResult = {};
+    }
+
+    dispatch(
+      setGeneSignatureCache({
+        formulaKey: normalizedKey,
+        datasetId,
+        data: parsedResult,
+      })
+    );
+
+    if (setPrimaryResult) {
+      dispatch(
+        resultReceived({
+          result: parsedResult,
+          module: ModulePathNames[ROUTES.GENESIGNATURE],
+        })
+      );
+    }
+
+    return parsedResult;
+  } catch (error) {
+    toast({
+      message: {
+        type: "Error",
+        icon: true,
+        content: `Failed to calculate gene signature for ${datasetId}`,
+        details: error.message,
+      },
+    });
+    return null;
+  } finally {
+    // Clear running state that was set via taskStarted inside getData
+    dispatch(calcRunningChanged({ module: "genesignatureGraph", status: false }));
   }
 };
 
@@ -537,4 +669,10 @@ const cancelCalculation = (module) => async (dispatch, getState) => {
   }
 };
 
-export { calculationResultsReducer, runCalculation, runMultiDatasetGeneSignature, cancelCalculation };
+export {
+  calculationResultsReducer,
+  runCalculation,
+  runMultiDatasetGeneSignature,
+  fetchGeneSignatureDataset,
+  cancelCalculation,
+};

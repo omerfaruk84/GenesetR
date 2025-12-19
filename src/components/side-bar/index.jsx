@@ -113,6 +113,7 @@ const SideBar = ({
       >
         {pathname !== ROUTES.GENELISTCOMPARE &&
           pathname !== ROUTES.GENE_REGULATION &&
+          pathname !== ROUTES.CELL_CYCLE &&
           !(pathname === ROUTES.DR && coreSettings.currentModule === "precomputed") && (
             <>
               <Spacer />

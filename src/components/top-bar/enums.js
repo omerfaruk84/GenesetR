@@ -13,6 +13,7 @@ const TabNames = {
   GENESIGNATURE: "Gene Signature",
   DEREGULATED_GENES: "Deregulated Genes",
   EXPRESSIONANALYZER: "Expression Analyzer",
+  CELL_CYCLE: "Cell Cycle",
   MULTIDATASET_COMPARISON: "Multi-Dataset Comparison",
   GENELISTCOMPARE: "Genelists",
   ABOUT: "Help",

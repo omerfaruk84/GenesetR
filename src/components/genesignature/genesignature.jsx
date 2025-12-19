@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Spacer,
   ButtonGroup,
@@ -6,6 +6,7 @@ import {
   Toggle,
   Flex,
   Text,
+  Button,
 } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable, FaSortAmountUpAlt, FaSortAmountDownAlt } from "react-icons/fa";
 import styles from "../../pages/genesignature/gene-signature-page.module.scss";
@@ -18,8 +19,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
 import { GeneSetEnrichmentTable } from "../enrichment";
-import { runMultiDatasetGeneSignature } from "../../store/results";
-import { runMultiDatasetGeneSignatureSimilar } from "../../store/results";
+import { fetchGeneSignatureDataset, runCalculation } from "../../store/results";
+import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { CoreSettingsTypes } from "../side-bar/settings/enums";
+import { ROUTES } from "../../common/routes";
 
 import {
   GridComponent,
@@ -76,7 +79,7 @@ const moduleDescription = {
   }
 };
 
-const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData, multiDatasetData, similarLoading, blacklistData, blacklistLoading, dispatch }) => {
+const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache, data, similarData, multiDatasetData, similarLoading, blacklistData, blacklistLoading, dispatch, coreSettingsChanged }) => {
   // Use sessionStorage to persist selectedView across data updates and component remounts
   const getInitialSelectedView = () => {
     const saved = sessionStorage.getItem('geneSignatureSelectedView');
@@ -84,6 +87,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
   };
   
   const [selectedView, setSelectedView] = useState(getInitialSelectedView);
+  const [signatureDirty, setSignatureDirty] = useState(false);
+  const lastAutoRunKeyRef = useRef(null);
   
   // Save selectedView to sessionStorage whenever it changes
   React.useEffect(() => {
@@ -96,6 +101,45 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
   const [keyedData2, setkeyedData2] = useState([{}]);
   const [keyedDataMulti, setkeyedDataMulti] = useState([{}]); // New state for multi-dataset data
   const [keyedDataMultiSimilar, setkeyedDataMultiSimilar] = useState([]); // New state for multi-dataset similar genes
+  const signatureGeneSet = useMemo(() => {
+    const normalized = (coreSettings.targetGeneList || "")
+      .replace(/[,\s;]+/g, "+")
+      .replace(/\++|\-+/g, "+")
+      .trimStart("+")
+      .split("+")
+      .filter(Boolean)
+      .map((g) => g.split("_")[0]);
+    return new Set(normalized);
+  }, [coreSettings.targetGeneList]);
+  const toggleGeneInSignature = useCallback(
+    (gene) => {
+      if (!gene) return;
+      const cleanGene = gene.split("_")[0];
+      const tokens = (coreSettings.targetGeneList || "")
+        .replace(/\s+/g, "")
+        .split(/(?=[+-])/)
+        .filter(Boolean);
+      const exists = tokens.some(
+        (t) => t.replace(/[+-]/g, "") === cleanGene
+      );
+      let newTokens;
+      if (exists) {
+        newTokens = tokens.filter((t) => t.replace(/[+-]/g, "") !== cleanGene);
+      } else {
+        if (tokens.length === 0) newTokens = [cleanGene];
+        else newTokens = [...tokens, `+${cleanGene}`];
+      }
+      const newFormula = newTokens.join("") || "";
+      dispatch(
+        coreSettingsChanged({
+          settingName: CoreSettingsTypes.TARGET_LIST,
+          newValue: newFormula,
+        })
+      );
+      setSignatureDirty(true);
+    },
+    [coreSettings.targetGeneList, dispatch]
+  );
   
   const [selectedTab, setSelectedTab] = useState({
     label: "Geneset Enrichment",
@@ -120,6 +164,13 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     label: "Geneset Enrichment",
     value: "gsea",
   });
+
+  const selectedDatasets = genesignatureSettings?.selectedDatasets || [];
+  const hasMultiDatasetSelection = selectedDatasets.length > 1;
+  const formulaKey = useMemo(
+    () => (coreSettings.targetGeneList || "").replace(/\s+/g, "").toUpperCase(),
+    [coreSettings.targetGeneList]
+  );
   
   // Gene lists for enrichment in table views
   const [genelistsTable, setGeneListsTable] = useState([]);
@@ -216,6 +267,94 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
   const [rankOrder, setRankOrder] = useState('desc');
   const [multiDatasetLoading, setMultiDatasetLoading] = useState(false);
   const [multiDatasetSimilarLoading, setMultiDatasetSimilarLoading] = useState(false);
+  const inflightRequestsRef = useRef(new Set());
+
+  const singleDatasetTabs = useMemo(() => [
+    {
+      icon: <FaChartBar />,
+      key: 0,
+      label: "Chart",
+    },
+    {
+      icon: <FaTable />,
+      key: 1,
+      label: "Table",
+    },
+    {
+      icon: <FaTable />,
+      key: 2,
+      label: "Similar Genes",
+    },
+  ], []);
+
+  const multiDatasetTabs = useMemo(() => [
+    {
+      icon: <FaTable />,
+      key: 3,
+      label: "Multi-Dataset",
+    },
+    {
+      icon: <FaTable />,
+      key: 4,
+      label: "Multi-Dataset Similar Genes",
+    },
+  ], []);
+
+  const availableTabs = hasMultiDatasetSelection ? multiDatasetTabs : singleDatasetTabs;
+  const cacheForFormula = useMemo(
+    () => geneSignatureCache?.[formulaKey] || {},
+    [geneSignatureCache, formulaKey]
+  );
+  const availableCachedDatasets = useMemo(
+    () => (hasMultiDatasetSelection ? selectedDatasets.filter((ds) => cacheForFormula[ds]) : []),
+    [hasMultiDatasetSelection, selectedDatasets, cacheForFormula]
+  );
+  const multiDatasetResultsMatchSelection =
+    hasMultiDatasetSelection && availableCachedDatasets.length > 0;
+  const multiDatasetSimilarResultsMatchSelection = multiDatasetResultsMatchSelection;
+
+  useEffect(() => {
+    const allowedKeys = availableTabs.map((t) => t.key);
+    if (!allowedKeys.includes(selectedView)) {
+      const fallbackKey = allowedKeys[0] ?? 0;
+      setSelectedView(fallbackKey);
+      sessionStorage.setItem('geneSignatureSelectedView', fallbackKey.toString());
+    }
+  }, [availableTabs, selectedView]);
+
+  useEffect(() => {
+    if (!hasMultiDatasetSelection) {
+      setkeyedDataMulti([{}]);
+      setkeyedDataMultiSimilar([]);
+    }
+  }, [hasMultiDatasetSelection]);
+
+  useEffect(() => {
+    setSignatureDirty(false);
+  }, [data?.results, data?.correlations, multiDatasetData?.datasets, similarData?.correlations, coreSettings.targetGeneList]);
+
+  // Auto-run calculation when a signature exists and a single dataset is selected
+  useEffect(() => {
+    const signature = coreSettings.targetGeneList || "";
+    if (!signature.trim()) return;
+    if (hasMultiDatasetSelection) return;
+
+    const datasetId = coreSettings.cellLine?.id || "";
+    if (!datasetId) return;
+
+    // Only auto-run when dataset changes, not when signature text changes
+    if (lastAutoRunKeyRef.current === datasetId) return;
+
+    lastAutoRunKeyRef.current = datasetId;
+    dispatch(runCalculation(ROUTES.GENESIGNATURE));
+  }, [coreSettings.cellLine?.id, hasMultiDatasetSelection, coreSettings.targetGeneList, dispatch]);
+
+  useEffect(() => {
+    if (hasMultiDatasetSelection) {
+      setkeyedDataMulti([{}]);
+      setkeyedDataMultiSimilar([]);
+    }
+  }, [hasMultiDatasetSelection, selectedDatasets.join(",")]);
 
 
   const columns = useMemo(
@@ -309,13 +448,36 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
           placeholder: "Select",
           size: "small",
         },
+        Cell: ({ row }) => {
+          const gene = (row?.original?.Gene || "").split("_")[0];
+          const isIncluded = signatureGeneSet.has(gene);
+          return (
+            <button
+              onClick={() => toggleGeneInSignature(gene)}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                background: isIncluded ? '#ffecec' : '#e8f5e9',
+                color: isIncluded ? '#c0392b' : '#2e7d32',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              {isIncluded ? 'Remove' : 'Add'}
+            </button>
+          );
+        },
       },
     ],
-    []
+    [signatureGeneSet, toggleGeneInSignature]
   );
 
   const columnsMulti = useMemo(() => {
-    if (!multiDatasetData?.datasets) return [];
+    const datasetsForColumns = hasMultiDatasetSelection
+      ? availableCachedDatasets
+      : multiDatasetData?.datasets;
+    if (!datasetsForColumns || datasetsForColumns.length === 0) return [];
     
     console.log('GeneSignature - Creating columns with showRanks:', showRanks);
     
@@ -339,7 +501,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     });
     
     // Group dataset columns under "Score" or "Rank" header
-    const datasetColumns = multiDatasetData.datasets.map(dataset => {
+    const datasetColumns = datasetsForColumns.map(dataset => {
       const datasetName = dataset === 'K562gwps' ? 'K562' : 
                          dataset === 'HCT116gwps' ? 'HCT116' : 
                          dataset === 'HEK293gwps' ? 'HEK293' : dataset;
@@ -415,10 +577,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     });
     
     return columns;
-  }, [multiDatasetData?.datasets, showRanks]);
+  }, [multiDatasetData?.datasets, showRanks, hasMultiDatasetSelection, availableCachedDatasets]);
 
   const columnsMultiSimilar = useMemo(() => {
-    const ds = similarData?.datasets || multiDatasetData?.datasets || [];
+    const ds = hasMultiDatasetSelection
+      ? availableCachedDatasets
+      : similarData?.datasets || multiDatasetData?.datasets || [];
     if (!ds.length) return [];
 
     const cols = [];
@@ -509,97 +673,41 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
         enableColumnActions: false, // Disable three dots menu
         filterVariant: "select",
         muiFilterTextFieldProps: { placeholder: "Select", size: "small" },
+        Cell: ({ row }) => {
+          const gene = (row?.original?.Gene || "").split("_")[0];
+          const isIncluded = signatureGeneSet.has(gene);
+          return (
+            <button
+              onClick={() => toggleGeneInSignature(gene)}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                background: isIncluded ? '#ffecec' : '#e8f5e9',
+                color: isIncluded ? '#c0392b' : '#2e7d32',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              {isIncluded ? 'Remove' : 'Add'}
+            </button>
+          );
+        },
       }],
     });
 
     return cols;
-  }, [data?.datasets, similarData?.datasets, showRanks]);
+  }, [data?.datasets, similarData?.datasets, showRanks, hasMultiDatasetSelection, availableCachedDatasets, signatureGeneSet, toggleGeneInSignature]);
 
   function roundToThree(num) {
     return +(Math.round(num + "e+3") + "e-3");
   }
-
-  // Function to trigger multi-dataset calculation
-  const triggerMultiDatasetCalculation = async () => {
-    if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 2) {
-      console.log('GeneSignature - Skipping multi-dataset calculation: no target gene list');
-      return;
-    }
-    
-    if (multiDatasetLoading) {
-      console.log('GeneSignature - Skipping multi-dataset calculation: already loading');
-      return;
-    }
-    
-    console.log('GeneSignature - Starting multi-dataset calculation');
-    setMultiDatasetLoading(true);
-    
-    const multiSettings = {
-      min_datasets: 1, // Always use 1 since we have table filters
-      ranking_order: rankOrder,
-    };
-    
-    try {
-      await dispatch(runMultiDatasetGeneSignature(multiSettings));
-      console.log('GeneSignature - Multi-dataset calculation completed');
-    } catch (error) {
-      console.error("Multi-dataset calculation failed:", error);
-    } finally {
-      setMultiDatasetLoading(false);
-    }
-  };
-
-  // Function to trigger multi-dataset similar genes calculation
-  const triggerMultiDatasetSimilarCalculation = async () => {
-    if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 2) {
-      console.log('GeneSignature - Skipping multi-dataset similar calculation: no target gene list');
-      return;
-    }
-    
-    if (multiDatasetSimilarLoading) {
-      console.log('GeneSignature - Skipping multi-dataset similar calculation: already loading');
-      return;
-    }
-    
-    console.log('GeneSignature - Starting multi-dataset similar genes calculation');
-    setMultiDatasetSimilarLoading(true);
-    
-    const multiSettings = {
-      ranking_order: rankOrder,
-    };
-    
-    try {
-      await dispatch(runMultiDatasetGeneSignatureSimilar(multiSettings));
-      console.log('GeneSignature - Multi-dataset similar genes calculation completed');
-    } catch (error) {
-      console.error("Multi-dataset similar genes calculation failed:", error);
-    } finally {
-      setMultiDatasetSimilarLoading(false);
-    }
-  };
 
   // Handle tab selection
   const handleTabSelection = (key) => {
     // Save to sessionStorage immediately before any async operations
     sessionStorage.setItem('geneSignatureSelectedView', key.toString());
     setSelectedView(key);
-    
-    // If multi-dataset tab is selected and we don't have data yet, trigger calculation
-    if (key === 3 && (!multiDatasetData?.datasets || multiDatasetData?.datasets?.length === 0)) {
-      triggerMultiDatasetCalculation();
-    }
-    
-    // If multi-dataset similar genes tab is selected and we don't have correlations data yet, trigger calculation
-    if (key === 4 && !similarData?.correlations) {
-      triggerMultiDatasetSimilarCalculation();
-    }
-    
-    // Clear multi-dataset data when switching away from multi-dataset tabs
-    if (key < 3) {
-      // We don't clear multiDatasetData here since it comes from props now
-      setkeyedDataMulti([{}]);
-      setkeyedDataMultiSimilar([{}]);
-    }
   };
 
   // Function to process multi-dataset data on frontend
@@ -937,6 +1045,120 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     return similarGenesData;
   }, [coreSettings.targetGeneList, showRanks, rankOrder]);
 
+  // Fetch missing per-dataset results when multi-select is enabled
+  const selectionDebounceRef = useRef();
+  useEffect(() => {
+    if (selectionDebounceRef.current) {
+      clearTimeout(selectionDebounceRef.current);
+    }
+
+    selectionDebounceRef.current = setTimeout(() => {
+      if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 1) {
+        setMultiDatasetLoading(false);
+        setMultiDatasetSimilarLoading(false);
+        return;
+      }
+
+      if (selectedDatasets.length === 0) {
+        setMultiDatasetLoading(false);
+        setMultiDatasetSimilarLoading(false);
+        return;
+      }
+
+      const missingDatasets = selectedDatasets.filter((ds) => !cacheForFormula[ds]);
+      const shouldShowMultiLoading = hasMultiDatasetSelection && missingDatasets.length > 0;
+      setMultiDatasetLoading(shouldShowMultiLoading);
+      setMultiDatasetSimilarLoading(shouldShowMultiLoading);
+
+      missingDatasets.forEach((ds) => {
+        const key = `${formulaKey}::${ds}`;
+        if (inflightRequestsRef.current.has(key)) return;
+        inflightRequestsRef.current.add(key);
+        dispatch(
+          fetchGeneSignatureDataset({
+            datasetId: ds,
+            formulaKey,
+            setPrimaryResult: !hasMultiDatasetSelection && selectedDatasets.length === 1,
+          })
+        )
+          .catch((error) => {
+            console.error("Failed to fetch gene signature dataset", ds, error);
+          })
+          .finally(() => {
+            inflightRequestsRef.current.delete(key);
+          });
+      });
+    }, 300);
+
+    return () => {
+      if (selectionDebounceRef.current) {
+        clearTimeout(selectionDebounceRef.current);
+      }
+    };
+  }, [
+    selectedDatasets,
+    cacheForFormula,
+    formulaKey,
+    dispatch,
+    hasMultiDatasetSelection,
+    coreSettings.targetGeneList,
+  ]);
+
+  // Combine cached per-dataset results into multi-dataset tables
+  useEffect(() => {
+    if (!hasMultiDatasetSelection) return;
+
+    const available = availableCachedDatasets;
+    if (available.length < 2) return;
+
+    const aggregatedScores = {
+      datasets: available,
+      processed_datasets: available.length,
+      total_datasets: selectedDatasets.length,
+    };
+    const aggregatedSimilar = {
+      datasets: available,
+      correlations: {},
+    };
+
+    available.forEach((ds) => {
+      const res = cacheForFormula[ds];
+      const geneScores = {};
+      if (res?.genes?.length && res?.results?.length) {
+        res.genes.forEach((gene, idx) => {
+          const val = res.results[idx];
+          if (typeof val === "number" && !Number.isNaN(val)) {
+            geneScores[gene] = val;
+          }
+        });
+      }
+      aggregatedScores[ds] = geneScores;
+      aggregatedSimilar.correlations[ds] = res?.correlations || {};
+    });
+
+    const multiTableInfo = processMultiDatasetData(
+      aggregatedScores,
+      genesignatureSettings?.minDatasets || 1,
+      blacklistData,
+      genesignatureSettings
+    );
+    setkeyedDataMulti(multiTableInfo);
+
+    const multiSimilarInfo = processMultiDatasetSimilarGenes(
+      aggregatedSimilar,
+      blacklistData,
+      genesignatureSettings
+    );
+    setkeyedDataMultiSimilar(multiSimilarInfo);
+  }, [
+    hasMultiDatasetSelection,
+    availableCachedDatasets,
+    processMultiDatasetData,
+    processMultiDatasetSimilarGenes,
+    genesignatureSettings,
+    blacklistData,
+  ]);
+
   //For tabs under the table
   const tabOptions = [
     {
@@ -1072,7 +1294,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     highlightList = new Set([...highlightList, ...signatureGenes]);
 
     // Process multi-dataset results if available (from separate prop)
-    if (multiDatasetData && multiDatasetData.datasets && multiDatasetData.datasets.length > 0) {
+    if (!hasMultiDatasetSelection && multiDatasetData && multiDatasetData.datasets && multiDatasetData.datasets.length > 0) {
       console.log('GeneSignature - Processing multi-dataset results:', {
         datasets: multiDatasetData.datasets,
         processed_datasets: multiDatasetData.processed_datasets,
@@ -1129,17 +1351,10 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
       multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
       setGeneListsMultiSimilar(multiSimilarGeneLists);
-    } else if ((selectedView === 3 || selectedView === 4) && 
-               coreSettings.targetGeneList && 
-               coreSettings.targetGeneList.trim().length > 0 && 
-               (!multiDatasetData?.datasets || multiDatasetData.datasets.length === 0)) {
-      // If we're on multi-dataset tabs but don't have multi-dataset data, trigger calculation
-      console.log('GeneSignature - Triggering multi-dataset calculation due to new data');
-      triggerMultiDatasetCalculation();
     }
 
     // Process multi-dataset similar genes if correlations data is available (separate API)
-    if (similarData && similarData.correlations && Object.keys(similarData.correlations).length > 0) {
+    if (!hasMultiDatasetSelection && similarData && similarData.correlations && Object.keys(similarData.correlations).length > 0) {
       const multiSimilarInfo = processMultiDatasetSimilarGenes(similarData, blacklistData, genesignatureSettings);
       setkeyedDataMultiSimilar(multiSimilarInfo);
       
@@ -1384,9 +1599,10 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       // Log when chart data is not available
       console.log('GeneSignature - Chart data not available');
     }
-  }, [data, multiDatasetData, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading, showRanks, rankOrder, processMultiDatasetData]);
+    }, [data, multiDatasetData, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading, showRanks, rankOrder, processMultiDatasetData, hasMultiDatasetSelection]);
 
   useEffect(() => {
+    if (hasMultiDatasetSelection) return;
     if ((selectedView === 3 || selectedView === 4) && multiDatasetData?.datasets?.length > 0) {
       if (selectedView === 3) {
         const multiTableInfo = processMultiDatasetData(multiDatasetData, 1, blacklistData, genesignatureSettings);
@@ -1435,7 +1651,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
     }
   }, [showRanks, rankOrder, multiDatasetData, similarData, selectedView,
     processMultiDatasetData, processMultiDatasetSimilarGenes,
-    blacklistData, genesignatureSettings]);
+    blacklistData, genesignatureSettings, hasMultiDatasetSelection]);
 
   console.log('GeneSignature - pointData state:', pointData);
   useEffect(() => {
@@ -1764,36 +1980,36 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
           </Accordion>
 
       <ButtonGroup
-        items={[
-          {
-            icon: <FaChartBar />,
-            key: 0,
-            label: "Chart",
-          },
-          {
-            icon: <FaTable />,
-            key: 1,
-            label: "Table",
-          },
-          {
-            icon: <FaTable />,
-            key: 2,
-            label: "Similar Genes",
-          },
-          {
-            icon: <FaTable />,
-            key: 3,
-            label: "Multi-Dataset",
-          },
-          {
-            icon: <FaTable />,
-            key: 4,
-            label: "Multi-Dataset Similar Genes",
-          },
-        ]}
+        items={availableTabs}
         onSelected={handleTabSelection}
         value={selectedView}
       />
+      {signatureDirty && (
+        <div style={{
+          marginTop: '8px',
+          padding: '10px 12px',
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffeeba',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <Text muted style={{ color: '#8a6d3b' }}>
+            Gene signature changed. Re-run analysis to update results.
+          </Text>
+          <Button
+            small
+            colored="success"
+            label="Re-run analysis"
+            onClick={() => {
+              setSignatureDirty(false);
+              dispatch(runCalculation(ROUTES.GENESIGNATURE));
+            }}
+          />
+        </div>
+      )}
       {blacklistLoading && (
         <div style={{ 
           padding: '12px', 
@@ -1807,7 +2023,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
         </div>
       )}
       <Spacer height={5} />
-      {keyedData && selectedView === 1 && (
+      {keyedData && selectedView === 1 && !hasMultiDatasetSelection && (
         <>
           <div style={{ height: "60vh", overflow: "auto" }}>
             <EnrichmentTable data={keyedData} columns={columns} onSortedDataChange={handleTableDataChange} />
@@ -1835,7 +2051,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
         </>
       )}
 
-      {keyedData2 && selectedView === 2 && (
+      {keyedData2 && selectedView === 2 && !hasMultiDatasetSelection && (
         <>
           <div style={{ height: "60vh", overflow: "auto" }}>
             <EnrichmentTable data={keyedData2} columns={columns2} onSortedDataChange={handleSimilarDataChange} />
@@ -1863,7 +2079,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
         </>
       )}
 
-      {selectedView === 3 && (
+      {selectedView === 3 && hasMultiDatasetSelection && (
         <>
           
 
@@ -1943,7 +2159,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
 
          
           
-          {keyedDataMulti && keyedDataMulti.length > 0 && (
+          {multiDatasetResultsMatchSelection && keyedDataMulti && keyedDataMulti.length > 0 && (
             <>
               <div style={{ height: "60vh", overflow: "auto" }}>
                 <EnrichmentTable 
@@ -1975,10 +2191,14 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
               )}
             </>
           )}
+
+          {!multiDatasetResultsMatchSelection && !multiDatasetLoading && (
+            <Text muted>Select multiple datasets and run the analysis to see combined results.</Text>
+          )}
         </>
       )}
 
-      {selectedView === 4 && (
+      {selectedView === 4 && hasMultiDatasetSelection && (
         <>
           <Text muted style={{ marginBottom: '10px' }}>
             Genes that correlate with your signature across multiple whole-genome datasets. 
@@ -2055,7 +2275,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
             </div>
           )}
 
-          {keyedDataMultiSimilar && keyedDataMultiSimilar.length > 0 && (
+          {multiDatasetSimilarResultsMatchSelection && keyedDataMultiSimilar && keyedDataMultiSimilar.length > 0 && (
             <>
               <div style={{ height: "60vh", overflow: "auto" }}>
                 <EnrichmentTable 
@@ -2088,17 +2308,21 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
             </>
           )}
           
-          {(!keyedDataMultiSimilar || keyedDataMultiSimilar.length === 0) && !multiDatasetSimilarLoading && data?.correlations && Object.keys(data.correlations).length > 0 && (
+          {multiDatasetSimilarResultsMatchSelection && (!keyedDataMultiSimilar || keyedDataMultiSimilar.length === 0) && !multiDatasetSimilarLoading && !similarLoading && data?.correlations && Object.keys(data.correlations).length > 0 && (
             <Text muted>No similar genes found after filtering. Try adjusting your gene signature or filter settings.</Text>
           )}
           
-          {!data?.correlations && !multiDatasetSimilarLoading && selectedView === 4 && (
+          {!multiDatasetSimilarResultsMatchSelection && !multiDatasetSimilarLoading && !similarLoading && (
+            <Text muted>Select multiple datasets and run the analysis to view similar genes.</Text>
+          )}
+
+          {!data?.correlations && !multiDatasetSimilarLoading && !similarLoading && selectedView === 4 && multiDatasetSimilarResultsMatchSelection && !hasMultiDatasetSelection && (
             <div style={{ textAlign: 'center', padding: '20px' }}>
               <Text muted style={{ marginBottom: '10px' }}>
                 Calculate gene signature correlations across multiple datasets to find similar genes.
               </Text>
               <button
-                onClick={triggerMultiDatasetSimilarCalculation}
+                onClick={() => {}}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#007bff',
@@ -2116,7 +2340,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
         </>
       )}
 
-      {selectedView === 0 && (
+      {selectedView === 0 && !hasMultiDatasetSelection && (
         <>
           <div style={{ 
             height: "350px", 
@@ -2136,7 +2360,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
       )}
       <Spacer height={5} />
 
-      {genelists && selectedView === 0 && (
+      {genelists && selectedView === 0 && !hasMultiDatasetSelection && (
         <>
           <Tabs
             name="tabs"
@@ -2159,16 +2383,17 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, data, similarData,
   );
 };
 
-const mapStateToProps = ({ settings }) => ({
+const mapStateToProps = ({ settings, calcResults }) => ({
   coreSettings: settings?.core ?? {},
   genesignatureSettings: settings?.genesignature ?? {},
+  geneSignatureCache: calcResults?.geneSignatureCache ?? {},
 });
 
 const mapDispatchToProps = (dispatch) => ({
   dispatch,
+  coreSettingsChanged: (payload) => dispatch(coreSettingsChanged(payload)),
 });
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneSignature);
 
 export { MainContainer as GeneSignature };
-

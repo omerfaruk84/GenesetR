@@ -16,6 +16,7 @@ const ROUTES = Object.freeze({
   GENELISTCOMPARE: "/genelists",
   MULTIDATASET_COMPARISON: "/multidataset-comparison",
   DEREGULATED_GENES: "/deregulated-genes",
+  CELL_CYCLE: "/cell-cycle",
   ABOUTUS: "/about",
 });
 
