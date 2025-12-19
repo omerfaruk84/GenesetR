@@ -20,6 +20,7 @@ const SettingsTypes = {
   GENELIST_COMPARE_SETTINGS: "Genelist Comparer Settings",
   MULTIDATASET_COMPARISON_SETTINGS: "Multi-Dataset Comparison Settings",
   PRECOMPUTED_DR_SETTINGS: "Pre-computed DR Settings",
+  CELL_CYCLE_SETTINGS: "Cell Cycle Settings",
 };
 
 const BiClusteringSettingsTypes = {
@@ -289,6 +290,12 @@ const DeregulatedGenesSettingsTypes = {
   FILTER_BLACKLIST_ENABLED: "filterBlacklistEnabled",
 };
 
+const CellCycleSettingsTypes = {
+  SELECTED_CELL_LINES: "selectedCellLines",
+  MIN_CELLS: "minCells",
+  MIN_CELL_LINES: "minCellLines",
+};
+
 const PrecomputedDrSettingsTypes = {
   HVG_STRATEGY: "hvgStrategy",
   N_HVGS: "nHvgs",
@@ -372,4 +379,5 @@ export {
   InchlibSettingsTypes,
   MultiDatasetComparisonSettingsTypes,
   DeregulatedGenesSettingsTypes,
+  CellCycleSettingsTypes,
 };

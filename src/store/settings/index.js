@@ -21,6 +21,7 @@ import { genelistcompareSettingsReducer } from "./genelist-compare-settings";
 import { multidatasetComparisonSettingsReducer } from "./multidataset-comparison-settings";
 import { precomputedDrSettingsReducer } from "./precomputed-dr-settings";
 import { deregulatedGenesSettingsReducer } from "./deregulated-genes-settings";
+import { cellCycleSettingsReducer } from "./cell-cycle-settings";
 const settingsReducer = combineReducers({
   core: coreSettingsReducer,
   mde: mdeSettingsReducer,
@@ -44,6 +45,7 @@ const settingsReducer = combineReducers({
   multidatasetComparison: multidatasetComparisonSettingsReducer,
   precomputedDr: precomputedDrSettingsReducer,
   deregulatedGenes: deregulatedGenesSettingsReducer,
+  cellCycle: cellCycleSettingsReducer,
 });
 
 export { settingsReducer };

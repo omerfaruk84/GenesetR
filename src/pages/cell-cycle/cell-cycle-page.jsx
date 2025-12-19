@@ -4,22 +4,15 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
-  Checkbox,
   Dialog,
   DialogContent,
   DialogTitle,
   Divider,
-  FormControl,
-  InputLabel,
-  ListItemText,
-  MenuItem,
-  OutlinedInput,
-  Select,
-  TextField,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { MaterialReactTable } from "material-react-table";
+import { useSelector } from "react-redux";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart } from "echarts/charts";
 import { CanvasRenderer } from "echarts/renderers";
@@ -28,13 +21,30 @@ import ReactEChartsCore from "echarts-for-react/lib/core";
 import styles from "./cell-cycle-page.module.scss";
 import {
   fetchCellCycleAggregateV2,
-  fetchCellCycleCellLinesV2,
   fetchCellCycleComparisonV2,
 } from "../../store/api/v2";
 
 echarts.use([TooltipComponent, GridComponent, BarChart, LineChart, CanvasRenderer]);
 
 const CONTROL_LABEL = "Non-Targeting";
+const NO_DATA_FOR_GENE_MESSAGE = "No data available for this gene";
+
+const toCellCycleDetailErrorMessage = (err, { anyFulfilled } = {}) => {
+  if (!err) return null;
+
+  const message = err?.message || String(err);
+  const code = err?.code;
+  const status = err?.response?.status;
+
+  if (code === "NOT_FOUND" || status === 404) return NO_DATA_FOR_GENE_MESSAGE;
+
+  if (typeof message === "string") {
+    if (/not found/i.test(message)) return NO_DATA_FOR_GENE_MESSAGE;
+    if (message === "Network Error" && anyFulfilled) return NO_DATA_FOR_GENE_MESSAGE;
+  }
+
+  return message;
+};
 
 const moduleDescription = {
   title: "Cell-Cycle Explorer",
@@ -140,9 +150,10 @@ const buildHalfViolinOption = (compareData, scoreKey) => {
 const CellCyclePage = () => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
 
-  const [availableCellLines, setAvailableCellLines] = useState([]);
-  const [selectedCellLines, setSelectedCellLines] = useState([]);
-  const [minCells, setMinCells] = useState(0);
+  const cellCycleSettings = useSelector((state) => state.settings?.cellCycle ?? {});
+  const selectedCellLines = cellCycleSettings?.selectedCellLines || [];
+  const minCells = cellCycleSettings?.minCells ?? 0;
+  const minCellLines = cellCycleSettings?.minCellLines ?? 1;
 
   const [aggregate, setAggregate] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -153,17 +164,6 @@ const CellCyclePage = () => {
   const [detailRows, setDetailRows] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
-
-  useEffect(() => {
-    fetchCellCycleCellLinesV2().then((cls) => {
-      const next = cls || [];
-      setAvailableCellLines(next);
-      if (next.length && selectedCellLines.length === 0) {
-        setSelectedCellLines([next[0]]);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,7 +210,12 @@ const CellCyclePage = () => {
 
   const tableData = useMemo(() => {
     const genes = aggregate?.genes || [];
-    return genes.map((g) => {
+    const parsedMin = parseInt(String(minCellLines), 10);
+    const minPresence = Math.max(1, Number.isFinite(parsedMin) ? parsedMin : 1);
+
+    return genes
+      .filter((g) => Number(g?.present_in || 0) >= minPresence)
+      .map((g) => {
       const row = {
         gene_target: g.gene_target,
         present_in: g.present_in,
@@ -230,8 +235,8 @@ const CellCyclePage = () => {
       });
 
       return row;
-    });
-  }, [aggregate, selectedCellLines, cellLineKeyMap]);
+      });
+  }, [aggregate, selectedCellLines, cellLineKeyMap, minCellLines]);
 
   const tableColumns = useMemo(() => {
     const deltaColumn = (prefix, header, avgKey) => ({
@@ -311,10 +316,15 @@ const CellCyclePage = () => {
         )
       );
 
+      const anyFulfilled = results.some((r) => r.status === "fulfilled");
       const rows = results.map((res, idx) => {
         const cl = selectedCellLines[idx];
         if (res.status === "fulfilled") return { cell_line: cl, data: res.value, error: null };
-        return { cell_line: cl, data: null, error: res.reason?.message || String(res.reason) };
+        return {
+          cell_line: cl,
+          data: null,
+          error: toCellCycleDetailErrorMessage(res.reason, { anyFulfilled }),
+        };
       });
 
       if (!cancelled) {
@@ -377,42 +387,21 @@ const CellCyclePage = () => {
       </Accordion>
 
       <div className={styles.controls}>
-        <FormControl fullWidth size="small">
-          <InputLabel>Cell lines</InputLabel>
-          <Select
-            multiple
-            value={selectedCellLines}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSelectedCellLines(typeof v === "string" ? v.split(",") : v);
-            }}
-            input={<OutlinedInput label="Cell lines" />}
-            renderValue={(selected) => (selected || []).join(", ")}
-          >
-            {availableCellLines.map((cl) => (
-              <MenuItem key={cl} value={cl}>
-                <Checkbox checked={selectedCellLines.indexOf(cl) > -1} />
-                <ListItemText primary={cl} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <TextField
-          size="small"
-          label="Min cells per gene"
-          type="number"
-          value={minCells}
-          onChange={(e) => setMinCells(e.target.value)}
-        />
-
         <div className={styles.controlsMeta}>
+          <div className={styles.datasetBadge}>
+            Selected cell lines: {selectedCellLines.length ? selectedCellLines.join(", ") : "None (use left settings)"}
+            {" • "}
+            Min cells per gene: {Number(minCells) || 0}
+            {" • "}
+            Min cell lines with data: {Number(minCellLines) || 1}
+          </div>
           {datasetsSummary && <div className={styles.datasetBadge}>{datasetsSummary}</div>}
           {loading && <div className={styles.status}>Loading cell-cycle deltas…</div>}
           {error && <div className={styles.statusError}>Cell-cycle data unavailable: {error}</div>}
           {!loading && !error && aggregate?.gene_count != null && (
             <div className={styles.status}>
-              Loaded {aggregate.gene_count.toLocaleString()} genes across {selectedCellLines.length} cell lines
+              Loaded {aggregate.gene_count.toLocaleString()} genes across {selectedCellLines.length} cell lines • Showing{" "}
+              {tableData.length.toLocaleString()}
             </div>
           )}
         </div>
@@ -424,11 +413,13 @@ const CellCyclePage = () => {
             columns={tableColumns}
             data={tableData}
             enableSorting
-            enablePagination
+            enablePagination 
+            positionGlobalFilter="left"           
             enableColumnPinning
             initialState={{
               pagination: { pageSize: 50, pageIndex: 0 },
               columnPinning: { left: ["gene_target"] },
+              showGlobalFilter: true,
             }}
             muiTableContainerProps={{ sx: { maxHeight: "calc(100vh - 300px)" } }}
             muiTableBodyRowProps={({ row }) => ({
@@ -440,7 +431,11 @@ const CellCyclePage = () => {
           !loading &&
           !error && (
             <div className={styles.noData}>
-              {selectedCellLines.length ? "No data available for the selected cell lines." : "Select one or more cell lines to begin."}
+              {!selectedCellLines.length
+                ? "Select one or more cell lines to begin."
+                : aggregate?.gene_count
+                  ? "No genes match the current filters."
+                  : "No data available for the selected cell lines."}
             </div>
           )
         )}
@@ -527,4 +522,3 @@ const CellCyclePage = () => {
 };
 
 export { CellCyclePage };
-

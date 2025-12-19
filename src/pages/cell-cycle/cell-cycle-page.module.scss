@@ -39,10 +39,9 @@
   border-radius: 10px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   margin-bottom: 12px;
-  display: grid;
-  grid-template-columns: 1fr 220px;
-  gap: 12px;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .controlsMeta {
@@ -135,9 +134,6 @@
 }
 
 @media (max-width: 1200px) {
-  .controls {
-    grid-template-columns: 1fr;
-  }
   .detailHeaderRow {
     display: none;
   }

@@ -22,6 +22,7 @@ import { GenelistCompareSettings } from "./genelist-compare";
 import { MultiDatasetComparisonSettings } from "./multidataset-comparison-settings";
 import { PrecomputedDrSettings } from "./precomputed-dr-settings";
 import { DrMethodSelector } from "./dr-method-selector";
+import { CellCycleSettings } from "./cell-cycle-settings";
 
 const SettingsSelector = ({ pathname }) => {
   const settingsMap = {
@@ -328,6 +329,12 @@ const SettingsSelector = ({ pathname }) => {
       {
         settingsName: SettingsTypes.MULTIDATASET_COMPARISON_SETTINGS,
         settings: <MultiDatasetComparisonSettings />,
+      },
+    ],
+    [ROUTES.CELL_CYCLE]: [
+      {
+        settingsName: SettingsTypes.CELL_CYCLE_SETTINGS,
+        settings: <CellCycleSettings />,
       },
     ],
   };
