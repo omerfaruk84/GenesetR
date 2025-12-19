@@ -63,6 +63,7 @@ const GeneRegulationEnhancedSettings = ({
     { label: "Degree Size", value: "degree" },
     { label: "Knockdown Efficiency", value: "knockdown" },
     { label: "Mixed (Category + Degree)", value: "mixed" },
+    { label: "Neighbor Count", value: "neighbourCount" },
   ];
 
   const edgeStyleOptions = [

@@ -246,6 +246,188 @@ function nodeSize(n, deg, settings) {
   return baseSize + Math.min(6, degree);
 }
 
+// ------------------ Graph Statistics Component ------------------
+function GraphStatistics({ nodes, edges, settings }) {
+  const stats = useMemo(() => {
+    const nodeCount = nodes.length;
+    const edgeCount = edges.length;
+    const expEdges = edges.filter(e => e.Type2 === "Exp").length;
+    const corrEdges = edges.filter(e => e.Type2 === "Corr").length;
+    const density = nodeCount > 1 ? (2 * edgeCount) / (nodeCount * (nodeCount - 1)) : 0;
+
+    // Calculate category distribution
+    const categories = { UPR: 0, UNR: 0, DPR: 0, DNR: 0, Other: 0 };
+    nodes.forEach(n => {
+      if (n.category === 0) categories.UPR++;
+      else if (n.category === 1) categories.UNR++;
+      else if (n.category === 2) categories.DPR++;
+      else if (n.category === 3) categories.DNR++;
+      else categories.Other++;
+    });
+
+    return { nodeCount, edgeCount, expEdges, corrEdges, density, categories };
+  }, [nodes, edges]);
+
+  return (
+    <div style={{
+      display: "flex",
+      gap: "16px",
+      padding: "8px 12px",
+      background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      fontSize: "12px",
+      flexWrap: "wrap",
+      alignItems: "center"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <span style={{ fontWeight: 600, color: "#475569" }}>Nodes:</span>
+        <span style={{
+          background: "#3b82f6",
+          color: "white",
+          padding: "2px 8px",
+          borderRadius: "12px",
+          fontWeight: 500
+        }}>{stats.nodeCount}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <span style={{ fontWeight: 600, color: "#475569" }}>Edges:</span>
+        <span style={{
+          background: "#64748b",
+          color: "white",
+          padding: "2px 8px",
+          borderRadius: "12px",
+          fontWeight: 500
+        }}>{stats.edgeCount}</span>
+        <span style={{ color: "#94a3b8", fontSize: "11px" }}>
+          (Exp: {stats.expEdges}, Corr: {stats.corrEdges})
+        </span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <span style={{ fontWeight: 600, color: "#475569" }}>Density:</span>
+        <span style={{ color: "#64748b" }}>{(stats.density * 100).toFixed(2)}%</span>
+      </div>
+      {settings?.selectedGene && (
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ fontWeight: 600, color: "#475569" }}>Target:</span>
+          <span style={{
+            background: "#8b5cf6",
+            color: "white",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontWeight: 500
+          }}>{settings.selectedGene}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------ Graph Legend Component ------------------
+function GraphLegend({ showLegend = true }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  if (!showLegend) return null;
+
+  const categoryLegend = [
+    { label: "UPR (Upstream Positive)", color: CATEGORY_COLORS[0], description: "Genes that positively regulate the target" },
+    { label: "UNR (Upstream Negative)", color: CATEGORY_COLORS[1], description: "Genes that negatively regulate the target" },
+    { label: "DPR (Downstream Positive)", color: CATEGORY_COLORS[2], description: "Genes positively regulated by the target" },
+    { label: "DNR (Downstream Negative)", color: CATEGORY_COLORS[3], description: "Genes negatively regulated by the target" },
+  ];
+
+  const edgeLegend = [
+    { label: "Expression", color: EDGE_STYLES.Exp.color, style: "solid", description: "Direct expression regulation" },
+    { label: "Correlation", color: EDGE_STYLES.Corr.color, style: "dashed", description: "Perturbation correlation" },
+  ];
+
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: 12,
+      left: 12,
+      zIndex: 10,
+      background: "rgba(255,255,255,0.95)",
+      padding: isCollapsed ? "6px 10px" : "10px 14px",
+      borderRadius: 8,
+      boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
+      border: "1px solid #e2e8f0",
+      maxWidth: isCollapsed ? "auto" : "220px",
+      fontSize: "11px",
+      transition: "all 0.2s ease"
+    }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          cursor: "pointer",
+          marginBottom: isCollapsed ? 0 : 8
+        }}
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && setIsCollapsed(!isCollapsed)}
+        aria-expanded={!isCollapsed}
+        aria-label="Toggle legend"
+      >
+        <span style={{ fontWeight: 600, color: "#334155" }}>Legend</span>
+        <span style={{
+          transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+          transition: "transform 0.2s",
+          fontSize: "10px"
+        }}>▼</span>
+      </div>
+
+      {!isCollapsed && (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Node Categories</div>
+            {categoryLegend.map(item => (
+              <div
+                key={item.label}
+                style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}
+                title={item.description}
+              >
+                <span style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  background: item.color,
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  flexShrink: 0
+                }} />
+                <span style={{ color: "#475569" }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div style={{ fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Edge Types</div>
+            {edgeLegend.map(item => (
+              <div
+                key={item.label}
+                style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}
+                title={item.description}
+              >
+                <svg width="20" height="10" style={{ flexShrink: 0 }}>
+                  <line
+                    x1="0" y1="5" x2="20" y2="5"
+                    stroke={item.color}
+                    strokeWidth="2"
+                    strokeDasharray={item.style === "dashed" ? "4,2" : "none"}
+                  />
+                </svg>
+                <span style={{ color: "#475569" }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ------------------ Main exported component ------------------
 export default function NetworkGraphAlternatives({
   graph,
@@ -253,7 +435,17 @@ export default function NetworkGraphAlternatives({
   height = 640,
   initialRenderer = "Cytoscape",
 }) {
-  const [renderer, setRenderer] = useState(initialRenderer);
+  // Use networkRenderer from settings if available, otherwise use initialRenderer
+  const effectiveInitialRenderer = settings?.networkRenderer || initialRenderer;
+  const [renderer, setRenderer] = useState(effectiveInitialRenderer);
+
+  // Update renderer when settings change
+  useEffect(() => {
+    if (settings?.networkRenderer && settings.networkRenderer !== renderer) {
+      setRenderer(settings.networkRenderer);
+    }
+  }, [settings?.networkRenderer]);
+
   const g = useMemo(() => normalizeGraph(graph), [graph]);
   const filteredEdges = useMemo(
     () => filterEdgesBySettings(g.edges, settings),
@@ -304,10 +496,51 @@ export default function NetworkGraphAlternatives({
 
   const common = { nodes: filteredNodes, edges: filteredEdges, deg, height, settings };
 
+  // Export function for saving graph as JSON
+  const handleExportJSON = useCallback(() => {
+    const exportData = {
+      nodes: filteredNodes.map(n => ({
+        id: n.id,
+        category: n.category,
+        kd: n.kd,
+        neighbourCount: n.neighbourCount
+      })),
+      edges: filteredEdges.map(e => ({
+        source: e.source,
+        target: e.target,
+        value: e.value,
+        Type2: e.Type2,
+        Type: e.Type
+      })),
+      metadata: {
+        exportDate: new Date().toISOString(),
+        selectedGene: settings?.selectedGene,
+        nodeCount: filteredNodes.length,
+        edgeCount: filteredEdges.length
+      }
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gene-network-${settings?.selectedGene || "export"}-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [filteredNodes, filteredEdges, settings]);
+
   return (
-    <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
-      <Header renderer={renderer} setRenderer={setRenderer} />
-      <div style={{ height }}>
+    <div style={{ display: "grid", gridTemplateRows: "auto auto 1fr", gap: 12 }}>
+      <Header
+        renderer={renderer}
+        setRenderer={setRenderer}
+        onExportJSON={handleExportJSON}
+        nodeCount={filteredNodes.length}
+        edgeCount={filteredEdges.length}
+      />
+      <GraphStatistics nodes={filteredNodes} edges={filteredEdges} settings={settings} />
+      <div style={{ height, position: "relative" }}>
         {renderer === "Cytoscape" &&
           (CytoscapeComponent ? (
             <CytoscapeRenderer {...common} />
@@ -324,58 +557,137 @@ export default function NetworkGraphAlternatives({
           ))}
         {renderer === "ForceGraph2D" && <ForceGraph2DRenderer {...common} />}
         {renderer === "ForceGraph3D" && <ForceGraph3DRenderer {...common} />}
+        <GraphLegend showLegend={settings?.showLegend !== false} />
       </div>
     </div>
   );
 }
 
-function Header({ renderer, setRenderer }) {
+function Header({ renderer, setRenderer, onExportJSON, nodeCount, edgeCount }) {
   const renderers = [
     {
       value: "Cytoscape",
       label: `Cytoscape${CytoscapeComponent ? "" : " (not installed)"}`,
       available: !!CytoscapeComponent,
+      description: "Interactive graph with advanced layouts"
     },
     {
       value: "Sigma",
       label: `Sigma.js${SigmaContainer ? "" : " (not installed)"}`,
       available: !!SigmaContainer,
+      description: "WebGL-based, great for large graphs"
     },
     {
       value: "ForceGraph2D",
       label: "ForceGraph 2D",
       available: true,
+      description: "Canvas-based 2D force-directed layout"
     },
     {
       value: "ForceGraph3D",
       label: "ForceGraph 3D",
       available: true,
+      description: "WebGL 3D force-directed layout"
     },
   ];
 
+  const currentRenderer = renderers.find(r => r.value === renderer);
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <strong style={{ fontSize: 16 }}>Renderer:</strong>
-      <select
-        value={renderer}
-        onChange={(e) => setRenderer(e.target.value)}
-        style={{ padding: 6 }}
-      >
-        {renderers.map((r) => (
-          <option
-            key={r.value}
-            value={r.value}
-            style={{ color: r.available ? "black" : "gray" }}
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "10px 14px",
+      background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+      borderRadius: 8,
+      color: "white"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <label htmlFor="renderer-select" style={{ fontSize: 13, fontWeight: 500 }}>
+            Visualization Engine:
+          </label>
+          <select
+            id="renderer-select"
+            value={renderer}
+            onChange={(e) => setRenderer(e.target.value)}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: "1px solid #475569",
+              background: "#1e293b",
+              color: "white",
+              fontSize: 12,
+              cursor: "pointer"
+            }}
+            aria-label="Select visualization renderer"
           >
-            {r.label}
-          </option>
-        ))}
-      </select>
-      <span style={{ opacity: 0.7, marginLeft: 8 }}>
-        {CytoscapeComponent || SigmaContainer
-          ? "Advanced renderers available!"
-          : "Install renderers: npm i react-cytoscapejs cytoscape @react-sigma/core graphology"}
-      </span>
+            {renderers.map((r) => (
+              <option
+                key={r.value}
+                value={r.value}
+                disabled={!r.available}
+                style={{ color: r.available ? "white" : "#94a3b8" }}
+              >
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {currentRenderer && (
+          <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>
+            {currentRenderer.description}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Performance indicator */}
+        {nodeCount > 200 && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: "3px 8px",
+              borderRadius: 12,
+              background: nodeCount > 500 ? "#ef4444" : "#f59e0b",
+              color: "white"
+            }}
+            title={`Large graph with ${nodeCount} nodes may affect performance`}
+          >
+            {nodeCount > 500 ? "Large Graph" : "Medium Graph"}
+          </span>
+        )}
+
+        {/* Export buttons */}
+        <button
+          onClick={onExportJSON}
+          style={{
+            padding: "6px 12px",
+            borderRadius: 6,
+            border: "1px solid #475569",
+            background: "transparent",
+            color: "white",
+            fontSize: 11,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            transition: "background 0.2s"
+          }}
+          onMouseOver={(e) => e.target.style.background = "#475569"}
+          onMouseOut={(e) => e.target.style.background = "transparent"}
+          title="Export graph data as JSON"
+          aria-label="Export graph as JSON"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7,10 12,15 17,10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export JSON
+        </button>
+      </div>
     </div>
   );
 }
@@ -388,8 +700,56 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
       (settings?.nodeStyle === "degree" ? "degree" : "category")
   );
   const [showLabels, setShowLabels] = useState(settings?.cyShowLabels ?? true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highlightedNodes, setHighlightedNodes] = useState(new Set());
   const cyRef = useRef(null);
   const [geneInfoCache, setGeneInfoCache] = useState({});
+
+  // Search functionality
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setHighlightedNodes(new Set());
+      return;
+    }
+    const term = searchTerm.toLowerCase();
+    const matches = new Set(
+      nodes
+        .filter(n => n.id.toLowerCase().includes(term))
+        .map(n => n.id)
+    );
+    setHighlightedNodes(matches);
+  }, [searchTerm, nodes]);
+
+  // Zoom to fit function
+  const handleZoomToFit = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.fit(cy.elements(), 50);
+  }, []);
+
+  // Center on selected gene
+  const handleCenterOnGene = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || !settings?.selectedGene) return;
+    const node = cy.$id(settings.selectedGene);
+    if (node.length) {
+      cy.animate({
+        center: { eles: node },
+        zoom: 1.5,
+        duration: 400
+      });
+    }
+  }, [settings?.selectedGene]);
+
+  // Highlight search matches
+  const handleHighlightSearch = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || highlightedNodes.size === 0) return;
+    const matchedNodes = cy.nodes().filter(n => highlightedNodes.has(n.id()));
+    if (matchedNodes.length) {
+      cy.fit(matchedNodes, 80);
+    }
+  }, [highlightedNodes]);
 
   const elements = useMemo(() => {
     const cyNodes = nodes.map((n) => ({
@@ -536,23 +896,71 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
         style: {
           label: showLabels ? "data(label)" : "",
           "background-color": (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
+            const nodeId = ele.id();
+            // Highlight selected gene with special color
+            if (settings?.selectedGene === nodeId) {
+              return "#f43f5e"; // Rose color for target gene
+            }
+            // Highlight search matches
+            if (highlightedNodes.has(nodeId)) {
+              return "#f59e0b"; // Amber for search matches
+            }
+            const node = nodes.find((n) => n.id === nodeId);
             return colorForNode(node);
           },
           width: (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
-            return nodeSize(node || {}, deg, settings) * 2;
+            const nodeId = ele.id();
+            const node = nodes.find((n) => n.id === nodeId);
+            let size = nodeSize(node || {}, deg, settings) * 2;
+            // Make target gene larger
+            if (settings?.selectedGene === nodeId) size *= 1.4;
+            // Make search matches slightly larger
+            if (highlightedNodes.has(nodeId)) size *= 1.2;
+            return size;
           },
           height: (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
-            return nodeSize(node || {}, deg, settings) * 2;
+            const nodeId = ele.id();
+            const node = nodes.find((n) => n.id === nodeId);
+            let size = nodeSize(node || {}, deg, settings) * 2;
+            if (settings?.selectedGene === nodeId) size *= 1.4;
+            if (highlightedNodes.has(nodeId)) size *= 1.2;
+            return size;
           },
           color: "#0f172a",
-          "font-size": 10,
+          "font-size": (ele) => {
+            const nodeId = ele.id();
+            if (settings?.selectedGene === nodeId || highlightedNodes.has(nodeId)) {
+              return 12;
+            }
+            return 10;
+          },
+          "font-weight": (ele) => {
+            const nodeId = ele.id();
+            if (settings?.selectedGene === nodeId || highlightedNodes.has(nodeId)) {
+              return "bold";
+            }
+            return "normal";
+          },
           "text-valign": "center",
           "text-halign": "center",
-          "border-width": 1,
-          "border-color": "#e2e8f0",
+          "border-width": (ele) => {
+            const nodeId = ele.id();
+            if (settings?.selectedGene === nodeId) return 3;
+            if (highlightedNodes.has(nodeId)) return 2;
+            return 1;
+          },
+          "border-color": (ele) => {
+            const nodeId = ele.id();
+            if (settings?.selectedGene === nodeId) return "#be123c";
+            if (highlightedNodes.has(nodeId)) return "#d97706";
+            return "#e2e8f0";
+          },
+          "z-index": (ele) => {
+            const nodeId = ele.id();
+            if (settings?.selectedGene === nodeId) return 999;
+            if (highlightedNodes.has(nodeId)) return 998;
+            return 1;
+          }
         },
       },
       {
@@ -565,10 +973,20 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
           "target-arrow-shape": "triangle",
           "line-style": (ele) =>
             ele.data("Type2") === "Corr" ? "dashed" : "solid",
+          opacity: 0.7,
+        },
+      },
+      // Highlight edges connected to target gene
+      {
+        selector: `edge[source = "${settings?.selectedGene}"], edge[target = "${settings?.selectedGene}"]`,
+        style: {
+          width: 3,
+          opacity: 1,
+          "z-index": 100,
         },
       },
     ],
-    [nodes, deg, settings, colorForNode, showLabels]
+    [nodes, deg, settings, colorForNode, showLabels, highlightedNodes]
   );
 
   // Run layout ONLY when data size or layoutName changes
@@ -695,6 +1113,7 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
 
   return (
     <div style={{ position: "relative", width: "100%", height }}>
+      {/* Main Control Panel */}
       <div
         style={{
           position: "absolute",
@@ -702,48 +1121,149 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
           right: 12,
           zIndex: 10,
           display: "flex",
-          flexWrap: "wrap",
+          flexDirection: "column",
           gap: 8,
-          background: "rgba(255,255,255,0.92)",
-          padding: "8px 12px",
-          borderRadius: 8,
-          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
+          background: "rgba(255,255,255,0.95)",
+          padding: "12px",
+          borderRadius: 10,
+          boxShadow: "0 4px 16px rgba(15, 23, 42, 0.15)",
+          border: "1px solid #e2e8f0",
+          minWidth: "200px"
         }}
       >
-        <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937" }}>
-          Layout
-          <select
-            value={layoutName}
-            onChange={(e) => setLayoutName(e.target.value)}
-            style={{ marginTop: 4, padding: "4px 6px", fontSize: 12 }}
-          >
-            <option value="cose">CoSE (force)</option>
-            <option value="concentric">Concentric</option>
-            <option value="breadthfirst">Breadth-First</option>
-            <option value="circle">Circle</option>
-            <option value="grid">Grid</option>
-          </select>
-        </label>
-        <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937" }}>
-          Color
-          <select
-            value={colorMode}
-            onChange={(e) => setColorMode(e.target.value)}
-            style={{ marginTop: 4, padding: "4px 6px", fontSize: 12 }}
-          >
-            <option value="category">Category</option>
-            <option value="degree">Degree</option>
-            <option value="kd">Knockdown</option>
-          </select>
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#1f2937" }}>
-          <input
-            type="checkbox"
-            checked={showLabels}
-            onChange={(e) => setShowLabels(e.target.checked)}
-          />
-          Labels
-        </label>
+        {/* Search Box */}
+        <div style={{ marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
+            Search Genes
+          </label>
+          <div style={{ display: "flex", gap: 4 }}>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Type gene name..."
+              style={{
+                flex: 1,
+                padding: "5px 8px",
+                fontSize: 11,
+                border: "1px solid #e2e8f0",
+                borderRadius: 5,
+                outline: "none"
+              }}
+              aria-label="Search genes"
+            />
+            {searchTerm && highlightedNodes.size > 0 && (
+              <button
+                onClick={handleHighlightSearch}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: 10,
+                  border: "1px solid #f59e0b",
+                  borderRadius: 5,
+                  background: "#fef3c7",
+                  color: "#92400e",
+                  cursor: "pointer"
+                }}
+                title="Focus on search results"
+              >
+                Focus ({highlightedNodes.size})
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Layout and Color Controls */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937", flex: 1 }}>
+            Layout
+            <select
+              value={layoutName}
+              onChange={(e) => setLayoutName(e.target.value)}
+              style={{ marginTop: 3, padding: "4px 6px", fontSize: 11, borderRadius: 4 }}
+              aria-label="Select layout"
+            >
+              <option value="cose">CoSE (force)</option>
+              <option value="concentric">Concentric</option>
+              <option value="breadthfirst">Breadth-First</option>
+              <option value="circle">Circle</option>
+              <option value="grid">Grid</option>
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937", flex: 1 }}>
+            Color
+            <select
+              value={colorMode}
+              onChange={(e) => setColorMode(e.target.value)}
+              style={{ marginTop: 3, padding: "4px 6px", fontSize: 11, borderRadius: 4 }}
+              aria-label="Select color mode"
+            >
+              <option value="category">Category</option>
+              <option value="degree">Degree</option>
+              <option value="kd">Knockdown</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Toggle and Action Buttons */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#1f2937", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => setShowLabels(e.target.checked)}
+            />
+            Labels
+          </label>
+
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={handleZoomToFit}
+              style={{
+                padding: "4px 8px",
+                fontSize: 10,
+                border: "1px solid #cbd5e1",
+                borderRadius: 4,
+                background: "#f8fafc",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 3
+              }}
+              title="Zoom to fit all nodes"
+              aria-label="Zoom to fit"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+              </svg>
+              Fit
+            </button>
+            {settings?.selectedGene && (
+              <button
+                onClick={handleCenterOnGene}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: 10,
+                  border: "1px solid #f43f5e",
+                  borderRadius: 4,
+                  background: "#fff1f2",
+                  color: "#be123c",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3
+                }}
+                title={`Center on ${settings.selectedGene}`}
+                aria-label={`Center on ${settings.selectedGene}`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Target
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <CytoscapeComponent
@@ -1202,6 +1722,39 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
   const [selNode, setSelNode] = useState(null);
   const [geneInfoCache, setGeneInfoCache] = useState({});
   const [nodeTooltips, setNodeTooltips] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highlightedNodes, setHighlightedNodes] = useState(new Set());
+
+  // Search functionality
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setHighlightedNodes(new Set());
+      return;
+    }
+    const term = searchTerm.toLowerCase();
+    const matches = new Set(
+      nodes.filter(n => n.id.toLowerCase().includes(term)).map(n => n.id)
+    );
+    setHighlightedNodes(matches);
+  }, [searchTerm, nodes]);
+
+  // Zoom to fit
+  const handleZoomToFit = useCallback(() => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    fg.zoomToFit(400, 50);
+  }, []);
+
+  // Center on selected gene
+  const handleCenterOnGene = useCallback(() => {
+    const fg = fgRef.current;
+    if (!fg || !settings?.selectedGene) return;
+    const node = nodes.find(n => n.id === settings.selectedGene);
+    if (node) {
+      fg.centerAt(node.x, node.y, 400);
+      fg.zoom(2, 400);
+    }
+  }, [settings?.selectedGene, nodes]);
 
   const data = useMemo(
     () => ({
@@ -1321,15 +1874,102 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
 
   return (
     <div style={{ position: "relative", width: "100%", height }}>
-      <div style={{ position: "absolute", right: 12, top: 12, zIndex: 5, background: "#fff", padding: 6, borderRadius: 6, border: "1px solid #e5e7eb" }}>
-        <label style={{ fontSize: 12, marginRight: 6 }}>Layout</label>
-        <select value={layout} onChange={(e) => setLayout(e.target.value)} style={{ fontSize: 12 }}>
-          <option value="force">Force</option>
-          <option value="circular">Circular</option>
-          <option value="grid">Grid</option>
-          <option value="radialByCategory">Radial by Category</option>
-          <option value="layersByDegree">Layers by Degree</option>
-        </select>
+      {/* Enhanced Control Panel */}
+      <div style={{
+        position: "absolute",
+        right: 12,
+        top: 12,
+        zIndex: 5,
+        background: "rgba(255,255,255,0.95)",
+        padding: "12px",
+        borderRadius: 10,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        minWidth: "200px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8
+      }}>
+        {/* Search Box */}
+        <div>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
+            Search Genes
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Type gene name..."
+            style={{
+              width: "100%",
+              padding: "5px 8px",
+              fontSize: 11,
+              border: "1px solid #e2e8f0",
+              borderRadius: 5,
+              boxSizing: "border-box"
+            }}
+            aria-label="Search genes"
+          />
+          {highlightedNodes.size > 0 && (
+            <div style={{ fontSize: 10, color: "#f59e0b", marginTop: 2 }}>
+              {highlightedNodes.size} match(es) highlighted
+            </div>
+          )}
+        </div>
+
+        {/* Layout Selection */}
+        <div>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Layout</label>
+          <select
+            value={layout}
+            onChange={(e) => setLayout(e.target.value)}
+            style={{ width: "100%", fontSize: 11, padding: "4px 6px", borderRadius: 4 }}
+            aria-label="Select layout"
+          >
+            <option value="force">Force-Directed</option>
+            <option value="circular">Circular</option>
+            <option value="grid">Grid</option>
+            <option value="radialByCategory">Radial by Category</option>
+            <option value="layersByDegree">Layers by Degree</option>
+          </select>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: 4 }}>
+          <button
+            onClick={handleZoomToFit}
+            style={{
+              flex: 1,
+              padding: "5px 8px",
+              fontSize: 10,
+              border: "1px solid #cbd5e1",
+              borderRadius: 4,
+              background: "#f8fafc",
+              cursor: "pointer"
+            }}
+            title="Zoom to fit all nodes"
+          >
+            Fit All
+          </button>
+          {settings?.selectedGene && (
+            <button
+              onClick={handleCenterOnGene}
+              style={{
+                flex: 1,
+                padding: "5px 8px",
+                fontSize: 10,
+                border: "1px solid #f43f5e",
+                borderRadius: 4,
+                background: "#fff1f2",
+                color: "#be123c",
+                cursor: "pointer"
+              }}
+              title={`Center on ${settings.selectedGene}`}
+            >
+              Center Target
+            </button>
+          )}
+        </div>
       </div>
 
       <ForceGraph2D
@@ -1363,13 +2003,30 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
         linkDirectionalParticleSpeed={0.006}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const ndata = getNode(node.id) || {};
-          const size = nodeSize(ndata, deg, settings);
-          const color = nodeColor(ndata, settings);
+          let size = nodeSize(ndata, deg, settings);
+          let color = nodeColor(ndata, settings);
 
-          if (hoverNode?.id === node.id || selNode?.id === node.id) {
+          // Highlight target gene
+          const isTargetGene = settings?.selectedGene === node.id;
+          const isSearchMatch = highlightedNodes.has(node.id);
+
+          if (isTargetGene) {
+            color = "#f43f5e";
+            size *= 1.4;
+          } else if (isSearchMatch) {
+            color = "#f59e0b";
+            size *= 1.2;
+          }
+
+          // Highlight halo for hovered/selected/target/search nodes
+          if (hoverNode?.id === node.id || selNode?.id === node.id || isTargetGene || isSearchMatch) {
             ctx.beginPath();
             ctx.arc(node.x, node.y, size + 6, 0, 2 * Math.PI, false);
-            ctx.fillStyle = "rgba(37, 99, 235, 0.18)";
+            ctx.fillStyle = isTargetGene
+              ? "rgba(244, 63, 94, 0.2)"
+              : isSearchMatch
+              ? "rgba(245, 158, 11, 0.2)"
+              : "rgba(37, 99, 235, 0.18)";
             ctx.fill();
           }
 
@@ -1377,12 +2034,12 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
           ctx.fillStyle = color;
           ctx.fill();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = isTargetGene ? "#be123c" : isSearchMatch ? "#d97706" : "#ffffff";
+          ctx.lineWidth = isTargetGene ? 3 : isSearchMatch ? 2 : 2;
           ctx.stroke();
 
           const fontSize = Math.max(8, 10 / Math.sqrt(globalScale));
-          ctx.font = `${fontSize}px sans-serif`;
+          ctx.font = isTargetGene || isSearchMatch ? `bold ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
           ctx.fillStyle = "#0f172a";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
@@ -1409,6 +2066,42 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
   const [selNode, setSelNode] = useState(null);
   const [geneInfoCache, setGeneInfoCache] = useState({});
   const [nodeTooltips, setNodeTooltips] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highlightedNodes, setHighlightedNodes] = useState(new Set());
+
+  // Search functionality
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setHighlightedNodes(new Set());
+      return;
+    }
+    const term = searchTerm.toLowerCase();
+    const matches = new Set(
+      nodes.filter(n => n.id.toLowerCase().includes(term)).map(n => n.id)
+    );
+    setHighlightedNodes(matches);
+  }, [searchTerm, nodes]);
+
+  // Zoom to fit
+  const handleZoomToFit = useCallback(() => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    fg.zoomToFit(400, 50);
+  }, []);
+
+  // Center on selected gene
+  const handleCenterOnGene = useCallback(() => {
+    const fg = fgRef.current;
+    if (!fg || !settings?.selectedGene) return;
+    const node = nodes.find(n => n.id === settings.selectedGene);
+    if (node && node.x !== undefined) {
+      fg.cameraPosition(
+        { x: node.x + 150, y: node.y, z: node.z + 150 },
+        { x: node.x, y: node.y, z: node.z },
+        1000
+      );
+    }
+  }, [settings?.selectedGene, nodes]);
 
   const data = useMemo(
     () => ({
@@ -1529,15 +2222,108 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
 
   return (
     <div style={{ position: "relative", width: "100%", height }}>
-      <div style={{ position: "absolute", right: 12, top: 12, zIndex: 5, background: "#fff", padding: 6, borderRadius: 6, border: "1px solid #e5e7eb" }}>
-        <label style={{ fontSize: 12, marginRight: 6 }}>Layout</label>
-        <select value={layout} onChange={(e) => setLayout(e.target.value)} style={{ fontSize: 12 }}>
-          <option value="force">Force</option>
-          <option value="circular">Circular</option>
-          <option value="grid">Grid</option>
-          <option value="radialByCategory">Radial by Category</option>
-          <option value="layersByDegree">Layers by Degree</option>
-        </select>
+      {/* Enhanced Control Panel */}
+      <div style={{
+        position: "absolute",
+        right: 12,
+        top: 12,
+        zIndex: 5,
+        background: "rgba(255,255,255,0.95)",
+        padding: "12px",
+        borderRadius: 10,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        minWidth: "200px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8
+      }}>
+        {/* Search Box */}
+        <div>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
+            Search Genes
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Type gene name..."
+            style={{
+              width: "100%",
+              padding: "5px 8px",
+              fontSize: 11,
+              border: "1px solid #e2e8f0",
+              borderRadius: 5,
+              boxSizing: "border-box"
+            }}
+            aria-label="Search genes"
+          />
+          {highlightedNodes.size > 0 && (
+            <div style={{ fontSize: 10, color: "#f59e0b", marginTop: 2 }}>
+              {highlightedNodes.size} match(es) highlighted
+            </div>
+          )}
+        </div>
+
+        {/* Layout Selection */}
+        <div>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Layout</label>
+          <select
+            value={layout}
+            onChange={(e) => setLayout(e.target.value)}
+            style={{ width: "100%", fontSize: 11, padding: "4px 6px", borderRadius: 4 }}
+            aria-label="Select layout"
+          >
+            <option value="force">Force-Directed</option>
+            <option value="circular">Circular</option>
+            <option value="grid">Grid</option>
+            <option value="radialByCategory">Radial by Category</option>
+            <option value="layersByDegree">Layers by Degree</option>
+          </select>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: 4 }}>
+          <button
+            onClick={handleZoomToFit}
+            style={{
+              flex: 1,
+              padding: "5px 8px",
+              fontSize: 10,
+              border: "1px solid #cbd5e1",
+              borderRadius: 4,
+              background: "#f8fafc",
+              cursor: "pointer"
+            }}
+            title="Zoom to fit all nodes"
+          >
+            Fit All
+          </button>
+          {settings?.selectedGene && (
+            <button
+              onClick={handleCenterOnGene}
+              style={{
+                flex: 1,
+                padding: "5px 8px",
+                fontSize: 10,
+                border: "1px solid #f43f5e",
+                borderRadius: 4,
+                background: "#fff1f2",
+                color: "#be123c",
+                cursor: "pointer"
+              }}
+              title={`Center on ${settings.selectedGene}`}
+            >
+              Center Target
+            </button>
+          )}
+        </div>
+
+        {/* 3D Navigation Tips */}
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 4, lineHeight: 1.3 }}>
+          <strong>3D Controls:</strong><br/>
+          Left-drag: rotate | Right-drag: pan | Scroll: zoom
+        </div>
       </div>
 
       <ForceGraph3D
@@ -1568,8 +2354,18 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
         }
         linkDirectionalParticles={(l) => (l === hoverLink ? 6 : 0)}
         linkDirectionalParticleSpeed={0.01}
-        // Default 3D node (sphere) color:
-        nodeColor={(n) => CATEGORY_COLORS[n.category ?? "default"] || CATEGORY_COLORS.default}
+        // Enhanced node coloring with search/target highlighting
+        nodeColor={(n) => {
+          if (settings?.selectedGene === n.id) return "#f43f5e";
+          if (highlightedNodes.has(n.id)) return "#f59e0b";
+          return CATEGORY_COLORS[n.category ?? "default"] || CATEGORY_COLORS.default;
+        }}
+        nodeVal={(n) => {
+          let size = 1;
+          if (settings?.selectedGene === n.id) size = 3;
+          else if (highlightedNodes.has(n.id)) size = 2;
+          return size;
+        }}
       />
 
       {selNode && (
@@ -1584,59 +2380,213 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
 }
 
 // ------------------ Shared UI bits ------------------
-function DetailsCard({ node, info, onClose }) {
+function DetailsCard({ node, info, onClose, isLoading = false }) {
+  const categoryLabels = {
+    0: { label: "Upstream Positive Regulator", color: CATEGORY_COLORS[0], short: "UPR" },
+    1: { label: "Upstream Negative Regulator", color: CATEGORY_COLORS[1], short: "UNR" },
+    2: { label: "Downstream Positive", color: CATEGORY_COLORS[2], short: "DPR" },
+    3: { label: "Downstream Negative", color: CATEGORY_COLORS[3], short: "DNR" },
+  };
+
+  const catInfo = categoryLabels[node.category] || { label: "Unknown", color: CATEGORY_COLORS.default, short: "N/A" };
+
   return (
     <div
       style={{
         position: "absolute",
-        right: 12,
-        top: 12,
-        background: "rgba(255,255,255,0.95)",
-        border: "1px solid #e5e7eb",
-        padding: "10px 12px",
-        borderRadius: 10,
-        boxShadow: "0 10px 24px rgba(15,23,42,.12)",
-        minWidth: 220,
-        maxWidth: 350,
+        left: 12,
+        bottom: 80,
+        background: "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)",
+        border: "1px solid #e2e8f0",
+        padding: "14px 16px",
+        borderRadius: 12,
+        boxShadow: "0 10px 30px rgba(15,23,42,.15)",
+        minWidth: 260,
+        maxWidth: 380,
         fontSize: 12,
+        zIndex: 20,
       }}
+      role="dialog"
+      aria-label={`Details for ${node.id}`}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <strong>
-          {node.id}
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 15, color: "#1e293b" }}>
+            {node.id}
+          </div>
           {info?.name && (
-            <span style={{ fontWeight: "normal", fontSize: 11, color: "#666" }}>
-              {" "}
-              ({info.name})
-            </span>
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+              {info.name}
+            </div>
           )}
-        </strong>
+        </div>
         <button
           onClick={onClose}
-          style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: 16 }}
+          style={{
+            border: 0,
+            background: "#f1f5f9",
+            cursor: "pointer",
+            fontSize: 14,
+            padding: "4px 8px",
+            borderRadius: 6,
+            color: "#64748b",
+            transition: "background 0.2s"
+          }}
+          onMouseOver={(e) => e.target.style.background = "#e2e8f0"}
+          onMouseOut={(e) => e.target.style.background = "#f1f5f9"}
           aria-label="Close details"
           title="Close"
         >
           ✕
         </button>
       </div>
-      <div>Category: {node.category ?? "N/A"}</div>
-      <div>Degree: {node.degree ?? 0}</div>
-      {Number.isFinite(node.kd) && <div>KD: {(+node.kd).toFixed(2)}</div>}
-      {info?.description && (
-        <div
+
+      {/* Category Badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span
           style={{
-            marginTop: 8,
-            paddingTop: 8,
-            borderTop: "1px solid #e5e7eb",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "3px 10px",
+            borderRadius: 12,
+            background: `${catInfo.color}20`,
+            border: `1px solid ${catInfo.color}40`,
+            color: catInfo.color,
             fontSize: 11,
-            lineHeight: 1.4,
-            color: "#555",
+            fontWeight: 500
           }}
         >
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: catInfo.color
+          }} />
+          {catInfo.short}
+        </span>
+        <span style={{ fontSize: 10, color: "#94a3b8" }}>
+          {catInfo.label}
+        </span>
+      </div>
+
+      {/* Stats Grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 8,
+        padding: "10px",
+        background: "#f8fafc",
+        borderRadius: 8,
+        marginBottom: 10
+      }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>Connections</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{node.degree ?? 0}</div>
+        </div>
+        {Number.isFinite(node.kd) && (
+          <div>
+            <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>Knockdown</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{(+node.kd).toFixed(3)}</div>
+          </div>
+        )}
+        {node.neighbourCount !== undefined && (
+          <div>
+            <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>Neighbors</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{node.neighbourCount}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Description / Loading State */}
+      {info?.description ? (
+        <div
+          style={{
+            paddingTop: 10,
+            borderTop: "1px solid #e2e8f0",
+            fontSize: 11,
+            lineHeight: 1.5,
+            color: "#475569",
+          }}
+        >
+          <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4, textTransform: "uppercase" }}>
+            Gene Description
+          </div>
           {info.description}
         </div>
+      ) : (
+        <div
+          style={{
+            paddingTop: 10,
+            borderTop: "1px solid #e2e8f0",
+            fontSize: 11,
+            color: "#94a3b8",
+            fontStyle: "italic",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}
+        >
+          {isLoading ? (
+            <>
+              <span style={{
+                width: 12,
+                height: 12,
+                border: "2px solid #e2e8f0",
+                borderTopColor: "#3b82f6",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite"
+              }} />
+              Loading gene information...
+            </>
+          ) : (
+            "Gene information not available"
+          )}
+        </div>
       )}
+
+      {/* Quick Links */}
+      <div style={{
+        marginTop: 10,
+        paddingTop: 10,
+        borderTop: "1px solid #e2e8f0",
+        display: "flex",
+        gap: 8
+      }}>
+        <a
+          href={`https://www.genecards.org/cgi-bin/carddisp.pl?gene=${node.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontSize: 10,
+            color: "#3b82f6",
+            textDecoration: "none",
+            padding: "4px 8px",
+            background: "#eff6ff",
+            borderRadius: 4,
+            transition: "background 0.2s"
+          }}
+        >
+          GeneCards ↗
+        </a>
+        <a
+          href={`https://www.ncbi.nlm.nih.gov/gene/?term=${node.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontSize: 10,
+            color: "#3b82f6",
+            textDecoration: "none",
+            padding: "4px 8px",
+            background: "#eff6ff",
+            borderRadius: 4,
+            transition: "background 0.2s"
+          }}
+        >
+          NCBI Gene ↗
+        </a>
+      </div>
     </div>
   );
 }

@@ -50,86 +50,41 @@ function parseMaybeString(x) {
 }
 
 function normalizeGraph(raw) {
-  console.log("🔍 normalizeGraph input:", { 
-    rawType: typeof raw, 
-    rawValue: raw,
-    isString: typeof raw === "string",
-    hasTaskResult: raw && typeof raw === "object" && "task_result" in raw
-  });
-
   // handle either the object itself or { task_result: "..." }
   const maybe = parseMaybeString(raw);
-  console.log("🔍 maybe after parseMaybeString:", maybe);
-  
   const graph = (maybe?.nodes && maybe?.edges) ? maybe : parseMaybeString(maybe?.task_result);
-  console.log("🔍 graph after extraction:", graph);
-  
+
   if (!graph || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
-    console.log("🚫 No valid graph data found:", {
-      hasGraph: !!graph,
-      hasNodes: graph?.nodes,
-      nodesIsArray: Array.isArray(graph?.nodes),
-      hasEdges: graph?.edges,
-      edgesIsArray: Array.isArray(graph?.edges)
-    });
     return null;
   }
 
-  console.log("📊 Processing graph:", {
-    nodeCount: graph.nodes.length,
-    edgeCount: graph.edges.length,
-    sampleEdges: graph.edges.slice(0, 2)
-  });
-
-  // Enhanced edge processing with detailed logging
+  // Edge processing: deduplicate and keep strongest edges
   const edges = [];
-  const skippedEdges = [];
   const bestByKey = new Map();
-  
+
   for (const e of graph.edges) {
     const source = e.source ?? e.From;
     const target = e.target ?? e.To;
     const value = Number(e.value);
-    
-    if (!source || !target) {
-      skippedEdges.push({ reason: "missing source/target", edge: e });
+
+    // Skip invalid edges
+    if (!source || !target || source === target || !Number.isFinite(value)) {
       continue;
     }
-    
-    if (source === target) {
-      skippedEdges.push({ reason: "self-loop", edge: e });
-      continue;
-    }
-    
-    if (!Number.isFinite(value)) {
-      skippedEdges.push({ reason: "invalid value", edge: e });
-      continue;
-    }
-    
+
     const type2 = e.Type2 ?? e.type ?? "Exp";
     const id = e.id ?? `${source}+${type2}+${target}`;
     const key = `${source}|${target}|${type2}`;
     const cur = bestByKey.get(key);
-    
+
     if (!cur || Math.abs(value) > Math.abs(cur.value)) {
       bestByKey.set(key, { ...e, source, target, value, id, Type2: type2 });
     }
   }
-  
-  edges.push(...bestByKey.values());
-  
-  console.log("🔗 Edge processing results:", {
-    originalEdgeCount: graph.edges.length,
-    validEdgeCount: edges.length,
-    skippedEdgeCount: skippedEdges.length,
-    skippedReasons: skippedEdges.reduce((acc, se) => {
-      acc[se.reason] = (acc[se.reason] || 0) + 1;
-      return acc;
-    }, {}),
-    sampleValidEdges: edges.slice(0, 2)
-  });
 
-  // ensure all edge endpoints exist as nodes
+  edges.push(...bestByKey.values());
+
+  // Ensure all edge endpoints exist as nodes
   const nodeMap = new Map();
   for (const n of (graph.nodes || [])) nodeMap.set(String(n.id), { id: String(n.id), ...n });
   for (const e of edges) {
@@ -138,14 +93,7 @@ function normalizeGraph(raw) {
   }
   const nodes = Array.from(nodeMap.values());
 
-  const result = nodes.length && edges.length ? { nodes, edges } : null;
-  console.log("✅ Final graph result:", {
-    hasResult: !!result,
-    nodeCount: result?.nodes?.length || 0,
-    edgeCount: result?.edges?.length || 0
-  });
-
-  return result;
+  return nodes.length && edges.length ? { nodes, edges } : null;
 }
 
 const GeneRegulationEnhancedPage = ({
@@ -341,15 +289,6 @@ const GeneRegulationEnhancedPage = ({
     
     return tableInfo;
   }, [geneRegulationResults]);
-
-  // Debug: helps confirm we have an object with nodes/edges
-  console.log("🚀 Enhanced Gene Regulation Debug:", {
-    rawResult,
-    rawResultType: typeof rawResult,
-    geneRegulationResults,
-    hasResults: !!geneRegulationResults,
-    settingsKeys: Object.keys(geneRegulationEnhancedSettings || {})
-  });
 
   // Transform geneRegulationResults to format expected by MultiDatasetComparison
   const transformedData = useMemo(() => {
