@@ -52,10 +52,13 @@ const requestToModuleMap = {
 };
 
 const getData = async (body, moduleName = null, options = {}) => {
+  const disableModuleTracking = !!options.disableModuleTracking;
   try {
     // Determine module name from request type if not provided
-    if (!moduleName && body?.request) {
+    let trackedModuleName = moduleName;
+    if (!disableModuleTracking && !trackedModuleName && body?.request) {
       moduleName = requestToModuleMap[body.request];
+      trackedModuleName = moduleName;
     }
 
     const response = await Axios.post(
@@ -74,11 +77,11 @@ const getData = async (body, moduleName = null, options = {}) => {
     debugLog(`Task created: ${task_id} for ${body.request}`);
 
     // Store task ID in Redux for cancellation support
-    if (moduleName && store && store.dispatch) {
+    if (!disableModuleTracking && trackedModuleName && store && store.dispatch) {
       try {
         const resultsModule = await import("../results");
         if (resultsModule.taskStarted) {
-          store.dispatch(resultsModule.taskStarted({ module: moduleName, taskId: task_id }));
+          store.dispatch(resultsModule.taskStarted({ module: trackedModuleName, taskId: task_id }));
         }
       } catch (e) {
         // Ignore if taskStarted not available (backward compatibility)
@@ -96,7 +99,7 @@ const getData = async (body, moduleName = null, options = {}) => {
       ...options,
     };
 
-    return await waitForTaskCompletion(task_id, moduleName, defaultOptions);
+    return await waitForTaskCompletion(task_id, disableModuleTracking ? null : trackedModuleName, defaultOptions);
   } catch (error) {
     debugError("Error in getData:", error);
     
@@ -382,13 +385,13 @@ const runGeneRegulationEnhanced = async (core, geneRegulationEnhanced) => {
   return await getData(body);
 };
 
-const runGeneSignature = async (core) => {
+const runGeneSignature = async (core, options = {}) => {
   const body = {
     formula: core.targetGeneList.trim("\n", " "),
     cell_line: core.cellLine.id,
     request: "calcGeneSignature",
   };
-  return await getData(body);
+  return await getData(body, null, options);
 };
 
 const runGeneSignatureMultiDataset = async (core, genesignatureSettings) => {

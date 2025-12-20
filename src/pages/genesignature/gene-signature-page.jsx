@@ -9,6 +9,19 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from '../../components/loading-page';
 
+const normalizeGeneSignatureFormula = (value = "") =>
+  (value || "").toString().replace(/\s+/g, "").toUpperCase();
+
+const normalizeDatasetIds = (datasets = []) => {
+  if (!Array.isArray(datasets)) return [];
+  return datasets
+    .map((ds) => {
+      if (typeof ds === "object" && ds !== null) return ds.id || ds.value || String(ds);
+      return String(ds);
+    })
+    .filter(Boolean);
+};
+
 const moduleDescription = {
   title: "Gene Signature Analysis",
   description: "This module identifies genes that induce specific phenotypes upon their perturbation by applying mathematical expressions to z-score normalized data. It helps to identify sets of genes responsible for specific phenotypic changes (e.g. genes that regulate ER stress, cholesterol biosynthesis, etc).",
@@ -27,15 +40,27 @@ const GeneSignaturePage = ({
   blacklistData, 
   blacklistLoading,
   calcResults,
+  coreSettings,
+  genesignatureSettings,
   path
 }) => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
 
+  const signature = (coreSettings?.targetGeneList || "").trim();
+  const formulaKey = normalizeGeneSignatureFormula(signature);
+  const selectedDatasets = normalizeDatasetIds(genesignatureSettings?.selectedDatasets || []);
+  const cacheForFormula = calcResults?.geneSignatureCache?.[formulaKey] || {};
+  const hasCachedSelectedDatasets = selectedDatasets.some((ds) => {
+    const cached = cacheForFormula?.[ds];
+    return !!cached && !cached?._error;
+  });
+
+  const hasAnyResults = !!(geneRegulationResults || hasCachedSelectedDatasets || genesignatureSimilarResults);
+
   // Check if any gene signature calculation is running
   const isMainCalculationRunning = calcResults?.[ModulePathNames?.[path]]?.running;
   const isMultiDatasetRunning = calcResults?.["genesignatureMultiDataset"]?.running;
-  const isMultiDatasetSimilarRunning = calcResults?.["genesignatureSimilarGraph"]?.running;
-  const isAnyCalculationRunning = isMainCalculationRunning || isMultiDatasetRunning || isMultiDatasetSimilarRunning;
+  const isAnyCalculationRunning = isMainCalculationRunning || isMultiDatasetRunning;
 
   // Auto-close description after 10 seconds
   useEffect(() => {
@@ -60,11 +85,6 @@ const GeneSignaturePage = ({
         message: calcResults["genesignatureMultiDataset"].progressMessage,
         percentage: calcResults["genesignatureMultiDataset"].progressPercentage,
       };
-    } else if (isMultiDatasetSimilarRunning) {
-      return {
-        message: calcResults["genesignatureSimilarGraph"].progressMessage,
-        percentage: calcResults["genesignatureSimilarGraph"].progressPercentage,
-      };
     } else if (isMainCalculationRunning) {
       const moduleName = ModulePathNames?.[path];
       return {
@@ -88,16 +108,16 @@ const GeneSignaturePage = ({
       )}
       {!isAnyCalculationRunning && (
       <>
-      {geneRegulationResults ? (      
-          <GeneSignature 
-            data={geneRegulationResults} 
-            similarData={genesignatureSimilarResults} 
-            multiDatasetData={genesignatureMultiDatasetResults}
-            similarLoading={genesignatureSimilarLoading}
-            blacklistData={blacklistData} 
-            blacklistLoading={blacklistLoading} 
-          />
-          ) : (
+      {hasAnyResults ? (      
+        <GeneSignature 
+          data={geneRegulationResults} 
+          similarData={genesignatureSimilarResults} 
+          multiDatasetData={genesignatureMultiDatasetResults}
+          similarLoading={genesignatureSimilarLoading}
+          blacklistData={blacklistData} 
+          blacklistLoading={blacklistLoading} 
+        />
+        ) : (
             <div>  
             <Accordion 
               expanded={isDescriptionExpanded}
@@ -151,14 +171,16 @@ const GeneSignaturePage = ({
 
 
 
-const mapStateToProps = ({ calcResults, blacklist }, { path }) => ({
+const mapStateToProps = ({ calcResults, blacklist, settings }, { path }) => ({
   geneRegulationResults: calcResults?.[ModulePathNames?.[path]]?.result ?? null,
   genesignatureSimilarResults: calcResults?.genesignatureSimilarGraph?.result ?? null,
   genesignatureMultiDatasetResults: calcResults?.genesignatureMultiDataset?.result ?? null,
-  genesignatureSimilarLoading: calcResults?.genesignatureSimilarGraph?.loading ?? false,
+  genesignatureSimilarLoading: calcResults?.genesignatureSimilarGraph?.running ?? false,
   blacklistData: blacklist?.data,
   blacklistLoading: blacklist?.loading,
   calcResults,
+  coreSettings: settings?.core ?? {},
+  genesignatureSettings: settings?.genesignature ?? {},
   path,
 });
 const mapDispatchToProps = {};

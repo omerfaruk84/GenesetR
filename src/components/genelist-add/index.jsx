@@ -9,9 +9,10 @@ const GenelistAdd = ({
   title = "New Gene List",
   setNewListVisible = () => {},
 }) => {
+  if (!visible) return null;
   return (
     <>
-      <Modal visible={true} centered={true}>
+      <Modal visible={visible} centered={true}>
         <InputGroup width={400}>
           <Genelist
             textTooltip={"Included genes"}
@@ -22,7 +23,7 @@ const GenelistAdd = ({
             setVisible={setNewListVisible}
             closeButton={true}
             showSaveListCheckBox={false}
-            returnLists={() => {}}
+            returnLists={() => true}
             genes={genes ? genes : ""}
             showAddList={true}
             showSavedGeneLists={false}

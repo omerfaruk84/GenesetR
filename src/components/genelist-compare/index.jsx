@@ -1,6 +1,6 @@
 import React, { useEffect, useContext, useState } from "react";
 import styles from "./genelist-compare-page.module.scss";
-import { Flex, Spacer } from "@oliasoft-open-source/react-ui-library";
+import { Button, CheckBox, Flex, Spacer } from "@oliasoft-open-source/react-ui-library";
 import { connect } from "react-redux";
 import { lab } from "d3-color";
 import UpSetJS, {
@@ -11,11 +11,15 @@ import { useMemo } from "react";
 import { GeneSetEnrichmentTable } from "../enrichment";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { get } from "idb-keyval";
+import GenelistAdd from "../genelist-add";
+import { genelistcompareSettingsChanged } from "../../store/settings/genelist-compare-settings";
 
 // Add module description for Gene List Comparison
 const moduleDescription = {
   title: "Genelist Module", 
-  description: "This module facilitates comparison of gene lists generated from various analyses. It identifies intersections between gene sets and performs gene set enrichment analysis on overlapping areas to enhance research efficiency.",
+  description:
+    "Create gene lists from your analyses, then compare overlaps across lists to find shared and unique genes. Select an intersection in the plot to run enrichment analysis on the selected gene set.",
   features: [
     "Gene list comparison to identify intersections and unique genes",
     "Venn diagrams for up to 5 gene sets",
@@ -53,9 +57,10 @@ const VennDiagramSelection = (props) => {
   );
 };
 
-const GenelistCompare = ({ genelistcompareSettings }) => {
-  const [expanded, setExpanded] = useState(false);
+const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChanged }) => {
+  const [expanded, setExpanded] = useState(true);
   const [genelists, setGeneLists] = useState([]);
+  const [newListVisible, setNewListVisible] = useState(false);
   
   // Function to sanitize gene names that start with + or -
   const sanitizeGeneName = (geneName) => {
@@ -66,6 +71,80 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
       return '_' + geneName;
     }
     return geneName;
+  };
+
+  const parseGenesText = (raw) => {
+    const text = String(raw || "").trim();
+    if (!text) return [];
+
+    const tokens = [];
+    let current = "";
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === "+" || ch === "-") {
+        const trimmed = current.trim();
+        if (trimmed) tokens.push(trimmed);
+        current = ch;
+        continue;
+      }
+      if (ch === "\n" || ch === "\r" || ch === "\t" || ch === " " || ch === "," || ch === ";") {
+        const trimmed = current.trim();
+        if (trimmed) tokens.push(trimmed);
+        current = "";
+        continue;
+      }
+      current += ch;
+    }
+
+    const trimmed = current.trim();
+    if (trimmed) tokens.push(trimmed);
+
+    return tokens.filter((t) => t && t !== "+" && t !== "-");
+  };
+
+  const syncGenelistsFromIdb = async ({ autoSelect = false } = {}) => {
+    const names = await get("geneListNames");
+    const ids = Array.from(names || []).filter(Boolean);
+    if (!ids.length) return;
+
+    const fetched = await Promise.all(ids.map((id) => get(`genelist_${id}`)));
+    const fromIdb = ids
+      .map((id, idx) => {
+        const v = fetched[idx];
+        if (!v) return null;
+        const listName = String(v.name || v.label || id);
+        return {
+          name: listName,
+          checked: false,
+          content: v.description || "",
+          genes: parseGenesText(v.genes),
+        };
+      })
+      .filter(Boolean);
+
+    const existing = genelistcompareSettings?.genelists || [];
+    const existingByName = new Map(existing.map((x) => [x.name, x]));
+    const merged = [
+      ...fromIdb.map((x) => {
+        const prev = existingByName.get(x.name);
+        return prev ? { ...x, checked: !!prev.checked } : x;
+      }),
+      ...existing.filter((x) => !fromIdb.some((y) => y.name === x.name)),
+    ];
+
+    if (!merged.length) return;
+
+    const anyChecked = merged.some((x) => x.checked);
+    const normalized =
+      autoSelect && !anyChecked
+        ? merged.map((x, idx) => ({ ...x, checked: idx < Math.min(2, merged.length) }))
+        : merged;
+
+    genelistcompareSettingsChanged({
+      settingName: "genelists",
+      newValue: normalized,
+    });
   };
 
   // Function to restore original gene names for display
@@ -170,6 +249,23 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
     }
   }, [sets.length]);
 
+  useEffect(() => {
+    // Populate available gene lists from IndexedDB on first load (Redux settings are not persisted).
+    if ((genelistcompareSettings?.genelists || []).length === 0) {
+      syncGenelistsFromIdb({ autoSelect: true }).catch((e) =>
+        console.error("Failed to load saved gene lists:", e)
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!newListVisible) {
+      syncGenelistsFromIdb().catch((e) => console.error("Failed to refresh saved gene lists:", e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newListVisible]);
+
   const [selection, setSelection] = React.useState();
   const [selectedOnes, setselectedOnes] = React.useState();
   
@@ -256,6 +352,14 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
 
   //document.getElementById("venndiagram")?.setAttribute("viewBox", "-100 -100");
 
+  const savedLists = genelistcompareSettings?.genelists || [];
+  const selectedCount = savedLists.filter((x) => x?.checked).length;
+
+  const setSavedListChecked = (name, checked) => {
+    const next = (savedLists || []).map((x) => (x.name === name ? { ...x, checked } : x));
+    genelistcompareSettingsChanged({ settingName: "genelists", newValue: next });
+  };
+
   return (
     <div id="maincontainer" className={styles.mainView}>
       {/* Module Description */}
@@ -311,7 +415,7 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
               borderRadius: '4px',
               color: '#1565c0'
             }}>
-              💡 To start, please add gene lists from the left menu and select which ones to compare.
+              Tip: create gene lists (saved locally in your browser), then select at least two lists to compare.
             </div>
             )}
           </div>
@@ -336,7 +440,7 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
           }}
         >
           <SelectionContext.Provider value={{ selection, setSelection }}>
-            {sets.length > 0 ? (
+            {sets.length > 0 && selectedCount >= 2 ? (
               <>
                 {genelistcompareSettings?.showcomparison && (
                   <>
@@ -424,11 +528,45 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
                 <Spacer height={20} />
               </>
             ) : (
-              //<Flex justifyContent={"flex-end"}>
-              <div className={styles.skeleton}>
-                <Skeleton />
+              <div className={styles.emptyState}>
+                <h3 className={styles.emptyStateTitle}>Start by creating or selecting gene lists</h3>
+                <p className={styles.emptyStateText}>
+                  Add gene lists (locally saved) and select at least two lists to compare intersections. Clicking a region
+                  in the plot lets you run enrichment on the selected genes.
+                </p>
+
+                <div className={styles.emptyStateActions}>
+                  <Button
+                    colored="success"
+                    label={savedLists.length ? "Create a new gene list" : "Create your first gene list"}
+                    onClick={() => setNewListVisible(true)}
+                  />
+                  <Button colored label="Refresh saved lists" onClick={() => syncGenelistsFromIdb()} />
+                </div>
+
+                {savedLists.length > 0 && (
+                  <div className={styles.listPicker}>
+                    <div className={styles.listPickerHeader}>
+                      <div className={styles.listPickerTitle}>Select gene lists to compare</div>
+                      <div style={{ color: "#6b7280", fontSize: 12 }}>
+                        Selected: {selectedCount} / {savedLists.length}
+                      </div>
+                    </div>
+
+                    <div className={styles.listPickerItems}>
+                      {savedLists.map((item) => (
+                        <div key={item.name} className={styles.listPickerItem}>
+                          <CheckBox
+                            label={`${item.name} (${(item.genes || []).length} genes)`}
+                            checked={!!item.checked}
+                            onChange={({ target: { checked } }) => setSavedListChecked(item.name, checked)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              //</Flex>
             )}
           </SelectionContext.Provider>
         </div>
@@ -447,6 +585,12 @@ const GenelistCompare = ({ genelistcompareSettings }) => {
           )
         )}
       </Flex>
+
+      <GenelistAdd
+        visible={newListVisible}
+        setNewListVisible={setNewListVisible}
+        title="New Gene List"
+      />
     </div>
   );
 };
@@ -457,7 +601,11 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   genelistcompareSettings: settings?.genelistcompare ?? {},
 });
 
-const MainContainer = connect(mapStateToProps)(GenelistCompare);
+const mapDispatchToProps = {
+  genelistcompareSettingsChanged,
+};
+
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GenelistCompare);
 
 export { MainContainer as GenelistCompare };
 

@@ -1,7 +1,6 @@
 import { ROUTES } from "../../common/routes";
 import { createSlice } from "@reduxjs/toolkit";
 import { toast } from "@oliasoft-open-source/react-ui-library";
-import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   runHeatMap,
   runPcaGraphCalc,
@@ -216,6 +215,75 @@ export const {
     setGeneSignatureCache,
   } = calculationResults.actions;
 
+const normalizeDatasetIds = (datasets = []) => {
+  if (!Array.isArray(datasets)) return [];
+  return datasets
+    .map((ds) => {
+      if (typeof ds === "object" && ds !== null) return ds.id || ds.value || String(ds);
+      return String(ds);
+    })
+    .filter(Boolean);
+};
+
+const runGeneSignatureMultiSelection = () => async (dispatch, getState) => {
+  const {
+    settings: { core, genesignature },
+    calcResults,
+  } = getState();
+
+  const selectedDatasets = normalizeDatasetIds(genesignature?.selectedDatasets || []);
+  if (selectedDatasets.length < 2) return;
+  const primaryDatasetId = selectedDatasets[0];
+
+  const signature = (core?.targetGeneList || "").trim();
+  if (!signature) return;
+
+  const formulaKey = normalizeGeneSignatureFormula(signature);
+  const cacheForFormula = calcResults?.geneSignatureCache?.[formulaKey] || {};
+  const missing = selectedDatasets.filter((ds) => !cacheForFormula?.[ds]);
+
+  if (missing.length === 0) return;
+
+  dispatch(calcRunningChanged({ module: "genesignatureMultiDataset", status: true }));
+
+  try {
+    for (let i = 0; i < missing.length; i++) {
+      const datasetId = missing[i];
+      const percentage = Math.round((i / Math.max(missing.length, 1)) * 100);
+
+      dispatch(
+        progressUpdateReceived({
+          module: "genesignatureMultiDataset",
+          message: `Calculating gene signature (${i + 1}/${missing.length}): ${datasetId}`,
+          percentage,
+        })
+      );
+
+      // Compute and cache dataset result (silent: no per-dataset running/progress flicker)
+      // Also set the single-dataset primary result once so the GeneSignature page renders consistently.
+      // We only do this on the first requested dataset in this batch.
+      await dispatch(
+        fetchGeneSignatureDataset({
+          datasetId,
+          formulaKey,
+          setPrimaryResult: datasetId === primaryDatasetId,
+          silent: true,
+        })
+      );
+    }
+
+    dispatch(
+      progressUpdateReceived({
+        module: "genesignatureMultiDataset",
+        message: "Multi-dataset gene signature updated",
+        percentage: 100,
+      })
+    );
+  } finally {
+    dispatch(calcRunningChanged({ module: "genesignatureMultiDataset", status: false }));
+  }
+};
+
 const runCalculation = (module) => async (dispatch, getState) => {
   console.log("Running");
   const { settings } = getState();
@@ -242,6 +310,11 @@ const runCalculation = (module) => async (dispatch, getState) => {
    * Will change the status of the running simulation for a specific module
    * and if the calc is already running will disable the run calc button
    */
+  const isGeneSignatureMultiDataset =
+    module === ROUTES.GENESIGNATURE &&
+    Array.isArray(genesignature?.selectedDatasets) &&
+    genesignature.selectedDatasets.length > 1;
+
   if (module === ROUTES.DR) {
     dispatch(
       calcRunningChanged({
@@ -249,6 +322,9 @@ const runCalculation = (module) => async (dispatch, getState) => {
         status: true,
       })
     );
+  } else if (isGeneSignatureMultiDataset) {
+    // Multi-dataset runs manage their own running/progress state via `runGeneSignatureMultiSelection`
+    // to avoid flicker from pre-setting or clearing module state here.
   } else {
     dispatch(
       calcRunningChanged({ module: ModulePathNames[module], status: true })
@@ -357,6 +433,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
         dispatch(clearResult({ module: "genesignatureSimilarGraph" }));
 
         const selectedDatasets = genesignature?.selectedDatasets || [];
+
+        if (Array.isArray(selectedDatasets) && selectedDatasets.length > 1) {
+          await dispatch(runGeneSignatureMultiSelection());
+          return;
+        }
+
         const primaryDatasetId = selectedDatasets[0] || core.cellLine.id;
         const singleCore = {
           ...core,
@@ -459,7 +541,6 @@ const runCalculation = (module) => async (dispatch, getState) => {
     const errorMessage = error.code 
       ? `${error.code}: ${error.message}` 
       : error.message || "An unknown error occurred";
-    const errorDetails = error.details || {};
     
     toast({
       message: {
@@ -541,7 +622,7 @@ export const runMultiDatasetGeneSignatureSimilar = (settings) => async (
   }
 };
 
-const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = false }) => async (
+const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = false, silent = false }) => async (
   dispatch,
   getState
 ) => {
@@ -579,7 +660,7 @@ const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = f
   };
 
   try {
-    const result = await runGeneSignature(coreForDataset);
+    const result = await runGeneSignature(coreForDataset, silent ? { disableModuleTracking: true } : {});
     let parsedResult = result;
     if (typeof result === "string") {
       try {
@@ -612,6 +693,17 @@ const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = f
 
     return parsedResult;
   } catch (error) {
+    if (silent) {
+      const errorPayload = { _error: true, message: error?.message || "Failed to calculate" };
+      dispatch(
+        setGeneSignatureCache({
+          formulaKey: normalizedKey,
+          datasetId,
+          data: errorPayload,
+        })
+      );
+      return errorPayload;
+    }
     toast({
       message: {
         type: "Error",
@@ -623,7 +715,9 @@ const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = f
     return null;
   } finally {
     // Clear running state that was set via taskStarted inside getData
-    dispatch(calcRunningChanged({ module: "genesignatureGraph", status: false }));
+    if (!silent) {
+      dispatch(calcRunningChanged({ module: "genesignatureGraph", status: false }));
+    }
   }
 };
 
@@ -674,5 +768,6 @@ export {
   runCalculation,
   runMultiDatasetGeneSignature,
   fetchGeneSignatureDataset,
+  runGeneSignatureMultiSelection,
   cancelCalculation,
 };

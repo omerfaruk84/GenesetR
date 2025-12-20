@@ -96,10 +96,10 @@ const SettingsSelector = ({ pathname }) => {
         settingsName: SettingsTypes.SCATTERPLOT_SETTINGS,
         settings: <ScatterPlotSettings />,
       },
-      {
+      /*{
         settingsName: SettingsTypes.PRECOMPUTED_DR_SETTINGS,
         settings: <PrecomputedDrSettings />,
-      },
+      },*/
     ],
     [ROUTES.MDE]: [
       {
@@ -273,6 +273,7 @@ const SettingsSelector = ({ pathname }) => {
             showgraphTypeOptions={false}
             showPerturbationList={false}
             isGeneSignature={true}
+            wholeGenomeOnly={true}
           />
         ),
       },

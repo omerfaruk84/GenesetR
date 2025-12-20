@@ -44,6 +44,67 @@
   margin-top: 20px;
 }
 
+.emptyState {
+  width: 100%;
+  max-width: 980px;
+  margin: 12px auto 0;
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+  box-shadow: 0 6px 18px rgba(20, 30, 40, 0.06);
+}
+
+.emptyStateTitle {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.emptyStateText {
+  margin: 0 0 12px 0;
+  color: #4b5563;
+  line-height: 1.55;
+}
+
+.emptyStateActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.listPicker {
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 12px;
+}
+
+.listPickerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.listPickerTitle {
+  font-weight: 700;
+  color: #374151;
+}
+
+.listPickerItems {
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px 8px;
+  border: 1px solid #eef1f4;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.listPickerItem {
+  padding: 6px 0;
+}
+
 // CSS to ensure font settings are applied to SVG elements
 :global(.upsetjs) {
   svg {
