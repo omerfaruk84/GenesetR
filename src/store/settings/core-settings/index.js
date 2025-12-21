@@ -87,7 +87,7 @@ const defaultGeneList = `TAF1C
 
 const initialState = {
   currentModule: "pca",
-  cellLine: {       
+  cellLine: {
         id: "K562gwps",
         name: "K562 Whole Genome",
         parent: 0,
@@ -109,14 +109,16 @@ const initialState = {
   lastTaskID: null,
   datasetsLoading: false,
   datasetsError: null,
+  sessionId: null, // User session ID for uploaded datasets
+  userUploadedDatasets: [], // User-uploaded datasets for current session
 };
 
 // Async thunk to fetch datasets from backend
 export const fetchDatasetsFromBackend = createAsyncThunk(
   'core/fetchDatasets',
-  async (_, { rejectWithValue }) => {
+  async (sessionId = null, { rejectWithValue }) => {
     try {
-      const datasets = await fetchDatasets();
+      const datasets = await fetchDatasets(sessionId);
       return datasets;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -132,6 +134,33 @@ export const coreSettingsSlice = createSlice({
       const { settingName, newValue } = action.payload;
       state[settingName] = newValue;
     },
+    setSessionId: (state, action) => {
+      state.sessionId = action.payload;
+    },
+    addUserDataset: (state, action) => {
+      // Add user dataset to the list if not already present
+      const dataset = action.payload;
+      const exists = state.userUploadedDatasets.find(d => d.id === dataset.id);
+      if (!exists) {
+        state.userUploadedDatasets.push(dataset);
+        // Also add to main datasetList
+        state.datasetList.push(dataset);
+      }
+    },
+    removeUserDataset: (state, action) => {
+      const datasetId = action.payload;
+      // Remove from user datasets
+      state.userUploadedDatasets = state.userUploadedDatasets.filter(d => d.id !== datasetId);
+      // Remove from main dataset list
+      state.datasetList = state.datasetList.filter(d => d.id !== datasetId);
+      // If it was the selected dataset, switch to default
+      if (state.cellLine.id === datasetId) {
+        const defaultDataset = state.datasetList.find(d => !d.isUserUploaded);
+        if (defaultDataset) {
+          state.cellLine = defaultDataset;
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -142,6 +171,8 @@ export const coreSettingsSlice = createSlice({
       .addCase(fetchDatasetsFromBackend.fulfilled, (state, action) => {
         state.datasetsLoading = false;
         state.datasetList = action.payload;
+        // Separate user-uploaded datasets
+        state.userUploadedDatasets = action.payload.filter(d => d.isUserUploaded === true);
         // Update cellLine to first available dataset if current one doesn't exist
         if (action.payload.length > 0) {
           const currentExists = action.payload.find(dataset => dataset.id === state.cellLine.id);
@@ -160,7 +191,12 @@ export const coreSettingsSlice = createSlice({
   },
 });
 
-export const { coreSettingsChanged } = coreSettingsSlice.actions;
+export const {
+  coreSettingsChanged,
+  setSessionId,
+  addUserDataset,
+  removeUserDataset
+} = coreSettingsSlice.actions;
 
 const coreSettingsReducer = coreSettingsSlice.reducer;
 

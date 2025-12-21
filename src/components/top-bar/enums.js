@@ -16,6 +16,7 @@ const TabNames = {
   CELL_CYCLE: "Cell Cycle",
   MULTIDATASET_COMPARISON: "Multi-Dataset Comparison",
   GENELISTCOMPARE: "Genelists",
+  UPLOAD_DATASET: "Upload Dataset",
   ABOUT: "Help",
 };
 

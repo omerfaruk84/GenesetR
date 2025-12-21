@@ -20,6 +20,7 @@ import { ExpressionAnalyzerPage } from "../../pages/expressionanalyzer/expressio
 import { MultiDatasetComparisonPage } from "../../pages/multidataset-comparison/multidataset-comparison-page";
 import { GenelistCompare } from "../genelist-compare";
 import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
+import UploadDatasetPage from "../../pages/upload-dataset/upload-dataset-page";
 
 const SideBarLayout = () => (
   <div className={styles.contentWrapper}>
@@ -101,6 +102,7 @@ const MainView = () => {
                 />
               }
             />
+            <Route path={ROUTES.UPLOAD_DATASET} element={<UploadDatasetPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

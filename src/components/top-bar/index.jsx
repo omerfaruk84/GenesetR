@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TopBar as TopBarCmp } from "@oliasoft-open-source/react-ui-library";
-import { FaHome, FaBars, FaTimes } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaCloudUploadAlt } from "react-icons/fa";
 import {
   FcMindMap,
   FcScatterPlot,
@@ -101,6 +101,11 @@ const TopBar = () => {
       icon: () => <FcElectricalSensor size={"2em"} style={{ filter: "hue-rotate(180deg)" }} />,
       name: TabNames.DEREGULATED_GENES,
       toLink: ROUTES.DEREGULATED_GENES,
+    },
+    {
+      icon: () => <FaCloudUploadAlt size={"2em"} color="#1976d2" />,
+      name: TabNames.UPLOAD_DATASET,
+      toLink: ROUTES.UPLOAD_DATASET,
     },
     {
       icon: () => <FcAbout size={"2em"} />,

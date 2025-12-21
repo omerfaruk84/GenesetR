@@ -1,14 +1,14 @@
 import { Field, Select } from "@oliasoft-open-source/react-ui-library";
 import React, {
-  useEffect, 
+  useEffect,
   useState,
   useImperativeHandle,
   forwardRef,
   useCallback,
 } from "react";
 import { connect } from "react-redux";
-import { FaTrash } from "react-icons/fa";
-import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { FaTrash, FaUser } from "react-icons/fa";
+import { coreSettingsChanged, removeUserDataset } from "../../store/settings/core-settings";
 import { correlationSettingsChanged } from "../../store/settings/correlation-settings";
 import { pathfinderSettingsChanged } from "../../store/settings/pathfinder-settings";
 import { deregulatedGenesSettingsChanged } from "../../store/settings/deregulated-genes-settings";
@@ -23,34 +23,34 @@ import {
 import styles from "./AccordionMenu.scss";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
-import { updateGeneLists, fetchDatasets } from "../../store/api";
+import { updateGeneLists, fetchDatasets, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
 
-const DatasetTreeItem = ({ item, level = 0, activeId }) => {
+const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
   const isActive = item.id === activeId;
   const hasChildren = item.children && item.children.length > 0;
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <div style={{ marginLeft: level > 0 ? "12px" : "0", borderLeft: level > 0 ? "1px solid #eee" : "none" }}>
-      <div 
-        style={{ 
-          display: "flex", 
-          alignItems: "center", 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
           marginBottom: "2px",
           paddingLeft: level > 0 ? "8px" : "0"
         }}
       >
         {hasChildren ? (
-          <span 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              setIsExpanded(!isExpanded); 
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
             }}
-            style={{ 
-              cursor: "pointer", 
-              marginRight: "4px", 
-              width: "14px", 
+            style={{
+              cursor: "pointer",
+              marginRight: "4px",
+              width: "14px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -63,7 +63,7 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
         ) : (
           <span style={{ width: "18px" }}></span>
         )}
-        
+
         <div
           onClick={item.onClick}
           style={{
@@ -95,20 +95,65 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
             fontWeight: isActive ? "500" : "normal",
             flex: 1,
             lineHeight: "1.3",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
           }}>
             {item.name} {item.id.toString().length > 17 ? "(DR Result)" : ""}
+            {item.isUserUploaded && (
+              <FaUser
+                style={{
+                  color: "#1976d2",
+                  fontSize: "10px",
+                  flexShrink: 0,
+                }}
+                title="User uploaded dataset"
+              />
+            )}
           </Text>
         </div>
+
+        {item.isUserUploaded && onDeleteDataset && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDeleteDataset(item.id, e);
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              color: "#d32f2f",
+              opacity: 0.7,
+              transition: "opacity 0.2s",
+              marginLeft: "4px",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = "1";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = "0.7";
+            }}
+            title="Delete dataset"
+          >
+            <FaTrash style={{ fontSize: "12px" }} />
+          </button>
+        )}
       </div>
       
       {hasChildren && isExpanded && (
         <div style={{ marginTop: "2px" }}>
           {item.children.map(child => (
-            <DatasetTreeItem 
-              key={child.id} 
-              item={child} 
-              level={level + 1} 
+            <DatasetTreeItem
+              key={child.id}
+              item={child}
+              level={level + 1}
               activeId={activeId}
+              onDeleteDataset={onDeleteDataset}
             />
           ))}
         </div>
@@ -129,6 +174,8 @@ const DatasetSelector = forwardRef(
     pathfinderSettings,
     deregulatedGenesSettings,
     genesignatureSettings,
+    sessionId,
+    dispatch,
     wholeGenomeOnly = false,
   }, ref, onlyMain) => {
     const location = useLocation();
@@ -158,6 +205,46 @@ const DatasetSelector = forwardRef(
 
     const [datasetList, setDatasetList] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Function to handle user dataset deletion
+    const handleDeleteUserDataset = useCallback(async (datasetId, event) => {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      if (!window.confirm('Are you sure you want to delete this dataset? This cannot be undone.')) {
+        return;
+      }
+
+      try {
+        await deleteUserDatasetAPI(datasetId, sessionId);
+
+        // Remove from Redux
+        if (dispatch) {
+          dispatch(removeUserDataset(datasetId));
+        }
+
+        // Remove from local state
+        setDatasetList(prevList => prevList.filter(d => d.id !== datasetId));
+
+        // If deleted dataset was selected, switch to first available dataset
+        if (coreSettings.cellLine?.id === datasetId) {
+          const remainingDatasets = datasetList.filter(d => d.id !== datasetId && !d.isUserUploaded);
+          if (remainingDatasets.length > 0) {
+            const firstDataset = remainingDatasets[0];
+            updateActivityById(
+              firstDataset.id,
+              firstDataset.perturbationCount,
+              firstDataset.geneCount,
+              firstDataset.isMixscape
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Failed to delete dataset:', error);
+        alert('Failed to delete dataset: ' + error.message);
+      }
+    }, [sessionId, dispatch, coreSettings.cellLine?.id, datasetList, updateActivityById]);
 
     // Function to handle checkbox change for correlation or pathfinder module
     const handleCheckboxChange = useCallback((datasetId, checked) => {
@@ -239,7 +326,7 @@ const DatasetSelector = forwardRef(
       const loadDatasets = async () => {
         try {
           setLoading(true);
-          const datasets = await fetchDatasets();
+          const datasets = await fetchDatasets(sessionId);
           const transformedDatasets = datasets.map(transformDataset);
       
           // For multi-select modules, we don't auto-select datasets - user must select manually
@@ -270,7 +357,7 @@ const DatasetSelector = forwardRef(
 
       loadDatasets();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode, isDeregulatedModule]);
+    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode, isDeregulatedModule, sessionId]);
 
     const deleteItemAndChildren = (id) => {
       let parent = "";
@@ -509,8 +596,9 @@ const DatasetSelector = forwardRef(
     }
 
     // Filter datasets based on route
+    // Exclude DR results (long UUIDs) but include user-uploaded datasets
     const filteredDatasets = location.pathname !== ROUTES.DR
-      ? datasetList.filter((x) => x.id.length < 17)
+      ? datasetList.filter((x) => x.id.length < 17 || x.isUserUploaded === true)
       : datasetList;
 
     // For multi-select modules with checkboxes, render custom checkbox list
@@ -627,14 +715,56 @@ const DatasetSelector = forwardRef(
                           flexShrink: 0,
                         }}
                       />
-                      <Text size="small" style={{ 
+                      <Text size="small" style={{
                         color: isSelected ? "#1976d2" : "#333",
                         fontWeight: isSelected ? "500" : "normal",
                         flex: 1,
                         lineHeight: "1.3",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
                       }}>
                         {dataset.name}
+                        {dataset.isUserUploaded && (
+                          <FaUser
+                            style={{
+                              color: "#1976d2",
+                              fontSize: "10px",
+                              flexShrink: 0,
+                            }}
+                            title="User uploaded dataset"
+                          />
+                        )}
                       </Text>
+                      {dataset.isUserUploaded && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteUserDataset(dataset.id, e);
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            color: "#d32f2f",
+                            opacity: 0.7,
+                            transition: "opacity 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "0.7";
+                          }}
+                          title="Delete dataset"
+                        >
+                          <FaTrash style={{ fontSize: "12px" }} />
+                        </button>
+                      )}
                     </label>
                   );
                 })}
@@ -920,10 +1050,11 @@ const DatasetSelector = forwardRef(
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               {treeRoots.map(root => (
-                <DatasetTreeItem 
-                  key={root.id} 
-                  item={root} 
+                <DatasetTreeItem
+                  key={root.id}
+                  item={root}
                   activeId={coreSettings.cellLine?.id}
+                  onDeleteDataset={handleDeleteUserDataset}
                 />
               ))}
             </div>
@@ -955,6 +1086,7 @@ const mapStateToProps = ({ settings }) => ({
   pathfinderSettings: settings?.pathfinder ?? {},
   deregulatedGenesSettings: settings?.deregulatedGenes ?? {},
   genesignatureSettings: settings?.genesignature ?? {},
+  sessionId: settings?.core?.sessionId,
 });
 
 const mapDispatchToProps = { 

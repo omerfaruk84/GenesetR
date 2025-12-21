@@ -498,9 +498,13 @@ const runGeneExp = async (core, geneExp) => {
   return await getData(body);
 };
 
-const fetchDatasets = async () => {
+const fetchDatasets = async (sessionId = null) => {
   try {
-    const response = await Axios.get(SERVER_ADRESS + "/getDatasets", {
+    const url = sessionId
+      ? `${SERVER_ADRESS}/getDatasets?session_id=${sessionId}`
+      : `${SERVER_ADRESS}/getDatasets`;
+
+    const response = await Axios.get(url, {
       headers: {
         "ngrok-skip-browser-warning": "69420",
       },
@@ -568,8 +572,10 @@ const updateGeneLists = async (dataType) => {
     const response = await Axios.post(
       SERVER_ADRESS + "/getData",
       {
-        dataset: dataType,
-        request: "getAllGenes",
+        body: JSON.stringify({
+          dataset: dataType,
+          request: "getAllGenes",
+        })
       },
       {
         headers: {
@@ -663,6 +669,132 @@ const listPrecomputedDR = async () => {
   }
 };
 
+// User Dataset Upload Functions
+const uploadDataset = async ({ file, name, description, isZScored, isTransposed, sessionId }) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", name);
+    formData.append("description", description || "");
+    formData.append("is_z_scored", isZScored ? "true" : "false");
+    formData.append("is_transposed", isTransposed ? "true" : "false");
+    formData.append("session_id", sessionId);
+
+    const response = await Axios.post(
+      `${SERVER_ADRESS}/api/v1/upload/dataset`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Failed to upload dataset:", error);
+
+    // Handle error response
+    if (error.response?.data?.error) {
+      const apiError = error.response.data.error;
+      throw new Error(apiError.message || "Upload failed");
+    }
+
+    throw error;
+  }
+};
+
+const checkUploadProgress = async (uploadId, sessionId) => {
+  try {
+    const response = await Axios.get(
+      `${SERVER_ADRESS}/api/v1/upload/${uploadId}/progress?session_id=${sessionId}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Failed to check upload progress:", error);
+    throw error;
+  }
+};
+
+const getUserDatasets = async (sessionId) => {
+  try {
+    const response = await Axios.get(
+      `${SERVER_ADRESS}/api/v1/upload/my-datasets?session_id=${sessionId}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data.datasets || [];
+  } catch (error) {
+    debugError("Failed to fetch user datasets:", error);
+    return [];
+  }
+};
+
+const deleteUserDataset = async (datasetId, sessionId) => {
+  try {
+    const response = await Axios.delete(
+      `${SERVER_ADRESS}/api/v1/upload/dataset/${datasetId}?session_id=${sessionId}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Failed to delete user dataset:", error);
+    throw error;
+  }
+};
+
+const deleteUserSession = async (sessionId) => {
+  try {
+    const response = await Axios.delete(
+      `${SERVER_ADRESS}/api/v1/upload/session?session_id=${sessionId}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Failed to delete user session:", error);
+    throw error;
+  }
+};
+
+const getSessionStats = async (sessionId) => {
+  try {
+    const response = await Axios.get(
+      `${SERVER_ADRESS}/api/v1/upload/session/stats?session_id=${sessionId}`,
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    debugError("Failed to fetch session stats:", error);
+    throw error;
+  }
+};
+
 // Export task cancellation function
 export { cancelTask } from "./websocket";
 
@@ -704,4 +836,11 @@ export {
   fetchPrecomputedDR,
   listPrecomputedDR,
   getData,
+  // User dataset upload functions
+  uploadDataset,
+  checkUploadProgress,
+  getUserDatasets,
+  deleteUserDataset,
+  deleteUserSession,
+  getSessionStats,
 };
