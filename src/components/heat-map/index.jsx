@@ -10,13 +10,16 @@ import styles from "./heat-map.module.scss";
 import { GeneSetEnrichmentTable } from "../enrichment/index.jsx";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../enrichment-table-new/index.jsx";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { LoadingPage } from "../loading-page";
 import { throttle } from "lodash";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { saveAs } from "file-saver";
+import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
+import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 
 const moduleDescription = {
   title: "Interactive Heatmap Visualization",
@@ -40,10 +43,12 @@ const HeatMap = ({
   datasets = null,
   isMultiDataset = false,
 }) => {
+  const dispatch = useDispatch();
   const [selectedGenes, setSelectedGenes] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
   //const [keyedData, setKeyedData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState(null);
 
   const heatmapContainerRef = useRef(null);
   const heatmapRef = useRef(null);
@@ -56,6 +61,108 @@ const HeatMap = ({
   const manualFitToScreenTimeoutRef = useRef(null);
   const gcTimeoutRef = useRef(null);
   const resizeObserverCallbackRef = useRef(null);
+  const contextMenuRef = useRef(null);
+
+  const asBool = useCallback((value) => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true" || value === "1";
+    }
+    return Boolean(value);
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const exportHeatmapAsPng = useCallback(() => {
+    const inchlib = inchlibInstance.current;
+    const stage = inchlib?.stage;
+    if (!stage) return;
+
+    const dataUrlToBlob = (dataUrl) => {
+      const [header, base64] = dataUrl.split(",");
+      const mimeMatch = header.match(/data:(.*?);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mimeType });
+    };
+
+    const zoom = 3;
+    const width = stage.width();
+    const height = stage.height();
+    const prevScaleX = stage.scaleX?.() ?? 1;
+    const prevScaleY = stage.scaleY?.() ?? 1;
+
+    try {
+      inchlib?.navigation_layer?.hide?.();
+      stage.width(width * zoom);
+      stage.height(height * zoom);
+      stage.scale({ x: zoom, y: zoom });
+      stage.draw();
+
+      const dataUrl = stage.toDataURL({ mimeType: "image/png", quality: 1 });
+      const blob = dataUrlToBlob(dataUrl);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      saveAs(blob, `heatmap-${timestamp}.png`);
+    } finally {
+      stage.width(width);
+      stage.height(height);
+      stage.scale({ x: prevScaleX, y: prevScaleY });
+      stage.draw();
+      inchlib?.navigation_layer?.show?.();
+      inchlib?.navigation_layer?.draw?.();
+    }
+  }, []);
+
+  const toggleInchlibSetting = useCallback(
+    (settingName) => {
+      dispatch(
+        inchlibSettingsChanged({
+          settingName,
+          newValue: !asBool(inchlibSettings?.[settingName]),
+        })
+      );
+    },
+    [dispatch, inchlibSettings, asBool]
+  );
+
+  const handleHeatmapContextMenu = useCallback(
+    (e) => {
+      if (loading || selectedView !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const x = Math.min(e.clientX, window.innerWidth - 320);
+      const y = Math.min(e.clientY, window.innerHeight - 360);
+      setContextMenu({ x, y });
+    },
+    [loading, selectedView]
+  );
+
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const onMouseDown = (e) => {
+      if (!contextMenuRef.current) return;
+      if (!contextMenuRef.current.contains(e.target)) closeContextMenu();
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeContextMenu();
+    };
+
+    const onScroll = () => closeContextMenu();
+
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [contextMenu, closeContextMenu]);
 
   const columns = useMemo(() => {
     if (isMultiDataset && datasets && datasets.length > 0) {
@@ -439,53 +546,59 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setRowIdsVisibility(inchlibSettings.draw_row_ids);
+      inchlibInstance.current.setRowIdsVisibility(
+        asBool(inchlibSettings.draw_row_ids)
+      );
     }
-  }, [inchlibSettings.draw_row_ids]);
+  }, [inchlibSettings.draw_row_ids, asBool]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setColumnIdsVisibility(
-        inchlibSettings.show_column_names
+        asBool(inchlibSettings.show_column_names)
       );
     }
-  }, [inchlibSettings.show_column_names]);
+  }, [inchlibSettings.show_column_names, asBool]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setCellValueVisibility(
-        inchlibSettings.show_cell_values
+        asBool(inchlibSettings.show_cell_values)
       );
     }
-  }, [inchlibSettings.show_cell_values]);
+  }, [inchlibSettings.show_cell_values, asBool]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setWidthRatio(inchlibSettings.width_ratio);
+      const ratio = Number(inchlibSettings.width_ratio);
+      if (Number.isFinite(ratio)) {
+        inchlibInstance.current.setDendrogramWidth(ratio);
+      }
     }
   }, [inchlibSettings.width_ratio]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setDendrogramVisibility(
-        inchlibSettings.show_row_dendrogram
+        asBool(inchlibSettings.show_row_dendrogram)
       );
     }
-  }, [inchlibSettings.show_row_dendrogram]);
+  }, [inchlibSettings.show_row_dendrogram, asBool]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.setColumnDendrogramVisibility(
-        inchlibSettings.show_column_dendrogram
+        asBool(inchlibSettings.show_column_dendrogram)
       );
     }
-  }, [inchlibSettings.show_column_dendrogram]);
+  }, [inchlibSettings.show_column_dendrogram, asBool]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.updateDendrogramLineWidth(
-        inchlibSettings.dendrogram_line_width
-      );
+      const lineWidth = Number(inchlibSettings.dendrogram_line_width);
+      if (Number.isFinite(lineWidth)) {
+        inchlibInstance.current.updateDendrogramLineWidth(lineWidth);
+      }
     }
   }, [inchlibSettings.dendrogram_line_width]);
 
@@ -850,6 +963,7 @@ const keyedData = useMemo(() => {
                       marginBottom: "10px",
                     }}
                     ref={heatmapRef}
+                    onContextMenu={handleHeatmapContextMenu}
                   ></div>
                 </TransformComponent>
               </TransformWrapper>
@@ -883,6 +997,99 @@ const keyedData = useMemo(() => {
             </div>
           </div>
       </div>
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          role="menu"
+        >
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              closeContextMenu();
+              handleResetZoom();
+            }}
+          >
+            Reset zoom
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              closeContextMenu();
+              handleManualFitToScreen();
+            }}
+          >
+            Fit to screen
+          </button>
+          <div className={styles.contextMenuSeparator} />
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              closeContextMenu();
+              exportHeatmapAsPng();
+            }}
+            disabled={!inchlibInstance.current?.stage}
+          >
+            Export PNG
+          </button>
+          <div className={styles.contextMenuSeparator} />
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              toggleInchlibSetting(InchlibSettingsTypes.DRAW_ROW_IDS);
+              closeContextMenu();
+            }}
+          >
+            {asBool(inchlibSettings?.draw_row_ids) ? "Hide" : "Show"} row IDs
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_NAMES);
+              closeContextMenu();
+            }}
+          >
+            {asBool(inchlibSettings?.show_column_names) ? "Hide" : "Show"} column IDs
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              toggleInchlibSetting(InchlibSettingsTypes.SHOW_ROW_DENDROGRAM);
+              closeContextMenu();
+            }}
+          >
+            {asBool(inchlibSettings?.show_row_dendrogram) ? "Hide" : "Show"} row dendrogram
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_DENDROGRAM);
+              closeContextMenu();
+            }}
+          >
+            {asBool(inchlibSettings?.show_column_dendrogram) ? "Hide" : "Show"} column dendrogram
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              toggleInchlibSetting(InchlibSettingsTypes.SHOW_CELL_VALUES);
+              closeContextMenu();
+            }}
+          >
+            {asBool(inchlibSettings?.show_cell_values) ? "Hide" : "Show"} cell values
+          </button>
+        </div>
+      )}
     </>
   );
 };

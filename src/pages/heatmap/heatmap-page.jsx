@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { HeatMap } from "../../components/heat-map/index";
+import { LoadingPage } from "../../components/loading-page";
 import styles from "./heatmap-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
 import VideoHelpPage from "../../components/video-help";
@@ -20,7 +21,10 @@ const moduleDescription = {
 };
 const HeatMapPage = ({ heatmapResults, calcResults }) => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
-  const isCalculationRunning = calcResults?.[ModulePathNames?.["/heatmap"]]?.running;
+  const heatmapModuleKey = ModulePathNames?.["/heatmap"];
+  const isCalculationRunning = calcResults?.[heatmapModuleKey]?.running;
+  const progressMessage = calcResults?.[heatmapModuleKey]?.progressMessage ?? null;
+  const progressPercentage = calcResults?.[heatmapModuleKey]?.progressPercentage ?? null;
 
   // Auto-close description after 10 seconds
   useEffect(() => {
@@ -42,6 +46,11 @@ const HeatMapPage = ({ heatmapResults, calcResults }) => {
     <div className={styles.mainView}>
       {heatmapResults ? (
         <HeatMap graphData={heatmapResults} />
+      ) : isCalculationRunning ? (
+        <LoadingPage
+          progressMessage={progressMessage || "Generating heatmap..."}
+          progressPercentage={progressPercentage}
+        />
       ) : (
         <div>
           <Accordion 

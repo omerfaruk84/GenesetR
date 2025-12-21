@@ -202,14 +202,13 @@ const GeneRegulationEnhancedSettings = ({
                 </div>
 
                 <Button
-                  variant="danger"
-                  size="small"
+                  colored="danger"
+                  small
+                  label="Remove"
                   onClick={() => handleExperimentRemove(expId)}
                   disabled={geneRegulationEnhancedSettings?.selectedExperiments?.length <= 1}
                   style={{ marginLeft: "auto" }}
-                >
-                  Remove
-                </Button>
+                />
               </div>
             </div>
           </div>

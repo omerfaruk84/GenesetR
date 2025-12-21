@@ -4170,30 +4170,58 @@ InCHlib.prototype._export_icon_click = function () {
       self.stage.scale({ x: zoom, y: zoom });
       self.stage.draw();
       self.navigation_layer.hide();
-      self.stage.toDataURL({
-        quality: 1,
-        callback: function (dataUrl) {
-          if (action === "open") {
-            open_image(dataUrl);
-          } else {
-            download_image(dataUrl);
-          }
-          self.stage.width(width);
-          self.stage.height(height);
-          self.stage.scale({ x: 1, y: 1 });
-          self.stage.draw();
-          loading_div.remove();
-          self.target_element.show();
-          self.navigation_layer.show();
-          self.navigation_layer.draw();
-          overlay.trigger("click");
-        },
-      });
+      try {
+        var dataUrl = self.stage.toDataURL({ quality: 1, mimeType: "image/png" });
+        if (action === "open") {
+          open_image(dataUrl);
+        } else {
+          download_image(dataUrl);
+        }
+      } finally {
+        self.stage.width(width);
+        self.stage.height(height);
+        self.stage.scale({ x: 1, y: 1 });
+        self.stage.draw();
+        loading_div.remove();
+        self.target_element.show();
+        self.navigation_layer.show();
+        self.navigation_layer.draw();
+        overlay.trigger("click");
+      }
     });
   }
 
   function download_image(dataUrl) {
-    $('<a download="inchlib" href="' + dataUrl + '"></a>')[0].click();
+    try {
+      var parts = dataUrl.split(",");
+      var header = parts[0] || "";
+      var base64 = parts[1] || "";
+      var mimeMatch = header.match(/data:(.*?);/);
+      var mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      var binary = atob(base64);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      var blob = new Blob([bytes], { type: mimeType });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "inchlib.png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 0);
+    } catch (e) {
+      var fallback = document.createElement("a");
+      fallback.href = dataUrl;
+      fallback.download = "inchlib.png";
+      document.body.appendChild(fallback);
+      fallback.click();
+      fallback.remove();
+    }
   }
 
   function open_image(dataUrl) {

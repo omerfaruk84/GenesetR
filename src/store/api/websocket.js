@@ -92,6 +92,24 @@ export const connectTaskWebSocket = (
             percentage: null,
           }));
         }
+      } else if (data.status === "STARTED") {
+        // Task started but no granular progress yet
+        if (moduleName) {
+          store.dispatch(progressUpdateReceived({
+            module: moduleName,
+            message: "Task started...",
+            percentage: null,
+          }));
+        }
+      } else {
+        // Other task states (RECEIVED, RETRY, etc.)
+        if (moduleName) {
+          store.dispatch(progressUpdateReceived({
+            module: moduleName,
+            message: `Task status: ${data.status}`,
+            percentage: null,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
@@ -251,9 +269,13 @@ const waitForTaskCompletionPolling = async (taskId, moduleName = null, useVersio
       } else if (status === "FAILURE") {
         throw new Error(task_result || "Task failed");
       } else if (status === "PROGRESS") {
+        const nestedCurrent = task_result?.current;
+        const nestedTotal = task_result?.total;
         const message = data.message || task_result?.message || "Processing...";
-        const percentage = data.percentage || 
-          (data.current && data.total ? Math.round((data.current / data.total) * 100) : null);
+        const percentage =
+          data.percentage ??
+          (data.current && data.total ? Math.round((data.current / data.total) * 100) : null) ??
+          (nestedCurrent && nestedTotal ? Math.round((nestedCurrent / nestedTotal) * 100) : null);
 
         // Dispatch progress update
         if (moduleName) {
@@ -261,6 +283,14 @@ const waitForTaskCompletionPolling = async (taskId, moduleName = null, useVersio
             module: moduleName,
             message: message,
             percentage: percentage,
+          }));
+        }
+      } else if (status === "STARTED") {
+        if (moduleName) {
+          store.dispatch(progressUpdateReceived({
+            module: moduleName,
+            message: "Task started...",
+            percentage: null,
           }));
         }
       } else if (status === "SUCCESS" && task_result !== undefined && task_result !== null) {
