@@ -6,62 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
+import V2ReleasePopup from "../../components/v2-release-popup";
 
 const MainPage = ({ coreSettingsChanged }) => {
   const navigate = useNavigate();
-
-  /*
-  var consent = getCookie("userConsent");
-
-  function setCookie(name, value, days) {
-    var expires = "";
-    if (days) {
-      var date = new Date();
-      date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-      expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/";
-  }
-
-  function getCookie(name) {
-    var nameEQ = name + "=";
-    var ca = document.cookie.split(";");
-    for (var i = 0; i < ca.length; i++) {
-      var c = ca[i];
-      while (c.charAt(0) == " ") c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-  }
-
-  function loadGoogleAnalytics() {
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://www.googletagmanager.com/gtag/js?id=G-80PDL3N0GG";
-    document.head.appendChild(script);
-
-    // Initialize Google Analytics after the script is loaded
-    script.onload = function () {
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        window.dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", "G-80PDL3N0GG");
-    };
-  }
-
-  const handleConsent = () => {
-    setCookie("userConsent", "true", 365); // Store consent for 1 year
-    loadGoogleAnalytics();
-    document.getElementById("cookieConsentContainer").style.display = "none";
-    //window.location.reload();
-  };
-
-  const closeConsent = () => {
-    document.getElementById("cookieConsentContainer").style.display = "none";
-  };
-*/
   const handleClick = (page) => {
     switch (page) {
       case 1:
@@ -101,39 +49,8 @@ const MainPage = ({ coreSettingsChanged }) => {
 
   return (
     <>
+      <V2ReleasePopup />
       <div className={styles.parentOfMainView}>
-        {/* 
-        {!consent && (
-          <div id="cookieConsentContainer" className={styles.consentContainer}>
-            <p className={styles.consentTitle}>We value your privacy</p>
-            <div className={styles.consentGroup}>
-              <div>
-                <p>
-                  The only cookie that we use is to track user statistics.
-                  <br />
-                  We do not collect any personal data.
-                </p>
-              </div>
-              <div>
-                <button
-                  id="rejectCookieConsent"
-                  onClick={closeConsent}
-                  className={styles.consentBtnR}
-                >
-                  REJECT
-                </button>
-                <button
-                  id="acceptCookieConsent"
-                  onClick={handleConsent}
-                  className={styles.consentBtn}
-                >
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        */}
 
         <div className={styles.mainView}>
           <h1 style={{ fontFamily: "Droid Sans", fontSize: "30px" }}>

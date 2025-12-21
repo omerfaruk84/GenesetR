@@ -147,28 +147,7 @@
   }
 }
 
-.hamburger {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  margin-left: 8px;
-  z-index: 1201;
-}
 
-@media (max-width: 600px) {
-  .topBar > *:not(.hamburger):not(.drawerOverlay) {
-    display: none !important;
-  }
-  .hamburger {
-    display: block;
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 1300;
-  }
-}
 
 .drawerOverlay {
   position: fixed;
@@ -226,6 +205,10 @@
 }
 .drawerNavLink:hover {
   background: #f0f0f0;
+}
+
+.drawerNavLinkActive {
+  background: rgba(25, 118, 210, 0.10);
 }
 
 .drawerNavLink img, .drawerNavLink svg {

@@ -105,6 +105,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   const [keyedData2, setkeyedData2] = useState([{}]);
   const [keyedDataMulti, setkeyedDataMulti] = useState([]); // Multi-dataset table data
   const [keyedDataMultiSimilar, setkeyedDataMultiSimilar] = useState([]); // New state for multi-dataset similar genes
+  const prevMultiDataLengthRef = useRef(0); // Track previous data length to detect new calculations
+  const prevMultiSimilarDataLengthRef = useRef(0); // Track previous similar data length
   const signatureGeneSet = useMemo(() => {
     const normalized = (coreSettings.targetGeneList || "")
       .replace(/[,\s;]+/g, "+")
@@ -264,6 +266,10 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   
   // Multi-dataset local settings
   const [showRanks, setShowRanks] = useState(false);
+  
+  // Persist filters for multi-dataset tables across tab/toggle changes
+  const [multiDatasetFilters, setMultiDatasetFilters] = useState([]);
+  const [multiSimilarFilters, setMultiSimilarFilters] = useState([]);
   const [rankOrder, setRankOrder] = useState('desc');
 
   const singleDatasetTabs = useMemo(() => [
@@ -672,6 +678,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
             size: "small",
             color: "primary",
             step: 1,
+            min: 1,
+            max: normalizedSelectedDatasets.length,
           },
         },
       ],
@@ -756,7 +764,13 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           size: 60,
           enableColumnActions: false, // Disable three dots menu
           filterVariant: "range-slider",
-          muiFilterSliderProps: { size: "small", color: "primary", step: 1 },
+          muiFilterSliderProps: { 
+            size: "small", 
+            color: "primary", 
+            step: 1,
+            min: 1,
+            max: normalizedSelectedDatasets.length,
+          },
         },
       ],
     });
@@ -1147,13 +1161,21 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
   // Multi-dataset mode: build cross-dataset tables from cached per-dataset results.
   useEffect(() => {
-    if (!hasMultiDatasetSelection) return;
+    if (!hasMultiDatasetSelection) {
+      // Reset refs when switching away from multi-dataset mode
+      prevMultiDataLengthRef.current = 0;
+      prevMultiSimilarDataLengthRef.current = 0;
+      return;
+    }
 
     if (!coreSettings.targetGeneList || coreSettings.targetGeneList.trim().length < 1) {
       setkeyedDataMulti([]);
       setkeyedDataMultiSimilar([]);
       setGeneListsMulti({});
       setGeneListsMultiSimilar({});
+      // Reset refs when clearing data
+      prevMultiDataLengthRef.current = 0;
+      prevMultiSimilarDataLengthRef.current = 0;
       return;
     }
 
@@ -1165,7 +1187,23 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       blacklistData,
       genesignatureSettings
     );
+    // Set initial filter for dataset_count if data is newly calculated (transition from 0 to >0 rows)
+    const isNewData = prevMultiDataLengthRef.current === 0 && Array.isArray(multiTableInfo) && multiTableInfo.length > 0;
+    prevMultiDataLengthRef.current = Array.isArray(multiTableInfo) ? multiTableInfo.length : 0;
+    
     setkeyedDataMulti(multiTableInfo);
+    
+    // Set initial filter only when data is first calculated (new data) and filters are empty
+    if (isNewData && multiDatasetFilters.length === 0) {
+      const numDatasets = normalizedSelectedDatasets.length;
+      const filterValue = Math.max(1, numDatasets - 1); // Set to numDatasets - 1, minimum 1
+      setMultiDatasetFilters([
+        {
+          id: 'dataset_count',
+          value: [filterValue, numDatasets], // Range filter: [min, max]
+        }
+      ]);
+    }
 
     if (Array.isArray(multiTableInfo) && multiTableInfo.length > 0) {
       const multiGeneLists = {};
@@ -1193,7 +1231,23 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       blacklistData,
       genesignatureSettings
     );
+    // Set initial filter for Datasets column if data is newly calculated (transition from 0 to >0 rows)
+    const isNewSimilarData = prevMultiSimilarDataLengthRef.current === 0 && Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0;
+    prevMultiSimilarDataLengthRef.current = Array.isArray(multiSimilarInfo) ? multiSimilarInfo.length : 0;
+    
     setkeyedDataMultiSimilar(multiSimilarInfo);
+    
+    // Set initial filter only when data is first calculated (new data) and filters are empty
+    if (isNewSimilarData && multiSimilarFilters.length === 0) {
+      const numDatasets = normalizedSelectedDatasets.length;
+      const filterValue = Math.max(1, numDatasets - 1); // Set to numDatasets - 1, minimum 1
+      setMultiSimilarFilters([
+        {
+          id: 'Datasets',
+          value: [filterValue, numDatasets], // Range filter: [min, max]
+        }
+      ]);
+    }
 
     if (Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0) {
       const multiSimilarGeneLists = {};
@@ -2169,6 +2223,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   data={keyedDataMulti} 
                   columns={columnsMulti} 
                   onSortedDataChange={handleMultiDataChange}
+                  initialColumnFilters={multiDatasetFilters}
+                  onColumnFiltersChange={setMultiDatasetFilters}
                   key={`multi-table-${showRanks}-${rankOrder}`} // Force re-render when settings change
                 />
               </div>
@@ -2308,6 +2364,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   data={keyedDataMultiSimilar} 
                   columns={columnsMultiSimilar} 
                   onSortedDataChange={handleMultiSimilarDataChange}
+                  initialColumnFilters={multiSimilarFilters}
+                  onColumnFiltersChange={setMultiSimilarFilters}
                   key={`multi-similar-${showRanks}-${rankOrder}-${normalizedSelectedDatasets.length}`} 
                 />
               </div>

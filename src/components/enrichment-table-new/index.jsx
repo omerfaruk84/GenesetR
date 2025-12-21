@@ -16,13 +16,30 @@ const csvConfig = mkConfig({
   useKeysAsHeaders: true,
 });
 
-const EnrichmentTable = ({ columns, data, onSortedDataChange }) => {
+const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilters, onColumnFiltersChange }) => {
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnFilters, setColumnFilters] = useState(initialColumnFilters || []);
   const [globalFilter, setGlobalFilter] = useState('');
   const debounceTimerRef = useRef(null);
+  
+  // Update filters when initialColumnFilters prop changes (for external control)
+  useEffect(() => {
+    if (initialColumnFilters !== undefined) {
+      setColumnFilters(initialColumnFilters);
+    }
+  }, [initialColumnFilters]);
+  
+  // Notify parent of filter changes
+  const handleColumnFiltersChange = (updater) => {
+    setColumnFilters(updater);
+    if (onColumnFiltersChange) {
+      // If updater is a function, we need to call it with current filters
+      const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+      onColumnFiltersChange(newFilters);
+    }
+  };
   
   const table = useMaterialReactTable({
     columns,
@@ -48,7 +65,7 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange }) => {
       globalFilter,
     },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: handleColumnFiltersChange,
     onGlobalFilterChange: setGlobalFilter,
     initialState: {
       density: "compact",

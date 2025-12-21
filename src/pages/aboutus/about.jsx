@@ -112,6 +112,24 @@ const AboutPage = () => {
       <div className={styles.box}>
         <h1> UPDATES </h1>
         <div className={styles.updateBody}>
+          <span className={styles.updateDate}>2025-12-21</span>
+          <p>
+            <b>GeneSetR v2 released</b>
+            <br />
+            <br />
+            - New whole-genome Perturb-Seq datasets: HCT116 and HEK293 (plus merged GWPS datasets: intersection/union, and a new K562GWPS analysis dataset)
+            <br />
+            - GWPS datasets integrated across many modules for consistent cross-module comparisons
+            <br />
+            - New modules: MultiDataset Comparison, Gene Regulation+, Cell Cycle, Deregulated Genes
+            <br />
+            - Upload your own datasets (CSV/TSV/TXT) for temporary analysis
+            <br />
+            - Many bug fixes and stability improvements (including memory leak fixes)
+            <br />
+            - Programmatic access (API) for pipelines and scripts (see the API tab under HELP)
+          </p>
+          <hr style={{ height: 1 }} />
           <span className={styles.updateDate}>NEAR FUTURE</span>
           <p>
             As we continuously strive to enhance your experience with GeneSetR,

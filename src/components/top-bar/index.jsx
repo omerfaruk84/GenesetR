@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TopBar as TopBarCmp } from "@oliasoft-open-source/react-ui-library";
 import { FaHome, FaBars, FaTimes, FaCloudUploadAlt } from "react-icons/fa";
@@ -24,6 +24,16 @@ const TopBar = () => {
   const navigate = useNavigate();
   const { pathname } = location;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const navLinks = [
     {
       icon: () => <FaHome size={"2em"} />,
@@ -34,6 +44,11 @@ const TopBar = () => {
       icon: () => <FcScatterPlot size={"2em"} />,
       name: TabNames.CORRELATION,
       toLink: ROUTES.CORRELATION,
+    },      
+    {
+      icon: () => <FcElectricalSensor size={"2em"} />,
+      name: TabNames.GENESIGNATURE,
+      toLink: ROUTES.GENESIGNATURE,
     },
     {
       icon: () => (
@@ -51,11 +66,7 @@ const TopBar = () => {
       name: TabNames.EXPRESSIONANALYZER,
       toLink: ROUTES.EXPRESSIONANALYZER,
     },
-    {
-      icon: () => <FcClock size={"2em"} />,
-      name: TabNames.CELL_CYCLE,
-      toLink: ROUTES.CELL_CYCLE,
-    },
+    
     {
       icon: () => <FcSerialTasks size={"2em"} />,
       name: TabNames.MULTIDATASET_COMPARISON,
@@ -87,20 +98,21 @@ const TopBar = () => {
       name: TabNames.PATHFINDER,
       toLink: ROUTES.PATHFINDER,
     },
+  
     {
-      icon: () => <FcTodoList size={"2em"} />,
-      name: TabNames.GENELISTCOMPARE,
-      toLink: ROUTES.GENELISTCOMPARE,
-    },
-    {
-      icon: () => <FcElectricalSensor size={"2em"} />,
-      name: TabNames.GENESIGNATURE,
-      toLink: ROUTES.GENESIGNATURE,
+      icon: () => <FcClock size={"2em"} />,
+      name: TabNames.CELL_CYCLE,
+      toLink: ROUTES.CELL_CYCLE,
     },
     {
       icon: () => <FcElectricalSensor size={"2em"} style={{ filter: "hue-rotate(180deg)" }} />,
       name: TabNames.DEREGULATED_GENES,
       toLink: ROUTES.DEREGULATED_GENES,
+    },
+    {
+      icon: () => <FcTodoList size={"2em"} />,
+      name: TabNames.GENELISTCOMPARE,
+      toLink: ROUTES.GENELISTCOMPARE,
     },
     {
       icon: () => <FaCloudUploadAlt size={"2em"} color="#1976d2" />,
@@ -114,6 +126,36 @@ const TopBar = () => {
     },
   ];
 
+  const visibleCount = useMemo(() => {
+    const w = viewportWidth;
+    if (w <= 600) return 0;
+    if (w <= 760) return 4;
+    if (w <= 900) return 6;
+    if (w <= 1100) return 9;
+    if (w <= 1280) return 12;
+    return navLinks.length;
+  }, [viewportWidth, navLinks.length]);
+
+  const visibleNavLinks = useMemo(
+    () => navLinks.slice(0, Math.min(navLinks.length, visibleCount)),
+    [navLinks, visibleCount]
+  );
+
+  const overflowNavLinks = useMemo(
+    () => navLinks.slice(Math.min(navLinks.length, visibleCount)),
+    [navLinks, visibleCount]
+  );
+
+  const drawerLinks = useMemo(() => {
+    if (viewportWidth <= 600) return navLinks;
+    return overflowNavLinks;
+  }, [navLinks, overflowNavLinks, viewportWidth]);
+
+  const overflowActive = useMemo(
+    () => overflowNavLinks.some((l) => isActiveTab(pathname, l.toLink)),
+    [overflowNavLinks, pathname]
+  );
+
   // Drawer nav for mobile
   const handleNavClick = (toLink) => {
     setMenuOpen(false);
@@ -122,18 +164,9 @@ const TopBar = () => {
 
   return (
     <div className={styles.topBar}>
-      {/* Hamburger icon for mobile */}
-      <button
-        className={styles.hamburger}
-        aria-label="Open menu"
-        onClick={() => setMenuOpen(true)}
-      >
-        <FaBars size={28} />
-      </button>
-      {/* Regular nav for desktop/tablet */}
       <TopBarCmp
         height={60}
-        content={navLinks.map(({ icon, name, toLink }) => ({
+        content={visibleNavLinks.map(({ icon, name, toLink }) => ({
           icon: icon(),
           label: name,
           onClick: () => navigate(toLink),
@@ -142,10 +175,22 @@ const TopBar = () => {
         }))}
         title={{
           onClick: () => navigate(ROUTES.HOME),
-          version: "V1.6.5",
+          version: "V2.0.0",
           logo: <img alt="logo" src="/images/logo.png" />,
         }}
-        contentRight={undefined}
+        contentRight={
+          drawerLinks.length > 0
+            ? [
+                {
+                  icon: <FaBars size={22} />,
+                  label: viewportWidth <= 600 ? "Menu" : "More",
+                  onClick: () => setMenuOpen(true),
+                  type: "Link",
+                  active: overflowActive || menuOpen,
+                },
+              ]
+            : undefined
+        }
       />
       {/* Drawer overlay and menu */}
       {menuOpen && (
@@ -162,10 +207,12 @@ const TopBar = () => {
             >
               <FaTimes />
             </button>
-            {navLinks.map(({ icon, name, toLink }) => (
+            {drawerLinks.map(({ icon, name, toLink }) => (
               <button
                 key={name}
-                className={styles.drawerNavLink}
+                className={`${styles.drawerNavLink} ${
+                  isActiveTab(pathname, toLink) ? styles.drawerNavLinkActive : ""
+                }`}
                 onClick={() => handleNavClick(toLink)}
               >
                 {icon()} <span style={{ marginLeft: 12 }}>{name}</span>
