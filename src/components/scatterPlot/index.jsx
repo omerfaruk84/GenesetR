@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import { safeJsonParse } from "../../utils/jsonUtils";
@@ -66,7 +66,32 @@ const ScatterPlot = ({
 }) => {
   const [options, setOptions] = useState({});
   const [searchGene, setSearchGene] = useState("");
-  const [chartInstance, setChartInstance] = useState(null);
+  const chartInstanceRef = useRef(null);
+  const highlightTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
+      }
+      chartInstanceRef.current = null;
+    };
+  }, []);
+
+  const getMinMax = (values) => {
+    if (!Array.isArray(values) || values.length === 0) return [0, 0];
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i];
+      if (value == null || Number.isNaN(value)) continue;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 0];
+    return [min, max];
+  };
 
   // Memoize expensive gene processing
   const genesTolabel = useMemo(() => {
@@ -717,7 +742,14 @@ const ScatterPlot = ({
 
   // Function to search and zoom to a gene
   const handleSearchGene = () => {
-    if (!searchGene || !chartInstance || !graphData || !graphData.GeneSymbols) {
+    const chartInstance = chartInstanceRef.current;
+    if (
+      !searchGene ||
+      !chartInstance ||
+      (typeof chartInstance.isDisposed === "function" && chartInstance.isDisposed()) ||
+      !graphData ||
+      !graphData.GeneSymbols
+    ) {
       return;
     }
     
@@ -741,12 +773,9 @@ const ScatterPlot = ({
     
     // Calculate zoom range (show area around the gene)
     const zoomRange = 0.2; // Show 20% of the data range around the gene
-    const pc1Min = Math.min(...graphData.PC1);
-    const pc1Max = Math.max(...graphData.PC1);
-    const pc2Min = Math.min(...graphData.PC2);
-    const pc2Max = Math.max(...graphData.PC2);
-    const pc3Min = graphData.PC3 ? Math.min(...graphData.PC3) : 0;
-    const pc3Max = graphData.PC3 ? Math.max(...graphData.PC3) : 0;
+    const [pc1Min, pc1Max] = getMinMax(graphData.PC1);
+    const [pc2Min, pc2Max] = getMinMax(graphData.PC2);
+    const [pc3Min, pc3Max] = graphData.PC3 ? getMinMax(graphData.PC3) : [0, 0];
     
     const pc1Range = pc1Max - pc1Min;
     const pc2Range = pc2Max - pc2Min;
@@ -805,7 +834,13 @@ const ScatterPlot = ({
     
     // Highlight the gene by selecting it and showing label
     // Use select action which works better with 3D charts
-    setTimeout(() => {
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = setTimeout(() => {
+      if (typeof chartInstance.isDisposed === "function" && chartInstance.isDisposed()) {
+        return;
+      }
       // Select the data point
       chartInstance.dispatchAction({
         type: 'select',
@@ -952,7 +987,7 @@ const ScatterPlot = ({
             notMerge={true}
             lazyUpdate={true}
             onChartReady={(chart) => {
-              setChartInstance(chart);
+              chartInstanceRef.current = chart;
             }}
           />
         </Row>

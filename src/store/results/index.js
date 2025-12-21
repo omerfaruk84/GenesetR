@@ -80,6 +80,26 @@ const sanitizeInvalidJsonNumbers = (input) => {
 const normalizeGeneSignatureFormula = (value = "") =>
   (value || "").toString().replace(/\s+/g, "").toUpperCase();
 
+const MAX_GENE_SIGNATURE_CACHE_ENTRIES = 25;
+
+const parseResultPayload = ({ result, module }) => {
+  try {
+    if (typeof result === "string") {
+      const sanitizedResult = sanitizeInvalidJsonNumbers(result);
+      return JSON.parse(sanitizedResult);
+    }
+
+    if (typeof result === "object" && result !== null) {
+      return result;
+    }
+
+    return {};
+  } catch (error) {
+    console.error(`JSON parsing failed for ${module}:`, error);
+    return {};
+  }
+};
+
 const resultState = {
   result: null,
   running: false,
@@ -109,6 +129,7 @@ const initialState = {
   deregulatedGenesGraph: { ...resultState },
   deregulatedGenesMultiDataset: { ...resultState },
   geneSignatureCache: {},
+  geneSignatureCacheOrder: [],
 };
 
 export const calculationResults = createSlice({
@@ -119,23 +140,7 @@ export const calculationResults = createSlice({
       //console.log(action);
       const { result, module } = action.payload;
       //console.log(result);
-      // Use the original JSON.parse approach with error handling
-      let parsedResult;
-      
-      try {
-        if (typeof result === 'string') {
-          const sanitizedResult = sanitizeInvalidJsonNumbers(result);
-          parsedResult = JSON.parse(sanitizedResult);
-        } else if (typeof result === 'object' && result !== null) {
-          // Deep clone to avoid reference issues
-          parsedResult = JSON.parse(JSON.stringify(result));
-        } else {
-          parsedResult = {};
-        }
-      } catch (error) {
-        console.error(`JSON parsing failed for ${module}:`, error);
-        parsedResult = {};
-      }
+      const parsedResult = parseResultPayload({ result, module });
       
       console.log(`Results store - Setting ${module} result:`, {
         resultType: typeof result,
@@ -199,6 +204,27 @@ export const calculationResults = createSlice({
         state.geneSignatureCache[formulaKey] = {};
       }
       state.geneSignatureCache[formulaKey][datasetId] = data;
+
+      const cacheKey = `${formulaKey}::${datasetId}`;
+      state.geneSignatureCacheOrder = (state.geneSignatureCacheOrder || []).filter(
+        (existing) => existing !== cacheKey
+      );
+      state.geneSignatureCacheOrder.push(cacheKey);
+
+      while (
+        state.geneSignatureCacheOrder.length > MAX_GENE_SIGNATURE_CACHE_ENTRIES
+      ) {
+        const oldestKey = state.geneSignatureCacheOrder.shift();
+        if (!oldestKey) break;
+        const [oldFormulaKey, oldDatasetId] = oldestKey.split("::");
+        if (!oldFormulaKey || !oldDatasetId) continue;
+        if (state.geneSignatureCache?.[oldFormulaKey]) {
+          delete state.geneSignatureCache[oldFormulaKey][oldDatasetId];
+          if (Object.keys(state.geneSignatureCache[oldFormulaKey]).length === 0) {
+            delete state.geneSignatureCache[oldFormulaKey];
+          }
+        }
+      }
     },
   },
 });
@@ -453,18 +479,10 @@ const runCalculation = (module) => async (dispatch, getState) => {
 
         // Cache the primary dataset result for reuse in multi-dataset aggregation
         const formulaKey = normalizeGeneSignatureFormula(singleCore.targetGeneList);
-        let parsedResult = result;
-        if (typeof result === "string") {
-          try {
-            parsedResult = JSON.parse(sanitizeInvalidJsonNumbers(result));
-          } catch (error) {
-            parsedResult = {};
-          }
-        } else if (typeof result === "object" && result !== null) {
-          parsedResult = JSON.parse(JSON.stringify(result));
-        } else {
-          parsedResult = {};
-        }
+        const parsedResult = parseResultPayload({
+          result,
+          module: ModulePathNames[module],
+        });
         dispatch(
           setGeneSignatureCache({
             formulaKey,
@@ -661,18 +679,10 @@ const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = f
 
   try {
     const result = await runGeneSignature(coreForDataset, silent ? { disableModuleTracking: true } : {});
-    let parsedResult = result;
-    if (typeof result === "string") {
-      try {
-        parsedResult = JSON.parse(sanitizeInvalidJsonNumbers(result));
-      } catch (error) {
-        parsedResult = {};
-      }
-    } else if (typeof result === "object" && result !== null) {
-      parsedResult = JSON.parse(JSON.stringify(result));
-    } else {
-      parsedResult = {};
-    }
+    const parsedResult = parseResultPayload({
+      result,
+      module: ModulePathNames[ROUTES.GENESIGNATURE],
+    });
 
     dispatch(
       setGeneSignatureCache({

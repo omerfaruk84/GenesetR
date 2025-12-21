@@ -52,6 +52,10 @@ const HeatMap = ({
   const resizeObserverRef = useRef(null);
   const instanceIdRef = useRef(0);
   const isMountedRef = useRef(false);
+  const fitToScreenRetryTimeoutRef = useRef(null);
+  const manualFitToScreenTimeoutRef = useRef(null);
+  const gcTimeoutRef = useRef(null);
+  const resizeObserverCallbackRef = useRef(null);
 
   const columns = useMemo(() => {
     if (isMultiDataset && datasets && datasets.length > 0) {
@@ -183,8 +187,21 @@ const HeatMap = ({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+
+      if (fitToScreenRetryTimeoutRef.current) {
+        clearTimeout(fitToScreenRetryTimeoutRef.current);
+        fitToScreenRetryTimeoutRef.current = null;
+      }
+      if (manualFitToScreenTimeoutRef.current) {
+        clearTimeout(manualFitToScreenTimeoutRef.current);
+        manualFitToScreenTimeoutRef.current = null;
+      }
+      if (gcTimeoutRef.current) {
+        clearTimeout(gcTimeoutRef.current);
+        gcTimeoutRef.current = null;
+      }
       transformWrapperRef.current?.resetTransform();
-    transformWrapperRef.current = null;
+      transformWrapperRef.current = null;
     };
   }, []);
 
@@ -287,22 +304,15 @@ const keyedData = useMemo(() => {
     
     // Force garbage collection if available (dev tools or specific browsers)
     if (window.gc && typeof window.gc === 'function') {
-      setTimeout(() => {
+      if (gcTimeoutRef.current) {
+        clearTimeout(gcTimeoutRef.current);
+      }
+      gcTimeoutRef.current = setTimeout(() => {
         window.gc();
         logMemoryUsage('After GC');
         console.log('Forced garbage collection');
+        gcTimeoutRef.current = null;
       }, 100);
-    }
-    
-    // Alternative method to encourage garbage collection
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(() => {
-        // Create and immediately discard some objects to trigger GC
-        for (let i = 0; i < 100; i++) {
-          const temp = new Array(1000).fill(Math.random());
-        }
-        logMemoryUsage('After manual GC attempt');
-      });
     }
   }, [logMemoryUsage]);
 
@@ -341,6 +351,7 @@ const keyedData = useMemo(() => {
     if (container && heatmap && transformWrapperRef.current) {
       // Wait for next frame to ensure DOM is updated
       requestAnimationFrame(() => {
+        if (!isMountedRef.current) return;
         try {
           const containerWidth = container.offsetWidth - 50;
           const heatmapWidth = heatmap.offsetWidth;
@@ -351,7 +362,14 @@ const keyedData = useMemo(() => {
             transformWrapperRef.current?.setTransform(0, 0, scale);
           } else {
             // Retry after a short delay if dimensions aren't ready
-            setTimeout(() => handleFitToScreen(), 100);
+            if (fitToScreenRetryTimeoutRef.current) {
+              clearTimeout(fitToScreenRetryTimeoutRef.current);
+            }
+            fitToScreenRetryTimeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) {
+                handleFitToScreen();
+              }
+            }, 100);
           }
         } catch (error) {
           console.error('Error in handleFitToScreen:', error);
@@ -367,7 +385,11 @@ const keyedData = useMemo(() => {
 
     if (container && heatmap && transformWrapperRef.current) {
       // Wait a bit longer for manual fit to ensure everything is ready
-      setTimeout(() => {
+      if (manualFitToScreenTimeoutRef.current) {
+        clearTimeout(manualFitToScreenTimeoutRef.current);
+      }
+      manualFitToScreenTimeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) return;
         try {
           const containerWidth = container.offsetWidth - 50;
           const heatmapWidth = heatmap.offsetWidth;
@@ -604,14 +626,15 @@ const keyedData = useMemo(() => {
   useEffect(() => {
     if (!heatmapContainerRef.current) return;
 
-    resizeObserverRef.current = new ResizeObserver(
-      throttle(() => {
-        // Only auto-fit if not currently loading
-        if (!loading && inchlibInstance.current) {
-          handleFitToScreen();
-        }
-      }, 200)
-    );
+    const throttledFit = throttle(() => {
+      // Only auto-fit if not currently loading
+      if (!loading && inchlibInstance.current) {
+        handleFitToScreen();
+      }
+    }, 200);
+
+    resizeObserverCallbackRef.current = throttledFit;
+    resizeObserverRef.current = new ResizeObserver(throttledFit);
 
     resizeObserverRef.current.observe(heatmapContainerRef.current);
     return () => {
@@ -619,6 +642,10 @@ const keyedData = useMemo(() => {
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
       }
+      if (resizeObserverCallbackRef.current?.cancel) {
+        resizeObserverCallbackRef.current.cancel();
+      }
+      resizeObserverCallbackRef.current = null;
     };
   }, [handleFitToScreen, loading]);
 
@@ -634,6 +661,23 @@ const keyedData = useMemo(() => {
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
+      }
+      if (resizeObserverCallbackRef.current?.cancel) {
+        resizeObserverCallbackRef.current.cancel();
+      }
+      resizeObserverCallbackRef.current = null;
+
+      if (fitToScreenRetryTimeoutRef.current) {
+        clearTimeout(fitToScreenRetryTimeoutRef.current);
+        fitToScreenRetryTimeoutRef.current = null;
+      }
+      if (manualFitToScreenTimeoutRef.current) {
+        clearTimeout(manualFitToScreenTimeoutRef.current);
+        manualFitToScreenTimeoutRef.current = null;
+      }
+      if (gcTimeoutRef.current) {
+        clearTimeout(gcTimeoutRef.current);
+        gcTimeoutRef.current = null;
       }
       
       // Reset transform wrapper

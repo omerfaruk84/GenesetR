@@ -112,7 +112,7 @@ const AboutPage = () => {
       <div className={styles.box}>
         <h1> UPDATES </h1>
         <div className={styles.updateBody}>
-          <span className={styles.updateDate}>2025-12-21</span>
+          <span className={styles.updateDate}>2025-12-20</span>
           <p>
             <b>GeneSetR v2 released</b>
             <br />

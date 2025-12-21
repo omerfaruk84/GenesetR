@@ -182,33 +182,36 @@ const GeneRegulationEnhancedSettings = ({
       >
         {geneRegulationEnhancedSettings?.selectedExperiments?.map((expId, index) => (
           <div key={expId} style={{ marginBottom: "10px", padding: "10px", border: "1px solid #e0e0e0", borderRadius: "4px" }}>
-            <Flex justifyContent="space-between" alignItems="center">
-              <div style={{ flex: 1 }}>
-                <strong>{expId}</strong>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ wordBreak: "break-word" }}>{expId}</strong>
               </div>
-              <div style={{ flex: 1, marginLeft: "10px" }}>
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="5.0"
-                  value={geneRegulationEnhancedSettings?.experimentWeights?.[index] || 1.0}
-                  onChange={({ target: { value } }) => handleWeightChange(expId, value)}
-                  style={{ width: "80px" }}
-                />
-                <Label style={{ marginLeft: "5px", fontSize: "12px" }}>Weight</Label>
-              </div>
-              <div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="5.0"
+                    value={geneRegulationEnhancedSettings?.experimentWeights?.[index] || 1.0}
+                    onChange={({ target: { value } }) => handleWeightChange(expId, value)}
+                    style={{ width: "80px" }}
+                  />
+                  <Label style={{ fontSize: "12px", whiteSpace: "nowrap" }}>Weight</Label>
+                </div>
+
                 <Button
                   variant="danger"
                   size="small"
                   onClick={() => handleExperimentRemove(expId)}
                   disabled={geneRegulationEnhancedSettings?.selectedExperiments?.length <= 1}
+                  style={{ marginLeft: "auto" }}
                 >
                   Remove
                 </Button>
               </div>
-            </Flex>
+            </div>
           </div>
         ))}
         

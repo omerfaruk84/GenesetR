@@ -20,30 +20,47 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState(initialColumnFilters || []);
+  const isControlledFilters = Array.isArray(initialColumnFilters) && typeof onColumnFiltersChange === "function";
+  const [uncontrolledColumnFilters, setUncontrolledColumnFilters] = useState(initialColumnFilters || []);
+  const columnFilters = isControlledFilters ? initialColumnFilters : uncontrolledColumnFilters;
   const [globalFilter, setGlobalFilter] = useState('');
   const debounceTimerRef = useRef(null);
   const prevInitialFiltersRef = useRef(JSON.stringify(initialColumnFilters || []));
+  const isInitializingRef = useRef(true);
+
+  useEffect(() => {
+    isInitializingRef.current = false;
+  }, []);
   
   // Update filters when initialColumnFilters prop changes (for external control)
   useEffect(() => {
+    if (isControlledFilters) return;
     if (initialColumnFilters !== undefined) {
       const newFilterStr = JSON.stringify(initialColumnFilters);
       const prevFilterStr = prevInitialFiltersRef.current;
-      
-      // Only update if the filters actually changed
+
       if (newFilterStr !== prevFilterStr) {
         prevInitialFiltersRef.current = newFilterStr;
-        setColumnFilters(initialColumnFilters || []);
+        setUncontrolledColumnFilters(initialColumnFilters || []);
       }
     }
-  }, [initialColumnFilters]);
+  }, [initialColumnFilters, isControlledFilters]);
   
   // Notify parent of filter changes
   const handleColumnFiltersChange = (updater) => {
-    setColumnFilters((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      onColumnFiltersChange?.(next);
+    if (isControlledFilters) {
+      const next = typeof updater === "function" ? updater(columnFilters) : updater;
+      if (!isInitializingRef.current) {
+        onColumnFiltersChange(next);
+      }
+      return;
+    }
+
+    setUncontrolledColumnFilters((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (!isInitializingRef.current) {
+        onColumnFiltersChange?.(next);
+      }
       return next;
     });
   };

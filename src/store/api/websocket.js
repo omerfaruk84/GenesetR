@@ -140,11 +140,45 @@ export const waitForTaskCompletion = async (taskId, moduleName = null, options =
   if (useWebSocket && typeof WebSocket !== "undefined") {
     try {
       return new Promise((resolve, reject) => {
-        const cancel = connectTaskWebSocket(
+        let cancel = null;
+        let settled = false;
+
+        const cleanup = (shouldCancel = true) => {
+          if (settled) return;
+          settled = true;
+
+          try {
+            if (
+              typeof window !== "undefined" &&
+              window.activeTaskConnections &&
+              window.activeTaskConnections[taskId]
+            ) {
+              delete window.activeTaskConnections[taskId];
+            }
+          } catch (_) {
+            // no-op
+          }
+
+          if (shouldCancel && typeof cancel === "function") {
+            try {
+              cancel();
+            } catch (_) {
+              // no-op
+            }
+          }
+          cancel = null;
+        };
+
+        cancel = connectTaskWebSocket(
           taskId,
           moduleName,
-          (result) => resolve(result),
+          (result) => {
+            cleanup(true);
+            resolve(result);
+          },
           (error) => {
+            cleanup(true);
+
             // If WebSocket fails and fallback is enabled, try polling
             if (fallbackToPolling) {
               console.warn("WebSocket failed, falling back to polling");
@@ -156,10 +190,13 @@ export const waitForTaskCompletion = async (taskId, moduleName = null, options =
             }
           }
         );
-        
-        // Store cancel function for potential cancellation
-        if (window.activeTaskConnections) {
-          window.activeTaskConnections[taskId] = cancel;
+
+        // Store cancel function for potential cancellation, but ensure we also cleanup the tracking entry.
+        if (typeof window !== "undefined") {
+          window.activeTaskConnections = window.activeTaskConnections || {};
+          window.activeTaskConnections[taskId] = () => {
+            cleanup(true);
+          };
         }
       });
     } catch (error) {

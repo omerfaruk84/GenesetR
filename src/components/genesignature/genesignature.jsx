@@ -172,7 +172,16 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   });
 
   const selectedDatasets = genesignatureSettings?.selectedDatasets || [];
-  const hasMultiDatasetSelection = selectedDatasets.length > 1;
+  const normalizedSelectedDatasets = useMemo(() => {
+    const raw = selectedDatasets || [];
+    return raw
+      .map((ds) => {
+        if (typeof ds === "object" && ds !== null) return ds.id || ds.value || String(ds);
+        return String(ds);
+      })
+      .filter(Boolean);
+  }, [selectedDatasets]);
+  const hasMultiDatasetSelection = normalizedSelectedDatasets.length > 1;
   
   // Gene lists for enrichment in table views
   const [genelistsTable, setGeneListsTable] = useState([]);
@@ -271,6 +280,27 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   const [multiDatasetFilters, setMultiDatasetFilters] = useState([]);
   const [multiSimilarFilters, setMultiSimilarFilters] = useState([]);
   const [rankOrder, setRankOrder] = useState('desc');
+  const [minDatasetsAtLeast, setMinDatasetsAtLeast] = useState(1);
+  const minDatasetsTouchedRef = useRef(false);
+
+  // Default: selected datasets - 1 (min 1). Keep user selection if they've changed it.
+  useEffect(() => {
+    if (!hasMultiDatasetSelection) return;
+    const n = normalizedSelectedDatasets.length;
+    if (n < 2) return;
+
+    const recommended = Math.max(1, n - 1);
+    setMinDatasetsAtLeast((prev) => {
+      if (!minDatasetsTouchedRef.current) return recommended;
+      return Math.max(1, Math.min(n, prev));
+    });
+  }, [hasMultiDatasetSelection, normalizedSelectedDatasets.length]);
+
+  const minDatasetOptions = useMemo(() => {
+    const n = normalizedSelectedDatasets.length;
+    if (!hasMultiDatasetSelection || n < 2) return [1];
+    return Array.from({ length: n }, (_, i) => i + 1);
+  }, [hasMultiDatasetSelection, normalizedSelectedDatasets.length]);
 
   const singleDatasetTabs = useMemo(() => [
     {
@@ -304,15 +334,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   ], []);
 
   const availableTabs = hasMultiDatasetSelection ? multiDatasetTabs : singleDatasetTabs;
-  const normalizedSelectedDatasets = useMemo(() => {
-    const raw = genesignatureSettings?.selectedDatasets || [];
-    return (raw || [])
-      .map((ds) => {
-        if (typeof ds === "object" && ds !== null) return ds.id || ds.value || String(ds);
-        return String(ds);
-      })
-      .filter(Boolean);
-  }, [genesignatureSettings?.selectedDatasets]);
 
   const formulaKey = useMemo(
     () => normalizeGeneSignatureFormula(coreSettings.targetGeneList || ""),
@@ -676,14 +697,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           header: "Datasets",
           size: 60,
           enableColumnActions: false, // Disable three dots menu
-          filterVariant: "range-slider",
-          muiFilterSliderProps: {
-            size: "small",
-            color: "primary",
-            step: 1,
-            min: 1,
-            max: normalizedSelectedDatasets.length,
-          },
+          enableColumnFilter: false,
         },
       ],
     });
@@ -766,14 +780,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           header: "Datasets",
           size: 60,
           enableColumnActions: false, // Disable three dots menu
-          filterVariant: "range-slider",
-          muiFilterSliderProps: { 
-            size: "small", 
-            color: "primary", 
-            step: 1,
-            min: 1,
-            max: normalizedSelectedDatasets.length,
-          },
+          enableColumnFilter: false,
         },
       ],
     });
@@ -1182,11 +1189,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       return;
     }
 
-    const minDatasets = genesignatureSettings?.minDatasets || 1;
-
     const multiTableInfo = processMultiDatasetData(
       multiDatasetDataFromCache || { datasets: normalizedSelectedDatasets },
-      minDatasets,
+      minDatasetsAtLeast,
       blacklistData,
       genesignatureSettings
     );
@@ -1200,23 +1205,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       : 0;
     
     setkeyedDataMulti(multiTableInfo);
-    
-    // Ensure default filter exists for dataset_count (min = selected datasets - 1)
-    // Use a functional update so filter state survives tab switches and toggles.
-    if (isNewData || (Array.isArray(multiTableInfo) && multiTableInfo.length > 0)) {
-      const numDatasets = normalizedSelectedDatasets.length;
-      const filterValue = Math.max(1, numDatasets - 1);
-      setMultiDatasetFilters((prev) => {
-        if (prev.some((f) => f?.id === "dataset_count")) return prev;
-        return [
-          ...prev,
-          {
-            id: "dataset_count",
-            value: [filterValue, numDatasets],
-          },
-        ];
-      });
-    }
 
     if (Array.isArray(multiTableInfo) && multiTableInfo.length > 0) {
       const multiGeneLists = {};
@@ -1253,28 +1241,16 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       ? multiSimilarInfo.length
       : 0;
     
-    setkeyedDataMultiSimilar(multiSimilarInfo);
-    
-    // Ensure default filter exists for the Datasets column (min = selected datasets - 1)
-    if (isNewSimilarData || (Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0)) {
-      const numDatasets = normalizedSelectedDatasets.length;
-      const filterValue = Math.max(1, numDatasets - 1);
-      setMultiSimilarFilters((prev) => {
-        if (prev.some((f) => f?.id === "Datasets")) return prev;
-        return [
-          ...prev,
-          {
-            id: "Datasets",
-            value: [filterValue, numDatasets],
-          },
-        ];
-      });
-    }
+    const filteredMultiSimilarInfo = Array.isArray(multiSimilarInfo)
+      ? multiSimilarInfo.filter((row) => (row?.Datasets || 0) >= minDatasetsAtLeast)
+      : [];
 
-    if (Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0) {
+    setkeyedDataMultiSimilar(filteredMultiSimilarInfo);
+
+    if (Array.isArray(filteredMultiSimilarInfo) && filteredMultiSimilarInfo.length > 0) {
       const multiSimilarGeneLists = {};
-      const topMultiSimilar = multiSimilarInfo.filter((g) => (g.average || 0) > 0).map((g) => g.Gene);
-      const bottomMultiSimilar = multiSimilarInfo.filter((g) => (g.average || 0) < 0).map((g) => g.Gene);
+      const topMultiSimilar = filteredMultiSimilarInfo.filter((g) => (g.average || 0) > 0).map((g) => g.Gene);
+      const bottomMultiSimilar = filteredMultiSimilarInfo.filter((g) => (g.average || 0) < 0).map((g) => g.Gene);
 
       multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
       multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
@@ -1300,6 +1276,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     blacklistData,
     processMultiDatasetData,
     processMultiDatasetSimilarGenes,
+    minDatasetsAtLeast,
     multiDatasetRunning,
     multiResultDatasets.length,
   ]);
@@ -2152,7 +2129,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
              Gene signature analysis across whole-genome datasets. Rankings show relative positions within each dataset. 
              {genesignatureSettings?.filter && 'Blacklisted sgRNAs are filtered based on sidebar settings.'}
            </Text>
-            <Flex justifyContent="flex-end" alignItems="center" gap="16px">
+            <Flex justifyContent="flex-end" alignItems="center" gap="16px" style={{ flexWrap: "wrap" }}>
               <Flex alignItems="center" gap="10px">
                 <Text size="small">Rank based average:</Text>
                 <Toggle
@@ -2202,6 +2179,34 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                     </button>
                   </Flex>
                 )}
+              </Flex>
+              <Flex alignItems="center" gap="8px">
+                <Text size="small">Show genes in at least</Text>
+                <select
+                  value={minDatasetsAtLeast}
+                  onChange={(e) => {
+                    minDatasetsTouchedRef.current = true;
+                    const next = Number(e.target.value);
+                    setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
+                  }}
+                  style={{
+                    minWidth: "60px",
+                    width: "60px",
+                    padding: "4px 8px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    backgroundColor: "#fff",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  {minDatasetOptions.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <Text size="small">datasets.</Text>
               </Flex>
             </Flex>
           </Flex>
@@ -2291,13 +2296,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           
           {/* Controls for ranks and ordering */}
           <Flex justifyContent="flex-start" alignItems="left" gap="10px" style={{ marginBottom: '10px' }}>
-            <Flex justifyContent="flex-end" alignItems="center" gap="16px">
+            <Flex justifyContent="flex-end" alignItems="center" gap="16px" style={{ flexWrap: "wrap" }}>
               <Flex alignItems="center" gap="10px">
                 <Text size="small">Rank based average:</Text>
                 <Toggle
                   checked={showRanks}
                   onChange={(e) => {
-                    console.log('GeneSignature - Toggle changed:', e.target.checked);
                     setShowRanks(e.target.checked);
                   }}
                 />
@@ -2342,6 +2346,34 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                     </button>
                   </Flex>
                 )}
+              </Flex>
+              <Flex alignItems="center" gap="8px">
+                <Text size="small">Show genes in at least</Text>
+                <select
+                  value={minDatasetsAtLeast}
+                  onChange={(e) => {
+                    minDatasetsTouchedRef.current = true;
+                    const next = Number(e.target.value);
+                    setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
+                  }}
+                  style={{
+                    minWidth: "60px",
+                    width: "60px",
+                    padding: "4px 8px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    backgroundColor: "#fff",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  {minDatasetOptions.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <Text size="small">datasets.</Text>
               </Flex>
             </Flex>
           </Flex>
