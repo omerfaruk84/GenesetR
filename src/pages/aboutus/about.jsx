@@ -11,6 +11,12 @@ import helpVideo4 from "../../common/videos/5.webm";
 import helpVideo5 from "../../common/videos/6.webm";
 
 const AboutPage = () => {
+  const isDevEnv = process.env.NODE_ENV !== "production";
+  const API_BASE_URL = isDevEnv ? "http://localhost:8443" : "https://genesetr.uio.no/api";
+  const swaggerUrl = `${API_BASE_URL}/docs`;
+  const redocUrl = `${API_BASE_URL}/redoc`;
+  const openapiUrl = `${API_BASE_URL}/openapi.json`;
+
   const [selectedhelp, setSelctedHelp] = useState({
     label: "Correlation",
     value: 0,
@@ -47,6 +53,10 @@ const AboutPage = () => {
                 label: "Gene Signature",
                 value: 5,
               },
+              {
+                label: "API",
+                value: 6,
+              },
             ]}
             value={selectedhelp}
             onChange={(evt) => {
@@ -60,6 +70,42 @@ const AboutPage = () => {
           {selectedhelp.value === 3 && <VideoHelpPage videoFile={helpVideo3} />}
           {selectedhelp.value === 4 && <VideoHelpPage videoFile={helpVideo4} />}
           {selectedhelp.value === 5 && <VideoHelpPage videoFile={helpVideo5} />}
+          {selectedhelp.value === 6 && (
+            <div className={styles.apiHelp}>
+              <h2>Programmatic API</h2>
+              <p>
+                GeneSetR exposes a REST API for programmatic access. Interactive documentation is available via Swagger
+                UI and ReDoc.
+              </p>
+              <p>
+                To request an API key, email <a href="mailto:omerfk@uio.no">omerfk@uio.no</a> and briefly describe your
+                use case (endpoints needed, expected request volume, and whether it is academic or commercial).
+              </p>
+              <ul>
+                <li>
+                  <a href={swaggerUrl} target="_blank" rel="noreferrer">
+                    Swagger UI
+                  </a>
+                </li>
+                <li>
+                  <a href={redocUrl} target="_blank" rel="noreferrer">
+                    ReDoc
+                  </a>
+                </li>
+                <li>
+                  <a href={openapiUrl} target="_blank" rel="noreferrer">
+                    OpenAPI JSON
+                  </a>
+                </li>
+              </ul>
+              <p>
+                If API keys are enabled on the server, include <code>X-API-Key</code> in your requests.
+              </p>
+              <pre className={styles.codeBlock}>
+                {`curl -H "X-API-Key: <your-key>" "${API_BASE_URL}/api/v1/datasets"`}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,6 +319,63 @@ const AboutPage = () => {
                 <td>K562</td>
                 <td>11,258</td>
                 <td>8,248</td>
+              </tr>
+              <tr>
+                <td>HCT116 Whole Genome</td>
+                <td>
+                  X-Atlas/Orion: Genome-wide Perturb-seq Datasets via a Scalable
+                  Fix-Cryopreserve Platform for Training Dose-Dependent
+                  Biological Foundation Models
+                </td>
+                <td>CRISPRi</td>
+                <td>HCT116</td>
+                <td>18,194</td>
+                <td>12,245</td>
+              </tr>
+              <tr>
+                <td>HEK293 Whole Genome</td>
+                <td>
+                  X-Atlas/Orion: Genome-wide Perturb-seq Datasets via a Scalable
+                  Fix-Cryopreserve Platform for Training Dose-Dependent
+                  Biological Foundation Models
+                </td>
+                <td>CRISPRi</td>
+                <td>HEK293</td>
+                <td>21,918</td>
+                <td>13,422</td>
+              </tr>
+              <tr>
+                <td>K562 Whole Genome (new analysis)</td>
+                <td>
+                  Mapping information-rich genotype-phenotype landscapes with
+                  genome-scale Perturb-seq
+                </td>
+                <td>CRISPRi</td>
+                <td>K562</td>
+                <td>9,848</td>
+                <td>8,248</td>
+              </tr>
+              <tr>
+                <td>Intersection of GWPS</td>
+                <td>
+                  Combined analysis of K562, HCT116, and HEK293 whole genome
+                  datasets (processing pipeline details to be released)
+                </td>
+                <td>CRISPRi</td>
+                <td>Multiple</td>
+                <td>9,450</td>
+                <td>7,502</td>
+              </tr>
+              <tr>
+                <td>Union of GWPS</td>
+                <td>
+                  Combined analysis of K562, HCT116, and HEK293 whole genome
+                  datasets (processing pipeline details to be released)
+                </td>
+                <td>CRISPRi</td>
+                <td>Multiple</td>
+                <td>22,347</td>
+                <td>14,359</td>
               </tr>
               <tr>
                 <td>K562 Essential</td>

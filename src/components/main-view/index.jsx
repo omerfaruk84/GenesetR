@@ -49,6 +49,7 @@ const MainView = () => {
             }
           />
           <Route path={ROUTES.ABOUTUS} element={<AboutPage />} />
+          <Route path={ROUTES.UPLOAD_DATASET} element={<UploadDatasetPage />} />
           <Route element={<SideBarLayout />}>
             <Route path={ROUTES.DR} element={<DimReductionPage />} />
             <Route
@@ -102,7 +103,6 @@ const MainView = () => {
                 />
               }
             />
-            <Route path={ROUTES.UPLOAD_DATASET} element={<UploadDatasetPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
