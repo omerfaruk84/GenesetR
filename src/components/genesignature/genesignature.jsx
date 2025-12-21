@@ -618,12 +618,15 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         header: datasetName,
         size: showRanks ? 70 : 50, // Reduced width
         enableColumnActions: false, // Disable three dots menu
-        filterVariant: "range-slider",
-        muiFilterSliderProps: {
-          size: "small",
-          color: "primary",
-          step: showRanks ? 0.1 : 0.01,
-        },
+        filterVariant: showRanks ? "text" : "range-slider",
+        muiFilterSliderProps: showRanks
+          ? undefined
+          : {
+              size: "small",
+              color: "primary",
+              step: 0.01,
+            },
+        muiFilterTextFieldProps: showRanks ? { placeholder: "Rank", size: "small" } : undefined,
         Cell: ({ cell }) => {
           const value = cell.getValue();
           if (showRanks) {
@@ -1187,22 +1190,32 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       blacklistData,
       genesignatureSettings
     );
-    // Set initial filter for dataset_count if data is newly calculated (transition from 0 to >0 rows)
-    const isNewData = prevMultiDataLengthRef.current === 0 && Array.isArray(multiTableInfo) && multiTableInfo.length > 0;
-    prevMultiDataLengthRef.current = Array.isArray(multiTableInfo) ? multiTableInfo.length : 0;
+    // Track whether multi-dataset results just became available (0 -> >0 rows)
+    const isNewData =
+      prevMultiDataLengthRef.current === 0 &&
+      Array.isArray(multiTableInfo) &&
+      multiTableInfo.length > 0;
+    prevMultiDataLengthRef.current = Array.isArray(multiTableInfo)
+      ? multiTableInfo.length
+      : 0;
     
     setkeyedDataMulti(multiTableInfo);
     
-    // Set initial filter only when data is first calculated (new data) and filters are empty
-    if (isNewData && multiDatasetFilters.length === 0) {
+    // Ensure default filter exists for dataset_count (min = selected datasets - 1)
+    // Use a functional update so filter state survives tab switches and toggles.
+    if (isNewData || (Array.isArray(multiTableInfo) && multiTableInfo.length > 0)) {
       const numDatasets = normalizedSelectedDatasets.length;
-      const filterValue = Math.max(1, numDatasets - 1); // Set to numDatasets - 1, minimum 1
-      setMultiDatasetFilters([
-        {
-          id: 'dataset_count',
-          value: [filterValue, numDatasets], // Range filter: [min, max]
-        }
-      ]);
+      const filterValue = Math.max(1, numDatasets - 1);
+      setMultiDatasetFilters((prev) => {
+        if (prev.some((f) => f?.id === "dataset_count")) return prev;
+        return [
+          ...prev,
+          {
+            id: "dataset_count",
+            value: [filterValue, numDatasets],
+          },
+        ];
+      });
     }
 
     if (Array.isArray(multiTableInfo) && multiTableInfo.length > 0) {
@@ -1231,22 +1244,31 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       blacklistData,
       genesignatureSettings
     );
-    // Set initial filter for Datasets column if data is newly calculated (transition from 0 to >0 rows)
-    const isNewSimilarData = prevMultiSimilarDataLengthRef.current === 0 && Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0;
-    prevMultiSimilarDataLengthRef.current = Array.isArray(multiSimilarInfo) ? multiSimilarInfo.length : 0;
+    // Track whether multi-similar results just became available (0 -> >0 rows)
+    const isNewSimilarData =
+      prevMultiSimilarDataLengthRef.current === 0 &&
+      Array.isArray(multiSimilarInfo) &&
+      multiSimilarInfo.length > 0;
+    prevMultiSimilarDataLengthRef.current = Array.isArray(multiSimilarInfo)
+      ? multiSimilarInfo.length
+      : 0;
     
     setkeyedDataMultiSimilar(multiSimilarInfo);
     
-    // Set initial filter only when data is first calculated (new data) and filters are empty
-    if (isNewSimilarData && multiSimilarFilters.length === 0) {
+    // Ensure default filter exists for the Datasets column (min = selected datasets - 1)
+    if (isNewSimilarData || (Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0)) {
       const numDatasets = normalizedSelectedDatasets.length;
-      const filterValue = Math.max(1, numDatasets - 1); // Set to numDatasets - 1, minimum 1
-      setMultiSimilarFilters([
-        {
-          id: 'Datasets',
-          value: [filterValue, numDatasets], // Range filter: [min, max]
-        }
-      ]);
+      const filterValue = Math.max(1, numDatasets - 1);
+      setMultiSimilarFilters((prev) => {
+        if (prev.some((f) => f?.id === "Datasets")) return prev;
+        return [
+          ...prev,
+          {
+            id: "Datasets",
+            value: [filterValue, numDatasets],
+          },
+        ];
+      });
     }
 
     if (Array.isArray(multiSimilarInfo) && multiSimilarInfo.length > 0) {
@@ -2225,7 +2247,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   onSortedDataChange={handleMultiDataChange}
                   initialColumnFilters={multiDatasetFilters}
                   onColumnFiltersChange={setMultiDatasetFilters}
-                  key={`multi-table-${showRanks}-${rankOrder}`} // Force re-render when settings change
                 />
               </div>
               <Spacer height={10} />
@@ -2366,7 +2387,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   onSortedDataChange={handleMultiSimilarDataChange}
                   initialColumnFilters={multiSimilarFilters}
                   onColumnFiltersChange={setMultiSimilarFilters}
-                  key={`multi-similar-${showRanks}-${rankOrder}-${normalizedSelectedDatasets.length}`} 
                 />
               </div>
               <Spacer height={10} />

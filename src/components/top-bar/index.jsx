@@ -164,34 +164,36 @@ const TopBar = () => {
 
   return (
     <div className={styles.topBar}>
-      <TopBarCmp
-        height={60}
-        content={visibleNavLinks.map(({ icon, name, toLink }) => ({
-          icon: icon(),
-          label: name,
-          onClick: () => navigate(toLink),
-          type: "Link",
-          active: isActiveTab(pathname, toLink),
-        }))}
-        title={{
-          onClick: () => navigate(ROUTES.HOME),
-          version: "V2.0.0",
-          logo: <img alt="logo" src="/images/logo.png" />,
-        }}
-        contentRight={
-          drawerLinks.length > 0
-            ? [
-                {
-                  icon: <FaBars size={22} />,
-                  label: viewportWidth <= 600 ? "Menu" : "More",
-                  onClick: () => setMenuOpen(true),
-                  type: "Link",
-                  active: overflowActive || menuOpen,
-                },
-              ]
-            : undefined
-        }
-      />
+      <div className={styles.barInner}>
+        <TopBarCmp
+          height={60}
+          content={visibleNavLinks.map(({ icon, name, toLink }) => ({
+            icon: icon(),
+            label: name,
+            onClick: () => navigate(toLink),
+            type: "Link",
+            active: isActiveTab(pathname, toLink),
+          }))}
+          title={{
+            onClick: () => navigate(ROUTES.HOME),
+            version: "V2.0.0",
+            logo: <img alt="logo" src="/images/logo.png" />,
+          }}
+          contentRight={
+            drawerLinks.length > 0
+              ? [
+                  {
+                    icon: <FaBars size={22} />,
+                    label: viewportWidth <= 600 ? "Menu" : "More",
+                    onClick: () => setMenuOpen(true),
+                    type: "Link",
+                    active: overflowActive || menuOpen,
+                  },
+                ]
+              : undefined
+          }
+        />
+      </div>
       {/* Drawer overlay and menu */}
       {menuOpen && (
         <div className={styles.drawerOverlay} onClick={() => setMenuOpen(false)}>

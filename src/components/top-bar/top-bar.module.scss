@@ -1,4 +1,13 @@
 .topBar {
+  position: relative;
+  font-size: medium;
+  max-width: 1200px;
+  height: 60px;
+  margin-top: 30px;
+}
+
+.barInner {
+  width: 100%;
   div {
     > div:nth-child(2) {
       display: flex;
@@ -24,13 +33,6 @@
     justify-content: center;
     margin-top: 3px;
   }
-
-  font-size: medium;
-  //background-color: rgb(255, 0, 0);
-  max-width: 1200px;
-  height: 60px;
-  //border: 2px solid rgb(3, 76, 233);
-  margin-top: 30px;
   ul {
     height: 100%;
     padding: 0px;
@@ -69,18 +71,11 @@
     margin-top: 15px;
     padding: 0 4px;
     font-size: 0.95em;
-    
+  }
+  .barInner {
     div > div:nth-child(2) {
       margin-right: 0;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-    ul {
-      flex-wrap: wrap;
-      gap: 2px;
-      li a {
-        padding: 6px 4px;
-      }
+      gap: 6px;
     }
     div > div > a > span {
       font-size: 0.7em;
@@ -93,18 +88,13 @@
     margin-top: 8px;
     padding: 0 2px;
     font-size: 0.85em;
-    
+  }
+  .barInner {
     div > div:nth-child(2) {
-      gap: 2px;
-    }
-    ul {
-      gap: 1px;
-      li a {
-        padding: 4px 2px;
-      }
+      gap: 4px;
     }
     div > div > a > span {
-      font-size: 0.6em;
+      font-size: 0.65em;
     }
     img, svg {
       max-width: 22px !important;
@@ -118,16 +108,11 @@
     margin-top: 12px;
     padding: 0 2px;
     font-size: 0.92em;
-    
+  }
+  .barInner {
     div > div:nth-child(2) {
       gap: 8px;
       margin-right: 0;
-    }
-    ul {
-      gap: 6px;
-      li a {
-        padding: 7px 4px;
-      }
     }
     div > div > a > span {
       font-size: 0.75em;

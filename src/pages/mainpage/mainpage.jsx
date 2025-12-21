@@ -51,6 +51,38 @@ const MainPage = ({ coreSettingsChanged }) => {
     <>
       <V2ReleasePopup />
       <div className={styles.parentOfMainView}>
+        {/* 
+        {!consent && (
+          <div id="cookieConsentContainer" className={styles.consentContainer}>
+            <p className={styles.consentTitle}>We value your privacy</p>
+            <div className={styles.consentGroup}>
+              <div>
+                <p>
+                  The only cookie that we use is to track user statistics.
+                  <br />
+                  We do not collect any personal data.
+                </p>
+              </div>
+              <div>
+                <button
+                  id="rejectCookieConsent"
+                  onClick={closeConsent}
+                  className={styles.consentBtnR}
+                >
+                  REJECT
+                </button>
+                <button
+                  id="acceptCookieConsent"
+                  onClick={handleConsent}
+                  className={styles.consentBtn}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        */}
 
         <div className={styles.mainView}>
           <h1 style={{ fontFamily: "Droid Sans", fontSize: "30px" }}>

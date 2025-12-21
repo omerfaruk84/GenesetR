@@ -23,22 +23,29 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
   const [columnFilters, setColumnFilters] = useState(initialColumnFilters || []);
   const [globalFilter, setGlobalFilter] = useState('');
   const debounceTimerRef = useRef(null);
+  const prevInitialFiltersRef = useRef(JSON.stringify(initialColumnFilters || []));
   
   // Update filters when initialColumnFilters prop changes (for external control)
   useEffect(() => {
     if (initialColumnFilters !== undefined) {
-      setColumnFilters(initialColumnFilters);
+      const newFilterStr = JSON.stringify(initialColumnFilters);
+      const prevFilterStr = prevInitialFiltersRef.current;
+      
+      // Only update if the filters actually changed
+      if (newFilterStr !== prevFilterStr) {
+        prevInitialFiltersRef.current = newFilterStr;
+        setColumnFilters(initialColumnFilters || []);
+      }
     }
   }, [initialColumnFilters]);
   
   // Notify parent of filter changes
   const handleColumnFiltersChange = (updater) => {
-    setColumnFilters(updater);
-    if (onColumnFiltersChange) {
-      // If updater is a function, we need to call it with current filters
-      const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
-      onColumnFiltersChange(newFilters);
-    }
+    setColumnFilters((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      onColumnFiltersChange?.(next);
+      return next;
+    });
   };
   
   const table = useMaterialReactTable({
