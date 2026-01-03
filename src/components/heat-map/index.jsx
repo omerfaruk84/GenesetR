@@ -757,7 +757,7 @@ const keyedData = useMemo(() => {
 
       const columnOrder = coordinates
         .map(([key]) => valueKeyMap.get(key))
-        .reverse()
+//        .reverse()
         .map((gene) =>
           graphData.data.feature_names.findIndex((f) => f === gene)
         );
