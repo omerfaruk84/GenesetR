@@ -261,8 +261,18 @@ const waitForTaskCompletionPolling = async (taskId, moduleName = null, useVersio
       });
 
       const data = response.data;
-      const status = data.status;
-      const task_result = data.task_result;
+      const status = data?.status;
+      const task_result = data?.task_result;
+
+      // Some backends (legacy /tasks) may return the final result directly (no wrapper).
+      // Treat that as completion.
+      if (
+        (status === undefined || status === null) &&
+        data !== undefined &&
+        data !== null
+      ) {
+        return data;
+      }
 
       if (status === "PENDING") {
         // Still pending, continue polling

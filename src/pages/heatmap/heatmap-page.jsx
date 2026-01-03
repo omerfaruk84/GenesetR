@@ -44,13 +44,13 @@ const HeatMapPage = ({ heatmapResults, calcResults }) => {
 
   return (
     <div className={styles.mainView}>
-      {heatmapResults ? (
-        <HeatMap graphData={heatmapResults} />
-      ) : isCalculationRunning ? (
+      {isCalculationRunning ? (
         <LoadingPage
           progressMessage={progressMessage || "Generating heatmap..."}
           progressPercentage={progressPercentage}
         />
+      ) : heatmapResults ? (
+        <HeatMap graphData={heatmapResults} />
       ) : (
         <div>
           <Accordion 

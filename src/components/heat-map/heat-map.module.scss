@@ -109,6 +109,9 @@
 .contextMenuItem {
   width: 100%;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 10px;
   border: 0;
   border-radius: 6px;
@@ -116,6 +119,16 @@
   color: #212121;
   font-size: 13px;
   cursor: pointer;
+}
+
+.contextMenuIcon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #616161;
+  flex: 0 0 auto;
 }
 
 .contextMenuItem:hover {
@@ -131,4 +144,17 @@
   height: 1px;
   margin: 6px 4px;
   background: #eeeeee;
+}
+
+.exportOverlay {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10001;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(33, 33, 33, 0.92);
+  color: #ffffff;
+  font-size: 13px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
 }

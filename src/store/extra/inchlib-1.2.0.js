@@ -4153,7 +4153,6 @@ InCHlib.prototype._export_icon_click = function () {
 
     buttons.click(function () {
       var action = $(this).attr("data-action");
-      var zoom = 3;
       var width = self.stage.width();
       var height = self.stage.height();
       var loading_div = $(
@@ -4161,71 +4160,124 @@ InCHlib.prototype._export_icon_click = function () {
           width +
           "px; height: " +
           height +
-          "px;'>Loading...</h3>"
+          "px;'>Exporting...</h3>"
       );
       self.target_element.after(loading_div);
-      self.target_element.hide();
-      self.stage.width(width * zoom);
-      self.stage.height(height * zoom);
-      self.stage.scale({ x: zoom, y: zoom });
-      self.stage.draw();
       self.navigation_layer.hide();
-      try {
-        var dataUrl = self.stage.toDataURL({ quality: 1, mimeType: "image/png" });
-        if (action === "open") {
-          open_image(dataUrl);
-        } else {
-          download_image(dataUrl);
-        }
-      } finally {
-        self.stage.width(width);
-        self.stage.height(height);
-        self.stage.scale({ x: 1, y: 1 });
-        self.stage.draw();
+      self.navigation_layer.draw();
+      var cleaned = false;
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         loading_div.remove();
-        self.target_element.show();
         self.navigation_layer.show();
         self.navigation_layer.draw();
         overlay.trigger("click");
       }
+
+      try {
+        setTimeout(function () {
+          var content = self.stage.getContent && self.stage.getContent();
+          var canvases =
+            content &&
+            content.getElementsByTagName &&
+            content.getElementsByTagName("canvas");
+
+          // Prefer toBlob to avoid huge base64 strings + UI freezes
+          if (canvases && canvases.length) {
+            try {
+              var baseCanvas = canvases[0];
+              var out = document.createElement("canvas");
+              out.width = baseCanvas.width;
+              out.height = baseCanvas.height;
+              var ctx = out.getContext("2d");
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, out.width, out.height);
+              for (var i = 0; i < canvases.length; i++) {
+                ctx.drawImage(canvases[i], 0, 0);
+              }
+
+              out.toBlob(
+                function (blob) {
+                  try {
+                    if (!blob) return;
+                    if (action === "open") open_blob(blob);
+                    else download_blob(blob);
+                  } finally {
+                    cleanup();
+                  }
+                },
+                "image/png",
+                1
+              );
+            } catch (e) {
+              cleanup();
+            }
+            return;
+          }
+
+          // Fallback to built-in stage export (async)
+          self.stage.toDataURL({
+            quality: 1,
+            mimeType: "image/png",
+            callback: function (dataUrl) {
+              try {
+                if (action === "open") open_image(dataUrl);
+                else download_image(dataUrl);
+              } finally {
+                cleanup();
+              }
+            },
+          });
+        }, 0);
+      } catch (e) {
+        cleanup();
+      }
     });
   }
 
+  function download_blob(blob) {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "inchlib.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 0);
+  }
+
+  function open_blob(blob) {
+    var url = URL.createObjectURL(blob);
+    var win = window.open(url, "_blank");
+    if (!win) download_blob(blob);
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 10000);
+  }
+
   function download_image(dataUrl) {
-    try {
-      var parts = dataUrl.split(",");
-      var header = parts[0] || "";
-      var base64 = parts[1] || "";
-      var mimeMatch = header.match(/data:(.*?);/);
-      var mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-      var binary = atob(base64);
-      var bytes = new Uint8Array(binary.length);
-      for (var i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      var blob = new Blob([bytes], { type: mimeType });
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement("a");
-      link.href = url;
-      link.download = "inchlib.png";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(function () {
-        URL.revokeObjectURL(url);
-      }, 0);
-    } catch (e) {
-      var fallback = document.createElement("a");
-      fallback.href = dataUrl;
-      fallback.download = "inchlib.png";
-      document.body.appendChild(fallback);
-      fallback.click();
-      fallback.remove();
-    }
+    if (typeof dataUrl !== "string") return;
+    fetch(dataUrl)
+      .then(function (r) {
+        return r.blob();
+      })
+      .then(function (blob) {
+        download_blob(blob);
+      });
   }
 
   function open_image(dataUrl) {
-    window.open(dataUrl, "_blank");
+    if (typeof dataUrl !== "string") return;
+    fetch(dataUrl)
+      .then(function (r) {
+        return r.blob();
+      })
+      .then(function (blob) {
+        open_blob(blob);
+      });
   }
 };
 

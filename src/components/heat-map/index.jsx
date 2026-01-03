@@ -8,7 +8,15 @@ import React, {
 import InCHlib from "../../store/extra/inchlib-1.2.0.js";
 import styles from "./heat-map.module.scss";
 import { GeneSetEnrichmentTable } from "../enrichment/index.jsx";
-import { FaChartBar, FaTable } from "react-icons/fa";
+import {
+  FaChartBar,
+  FaTable,
+  FaUndo,
+  FaArrowsAlt,
+  FaDownload,
+  FaRegCheckSquare,
+  FaRegSquare,
+} from "react-icons/fa";
 import EnrichmentTable from "../enrichment-table-new/index.jsx";
 import { connect, useDispatch } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
@@ -74,47 +82,92 @@ const HeatMap = ({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-  const exportHeatmapAsPng = useCallback(() => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportHeatmapImage = useCallback(async ({ mimeType, extension, quality }) => {
     const inchlib = inchlibInstance.current;
     const stage = inchlib?.stage;
     if (!stage) return;
 
-    const dataUrlToBlob = (dataUrl) => {
-      const [header, base64] = dataUrl.split(",");
-      const mimeMatch = header.match(/data:(.*?);/);
-      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return new Blob([bytes], { type: mimeType });
+    const delayFrame = () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      });
+
+    const compositeStageToCanvas = () => {
+      const content = stage.getContent?.();
+      const canvases = content?.getElementsByTagName?.("canvas");
+      if (!canvases || canvases.length === 0) {
+        throw new Error("Export failed: canvas not available");
+      }
+
+      const baseCanvas = canvases[0];
+      const out = document.createElement("canvas");
+      out.width = baseCanvas.width;
+      out.height = baseCanvas.height;
+
+      const ctx = out.getContext("2d");
+      if (!ctx) throw new Error("Export failed: canvas context not available");
+
+      // Force an opaque white background (PNG/JPEG) so labels/dendrograms render clearly.
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, out.width, out.height);
+
+      for (const c of canvases) {
+        ctx.drawImage(c, 0, 0);
+      }
+
+      return out;
     };
 
-    const zoom = 3;
-    const width = stage.width();
-    const height = stage.height();
-    const prevScaleX = stage.scaleX?.() ?? 1;
-    const prevScaleY = stage.scaleY?.() ?? 1;
+    const canvasToBlob = (canvas) =>
+      new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) reject(new Error("Export failed: could not create image blob"));
+            else resolve(blob);
+          },
+          mimeType,
+          quality
+        );
+      });
 
     try {
-      inchlib?.navigation_layer?.hide?.();
-      stage.width(width * zoom);
-      stage.height(height * zoom);
-      stage.scale({ x: zoom, y: zoom });
-      stage.draw();
+      setIsExporting(true);
+      await delayFrame();
 
-      const dataUrl = stage.toDataURL({ mimeType: "image/png", quality: 1 });
-      const blob = dataUrlToBlob(dataUrl);
+      inchlib?.navigation_layer?.hide?.();
+      inchlib?.navigation_layer?.draw?.();
+
+      const canvas = compositeStageToCanvas();
+      const blob = await canvasToBlob(canvas);
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      saveAs(blob, `heatmap-${timestamp}.png`);
+      saveAs(blob, `heatmap-${timestamp}.${extension}`);
+    } catch (e) {
+      console.error(e);
     } finally {
-      stage.width(width);
-      stage.height(height);
-      stage.scale({ x: prevScaleX, y: prevScaleY });
-      stage.draw();
       inchlib?.navigation_layer?.show?.();
       inchlib?.navigation_layer?.draw?.();
+      setIsExporting(false);
     }
   }, []);
+
+  const exportHeatmapAsPng = useCallback(() => {
+    return exportHeatmapImage({
+      mimeType: "image/png",
+      extension: "png",
+      quality: 1,
+      backgroundColor: "#ffffff",
+    });
+  }, [exportHeatmapImage]);
+
+  const exportHeatmapAsJpeg = useCallback(() => {
+    return exportHeatmapImage({
+      mimeType: "image/jpeg",
+      extension: "jpg",
+      quality: 1,
+    });
+  }, [exportHeatmapImage]);
 
   const toggleInchlibSetting = useCallback(
     (settingName) => {
@@ -1013,6 +1066,9 @@ const keyedData = useMemo(() => {
               handleResetZoom();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              <FaUndo />
+            </span>
             Reset zoom
           </button>
           <button
@@ -1023,6 +1079,9 @@ const keyedData = useMemo(() => {
               handleManualFitToScreen();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              <FaArrowsAlt />
+            </span>
             Fit to screen
           </button>
           <div className={styles.contextMenuSeparator} />
@@ -1035,7 +1094,24 @@ const keyedData = useMemo(() => {
             }}
             disabled={!inchlibInstance.current?.stage}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              <FaDownload />
+            </span>
             Export PNG
+          </button>
+          <button
+            type="button"
+            className={styles.contextMenuItem}
+            onClick={() => {
+              closeContextMenu();
+              exportHeatmapAsJpeg();
+            }}
+            disabled={!inchlibInstance.current?.stage}
+          >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              <FaDownload />
+            </span>
+            Export JPEG
           </button>
           <div className={styles.contextMenuSeparator} />
           <button
@@ -1046,6 +1122,13 @@ const keyedData = useMemo(() => {
               closeContextMenu();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              {asBool(inchlibSettings?.draw_row_ids) ? (
+                <FaRegCheckSquare />
+              ) : (
+                <FaRegSquare />
+              )}
+            </span>
             {asBool(inchlibSettings?.draw_row_ids) ? "Hide" : "Show"} row IDs
           </button>
           <button
@@ -1056,6 +1139,13 @@ const keyedData = useMemo(() => {
               closeContextMenu();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              {asBool(inchlibSettings?.show_column_names) ? (
+                <FaRegCheckSquare />
+              ) : (
+                <FaRegSquare />
+              )}
+            </span>
             {asBool(inchlibSettings?.show_column_names) ? "Hide" : "Show"} column IDs
           </button>
           <button
@@ -1066,6 +1156,13 @@ const keyedData = useMemo(() => {
               closeContextMenu();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              {asBool(inchlibSettings?.show_row_dendrogram) ? (
+                <FaRegCheckSquare />
+              ) : (
+                <FaRegSquare />
+              )}
+            </span>
             {asBool(inchlibSettings?.show_row_dendrogram) ? "Hide" : "Show"} row dendrogram
           </button>
           <button
@@ -1076,6 +1173,13 @@ const keyedData = useMemo(() => {
               closeContextMenu();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              {asBool(inchlibSettings?.show_column_dendrogram) ? (
+                <FaRegCheckSquare />
+              ) : (
+                <FaRegSquare />
+              )}
+            </span>
             {asBool(inchlibSettings?.show_column_dendrogram) ? "Hide" : "Show"} column dendrogram
           </button>
           <button
@@ -1086,8 +1190,21 @@ const keyedData = useMemo(() => {
               closeContextMenu();
             }}
           >
+            <span className={styles.contextMenuIcon} aria-hidden="true">
+              {asBool(inchlibSettings?.show_cell_values) ? (
+                <FaRegCheckSquare />
+              ) : (
+                <FaRegSquare />
+              )}
+            </span>
             {asBool(inchlibSettings?.show_cell_values) ? "Hide" : "Show"} cell values
           </button>
+        </div>
+      )}
+
+      {isExporting && (
+        <div className={styles.exportOverlay} aria-live="polite">
+          Exporting image…
         </div>
       )}
     </>
