@@ -9,22 +9,23 @@ import { MaterialReactTable } from 'material-react-table';
 import ReactECharts from 'echarts-for-react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import styles from './deregulated-genes.module.scss';
+import { SERVER_ADDRESS } from "../../store/api/config";
+import { escapeHtml } from "../../utils/escapeHtml";
+import { withErrorBoundary } from "../error-boundary";
+
+const formatZ = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "";
 
 const DeregulatedGenes = ({ data, multiDatasetData }) => {
-  const isDevEnv = process.env.NODE_ENV !== "production";
-  const SERVER_ADDRESS = isDevEnv ? "http://localhost:8443" : "https://genesetr.uio.no/api";
   const dispatch = useDispatch();
   const blacklistData = useSelector((state) => state.blacklist?.data);
   const blacklistLoading = useSelector((state) => state.blacklist?.loading);
   const deregulatedSettings = useSelector((state) => state.settings?.deregulatedGenes);
   const [activeTab, setActiveTab] = useState("table");
-  const [tableData, setTableData] = useState([]);
   const [heatmapData, setHeatmapData] = useState(null);
-  const [showHeatmap, setShowHeatmap] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailData, setDetailData] = useState({ gene: null, entries: [] });
   const [tableDataset, setTableDataset] = useState(null);
-  const [tableDatasetLabel, setTableDatasetLabel] = useState("");
 
   // Load blacklist data once
   useEffect(() => {
@@ -45,76 +46,111 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
   // initialize selected dataset for table
   useEffect(() => {
     if (multiDatasetData?.datasets) {
-      setTableDataset((prev) => prev || "MULTI");
+      // Keep the current choice only while it still exists in the new result
+      setTableDataset((prev) =>
+        prev && (prev === "MULTI" || multiDatasetData.datasets[prev]) ? prev : "MULTI"
+      );
     } else if (data?.metadata?.dataset) {
       setTableDataset(data.metadata.dataset);
     }
   }, [multiDatasetData, data]);
 
-  useEffect(() => {
-    let sourceResults = null;
-    let sourceLabel = "";
-
+  // Which result the table shows (derived, no state)
+  const { sourceResults, tableDatasetLabel, showHeatmap } = useMemo(() => {
     if (tableDataset === "MULTI") {
-      sourceResults = multiDatasetData?.common_genes || [];
-      sourceLabel = "Multi Dataset Aggregate";
-      setShowHeatmap(false);
-    } else if (multiDatasetData?.datasets && tableDataset && multiDatasetData.datasets[tableDataset]) {
-      sourceResults = multiDatasetData.datasets[tableDataset].results;
-      sourceLabel = tableDataset;
-      setShowHeatmap(true);
-    } else if (data?.results) {
-      sourceResults = data.results;
-      sourceLabel = data?.metadata?.dataset || tableDataset || "Selected dataset";
-      setShowHeatmap(true);
+      return {
+        sourceResults: multiDatasetData?.common_genes || [],
+        tableDatasetLabel: "Multi Dataset Aggregate",
+        showHeatmap: false,
+      };
     }
+    if (multiDatasetData?.datasets && tableDataset && multiDatasetData.datasets[tableDataset]) {
+      return {
+        sourceResults: multiDatasetData.datasets[tableDataset].results || [],
+        tableDatasetLabel: tableDataset,
+        showHeatmap: true,
+      };
+    }
+    if (data?.results) {
+      return {
+        sourceResults: data.results,
+        tableDatasetLabel: data?.metadata?.dataset || tableDataset || "Selected dataset",
+        showHeatmap: true,
+      };
+    }
+    return { sourceResults: null, tableDatasetLabel: "", showHeatmap: true };
+  }, [tableDataset, multiDatasetData, data]);
+
+  // Table rows. Recomputed whenever the result, the blacklist data (loaded
+  // asynchronously) or the blacklist settings change, so the filter is always
+  // applied to what is on screen.
+  const tableData = useMemo(() => {
+    if (!sourceResults) return [];
+
+    const filterEnabled = !!deregulatedSettings?.filterBlacklistEnabled;
+    const threshold = deregulatedSettings?.filterBlackListed ?? 0;
 
     const passesBlacklist = (gene, avgZ) => {
-      if (!deregulatedSettings?.filterBlacklistEnabled) return true;
-      if (!blacklistData) return true;
-      const threshold = deregulatedSettings?.filterBlackListed ?? 0;
-      const val = parseFloat(avgZ);
-      if (isNaN(val)) return true;
-      if (val < 0 && blacklistData.blackListDown && blacklistData.blackListDown[gene] !== undefined) {
+      if (!filterEnabled || !blacklistData) return true;
+      if (typeof avgZ !== "number" || Number.isNaN(avgZ)) return true;
+      if (avgZ < 0 && blacklistData.blackListDown && blacklistData.blackListDown[gene] !== undefined) {
         return blacklistData.blackListDown[gene] <= threshold;
       }
-      if (val > 0 && blacklistData.blackListUp && blacklistData.blackListUp[gene] !== undefined) {
+      if (avgZ > 0 && blacklistData.blackListUp && blacklistData.blackListUp[gene] !== undefined) {
         return blacklistData.blackListUp[gene] <= threshold;
       }
       return true;
     };
 
-    if (sourceResults) {
-      const processedTableData = sourceResults
-        .map((gene, index) => ({
+    return sourceResults
+      .map((gene, index) => {
+        const avg = Number(gene.avg_z_score);
+        return {
           id: index,
           gene: gene.gene_symbol || gene.gene,
-          avgZScore: gene.avg_z_score?.toFixed ? gene.avg_z_score.toFixed(3) : (gene.avg_z_score || 0).toString(),
+          // Kept numeric so the column sorts numerically; formatted in the cell.
+          avgZScore: Number.isFinite(avg) ? avg : 0,
           frequency: gene.frequency || 0,
           direction: gene.direction_label || gene.direction || 'N/A',
           perturbationCount: gene.perturbation_count || 0,
           datasetCount: gene.dataset_count || 0,
-        }))
-        .filter((row) => passesBlacklist(row.gene, row.avgZScore));
-      setTableData(processedTableData);
-      setTableDatasetLabel(sourceLabel);
-    } else {
-      setTableData([]);
-      setTableDatasetLabel("");
+        };
+      })
+      .filter((row) => passesBlacklist(row.gene, row.avgZScore));
+  }, [
+    sourceResults,
+    blacklistData,
+    deregulatedSettings?.filterBlacklistEnabled,
+    deregulatedSettings?.filterBlackListed,
+  ]);
+
+  // The heatmap tab does not exist for the multi-dataset aggregate.
+  useEffect(() => {
+    if (!showHeatmap && activeTab === "heatmap") {
+      setActiveTab("table");
     }
+  }, [showHeatmap, activeTab]);
+
+  useEffect(() => {
+    // Set when the selection changes or the component unmounts, so a slow
+    // request for a previous dataset can never overwrite the current heatmap.
+    let cancelled = false;
 
     // Process heatmap when a single dataset is selected
     const loadHeatmap = async () => {
-      if (tableDataset === "MULTI") {
+      if (tableDataset === "MULTI" || !tableDataset) {
         setHeatmapData(null);
         return;
       }
 
       // If current single-dataset payload matches selection and has heatmap, reuse it
       if (data?.metadata?.dataset === tableDataset && data?.heatmap_data) {
-        processHeatmapData(data.heatmap_data);
+        setHeatmapData(buildHeatmapOption(data.heatmap_data));
         return;
       }
+
+      // Do not keep showing another dataset's heatmap while loading
+      setHeatmapData(null);
 
       // Try to fetch heatmap for selected dataset using existing metadata
       const meta =
@@ -152,23 +188,26 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
           fallbackToPolling: true,
           useVersionedEndpoint: false,
         });
+        if (cancelled) return;
         const parsed = typeof taskResult === "string" ? JSON.parse(taskResult) : taskResult;
-        if (parsed?.heatmap_data) {
-          processHeatmapData(parsed.heatmap_data);
-        } else {
-          setHeatmapData(null);
-        }
+        setHeatmapData(buildHeatmapOption(parsed?.heatmap_data));
       } catch (e) {
-        setHeatmapData(null);
+        if (!cancelled) setHeatmapData(null);
       }
     };
 
     loadHeatmap();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, multiDatasetData, tableDataset]);
 
-  const processHeatmapData = (heatmapData) => {
+  // ECharts option for a heatmap payload, or null when the payload is unusable
+  const buildHeatmapOption = (heatmapData) => {
     if (!heatmapData || !heatmapData.genes || !heatmapData.perturbations || !heatmapData.matrix) {
-      return;
+      return null;
     }
 
     const option = {
@@ -178,7 +217,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
           const perturbation = heatmapData.perturbations[params.value[0]];
           const gene = heatmapData.genes[params.value[1]];
           const zScore = params.value[2];
-          return `Gene: ${gene}<br/>Perturbation: ${perturbation}<br/>Z-Score: ${zScore.toFixed(3)}`;
+          return `Gene: ${escapeHtml(gene)}<br/>Perturbation: ${escapeHtml(perturbation)}<br/>Z-Score: ${formatZ(zScore) || "n/a"}`;
         }
       },
       grid: {
@@ -229,7 +268,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
       }]
     };
 
-    setHeatmapData(option);
+    return option;
   };
 
   const enrichmentGeneLists = useMemo(() => {
@@ -287,6 +326,8 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
       accessorKey: 'avgZScore',
       header: 'Avg Z-Score',
       size: 120,
+      sortingFn: 'basic', // numeric
+      Cell: ({ cell }) => formatZ(cell.getValue()),
     },
     {
       accessorKey: 'frequency',
@@ -488,4 +529,9 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
   );
 };
 
-export { DeregulatedGenes };
+const SafeDeregulatedGenes = withErrorBoundary(DeregulatedGenes, {
+  label: "Deregulated genes",
+  resetKeys: (props) => [props.data, props.multiDatasetData],
+});
+
+export { SafeDeregulatedGenes as DeregulatedGenes };

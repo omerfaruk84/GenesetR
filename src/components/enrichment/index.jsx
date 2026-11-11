@@ -36,6 +36,7 @@ import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { performEnrichment } from "./enrichrAPI";
 import { saveAs } from "file-saver";
 import { CopyToClipboard } from "react-copy-to-clipboard";
+import { withErrorBoundary } from "../error-boundary";
 
 import {
   GridComponent,
@@ -95,10 +96,31 @@ var checkNode = function (obj, path, value) {
   obj.checked = value;
 };
 
-const onChange = (currentNode, selectedNodes) => {
-  checkNode(data, currentNode.path, currentNode.checked);
-};
+// Gene-count limits accepted for an enrichment run (inclusive).
+const MIN_ENRICHMENT_GENES = 3;
+const MAX_ENRICHMENT_GENES = 400;
 
+const countGenes = (genes) =>
+  String(genes || "")
+    .split(",")
+    .map((g) => g.trim())
+    .filter(Boolean).length;
+
+// Numeric when both values are numbers (or numeric strings such as "1.2e-5"),
+// text otherwise; arrays (overlapping genes) compare by length.
+const compareCells = (a, b) => {
+  const av = Array.isArray(a) ? a.length : a;
+  const bv = Array.isArray(b) ? b.length : b;
+  const an = typeof av === "number" ? av : parseFloat(av);
+  const bn = typeof bv === "number" ? bv : parseFloat(bv);
+  const aIsNum = Number.isFinite(an) && String(av).trim() !== "" && !Number.isNaN(Number(av));
+  const bIsNum = Number.isFinite(bn) && String(bv).trim() !== "" && !Number.isNaN(Number(bv));
+  if (aIsNum && bIsNum) return an - bn;
+  return String(av ?? "").localeCompare(String(bv ?? ""), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+};
 
 
 /*
@@ -112,14 +134,30 @@ const GeneSetEnrichmentTable = ({
   genesetEnrichmentSettings,
   //clusteringSettingsChanged,
 }) => {
-  console.log(genesets);
   assignObjectPaths(data);
   const dispatch = useDispatch();
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
   const [genelistOptions, setGeneListOptions] = useState([]);
+  const [limitNotice, setLimitNotice] = useState("");
   const [showNavigationMenu, setShowNavigationMenu] = useState(false);
   const navigationMenuRef = useRef(null);
+  // Monotonic id of the latest enrichment request; older responses are ignored.
+  const enrichmentRequestRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Currently selected gene list (undefined when the selection is stale).
+  const selectedGeneItem = genelistOptions.find(
+    (item) => item?.value === selectedCluster
+  );
+  const selectedGenesRaw = selectedGeneItem?.genes || "";
 
   //Rank, Term name, P-value, Z-score, Combined score, Overlapping genes, Adjusted p-value, Old p-value, Old adjusted p-value
   const headings = [
@@ -132,8 +170,6 @@ const GeneSetEnrichmentTable = ({
     "Adjusted p-value",
     "GC",
   ];
-
-  let temp = [{}];
 
   function findCheckedLeaves(node) {
     // Initialize an array to hold the labels of checked leaf nodes
@@ -165,51 +201,74 @@ const GeneSetEnrichmentTable = ({
     for (let obj of dataToUse) {
       selectedDatasets = selectedDatasets.concat(findCheckedLeaves(obj));
     }
+    // A library listed under two categories must only be queried once.
+    selectedDatasets = Array.from(new Set(selectedDatasets));
+
+    // Only the most recent request may update the view; a slower, older
+    // request must never overwrite the results of the list selected now.
+    const requestId = ++enrichmentRequestRef.current;
+    const isCurrent = () =>
+      isMountedRef.current && enrichmentRequestRef.current === requestId;
+
+    if (selectedDatasets.length === 0) {
+      setkeyedData([]);
+      return;
+    }
+
+    const formatP = (value) => {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "";
+      return num > 0.001 ? num.toFixed(5) : num.toExponential(2);
+    };
+    const formatFixed = (value, digits) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toFixed(digits) : "";
+    };
 
     performEnrichment(genes, selectedDatasets.join().replaceAll(" ", "_"))
       .then((results) => {
-        temp.length = 0;
-        for (let i in results) {
-          for (let j in results[i].data) {
-            temp.push({
-              Dataset: results[i].name.replaceAll("_", " "),
-              Rank: results[i].data[j][0],
+        if (!isCurrent()) return;
+        const rows = [];
+        for (const library of results || []) {
+          for (const term of library?.data || []) {
+            if (!Array.isArray(term)) continue;
+            const termName = String(term[1] ?? "");
+            rows.push({
+              Dataset: String(library.name || "").replaceAll("_", " "),
+              Rank: term[0],
               "Term name":
-                results[i].data[j][1].charAt(0).toUpperCase() +
-                results[i].data[j][1].slice(1).split("(")[0],
-              "P-value":
-                results[i].data[j][2] > 0.001
-                  ? results[i].data[j][2].toFixed(5)
-                  : results[i].data[j][2].toExponential(2),
-              "Z-score": results[i].data[j][3].toFixed(1),
-              "Combined score": results[i].data[j][4].toFixed(1),
-              "Adjusted p-value":
-                results[i].data[j][6] > 0.001
-                  ? results[i].data[j][6].toFixed(5)
-                  : results[i].data[j][6].toExponential(2),
-              GC: results[i].data[j][5],
+                termName.charAt(0).toUpperCase() +
+                termName.slice(1).split("(")[0],
+              "P-value": formatP(term[2]),
+              "Z-score": formatFixed(term[3], 1),
+              "Combined score": formatFixed(term[4], 1),
+              "Adjusted p-value": formatP(term[6]),
+              GC: Array.isArray(term[5]) ? term[5] : [],
             });
           }
         }
 
         // Sort by adjusted p-value (low to high) as default
-        temp.sort((a, b) => {
-          const aVal = typeof a["Adjusted p-value"] === 'string' ? parseFloat(a["Adjusted p-value"]) : a["Adjusted p-value"];
-          const bVal = typeof b["Adjusted p-value"] === 'string' ? parseFloat(b["Adjusted p-value"]) : b["Adjusted p-value"];
-          return aVal - bVal;
-        });
+        rows.sort(
+          (a, b) =>
+            parseFloat(a["Adjusted p-value"]) - parseFloat(b["Adjusted p-value"])
+        );
 
-        setkeyedData(temp);
+        setkeyedData(rows);
       })
       .catch((error) => {
+        if (!isCurrent()) return;
+        setkeyedData([]);
         toast({
           message: {
             type: "Error",
             icon: true,
             heading: "Enrichr",
-            content: "Sorry. Enrichr servers are not responding." + error,
+            content:
+              "Sorry, Enrichr could not be reached. " +
+              (error?.message ? error.message : ""),
           },
-          autoClose: 2000,
+          autoClose: 3000,
         });
       });
   };
@@ -239,20 +298,23 @@ const GeneSetEnrichmentTable = ({
     
     // Update the specific node that was clicked
     checkNode(dataCopy, currentNode.path, currentNode.checked);
-    
-    // If it's a parent node, also update all children
-    if (currentNode.children && currentNode.children.length > 0) {
-      const updateChildren = (node, checked) => {
-        if (node.children) {
-          node.children.forEach(child => {
-            child.checked = checked;
-            updateChildren(child, checked);
-          });
-        }
-      };
-      updateChildren(currentNode, currentNode.checked);
+
+    // If it's a parent node, also update all of its children in the copy
+    // (the libraries actually queried are the checked leaves).
+    let clicked = dataCopy;
+    for (const part of String(currentNode.path).split(".")) {
+      clicked = clicked?.[part];
     }
-    
+    const updateChildren = (node, checked) => {
+      if (node && Array.isArray(node.children)) {
+        node.children.forEach((child) => {
+          child.checked = checked;
+          updateChildren(child, checked);
+        });
+      }
+    };
+    updateChildren(clicked, currentNode.checked);
+
     setTempData(dataCopy);
   };
 
@@ -295,15 +357,16 @@ const GeneSetEnrichmentTable = ({
     setSelectedPage(1);
   }, [filters, sorts]);
   const firstVisibleRow = (selectedPage - 1) * rowsPerPage;
-  const lastVisibleRow =
-    rowsPerPage === 0 ? keyedData.length - 1 : firstVisibleRow + rowsPerPage;
   const filterAndSortDataRows = (dataRows, filters, sorts) =>
     dataRows
       .filter((row) =>
         Object.keys(filters).every((key) => {
           return filters[key] === ""
             ? true
-            : row[key]?.toString().includes(filters[key]);
+            : row[key]
+                ?.toString()
+                .toLowerCase()
+                .includes(String(filters[key]).toLowerCase());
         })
       )
       .sort((a, b) =>
@@ -311,10 +374,10 @@ const GeneSetEnrichmentTable = ({
           .map(([key, value]) => {
             switch (value) {
               case "up": {
-                return a[key] - b[key];
+                return compareCells(a[key], b[key]);
               }
               case "down": {
-                return b[key] - a[key];
+                return compareCells(b[key], a[key]);
               }
               default:
                 return 0;
@@ -325,7 +388,10 @@ const GeneSetEnrichmentTable = ({
   const dataHeaders = (dataRowsKeys, filters, setFilters, sorts, setSorts) => {
     const dataSortCells = dataRowsKeys.map((key) => {
       const sort = Object.keys(sorts).includes(key) ? sorts[key] : "";
-      const prettifyHeaderValue = `${key[0].toUpperCase()}${key.slice(1)}`;
+      // "GC" holds the overlapping genes; show it as an explicit overlap count
+      // so a term supported by a single gene is obvious.
+      const prettifyHeaderValue =
+        key === "GC" ? "Overlap (genes)" : `${key[0].toUpperCase()}${key.slice(1)}`;
       return {
         key,
         value: prettifyHeaderValue,
@@ -363,6 +429,11 @@ const GeneSetEnrichmentTable = ({
     filters,
     sorts
   );
+  // "Show all" (0 rows per page) must include the last row as well.
+  const lastVisibleRow =
+    rowsPerPage === 0
+      ? filteredAndSortedData.length
+      : firstVisibleRow + rowsPerPage;
 
   const ClusterInfoForm = ({ title, subtitle, value, value2 }) => (
     <>
@@ -389,15 +460,16 @@ const GeneSetEnrichmentTable = ({
   );
   //let allGenes = selectedCluster?clusters[selectedCluster?.split(" (")[0]]?.split(","):[]
 
-  let allGenes =
-    selectedCluster && genelistOptions.length > 0
-      ? genelistOptions
-          .find((item) => item?.value === selectedCluster)
-          .genes?.replaceAll("_2", "")
-          .replaceAll(" ", "")
-          .split(",")
-      : [];
-  allGenes = [...new Set(allGenes)];
+  // Selected genes without the "_2" guide suffix / non-targeting controls.
+  const cleanSelectedGenes = (keepControls = false) =>
+    selectedGenesRaw
+      .replaceAll("_2", "")
+      .split(",")
+      .map((gene) => gene.trim())
+      .filter(Boolean)
+      .filter((gene) => keepControls || !gene.startsWith("non-targeting"));
+
+  let allGenes = [...new Set(cleanSelectedGenes(true))];
   const dataRows = [
     ...filteredAndSortedData
       .slice(firstVisibleRow, lastVisibleRow)
@@ -408,8 +480,12 @@ const GeneSetEnrichmentTable = ({
           key === "GC"
             ? {
                 key: "GC",
-                value: value.length,
-                tooltip: value.join(", "),
+                // overlap count / size of the submitted list
+                value:
+                  allGenes.length > 0
+                    ? `${value.length} / ${allGenes.length}`
+                    : value.length,
+                tooltip: `${value.length} overlapping gene${value.length === 1 ? "" : "s"}: ${value.join(", ")}`,
                 type: "Popover",
                 content: (
                   <ClusterInfoForm
@@ -458,11 +534,25 @@ const GeneSetEnrichmentTable = ({
           label: "Download",
           disabled: keyedData === undefined,
           onClick: () => {
+            // Same columns as the table; the overlap is exported as a count
+            // plus the overlapping genes.
+            const exportHeadings = headings
+              .filter((h) => h !== "GC")
+              .concat(["Overlap count", "Overlapping genes"]);
             const csvData =
-              headings.join("\t") +
+              exportHeadings.join("\t") +
               "\n" +
               keyedData
-                .map((item) => Object.values(item).join("\t"))
+                .map((item) =>
+                  headings
+                    .filter((h) => h !== "GC")
+                    .map((h) => item[h] ?? "")
+                    .concat([
+                      Array.isArray(item.GC) ? item.GC.length : "",
+                      Array.isArray(item.GC) ? item.GC.join(",") : "",
+                    ])
+                    .join("\t")
+                )
                 .join("\n");
             // Create a blob with the data
             const blob = new Blob([csvData], {
@@ -554,26 +644,39 @@ const GeneSetEnrichmentTable = ({
   useEffect(() => {
     const bubbleGraphData = [];
 
-    for (let data in keyedData) {
-      if (keyedData[data]["Adjusted p-value"] < 0.05) {
+    // -log10 that stays finite when Enrichr reports p = 0 (underflow).
+    const negLog10 = (value) => {
+      const p = parseFloat(value);
+      if (!Number.isFinite(p)) return NaN;
+      return p > 0 ? -Math.log10(p) : 300;
+    };
+
+    for (const row of keyedData) {
+      if (parseFloat(row["Adjusted p-value"]) < 0.05) {
         const objClone = {
-          "Adjusted log p-value": (-Math.log10(
-            keyedData[data]["Adjusted p-value"]
-          )).toFixed(2),
-          "p-value": -Math.log10(keyedData[data]["P-value"]),
-          "Combined score": keyedData[data]["Combined score"],
-          "Z-score": keyedData[data]["Z-score"], // Math.log(keyedData[data]['Z-score'],10),
-          "Term name": keyedData[data]["Term name"],
-          Genes: keyedData[data]["GC"],
-          Dataset: keyedData[data]["Dataset"],
+          "Adjusted log p-value": Number(negLog10(row["Adjusted p-value"]).toFixed(2)),
+          "p-value": negLog10(row["P-value"]),
+          "Combined score": Number(row["Combined score"]),
+          "Z-score": Number(row["Z-score"]),
+          "Term name": row["Term name"],
+          Genes: row["GC"],
+          Dataset: row["Dataset"],
         };
 
         bubbleGraphData.push(objClone);
       }
     }
 
-    if (bubbleGraphData.length < 3) {
-    }
+    // -log10(adj. p) of the 10th most significant term (or the weakest one
+    // when there are fewer than 10); terms at or above it get a label.
+    const sortedLogP = bubbleGraphData
+      .map((row) => Number(row["Adjusted log p-value"]))
+      .filter((v) => Number.isFinite(v))
+      .sort((a, b) => b - a);
+    const labelCutoff =
+      sortedLogP.length > 0
+        ? sortedLogP[Math.min(10, sortedLogP.length) - 1]
+        : Number.POSITIVE_INFINITY;
 
     setOptions({
       dataset: {
@@ -632,7 +735,8 @@ const GeneSetEnrichmentTable = ({
         {
           left: "right",
           bottom: "10%",
-          dimension: 0,
+          // "Combined score" is the third dataset dimension (index 2)
+          dimension: 2,
           min: 100,
           max: 1000,
           itemWidth: 30,
@@ -694,7 +798,8 @@ const GeneSetEnrichmentTable = ({
           //name: '1990',
           type: "scatter",
           symbolSize: function (data) {
-            return Math.sqrt(data["Combined Score"]);
+            const score = Number(data?.["Combined score"]);
+            return Number.isFinite(score) && score > 0 ? Math.sqrt(score) : 10;
           },
           emphasis: {
             label: {
@@ -725,15 +830,13 @@ const GeneSetEnrichmentTable = ({
             width: 300,
             fontSize: "12",
             formatter: function (param) {
-              let maxVis = Math.min(10, bubbleGraphData.length);
-              if (
-                param.data &&
-                param.data["Adjusted log p-value"] > 2 &&
-                param.data["Adjusted log  p-value"] >
-                  bubbleGraphData[maxVis]["Adjusted log  p-value"]
-              ) {
+              // Label only the most significant terms (adj. p < 0.01 and
+              // within the 10 strongest) to keep the chart readable.
+              const value = Number(param.data?.["Adjusted log p-value"]);
+              if (Number.isFinite(value) && value > 2 && value >= labelCutoff) {
                 return param.data["Term name"];
-              } else return "";
+              }
+              return "";
             },
             minMargin: 10,
             position: "top",
@@ -886,23 +989,59 @@ const GeneSetEnrichmentTable = ({
 
   // Update gene list options only when genesets changes
   useEffect(() => {
-    if (Object.keys(genesets).length > 0) {
-      let tempx = [];
-      Object.keys(genesets).forEach((gl) => {
-        const geneCount = genesets[gl].trim(",").split(",").length;
-        // Filter: Only include gene lists with more than 2 genes and less than or equal to 400 genes
-        if (geneCount > 2 && geneCount <= 400) {
-          tempx.push({
-            label: `${gl} (${geneCount} genes)`,
-            value: gl,
-            genes: genesets[gl],
-          });
-        }
-      });
-      setGeneListOptions(tempx);
-      // Always update selectedCluster when genesets change to trigger enrichment analysis
-      if (tempx.length > 0) {
-        setselectedCluster(tempx[0].value);
+    const names = Object.keys(genesets || {});
+    const tempx = [];
+    const skipped = [];
+    names.forEach((gl) => {
+      const geneCount = countGenes(genesets[gl]);
+      // Only gene lists with 3-400 genes can be sent to Enrichr
+      if (geneCount >= MIN_ENRICHMENT_GENES && geneCount <= MAX_ENRICHMENT_GENES) {
+        tempx.push({
+          label: `${gl} (${geneCount} genes)`,
+          value: gl,
+          genes: genesets[gl],
+        });
+      } else if (geneCount > 0) {
+        skipped.push({ name: gl, geneCount });
+      }
+    });
+
+    setGeneListOptions((prev) => {
+      // Keep the previous array when nothing changed so an identical genesets
+      // object does not restart the enrichment.
+      const same =
+        prev.length === tempx.length &&
+        prev.every(
+          (item, idx) =>
+            item.value === tempx[idx].value && item.genes === tempx[idx].genes
+        );
+      return same ? prev : tempx;
+    });
+
+    if (tempx.length > 0) {
+      // Keep the user's selection while it still exists; otherwise fall back
+      // to the first list so an enrichment is always shown.
+      setselectedCluster((prev) =>
+        tempx.some((item) => item.value === prev) ? prev : tempx[0].value
+      );
+      setLimitNotice("");
+    } else {
+      // Nothing can be analysed: never leave the previous selection's
+      // enrichment on screen.
+      enrichmentRequestRef.current += 1; // drop responses still in flight
+      setselectedCluster("");
+      setkeyedData([]);
+      if (skipped.length > 0) {
+        const first = skipped[0];
+        setLimitNotice(
+          skipped.length === 1
+            ? `"${first.name}" has ${first.geneCount} gene${first.geneCount === 1 ? "" : "s"}. ` +
+                `Enrichment is only run for lists of ${MIN_ENRICHMENT_GENES}-${MAX_ENRICHMENT_GENES} genes, so no enrichment is shown.`
+            : `None of the ${skipped.length} gene lists has ${MIN_ENRICHMENT_GENES}-${MAX_ENRICHMENT_GENES} genes, ` +
+                `so no enrichment is shown.`
+        );
+      } else {
+        setLimitNotice("");
       }
     }
   }, [genesets]); // Notice: selectedCluster is no longer in the dependency array here
@@ -922,14 +1061,7 @@ const GeneSetEnrichmentTable = ({
   }, [selectedCluster, genelistOptions]);
 
   const handleSaveGeneList = () => {
-    let genesString = selectedCluster
-      ? genelistOptions
-          .find((item) => item.value === selectedCluster)
-          .genes.replaceAll("_2", "")
-          .split(",")
-          .filter((gene) => !gene.trim().startsWith("non-targeting"))
-          .join(",")
-      : "";
+    const genesString = cleanSelectedGenes().join(",");
 
     if (genesString.length > 2) {
       setgenesToSave(genesString);
@@ -938,18 +1070,7 @@ const GeneSetEnrichmentTable = ({
   };
 
   // Get current genes as a formatted string
-  const getCurrentGenes = () => {
-    if (!selectedCluster || genelistOptions.length === 0) return "";
-    const geneItem = genelistOptions.find((item) => item.value === selectedCluster);
-    if (!geneItem) return "";
-    
-    return geneItem.genes
-      .replaceAll("_2", "")
-      .split(",")
-      .filter((gene) => !gene.trim().startsWith("non-targeting"))
-      .map((gene) => gene.trim())
-      .join("\n");
-  };
+  const getCurrentGenes = () => cleanSelectedGenes().join("\n");
 
   // Handle navigation to different pages with genes
   const handleNavigateWithGenes = (route, dataType = "genes") => {
@@ -1248,20 +1369,7 @@ const GeneSetEnrichmentTable = ({
                 icon={<FaDatabase />}
               />
               <Spacer width="6px" />
-              <CopyToClipboard
-                text={
-                  selectedCluster && genelistOptions.length > 0
-                    ? genelistOptions
-                        .find((item) => item.value === selectedCluster)
-                        .genes.replaceAll("_2", "")
-                        .split(",")
-                        .filter(
-                          (gene) => !gene.trim().startsWith("non-targeting")
-                        )
-                        .join("\n")
-                    : ""
-                }
-              >
+              <CopyToClipboard text={getCurrentGenes()}>
                 <Button
                   small
                   label="Copy Genes"
@@ -1295,19 +1403,7 @@ const GeneSetEnrichmentTable = ({
                 content={
                   <TextArea
                     rows={10}
-                    value={
-                      selectedCluster && genelistOptions.length > 0
-                        ? genelistOptions
-                            .find((item) => item.value === selectedCluster)
-                            .genes.replaceAll("_2", "")
-                            .replaceAll(" ", "")
-                            .split(",")
-                            .filter(
-                              (gene) => !gene.trim().startsWith("non-targeting")
-                            )
-                            .join("\n")
-                        : ""
-                    }
+                    value={getCurrentGenes()}
                   />
                 }
                 overflowContainer
@@ -1422,6 +1518,23 @@ const GeneSetEnrichmentTable = ({
             </div>
           </Row>
 
+          {limitNotice && (
+            <div
+              role="status"
+              style={{
+                margin: "8px 0",
+                padding: "10px 12px",
+                backgroundColor: "#fff3cd",
+                border: "1px solid #ffeeba",
+                borderRadius: "6px",
+                color: "#8a6d3b",
+                fontSize: "14px",
+              }}
+            >
+              {limitNotice}
+            </div>
+          )}
+
           <Row spacing={0} width="100%" height="70%">
             <div style={{ width: "100%", height: "100%" }}>
               <ReactEChartsCore
@@ -1445,7 +1558,7 @@ const GeneSetEnrichmentTable = ({
               width: "100%",
             }}
           >
-            <Table table={table} />;
+            <Table table={table} />
           </div>
         </Card>
       </div>
@@ -1461,9 +1574,14 @@ const mapDispatchToProps = {
   genesetEnrichmentSettingsChanged,
 };
 
-const MainContainer = connect(
+const ConnectedGeneSetEnrichmentTable = connect(
   mapStateToProps,
   mapDispatchToProps
 )(GeneSetEnrichmentTable);
+
+// An enrichment failure must not take down the chart/table it is embedded in.
+const MainContainer = withErrorBoundary(ConnectedGeneSetEnrichmentTable, {
+  label: "Enrichment",
+});
 
 export { MainContainer as GeneSetEnrichmentTable };

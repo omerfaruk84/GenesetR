@@ -86,6 +86,15 @@ const DimReductionPage = ({
   // Get current DR method from settings
   const currentMethod = coreSettings?.currentModule || "pca";
 
+  // Label of the sidebar button for the selected method (see side-bar/index.jsx)
+  const drButtonLabels = {
+    pca: "Calculate PCA",
+    mde: "Calculate MDE",
+    umap: "Calculate UMAP",
+    tsne: "Calculate t-SNE",
+  };
+  const drButtonLabel = drButtonLabels[currentMethod] || "Run Calculation";
+
   // Check if any calculation is running
   const isCalculationRunning =
     calcResults?.["tsneGraph"]?.running ||
@@ -246,6 +255,8 @@ const DimReductionPage = ({
         xAxis: [
           {
             type: "category",
+            // Principal components are numbered from 1
+            data: explained_ratio.map((_, index) => "PC" + (index + 1)),
           },
         ],
         yAxis: [
@@ -264,7 +275,8 @@ const DimReductionPage = ({
             min: 0,
             max: explained_ratio[0],
             name: "Variance exp.",
-            interval: Math.round(explained_ratio[0] / 5),
+            // Never 0: a flat variance spectrum (PC1 < 2.5 %) would leave the axis without ticks
+            interval: Math.max(1, Math.round(explained_ratio[0] / 5)),
             axisLabel: {
               formatter: "{value}  %",
             },
@@ -353,7 +365,7 @@ const DimReductionPage = ({
             </p>
             <p className={styles.moduleTextInfos}>
               <strong>To perform t-SNE analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
               button. The t-SNE results will be displayed in this panel. You can
               run the calculation multiple times with different parameters, or you
               can run different DR methods sequentially by selecting the result
@@ -396,7 +408,7 @@ const DimReductionPage = ({
             </p>
             <p className={styles.moduleTextInfos}>
               <strong>To perform UMAP analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
               button. The UMAP results will be displayed in this panel. For other
               dimensionality reduction methods, you can choose one of the tabs
               above. You can run the calculation multiple times with different
@@ -452,7 +464,7 @@ const DimReductionPage = ({
             </p>
             <p className={styles.moduleTextInfos}>
               <strong>To perform MDE analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
               button. The MDE results will be displayed in this panel. For other
               dimensionality reduction methods, you can choose one of the tabs
               above. You can run the calculation multiple times with different
@@ -511,7 +523,7 @@ const DimReductionPage = ({
               <br />
               <br />
               <strong>To perform PCA analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"Run Calculation"</strong>
+              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
               button. The PCA results will be displayed in this panel. For other
               dimensionality reduction methods, you can choose one of the tabs
               above. You can run the calculation multiple times with different
@@ -593,7 +605,7 @@ const DimReductionPage = ({
           marginBottom: '8px',
           fontSize: '13px'
         }}>
-          💡 To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"Run Calculation"</strong> button.
+          💡 To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"{drButtonLabel}"</strong> button.
         </div>
       )}
 

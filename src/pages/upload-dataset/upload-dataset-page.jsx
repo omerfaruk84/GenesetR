@@ -28,6 +28,7 @@ import {
 import styles from './upload-dataset-page.module.scss';
 import { uploadDataset, checkUploadProgress } from '../../store/api';
 import { addUserDataset, coreSettingsChanged, fetchDatasetsFromBackend } from '../../store/settings/core-settings';
+import { correlationSettingsChanged } from '../../store/settings/correlation-settings';
 import { ROUTES } from '../../common/routes';
 
 const moduleDescription = {
@@ -326,6 +327,13 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
     dispatch(coreSettingsChanged({
       settingName: 'cellLine',
       newValue: datasetToSet
+    }));
+
+    // The Correlation page works on its own (multi-select) dataset selection:
+    // pre-select the uploaded dataset there as well.
+    dispatch(correlationSettingsChanged({
+      settingName: 'selectedDatasets',
+      newValue: [uploadedDataset.id]
     }));
 
     console.log('Navigating to correlation page');

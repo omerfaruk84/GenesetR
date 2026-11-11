@@ -1,5 +1,5 @@
 // src/components/GeneListSearchPopup.js
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 import {
   MaterialReactTable,
@@ -23,8 +23,8 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import _ from "lodash";
-// ... other imports
+import { SERVER_ADDRESS } from "../../store/api/config";
+import { formulaGeneSymbols } from "../../utils/geneFormula";
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 const debugLog = (...args) => {
@@ -38,12 +38,12 @@ const debugError = (...args) => {
   }
 };
 
-// Use centralized server address configuration (matches frontend/src/store/api/index.js)
-let SERVER_ADRESS = "https://genesetr.uio.no/api";
-if (isDevEnv) {
-  SERVER_ADRESS = "http://localhost:8443";
-  debugLog("WORKING IN DEVELOPMENT MODE");
-}
+// Backend address comes from the shared API configuration.
+const SERVER_ADRESS = SERVER_ADDRESS;
+
+// Gene symbols of a signature / gene list. Uses the shared formula rules, so
+// "A + B - C" is three genes and a hyphenated symbol such as HLA-A stays whole.
+const signatureGenes = (input) => formulaGeneSymbols(input);
 
 const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAndCalculate }) => {
   const [isError, setIsError] = useState(false);
@@ -71,14 +71,21 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
 
   // Process gene input to handle different formats (+ - comma ; newline)
-  const processGeneInput = (input) => {
-    return input
-      .replace(/[+\-,;\n\r]/g, ';') // Replace all separators with semicolon
-      .split(';')
-      .map(gene => gene.trim())
-      .filter(gene => gene.length > 0)
-      .join(';');
-  };
+  const processGeneInput = (input) => signatureGenes(input).join(';');
+
+  // Request bookkeeping for the signature list: only the newest request may
+  // update the table, and a pending debounced call is replaced, not stacked.
+  const fetchSeqRef = useRef(0);
+  const fetchTimerRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    };
+  }, []);
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -150,9 +157,32 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
     setShowSuggestionForm(false);
   };
 
+  // Debounced (300 ms) fetch of the signature list. A new call cancels the
+  // pending one, and responses of superseded requests are ignored, so the
+  // table always shows the result of the latest search text.
   const getGeneSignatures = useCallback(() => {
-    function handleResponse(error, data) {
-      if (error) {
+    const params = new URLSearchParams({
+      list_name: globalFilter ?? "",
+    });
+    const url = `${SERVER_ADRESS}/gene-signatures/?${params.toString()}`;
+
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    const seq = ++fetchSeqRef.current;
+
+    fetchTimerRef.current = setTimeout(async () => {
+      fetchTimerRef.current = null;
+      const isCurrent = () => isMountedRef.current && fetchSeqRef.current === seq;
+      setIsLoading(true);
+      try {
+        const data = await sendGetRequest(url);
+        if (!isCurrent()) return;
+        debugLog("API call succeeded:", data);
+        const rows = Array.isArray(data) ? data : [];
+        setRowCount(rows.length);
+        setGeneSignatures(rows);
+        setIsError(false);
+      } catch (error) {
+        if (!isCurrent()) return;
         debugError("API call failed:", error);
         setIsError(true);
         setNotification({
@@ -160,34 +190,16 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
           message: "Failed to load gene signatures. Please check if the backend server is running.",
           severity: "error"
         });
-        return;
+      } finally {
+        // Always leave the loading state, also after a failure
+        if (isCurrent()) {
+          setIsLoading(false);
+          setIsRefetching(false);
+        }
       }
-      debugLog("API call succeeded:", data);
-      data != null ? setRowCount(data.length) : setRowCount(0);
-      setGeneSignatures(data);
-      setIsError(false);
-      setIsLoading(false);
-      setIsRefetching(false);
-    }
-
-    const params = new URLSearchParams({
-      list_name: globalFilter ?? "",
-    });
-
-    const url = `${SERVER_ADRESS}/gene-signatures/?${params.toString()}`;
-    debouncedFetchGeneSignatures(url, handleResponse);
-  }, [globalFilter, SERVER_ADRESS]);
-
-  const debouncedFetchGeneSignatures = _.debounce(async (url, callback) => {
-    try {
-      setIsLoading(true);
-      const result = await sendGetRequest(url);
-      callback(null, result);
-    } catch (error) {
-      debugError(error);
-      callback(error);
-    }
-  }, 300);
+    }, 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalFilter]);
 
   async function sendGetRequest(url) {
     try {
@@ -242,15 +254,14 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
     }
   }
 
+  // Load when the dialog opens and whenever the search text changes while it
+  // is open (getGeneSignatures changes with globalFilter). Nothing is fetched
+  // while the dialog is closed.
   useEffect(() => {
     if (open) {
       getGeneSignatures();
     }
   }, [open, getGeneSignatures]);
-
-  useEffect(() => {
-    getGeneSignatures();
-  }, [globalFilter]);
 
   const handleRowClick = (row) => {
     setSelectedGeneSignature(row.original);
@@ -259,10 +270,11 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   const handleSelect = async () => {
     if (!selectedGeneSignature) return;
     
-    try {
-      // Increase popularity when selected
-      await axios.post(
-        `${SERVER_ADRESS}/gene-signature/${selectedGeneSignature.id}/increase-popularity`,
+    // Popularity is a nice-to-have counter: fire and forget, so a failed or
+    // rate-limited request can never block selecting a signature.
+    axios
+      .post(
+        `${SERVER_ADRESS}/gene-signature/${encodeURIComponent(selectedGeneSignature.id)}/increase-popularity`,
         {},
         {
           headers: {
@@ -271,8 +283,10 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
             "ngrok-skip-browser-warning": "69420", // Add ngrok header for consistency
           }
         }
-      );
-      
+      )
+      .catch((error) => debugError("Error increasing popularity:", error));
+
+    try {
       // Pass the gene list to parent component
       onGeneListSelect(selectedGeneSignature.genes);
       
@@ -283,7 +297,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
       
       onClose();
     } catch (error) {
-      debugError("Error increasing popularity:", error);
+      debugError("Error selecting gene signature:", error);
       setNotification({
         open: true,
         message: "Error selecting gene signature. Please try again.",
@@ -311,13 +325,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
         Cell: ({ row }) => {
           // Handle all possible gene separator formats that might exist in the database
           const genesString = row.original.genes || "";
-          const geneCount = genesString
-            ? genesString
-                .replace(/[+\-,;\n\r\t]/g, ';') // Replace all separators with semicolon
-                .split(';')
-                .map(gene => gene.trim())
-                .filter(gene => gene.length > 0).length
-            : 0;
+          const geneCount = genesString ? signatureGenes(genesString).length : 0;
           return (
             <Box display="flex" justifyContent="center" alignItems="center" width="100%">
               <Chip label={geneCount} size="small" color="primary" />

@@ -12,6 +12,7 @@ import { registerTransform } from "echarts/core";
 import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { transform } from "echarts-stat";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
+import { withErrorBoundary } from "../error-boundary";
 
 import {
   GridComponent,
@@ -66,8 +67,15 @@ const ScatterPlot = ({
 }) => {
   const [options, setOptions] = useState({});
   const [searchGene, setSearchGene] = useState("");
+  // Gene found by "Search & Zoom": { gene, index, x: [min,max], y, z }
+  const [focus, setFocus] = useState(null);
   const chartInstanceRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
+
+  // A search result belongs to one dataset/result only.
+  useEffect(() => {
+    setFocus(null);
+  }, [graphData]);
 
   useEffect(() => {
     return () => {
@@ -95,11 +103,18 @@ const ScatterPlot = ({
 
   // Memoize expensive gene processing
   const genesTolabel = useMemo(() => {
-    const genes = scatterplotSettings.genesTolabel
-      .replaceAll(/\s+|,\s+|,/g, ";")
-      ?.split(";");
+    const genes = String(scatterplotSettings.genesTolabel || "")
+      .split(/[\s,;]+/)
+      .map((gene) => gene.trim().toUpperCase())
+      .filter(Boolean);
     return new Set(genes);
   }, [scatterplotSettings.genesTolabel]);
+
+  // Case-insensitive "should this point be labelled" check.
+  const isLabelledGene = (name) =>
+    name !== null &&
+    name !== undefined &&
+    genesTolabel.has(String(name).toUpperCase());
 
   // Memoize data processing
   const processedData = useMemo(() => {
@@ -258,7 +273,7 @@ const ScatterPlot = ({
         );
         for (var i = 0; i < graphdata["GeneSymbols"].length; i++) {
           if (graphdata["clusterLabels"][i] > -1) {
-            arrayOfArrays[graphdata["clusterLabels"][i]].push(
+            arrayOfArrays[graphdata["clusterLabels"][i]]?.push(
               graphdata["GeneSymbols"][i]
             );
           }
@@ -278,7 +293,7 @@ const ScatterPlot = ({
         for (var i = 0; i < Object.keys(graphdata["GeneSymbols"]).length; i++) {
           //collect the clusters
           if (graphdata["clusterLabels"][i] > -1) {
-            arrayOfArrays[graphdata["clusterLabels"][i]].push(
+            arrayOfArrays[graphdata["clusterLabels"][i]]?.push(
               graphdata["GeneSymbols"][i]
             );
           }
@@ -366,7 +381,9 @@ const ScatterPlot = ({
 
   useEffect(() => {
     function renderItem(params, api) {
-      var curIndex = api.value(0) * 10000;
+      // The cluster index is stored as i / 10000; multiplying back is not exact
+      // in floating point (3 / 10000 * 10000 = 3.0000000000000004), so round.
+      var curIndex = Math.round(api.value(0) * 10000);
 
       const points = [];
       if (graphData["x" + curIndex]) {
@@ -404,7 +421,17 @@ const ScatterPlot = ({
     // Use 3D if PC3 is available and graphType is not explicitly "2D"
     const hasPC3 = graphData?.PC3 && Array.isArray(graphData.PC3) && graphData.PC3.length > 0 && graphData.PC3.some(v => v !== "" && v != null);
     const use2D = coreSettings.graphType === "2D" || !hasPC3;
-    
+
+    // Axis window: zoomed around the searched gene, otherwise data range + 10%.
+    const axisRange = (focusWindow, lo, hi) =>
+      Array.isArray(focusWindow)
+        ? { min: focusWindow[0], max: focusWindow[1] }
+        : { min: lo - (hi - lo) * 0.1, max: hi + (hi - lo) * 0.1 };
+    const xRange = axisRange(focus?.x, minandmax[0], minandmax[1]);
+    const yRange = axisRange(focus?.y, minandmax[2], minandmax[3]);
+    const zRange = axisRange(focus?.z, minandmax[4], minandmax[5]);
+    const focusGene = focus?.gene;
+
     if (use2D) {
       //2D chart
       setOptions({
@@ -494,8 +521,8 @@ const ScatterPlot = ({
           },
           name: "Component 1",
           nameGap: 25,
-          min: minandmax[0] - (minandmax[1] - minandmax[0]) * 0.1,
-          max: minandmax[1] + (minandmax[1] - minandmax[0]) * 0.1,
+          min: xRange.min,
+          max: xRange.max,
         },
 
         yAxis: {
@@ -516,8 +543,8 @@ const ScatterPlot = ({
             verticalAlign: "center",
             color: "black",
           },
-          min: minandmax[2] - (minandmax[3] - minandmax[2]) * 0.1,
-          max: minandmax[3] + (minandmax[3] - minandmax[2]) * 0.1,
+          min: yRange.min,
+          max: yRange.max,
         },
         toolbox: {
           show: true,
@@ -565,12 +592,24 @@ const ScatterPlot = ({
               position: scatterplotSettings.labelLoc,
               fontSize: scatterplotSettings.labelSize,
               formatter: function (params) {
+                const name = params.data[3];
+                if (focusGene !== undefined && name === focusGene) {
+                  // Searched gene: always labelled, emphasised
+                  return "{focus|" + name + "}";
+                }
                 if (
                   scatterplotSettings.showLabels === true ||
-                  genesTolabel.has(params.data[3])
+                  isLabelledGene(name)
                 ) {
-                  return params.data[3];
+                  return name;
                 } else return "";
+              },
+              rich: {
+                focus: {
+                  color: "#ff0000",
+                  fontWeight: "bold",
+                  fontSize: 18,
+                },
               },
 
               // fontWeight: 'bold',
@@ -607,8 +646,8 @@ const ScatterPlot = ({
           },
           name: "Component 1",
           nameGap: 25,
-          min: minandmax[0] - (minandmax[1] - minandmax[0]) * 0.1,
-          max: minandmax[1] + (minandmax[1] - minandmax[0]) * 0.1,
+          min: xRange.min,
+          max: xRange.max,
         },
         yAxis3D: {
           axisLabel: {
@@ -626,8 +665,8 @@ const ScatterPlot = ({
             verticalAlign: "center",
             color: "black",
           },
-          min: minandmax[2] - (minandmax[3] - minandmax[2]) * 0.1,
-          max: minandmax[3] + (minandmax[3] - minandmax[2]) * 0.1,
+          min: yRange.min,
+          max: yRange.max,
         },
         zAxis3D: {
           axisLabel: {
@@ -645,8 +684,8 @@ const ScatterPlot = ({
             verticalAlign: "center",
             color: "black",
           },
-          min: minandmax[4] - (minandmax[5] - minandmax[4]) * 0.1,
-          max: minandmax[5] + (minandmax[5] - minandmax[4]) * 0.1,
+          min: zRange.min,
+          max: zRange.max,
         },
 
         visualMap: {
@@ -672,22 +711,47 @@ const ScatterPlot = ({
             lineHeight: 1.4,
           },
           formatter: createGeneTooltipFormatter({
-            parseData: (params) => ({
-              geneSymbol: params.data[3],
-              cluster: params.data[4],
-              clusterProb: params.data[5]
-            })
+            // Rows are [PC1, PC2, PC3, Gene, Cluster, Prob] or, when colouring
+            // by cell line, [PC1, PC2, PC3, Gene, CellLine, Cluster, Prob].
+            parseData: (params) =>
+              shouldColorByCellLine
+                ? {
+                    geneSymbol: params.data[3],
+                    cellLine:
+                      {
+                        K562gwps: "K562",
+                        HEK293gwps: "HEK293",
+                        HCT116gwps: "HCT116",
+                      }[params.data[4]] || params.data[4],
+                    cluster: params.data[5],
+                    clusterProb: params.data[6],
+                  }
+                : {
+                    geneSymbol: params.data[3],
+                    cluster: params.data[4],
+                    clusterProb: params.data[5],
+                  },
           }),
         },
         dataset: {
-          dimensions: [
-            "PC1",
-            "PC2",
-            "PC3",
-            "GeneSymbol",
-            { name: "Cluster", type: "ordinal" },
-            "ClusterProb",
-          ],
+          dimensions: shouldColorByCellLine
+            ? [
+                "PC1",
+                "PC2",
+                "PC3",
+                "GeneSymbol",
+                { name: "CellLine", type: "ordinal" },
+                "Cluster",
+                "ClusterProb",
+              ]
+            : [
+                "PC1",
+                "PC2",
+                "PC3",
+                "GeneSymbol",
+                { name: "Cluster", type: "ordinal" },
+                "ClusterProb",
+              ],
           source: data,
         },
         toolbox: {
@@ -720,11 +784,13 @@ const ScatterPlot = ({
               fontSize: scatterplotSettings.labelSize,
               position: scatterplotSettings.labelLoc,
               formatter: function (params) {
+                const name = params.data[3];
                 if (
                   scatterplotSettings.showLabels === true ||
-                  genesTolabel.has(params.data[3])
+                  (focusGene !== undefined && name === focusGene) ||
+                  isLabelledGene(name)
                 ) {
-                  return params.data[3];
+                  return name;
                 } else return " ";
               },
             },
@@ -738,193 +804,94 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData]);
+  }, [coreSettings, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData, focus, genesTolabel]);
 
-  // Function to search and zoom to a gene
+  // Search a gene: zoom the axes around it and emphasise its point/label.
+  // The zoom window and the highlighted gene live in state so they survive
+  // chart re-renders (the chart is redrawn with notMerge).
   const handleSearchGene = () => {
-    const chartInstance = chartInstanceRef.current;
-    if (
-      !searchGene ||
-      !chartInstance ||
-      (typeof chartInstance.isDisposed === "function" && chartInstance.isDisposed()) ||
-      !graphData ||
-      !graphData.GeneSymbols
-    ) {
+    if (!searchGene || !graphData || !Array.isArray(graphData.GeneSymbols)) {
       return;
     }
-    
+
     const geneSymbol = searchGene.trim().toUpperCase();
+    if (!geneSymbol) return;
     const geneIndex = graphData.GeneSymbols.findIndex(
-      (g) => g && g.toUpperCase() === geneSymbol
+      (g) => g && String(g).toUpperCase() === geneSymbol
     );
-    
+
     if (geneIndex === -1) {
       alert(`Gene "${searchGene}" not found in the dataset.`);
       return;
     }
-    
-    // Get the coordinates for this gene
-    const pc1 = graphData.PC1[geneIndex];
-    const pc2 = graphData.PC2[geneIndex];
-    const pc3 = graphData.PC3 ? graphData.PC3[geneIndex] : 0;
-    
-    // Get current option
-    const currentOption = chartInstance.getOption();
-    
-    // Calculate zoom range (show area around the gene)
-    const zoomRange = 0.2; // Show 20% of the data range around the gene
-    const [pc1Min, pc1Max] = getMinMax(graphData.PC1);
-    const [pc2Min, pc2Max] = getMinMax(graphData.PC2);
-    const [pc3Min, pc3Max] = graphData.PC3 ? getMinMax(graphData.PC3) : [0, 0];
-    
-    const pc1Range = pc1Max - pc1Min;
-    const pc2Range = pc2Max - pc2Min;
-    const pc3Range = pc3Max - pc3Min;
-    const maxRange = Math.max(pc1Range, pc2Range, pc3Range);
-    
-    // Check if it's a 3D chart
-    if (currentOption.grid3D && currentOption.grid3D[0]) {
-      // 3D chart - update view control and axis ranges
-      const newOption = {
-        grid3D: [{
-          ...currentOption.grid3D[0],
-          viewControl: {
-            ...currentOption.grid3D[0].viewControl,
-            target: [pc1, pc2, pc3],
-            distance: maxRange * 1.5, // Zoom in by reducing distance
-          }
-        }],
-        xAxis3D: [{
-          ...currentOption.xAxis3D[0],
-          min: pc1 - pc1Range * zoomRange,
-          max: pc1 + pc1Range * zoomRange,
-        }],
-        yAxis3D: [{
-          ...currentOption.yAxis3D[0],
-          min: pc2 - pc2Range * zoomRange,
-          max: pc2 + pc2Range * zoomRange,
-        }]
-      };
-      
-      if (graphData.PC3 && currentOption.zAxis3D && currentOption.zAxis3D[0]) {
-        newOption.zAxis3D = [{
-          ...currentOption.zAxis3D[0],
-          min: pc3 - pc3Range * zoomRange,
-          max: pc3 + pc3Range * zoomRange,
-        }];
+
+    // Show 20% of the data range on each side of the gene
+    const zoomRange = 0.2;
+    const windowAround = (values) => {
+      if (!Array.isArray(values)) return null;
+      const [min, max] = getMinMax(values);
+      const range = max - min;
+      const centre = values[geneIndex];
+      if (typeof centre !== "number" || !Number.isFinite(centre) || !(range > 0)) {
+        return null;
       }
-      
-      chartInstance.setOption(newOption, false);
-    } else {
-      // 2D chart - use dataZoom
-      chartInstance.dispatchAction({
-        type: 'dataZoom',
-        startValue: pc1 - pc1Range * zoomRange,
-        endValue: pc1 + pc1Range * zoomRange,
-        xAxisIndex: 0
-      });
-      
-      chartInstance.dispatchAction({
-        type: 'dataZoom',
-        startValue: pc2 - pc2Range * zoomRange,
-        endValue: pc2 + pc2Range * zoomRange,
-        yAxisIndex: 0
-      });
-    }
-    
-    // Highlight the gene by selecting it and showing label
-    // Use select action which works better with 3D charts
+      return [centre - range * zoomRange, centre + range * zoomRange];
+    };
+
+    setFocus({
+      gene: graphData.GeneSymbols[geneIndex],
+      index: geneIndex,
+      x: windowAround(graphData.PC1),
+      y: windowAround(graphData.PC2),
+      z: windowAround(graphData.PC3),
+    });
+  };
+
+  // After the chart has redrawn for a search, emphasise the point and show
+  // its tooltip. The scatter is series 1 in 2D (series 0 is the cluster hull
+  // layer) and series 0 in 3D.
+  useEffect(() => {
+    if (!focus) return undefined;
     if (highlightTimeoutRef.current) {
       clearTimeout(highlightTimeoutRef.current);
     }
     highlightTimeoutRef.current = setTimeout(() => {
-      if (typeof chartInstance.isDisposed === "function" && chartInstance.isDisposed()) {
+      highlightTimeoutRef.current = null;
+      const chartInstance = chartInstanceRef.current;
+      if (
+        !chartInstance ||
+        (typeof chartInstance.isDisposed === "function" && chartInstance.isDisposed())
+      ) {
         return;
       }
-      // Select the data point
-      chartInstance.dispatchAction({
-        type: 'select',
-        seriesIndex: 0,
-        dataIndex: geneIndex
-      });
-      
-      // Show tooltip
-      chartInstance.dispatchAction({
-        type: 'showTip',
-        seriesIndex: 0,
-        dataIndex: geneIndex
-      });
-      
-      // Update the series to show label for this specific gene
-      const updatedOption = chartInstance.getOption();
-      if (updatedOption.series && updatedOption.series[0]) {
-        const highlightOption = {
-          series: [{
-            ...updatedOption.series[0],
-            label: {
-              ...updatedOption.series[0].label,
-              show: true,
-              formatter: function(params) {
-                // Always show the searched gene label
-                if (params.dataIndex === geneIndex) {
-                  return graphData.GeneSymbols[geneIndex];
-                }
-                // Show other labels based on original logic
-                const showLabels = scatterplotSettings?.showLabels === true;
-                const geneSymbol = params.data && params.data[3] ? params.data[3] : '';
-                if (showLabels || (geneSymbol && genesTolabel.has(geneSymbol))) {
-                  return geneSymbol;
-                }
-                return ' ';
-              },
-              fontSize: function(params) {
-                return params.dataIndex === geneIndex ? 18 : (scatterplotSettings?.labelSize || 12);
-              },
-              fontWeight: function(params) {
-                return params.dataIndex === geneIndex ? 'bold' : 'normal';
-              },
-              color: function(params) {
-                return params.dataIndex === geneIndex ? '#ff0000' : 'black';
-              }
-            },
-            emphasis: {
-              ...updatedOption.series[0].emphasis,
-              itemStyle: {
-                color: '#ff0000',
-                borderColor: '#ff0000',
-                borderWidth: 4,
-                shadowBlur: 15,
-                shadowColor: 'rgba(255, 0, 0, 0.9)'
-              },
-              label: {
-                show: true,
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#ff0000'
-              }
-            },
-            select: {
-              itemStyle: {
-                color: '#ff0000',
-                borderColor: '#ff0000',
-                borderWidth: 4,
-                shadowBlur: 15,
-                shadowColor: 'rgba(255, 0, 0, 0.9)'
-              },
-              label: {
-                show: true,
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#ff0000'
-              }
-            }
-          }]
-        };
-        
-        chartInstance.setOption(highlightOption, false);
+      try {
+        const currentOption = chartInstance.getOption() || {};
+        const is3D = Array.isArray(currentOption.grid3D) && currentOption.grid3D.length > 0;
+        const seriesIndex = is3D ? 0 : 1;
+        chartInstance.dispatchAction({
+          type: "highlight",
+          seriesIndex,
+          dataIndex: focus.index,
+        });
+        if (!is3D) {
+          chartInstance.dispatchAction({
+            type: "showTip",
+            seriesIndex,
+            dataIndex: focus.index,
+          });
+        }
+      } catch (e) {
+        // Highlighting is cosmetic; never let it break the chart.
       }
-    }, 300);
-  };
+    }, 400);
+
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
+      }
+    };
+  }, [focus, options]);
 
   return (
     /*<EchartsReact
@@ -978,6 +945,23 @@ const ScatterPlot = ({
           >
             Search & Zoom
           </button>
+          {focus && (
+            <button
+              onClick={() => setFocus(null)}
+              style={{
+                padding: "6px 16px",
+                backgroundColor: "#ffffff",
+                color: "#1976d2",
+                border: "1px solid #1976d2",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "500"
+              }}
+            >
+              Reset view
+            </button>
+          )}
         </div>
         <Row spacing={0} width="100%" height="80vh">
           <ReactEChartsCore
@@ -1011,6 +995,11 @@ const mapDispatchToProps = {
   coreSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(ScatterPlot);
+const ConnectedScatterPlot = connect(mapStateToProps, mapDispatchToProps)(ScatterPlot);
+
+const MainContainer = withErrorBoundary(ConnectedScatterPlot, {
+  label: "Scatter plot",
+  resetKeys: (props) => [props.graphData],
+});
 
 export { MainContainer as ScatterPlot };

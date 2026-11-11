@@ -20,6 +20,7 @@ import {
   runDeregulatedGenes,
   runDeregulatedGenesMultiDataset,
   cancelTask,
+  isTaskCancelledError,
 } from "../api";
 import { ModulePathNames } from "./enums";
 
@@ -106,6 +107,9 @@ const resultState = {
   progressMessage: null,
   progressPercentage: null,
   taskId: null, // Store task ID for cancellation
+  // Settings the stored result was calculated with (set by modules that need
+  // to issue follow-up requests for exactly the same inputs).
+  requestParams: null,
 };
 
 const initialState = {
@@ -138,8 +142,11 @@ export const calculationResults = createSlice({
   reducers: {
     resultReceived: (state, action) => {
       //console.log(action);
-      const { result, module } = action.payload;
-      //console.log(result);
+      const { result, module, requestParams } = action.payload;
+      if (!module || !state[module]) {
+        console.warn("resultReceived: unknown result module", module);
+        return;
+      }
       const parsedResult = parseResultPayload({ result, module });
       
       console.log(`Results store - Setting ${module} result:`, {
@@ -151,6 +158,9 @@ export const calculationResults = createSlice({
       
       state[module].result = parsedResult;
       state[module].running = false;
+      if (requestParams !== undefined) {
+        state[module].requestParams = requestParams;
+      }
       // Clear progress when calculation completes
       state[module].progressMessage = null;
       state[module].progressPercentage = null;
@@ -158,7 +168,7 @@ export const calculationResults = createSlice({
     calcRunningChanged: (state, action) => {
       //console.log(state, action);
       const { module, status } = action.payload;
-      //console.log(module, status);
+      if (!module || !state[module]) return;
       state[module].running = status;
       // Clear progress when calculation starts or stops
       if (!status) {
@@ -168,6 +178,7 @@ export const calculationResults = createSlice({
     },
     progressUpdateReceived: (state, action) => {
       const { module, message, percentage } = action.payload;
+      if (!module || !state[module]) return;
       state[module].progressMessage = message;
       state[module].progressPercentage = percentage;
     },
@@ -179,6 +190,7 @@ export const calculationResults = createSlice({
         state[module].progressMessage = null;
         state[module].progressPercentage = null;
         state[module].taskId = null;
+        state[module].requestParams = null;
       }
     },
     taskStarted: (state, action) => {
@@ -241,6 +253,20 @@ export const {
     setGeneSignatureCache,
   } = calculationResults.actions;
 
+// Every calculation gets a sequence number per result module. A response is
+// only stored when it belongs to the most recent request for that module, so a
+// slow earlier request can never overwrite the result of a newer one.
+const latestRequestIds = {};
+const beginRequest = (key) => {
+  latestRequestIds[key] = (latestRequestIds[key] || 0) + 1;
+  return latestRequestIds[key];
+};
+const isLatestRequest = (key, requestId) => latestRequestIds[key] === requestId;
+
+// A cached per-dataset gene signature result that can be reused (failed
+// attempts are cached as `{ _error: true }` and must be recalculated).
+const isUsableGeneSignatureCacheEntry = (entry) => !!entry && !entry._error;
+
 const normalizeDatasetIds = (datasets = []) => {
   if (!Array.isArray(datasets)) return [];
   return datasets
@@ -266,7 +292,26 @@ const runGeneSignatureMultiSelection = () => async (dispatch, getState) => {
 
   const formulaKey = normalizeGeneSignatureFormula(signature);
   const cacheForFormula = calcResults?.geneSignatureCache?.[formulaKey] || {};
-  const missing = selectedDatasets.filter((ds) => !cacheForFormula?.[ds]);
+  // Datasets without a usable cached result (never calculated, or failed last time)
+  const missing = selectedDatasets.filter(
+    (ds) => !isUsableGeneSignatureCacheEntry(cacheForFormula?.[ds])
+  );
+
+  // Keep the single-dataset result in sync with the current signature when the
+  // primary dataset is served from the cache (it is not requested again below).
+  const cachedPrimary = cacheForFormula?.[primaryDatasetId];
+  if (
+    isUsableGeneSignatureCacheEntry(cachedPrimary) &&
+    !missing.includes(primaryDatasetId) &&
+    calcResults?.[ModulePathNames[ROUTES.GENESIGNATURE]]?.result !== cachedPrimary
+  ) {
+    dispatch(
+      resultReceived({
+        result: cachedPrimary,
+        module: ModulePathNames[ROUTES.GENESIGNATURE],
+      })
+    );
+  }
 
   if (missing.length === 0) return;
 
@@ -341,6 +386,24 @@ const runCalculation = (module) => async (dispatch, getState) => {
     Array.isArray(genesignature?.selectedDatasets) &&
     genesignature.selectedDatasets.length > 1;
 
+  const resultModule =
+    module === ROUTES.DR
+      ? ModulePathNames["/" + core.currentModule]
+      : ModulePathNames[module];
+
+  if (!resultModule) {
+    console.warn("runCalculation: no result module for", module, core.currentModule);
+    return;
+  }
+
+  // Only the most recent request for a module may store its result / clear its state
+  const requestId = beginRequest(resultModule);
+  const isStale = () => !isLatestRequest(resultModule, requestId);
+  const deliver = (payload) => {
+    if (isStale()) return null;
+    return dispatch(resultReceived(payload));
+  };
+
   if (module === ROUTES.DR) {
     dispatch(
       calcRunningChanged({
@@ -366,50 +429,34 @@ const runCalculation = (module) => async (dispatch, getState) => {
       case ROUTES.DR: {
         if (core.currentModule === "pca") {
           const result = await runPcaGraphCalc(core, pca, clustering);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames["/pca"] })
-          );
+          return deliver({ result, module: ModulePathNames["/pca"] });
         } else if (core.currentModule === "mde") {
           const result = await runMdeGraphCalc(core, mde, clustering);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames["/mde"] })
-          );
+          return deliver({ result, module: ModulePathNames["/mde"] });
         } else if (core.currentModule === "tsne") {
           const result = await runtSNEGraphCalc(core, tsne, clustering);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames["/tsne"] })
-          );
+          return deliver({ result, module: ModulePathNames["/tsne"] });
         } else if (core.currentModule === "umap") {
           const result = await runUMAPGraphCalc(core, umap, clustering);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames["/umap"] })
-          );
+          return deliver({ result, module: ModulePathNames["/umap"] });
         }
         break;
       }
       case ROUTES.GENE_REGULATION: {
         const result = await runGeneRegulation(core, geneRegulationCore);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       case ROUTES.GENE_REGULATION_ENHANCED: {
         const result = await runGeneRegulationEnhanced(core, geneRegulationEnhanced);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       case ROUTES.PATHFINDER: {
         const result = await runPathFinderCalc(core, pathfinder);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       case ROUTES.HEATMAP: {
         const result = await runHeatMap(core, heatMap);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       case ROUTES.CORRELATION_WEBGL:
       case ROUTES.CORRELATION: {
@@ -430,9 +477,20 @@ const runCalculation = (module) => async (dispatch, getState) => {
             combineMethod: correlation.combineMethod || "average",
           };
           const result = await runCorrCalcMultiDataset(multiCore, multiCorr);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames[module] })
-          );
+          return deliver({
+            result,
+            module: ModulePathNames[module],
+            requestParams: {
+              multiDataset: true,
+              datasets: [...correlation.selectedDatasets],
+              core: {
+                dataType: core.dataType,
+                targetGeneList: core.targetGeneList,
+                cellLine: { ...core.cellLine },
+              },
+              correlation: { ...multiCorr },
+            },
+          });
         } else {
           // Single dataset mode - use the selected dataset
           const singleCore = {
@@ -443,16 +501,25 @@ const runCalculation = (module) => async (dispatch, getState) => {
             },
           };
           const result = await runCorrCalc(singleCore, correlation);
-          return dispatch(
-            resultReceived({ result, module: ModulePathNames[module] })
-          );
+          return deliver({
+            result,
+            module: ModulePathNames[module],
+            requestParams: {
+              multiDataset: false,
+              datasets: [...correlation.selectedDatasets],
+              core: {
+                dataType: core.dataType,
+                targetGeneList: core.targetGeneList,
+                cellLine: { ...singleCore.cellLine },
+              },
+              correlation: { ...correlation },
+            },
+          });
         }
       }
       case ROUTES.EXPRESSIONANALYZER: {
         const result = await runGeneExp(core, expressionanalyzer);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       case ROUTES.GENESIGNATURE: {
         // Clear downstream multi-dataset results when starting a new gene signature calculation
@@ -476,6 +543,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
         };
 
         const result = await runGeneSignature(singleCore);
+        if (isStale()) return;
         dispatch(resultReceived({ result, module: ModulePathNames[module] }));
 
         // Cache the primary dataset result for reuse in multi-dataset aggregation
@@ -506,6 +574,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
           : core;
 
         const result = await runDeregulatedGenes(singleCore, deregulatedGenesSettings);
+        if (isStale()) return;
         dispatch(resultReceived({ result, module: ModulePathNames[module] }));
 
         // Fire multi-dataset aggregation when more than one dataset is selected
@@ -513,9 +582,12 @@ const runCalculation = (module) => async (dispatch, getState) => {
           dispatch(calcRunningChanged({ module: "deregulatedGenesMultiDataset", status: true }));
           try {
             const multiResult = await runDeregulatedGenesMultiDataset(singleCore, deregulatedGenesSettings);
+            if (isStale()) return;
             dispatch(resultReceived({ result: multiResult, module: "deregulatedGenesMultiDataset" }));
           } catch (multiErr) {
+            if (isStale()) return;
             dispatch(calcRunningChanged({ module: "deregulatedGenesMultiDataset", status: false }));
+            if (isTaskCancelledError(multiErr)) return;
             toast({
               message: {
                 type: "Error",
@@ -530,9 +602,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
       }
       case ROUTES.MULTIDATASET_COMPARISON: {
         const result = await runMultiDatasetComparison(core, multidatasetComparison);
-        return dispatch(
-          resultReceived({ result, module: ModulePathNames[module] })
-        );
+        return deliver({ result, module: ModulePathNames[module] });
       }
       default: {
         dispatch(
@@ -541,18 +611,14 @@ const runCalculation = (module) => async (dispatch, getState) => {
       }
     }
   } catch (error) {
-    if (module === ROUTES.DR) {
-      dispatch(
-        calcRunningChanged({
-          module: ModulePathNames["/" + core.currentModule],
-          status: false,
-        })
-      );
-    } else {
-      dispatch(
-        calcRunningChanged({ module: ModulePathNames[module], status: false })
-      );
-    }
+    // A newer request for this module is in flight: it owns the running state
+    // and the user is no longer interested in this outcome.
+    if (isStale()) return;
+
+    dispatch(calcRunningChanged({ module: resultModule, status: false }));
+
+    // Cancelled by the user: not an error.
+    if (isTaskCancelledError(error)) return;
 
     console.log(error);
     
@@ -655,8 +721,10 @@ const fetchGeneSignatureDataset = ({ datasetId, formulaKey, setPrimaryResult = f
   }
 
   const normalizedKey = formulaKey || normalizeGeneSignatureFormula(core.targetGeneList);
-  const cached =
+  const cachedEntry =
     calcResults?.geneSignatureCache?.[normalizedKey]?.[datasetId] || null;
+  // A cached failure is not a result: calculate it again.
+  const cached = isUsableGeneSignatureCacheEntry(cachedEntry) ? cachedEntry : null;
 
   if (cached) {
     if (setPrimaryResult) {

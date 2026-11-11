@@ -147,9 +147,9 @@ const CorrelationSettings = ({
 
   // Validate selected datasets against available datasets (remove invalid ones)
   useEffect(() => {
-    // Get all main datasets (id.length < 17) for correlation module
+    // All datasets that can be correlated (everything except client-side DR results)
     const allDatasets = coreSettings?.datasetList?.filter(
-      (dataset) => dataset.id.length < 17
+      (dataset) => dataset.isDrResult !== true
     ) || [];
 
     if (allDatasets.length === 0) {

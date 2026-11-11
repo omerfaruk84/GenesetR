@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 import { Tabs } from "@oliasoft-open-source/react-ui-library";
 import styles from "./about.module.scss";
+import { SERVER_ADDRESS } from "../../store/api/config";
 import VideoHelpPage from "../../components/video-help";
 import helpVideo0 from "../../common/videos/1.webm";
 import helpVideo1 from "../../common/videos/2.webm";
@@ -11,8 +12,7 @@ import helpVideo4 from "../../common/videos/5.webm";
 import helpVideo5 from "../../common/videos/6.webm";
 
 const AboutPage = () => {
-  const isDevEnv = process.env.NODE_ENV !== "production";
-  const API_BASE_URL = isDevEnv ? "http://localhost:8443" : "https://genesetr.uio.no/api";
+  const API_BASE_URL = SERVER_ADDRESS;
   const swaggerUrl = `${API_BASE_URL}/docs`;
   const redocUrl = `${API_BASE_URL}/redoc`;
   const openapiUrl = `${API_BASE_URL}/openapi.json`;

@@ -9,6 +9,8 @@ import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleR
 import { mkConfig, generateCsv, download } from "export-to-csv";
 import React from "react";
 import GenelistAdd from "../genelist-add";
+import { withErrorBoundary } from "../error-boundary";
+import { flattenColumns } from "../../utils/geneListUtils";
 
 const csvConfig = mkConfig({
   fieldSeparator: "\t",
@@ -16,7 +18,76 @@ const csvConfig = mkConfig({
   useKeysAsHeaders: true,
 });
 
-const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilters, onColumnFiltersChange }) => {
+// Accessor keys / headers that hold gene symbols in the result tables.
+// "gene", "Gene", "Gene 1", "Gene Symbol From", "From", "To", "Perturbation", ...
+const GENE_KEY_PATTERN =
+  /^(gene(\s*symbol)?(\s*(\d+|from|to))?|gene\/perturbation|perturbation|from|to|symbol)$/i;
+
+const isGeneLikeKey = (value) =>
+  typeof value === "string" && GENE_KEY_PATTERN.test(value.trim());
+
+/**
+ * Which row keys hold gene symbols.
+ * 1) explicit `geneAccessors` prop, 2) columns whose accessorKey or header looks
+ * like a gene column, 3) gene-like keys of the first row.
+ */
+export const resolveGeneAccessors = (geneAccessors, columns, data) => {
+  if (Array.isArray(geneAccessors) && geneAccessors.length > 0) {
+    return geneAccessors.filter((key) => typeof key === "string" && key);
+  }
+  if (typeof geneAccessors === "string" && geneAccessors) return [geneAccessors];
+
+  const fromColumns = flattenColumns(columns)
+    .filter(
+      (col) =>
+        typeof col?.accessorKey === "string" &&
+        (isGeneLikeKey(col.accessorKey) || isGeneLikeKey(col.header))
+    )
+    .map((col) => col.accessorKey);
+  if (fromColumns.length > 0) return Array.from(new Set(fromColumns));
+
+  const firstRow = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  return firstRow ? Object.keys(firstRow).filter(isGeneLikeKey) : [];
+};
+
+/** Unique gene symbols of the given rows, in first-seen order. */
+export const collectGenes = (rows, accessors) => {
+  const seen = new Set();
+  const genes = [];
+  (accessors || []).forEach((key) => {
+    (rows || []).forEach((row) => {
+      const value = row?.[key];
+      if (value === null || value === undefined) return;
+      const gene = String(value).trim();
+      if (!gene || seen.has(gene)) return;
+      seen.add(gene);
+      genes.push(gene);
+    });
+  });
+  return genes;
+};
+
+// export-to-csv only accepts primitive cell values.
+const toExportRows = (rows) =>
+  (rows || []).map((row) => {
+    const out = {};
+    Object.entries(row || {}).forEach(([key, value]) => {
+      if (value === null || value === undefined) out[key] = "";
+      else if (Array.isArray(value)) out[key] = value.join(", ");
+      else if (typeof value === "object") out[key] = JSON.stringify(value);
+      else out[key] = value;
+    });
+    return out;
+  });
+
+const EnrichmentTable = ({
+  columns,
+  data,
+  onSortedDataChange,
+  initialColumnFilters,
+  onColumnFiltersChange,
+  geneAccessors,
+}) => {
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [sorting, setSorting] = useState([]);
@@ -27,11 +98,15 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
   const debounceTimerRef = useRef(null);
   const prevInitialFiltersRef = useRef(JSON.stringify(initialColumnFilters || []));
   const isInitializingRef = useRef(true);
+  // Latest callback, so an inline handler passed by a parent does not restart
+  // the debounce on every parent render.
+  const onSortedDataChangeRef = useRef(onSortedDataChange);
+  onSortedDataChangeRef.current = onSortedDataChange;
 
   useEffect(() => {
     isInitializingRef.current = false;
   }, []);
-  
+
   // Update filters when initialColumnFilters prop changes (for external control)
   useEffect(() => {
     if (isControlledFilters) return;
@@ -45,7 +120,7 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
       }
     }
   }, [initialColumnFilters, isControlledFilters]);
-  
+
   // Notify parent of filter changes
   const handleColumnFiltersChange = (updater) => {
     if (isControlledFilters) {
@@ -64,7 +139,10 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
       return next;
     });
   };
-  
+
+  const geneKeys = resolveGeneAccessors(geneAccessors, columns, data);
+  const canCreateGenelist = geneKeys.length > 0;
+
   const table = useMaterialReactTable({
     columns,
     data,
@@ -168,7 +246,11 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
           flexWrap: "wrap",
         }}
       >
-        <Button onClick={handleExportData} startIcon={<FileDownloadIcon />}>
+        <Button
+          disabled={!Array.isArray(data) || data.length === 0}
+          onClick={handleExportData}
+          startIcon={<FileDownloadIcon />}
+        >
           Export
         </Button>
 
@@ -182,7 +264,7 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
           Export Selected
         </Button>
         <Button
-          disabled={!table.getFilteredRowModel().rows.length > 0}
+          disabled={!canCreateGenelist || !(table.getFilteredRowModel().rows.length > 0)}
           onClick={() => {
             handleSaveGeneList(table.getFilteredRowModel().rows);
             table.resetRowSelection();
@@ -193,7 +275,8 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
         </Button>
         <Button
           disabled={
-            !table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
+            !canCreateGenelist ||
+            (!table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected())
           }
           onClick={() => {
             handleSaveGeneList(table.getSelectedRowModel().rows);
@@ -212,64 +295,46 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    
+
     debounceTimerRef.current = setTimeout(() => {
-      if (onSortedDataChange && table) {
+      const notify = onSortedDataChangeRef.current;
+      if (typeof notify === "function" && table) {
         const sortedRows = table.getSortedRowModel().rows;
         const sortedData = sortedRows.map(row => row.original);
-        onSortedDataChange(sortedData);
+        notify(sortedData);
       }
     }, 1000); // 1 second debounce
-    
+
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [sorting, columnFilters, globalFilter, data, onSortedDataChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorting, columnFilters, globalFilter, data]);
 
   const handleExportData = () => {
-    const csv = generateCsv(csvConfig)(data);
+    if (!Array.isArray(data) || data.length === 0) return;
+    const csv = generateCsv(csvConfig)(toExportRows(data));
     download(csvConfig)(csv);
   };
 
   const handleExportRows = (rows) => {
     const rowData = rows.map((row) => row.original);
-    const csv = generateCsv(csvConfig)(rowData);
+    if (rowData.length === 0) return;
+    const csv = generateCsv(csvConfig)(toExportRows(rowData));
     download(csvConfig)(csv);
   };
 
   const handleSaveGeneList = (rows) => {
     const rowData = rows.map((row) => row.original);
-    let genesString = rowData.map((obj) => obj["Gene"]).join(",");
-    genesString +=
-      "," + rowData.map((obj) => obj["Gene Symbol From"]).join(",");
-    genesString += "," + rowData.map((obj) => obj["Gene Symbol To"]).join(",");
-    genesString = genesString
-      .replaceAll(",,", ",")
-      .replaceAll(",,", ",")
-      .replaceAll(",,", ",");
+    const genes = collectGenes(rowData, geneKeys);
 
-    if (genesString.length > 2) {
-      setgenesToSave(genesString);
+    if (genes.length > 0) {
+      setgenesToSave(genes.join(","));
       setNewListVisible(true);
     }
   };
-
-  /*
-  const exportData = () => {
-    // Convert data to a tab-separated string
-    const csvData = keyedData
-      .map((item) => Object.values(item).join("\t"))
-      .join("\n");
-
-    // Create a blob with the data
-    const blob = new Blob([csvData], { type: "text/plain;charset=utf-8" });
-
-    // Save the blob as a file using FileSaver.js
-    saveAs(blob, "data.tsv");
-  };
-  */
 
   return (
     <>
@@ -284,4 +349,5 @@ const EnrichmentTable = ({ columns, data, onSortedDataChange, initialColumnFilte
     </>
   );
 };
-export default EnrichmentTable;
+
+export default withErrorBoundary(EnrichmentTable, { label: "Table" });

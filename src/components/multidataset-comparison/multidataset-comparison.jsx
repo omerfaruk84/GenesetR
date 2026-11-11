@@ -13,9 +13,27 @@ import {
 } from "@oliasoft-open-source/react-ui-library";
 import { MaterialReactTable } from 'material-react-table';
 import { FaSortAmountUpAlt, FaSortAmountDownAlt, FaDownload } from 'react-icons/fa';
-import { fetchGeneInfo, formatGeneTooltip, cleanGeneSymbol } from "../../utils/geneFunctionUtils";
+import { getGeneInfo, formatGeneTooltip } from "../../utils/geneFunctionUtils";
+import {
+  buildTopBottomGeneLists,
+  geneListsEqual,
+  flattenColumns,
+  csvCell,
+} from "../../utils/geneListUtils";
 import { GeneSetEnrichmentTable } from "../enrichment";
+import { withErrorBoundary } from "../error-boundary";
 import styles from "./multidataset-comparison.module.scss";
+
+// Enrichment gene lists of the comparison table. Always derived from the
+// "average" score column, never from the order the rows are displayed in.
+const COMPARISON_LIST_OPTIONS = {
+  geneKey: "gene",
+  scoreKey: "average",
+  allPositive: "All Positive",
+  allNegative: "All Negative",
+  topLabel: (n) => `Top ${n} Positive`,
+  bottomLabel: (n) => `Bottom ${n} Negative`,
+};
 
 const MultiDatasetComparison = ({ data }) => {
   const [selectedMainTab, setSelectedMainTab] = useState({ value: 0, label: "Perturbation Effects (Downstream Effects)" });
@@ -23,7 +41,6 @@ const MultiDatasetComparison = ({ data }) => {
   const [showRanks, setShowRanks] = useState(true);
   const [minDatasets, setMinDatasets] = useState(1); // Filter: minimum datasets per gene
   const [rankOrder, setRankOrder] = useState('asc'); // 'asc' = lowest values get rank 1, 'desc' = highest values get rank 1
-  const [geneInfoCache, setGeneInfoCache] = useState({}); // Cache for gene information
   const [selectedDatasets, setSelectedDatasets] = useState(new Set()); // Selected datasets for filtering
   const [isDatasetDropdownOpen, setIsDatasetDropdownOpen] = useState(false); // Dropdown state
   
@@ -46,6 +63,9 @@ const MultiDatasetComparison = ({ data }) => {
   const currentTooltipRef = React.useRef(null);
   const tooltipTimeoutRef = React.useRef(null);
   const dropdownRef = React.useRef(null);
+  // Incremented on every hover start/end so a slow gene-info lookup cannot
+  // show a tooltip for a cell the pointer has already left.
+  const hoverTokenRef = React.useRef(0);
   
   // Tab options for enrichment
   const tabOptions = [
@@ -85,49 +105,11 @@ const MultiDatasetComparison = ({ data }) => {
   };
 
   // Function to get gene info with caching
+  // Gene info comes from the shared cache in utils (memory + localStorage), so
+  // looking it up never re-renders this component. The returned HTML is escaped.
   const getGeneTooltip = async (geneSymbol) => {
-    const cleanSymbol = cleanGeneSymbol(geneSymbol);
-    
-    // Check cache first
-    if (geneInfoCache[cleanSymbol]) {
-      return formatGeneTooltip(geneSymbol, geneInfoCache[cleanSymbol]);
-    }
-    
-    // Check localStorage
-    const cached = localStorage.getItem(cleanSymbol);
-    if (cached) {
-      try {
-        const parsedCache = JSON.parse(cached);
-        setGeneInfoCache(prev => ({ ...prev, [cleanSymbol]: parsedCache }));
-        return formatGeneTooltip(geneSymbol, parsedCache);
-      } catch (e) {
-        console.error('Error parsing cached gene info:', e);
-      }
-    }
-    
-    // Fetch from API
-    try {
-      const content = await fetchGeneInfo(cleanSymbol);
-      if (content) {
-        let parsedContent;
-        try {
-          parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
-        } catch (e) {
-          parsedContent = { description: content };
-        }
-        
-        // Cache the result
-        localStorage.setItem(cleanSymbol, JSON.stringify(parsedContent));
-        setGeneInfoCache(prev => ({ ...prev, [cleanSymbol]: parsedContent }));
-        
-        return formatGeneTooltip(geneSymbol, parsedContent);
-      }
-    } catch (error) {
-      console.error('Error fetching gene info:', error);
-    }
-    
-    // Fallback
-    return formatGeneTooltip(geneSymbol, null);
+    const info = await getGeneInfo(geneSymbol);
+    return formatGeneTooltip(String(geneSymbol ?? ""), info);
   };
 
   // Cleanup tooltips when component unmounts
@@ -238,21 +220,15 @@ const MultiDatasetComparison = ({ data }) => {
     const mainTab = selectedMainTab.label.replace(/[^a-zA-Z0-9]/g, '_');
     const subTab = selectedSubTab.label.replace(/[^a-zA-Z0-9]/g, '_');
     
-    // Create CSV content
-    const headers = tableData.columns.map(col => col.header).join(',');
-    const rows = tableData.data.map(row => {
-      return tableData.columns.map(col => {
-        const value = row[col.accessorKey];
-        // Handle values that might contain commas or quotes
-        if (value === null || value === undefined) return '';
-        const stringValue = String(value);
-        // Escape quotes and wrap in quotes if contains comma
-        if (stringValue.includes(',') || stringValue.includes('"')) {
-          return `"${stringValue.replace(/"/g, '""')}"`;
-        }
-        return stringValue;
-      }).join(',');
-    });
+    // Create CSV content. The table uses grouped headers, so export the leaf
+    // columns (the ones that actually have an accessorKey).
+    const leafColumns = flattenColumns(tableData.columns).filter(
+      (col) => typeof col?.accessorKey === "string"
+    );
+    const headers = leafColumns.map((col) => csvCell(col.header)).join(',');
+    const rows = tableData.data.map((row) =>
+      leafColumns.map((col) => csvCell(row[col.accessorKey])).join(',')
+    );
     
     const csvContent = [headers, ...rows].join('\n');
     
@@ -415,9 +391,18 @@ const MultiDatasetComparison = ({ data }) => {
               try {
                 // Clean up any existing tooltip first
                 cleanupTooltip();
-                
+
+                // Capture the position now; the event target is not reliable
+                // after the await.
+                const rect = e.currentTarget.getBoundingClientRect();
+                const hoverToken = ++hoverTokenRef.current;
+
                 const tooltip = await getGeneTooltip(geneSymbol);
-                
+
+                // The pointer left (or moved to another gene) while loading.
+                if (hoverTokenRef.current !== hoverToken) return;
+                cleanupTooltip();
+
                 // Create a temporary tooltip element
                 const tooltipDiv = document.createElement('div');
                 tooltipDiv.setAttribute('data-gene-tooltip', 'true'); // Mark for cleanup
@@ -436,10 +421,9 @@ const MultiDatasetComparison = ({ data }) => {
                   pointer-events: none;
                 `;
                 
-                // Position tooltip
-                const rect = e.target.getBoundingClientRect();
+                // Position tooltip (position: fixed => viewport coordinates)
                 tooltipDiv.style.left = `${rect.right + 10}px`;
-                tooltipDiv.style.top = `${rect.top + window.scrollY}px`;
+                tooltipDiv.style.top = `${rect.top}px`;
                 
                 // Add to body
                 document.body.appendChild(tooltipDiv);
@@ -467,7 +451,8 @@ const MultiDatasetComparison = ({ data }) => {
               }
             }}
             onMouseLeave={() => {
-              // Clean up tooltip
+              // Invalidate any lookup still in flight, then clean up
+              hoverTokenRef.current += 1;
               cleanupTooltip();
             }}
           >
@@ -669,68 +654,58 @@ const MultiDatasetComparison = ({ data }) => {
     return aggregatedData;
   };
 
-  const currentData = getCurrentData();
-  const tableData = createTableData(currentData);
-  const datasetsWithData = getDatasetsWithData(currentData);
+  // The aggregated data, table rows and column definitions are memoised: they
+  // are expensive (all genes x datasets, plus ranks) and, more importantly,
+  // their identity drives the effects below. Rebuilding them on every render
+  // used to restart the debounce/enrichment cycle once per second.
+  const currentData = useMemo(
+    () => getCurrentData(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parsedData, selectedMainTab.value, selectedSubTab.value]
+  );
+  const tableData = useMemo(
+    () => createTableData(currentData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentData, parsedData, selectedDatasets, minDatasets, showRanks, rankOrder]
+  );
+  const datasetsWithData = useMemo(
+    () => getDatasetsWithData(currentData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentData, parsedData]
+  );
   const datasetFilterMax = Math.max(
     1,
     datasetsWithData.size || parsedData?.datasets?.length || 0
   );
-  
-  // Callback to handle sorted/filtered data changes from table
-  const handleTableDataChange = useCallback((sortedData) => {
-    if (!sortedData || sortedData.length === 0) {
-      setCurrentGeneLists({});
-      return;
-    }
-    
-    const lists = {};
-    const positiveGenes = sortedData.filter(g => (g.average || 0) > 0).map(g => g.gene);
-    const negativeGenes = sortedData.filter(g => (g.average || 0) < 0).map(g => g.gene);
-    
-    lists["All Positive"] = positiveGenes.join();
-    lists["All Negative"] = negativeGenes.join();
-    lists["Top 10 Positive"] = positiveGenes.slice(0, 10).join();
-    lists["Top 20 Positive"] = positiveGenes.slice(0, 20).join();
-    lists["Top 50 Positive"] = positiveGenes.slice(0, 50).join();
-    lists["Top 100 Positive"] = positiveGenes.slice(0, 100).join();
-    lists["Bottom 10 Negative"] = negativeGenes.slice(0, 10).join();
-    lists["Bottom 20 Negative"] = negativeGenes.slice(0, 20).join();
-    lists["Bottom 50 Negative"] = negativeGenes.slice(0, 50).join();
-    lists["Bottom 100 Negative"] = negativeGenes.slice(0, 100).join();
-    
-    setCurrentGeneLists(lists);
+
+  // Keep the table sorted by the column that exists in the current mode.
+  useEffect(() => {
+    setSorting(
+      showRanks
+        ? [{ id: 'average_rank', desc: false }]
+        : [{ id: 'average', desc: true }]
+    );
+  }, [showRanks]);
+
+  // Callback to handle filtered data changes from table. The lists are derived
+  // from the "average" score, so the display order of the rows is irrelevant.
+  const handleTableDataChange = useCallback((rows) => {
+    const lists =
+      !rows || rows.length === 0
+        ? {}
+        : buildTopBottomGeneLists(rows, COMPARISON_LIST_OPTIONS);
+    // Keep the previous object when nothing changed so the enrichment panel
+    // (and this component) do not re-render for identical lists.
+    setCurrentGeneLists((prev) => (geneListsEqual(prev, lists) ? prev : lists));
   }, []);
-  
+
   // Generate initial gene lists for enrichment
   const geneLists = useMemo(() => {
     if (!tableData.data || tableData.data.length === 0) return {};
-    
-    const lists = {};
-    const sortedByAverage = [...tableData.data].sort((a, b) => {
-      const aVal = a.average || 0;
-      const bVal = b.average || 0;
-      return bVal - aVal; // Sort descending by average
-    });
-    
-    const positiveGenes = sortedByAverage.filter(g => (g.average || 0) > 0).map(g => g.gene);
-    const negativeGenes = sortedByAverage.filter(g => (g.average || 0) < 0).map(g => g.gene).reverse();
-    
-    lists["All Positive"] = positiveGenes.join();
-    lists["All Negative"] = negativeGenes.join();
-    lists["Top 10 Positive"] = positiveGenes.slice(0, 10).join();
-    lists["Top 20 Positive"] = positiveGenes.slice(0, 20).join();
-    lists["Top 50 Positive"] = positiveGenes.slice(0, 50).join();
-    lists["Top 100 Positive"] = positiveGenes.slice(0, 100).join();
-    lists["Bottom 10 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 10, 0)).join();
-    lists["Bottom 20 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 20, 0)).join();
-    lists["Bottom 50 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 50, 0)).join();
-    lists["Bottom 100 Negative"] = negativeGenes.slice(Math.max(negativeGenes.length - 100, 0)).join();
-    
-    return lists;
+    return buildTopBottomGeneLists(tableData.data, COMPARISON_LIST_OPTIONS);
   }, [tableData.data]);
-  
-  // Use current gene lists if available (from sorted table), otherwise use initial
+
+  // Use current gene lists if available (from the filtered table), otherwise use initial
   const activeGeneLists = Object.keys(currentGeneLists).length > 0 ? currentGeneLists : geneLists;
 
   React.useEffect(() => {
@@ -747,10 +722,10 @@ const MultiDatasetComparison = ({ data }) => {
     
     debounceTimerRef.current = setTimeout(() => {
       if (!tableData.data || tableData.data.length === 0) {
-        setCurrentGeneLists({});
+        handleTableDataChange([]);
         return;
       }
-      
+
       // Apply filtering
       let filteredData = [...tableData.data];
       
@@ -773,36 +748,17 @@ const MultiDatasetComparison = ({ data }) => {
         });
       });
       
-      // Apply sorting
-      if (sorting && sorting.length > 0) {
-        const sortConfig = sorting[0];
-        filteredData.sort((a, b) => {
-          let aVal = a[sortConfig.id];
-          let bVal = b[sortConfig.id];
-          
-          // Handle numeric values
-          if (typeof aVal === 'number' && typeof bVal === 'number') {
-            return sortConfig.desc ? bVal - aVal : aVal - bVal;
-          }
-          
-          // Handle string values
-          const aStr = String(aVal || '');
-          const bStr = String(bVal || '');
-          const comparison = aStr.localeCompare(bStr);
-          return sortConfig.desc ? -comparison : comparison;
-        });
-      }
-      
-      // Generate gene lists from filtered and sorted data
+      // Generate gene lists from the filtered rows. Sorting is deliberately
+      // ignored: Top/Bottom N always follow the score column.
       handleTableDataChange(filteredData);
     }, 1000);
-    
+
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [sorting, columnFilters, globalFilter, tableData.data, handleTableDataChange]);
+  }, [columnFilters, globalFilter, tableData.data, handleTableDataChange]);
 
   const minDatasetOptions = useMemo(
     () => Array.from({ length: datasetFilterMax }, (_, idx) => idx + 1),
@@ -1126,4 +1082,9 @@ const MultiDatasetComparison = ({ data }) => {
   );
 };
 
-export { MultiDatasetComparison }; 
+const SafeMultiDatasetComparison = withErrorBoundary(MultiDatasetComparison, {
+  label: "Multi-dataset comparison",
+  resetKeys: (props) => [props.data],
+});
+
+export { SafeMultiDatasetComparison as MultiDatasetComparison };

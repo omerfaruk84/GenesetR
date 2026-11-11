@@ -38,7 +38,99 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
-import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
+import { createGeneTooltipFormatter, buildGeneScoreTooltip } from "../../utils/geneFunctionUtils";
+import { formulaSymbolSet, toggleGeneInFormula } from "../../utils/geneFormula";
+import { buildTopBottomGeneLists, splitGenesByScore } from "../../utils/geneListUtils";
+import { withErrorBoundary } from "../error-boundary";
+
+const isDevEnv = process.env.NODE_ENV !== "production";
+// Development-only logging (the result objects are large).
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    // eslint-disable-next-line no-console
+    console["log"](...args);
+  }
+};
+
+// Enrichment gene lists. Top/Bottom N are always derived from the score
+// column of the rows, never from the order the table is displayed in.
+const TABLE_LIST_OPTIONS = {
+  geneKey: "Gene",
+  scoreKey: "Z-Score",
+  allPositive: null,
+  allNegative: null,
+  topLabel: (n) => `Top ${n} Increasing`,
+  bottomLabel: (n) => `Bottom ${n} Decreasing`,
+};
+const SIMILAR_LIST_OPTIONS = {
+  geneKey: "Gene",
+  scoreKey: "Similarity",
+  allPositive: "All Positively Correlated",
+  allNegative: "All Negatively Correlated",
+  topLabel: (n) => `Top ${n} Similar`,
+  bottomLabel: (n) => `Bottom ${n} Anti-correlated`,
+};
+const MULTI_LIST_OPTIONS = {
+  geneKey: "gene",
+  scoreKey: "average",
+  allPositive: "All Increasing",
+  allNegative: "All Decreasing",
+  topLabel: (n) => `Top ${n} Increasing`,
+  bottomLabel: (n) => `Bottom ${n} Decreasing`,
+};
+const MULTI_SIMILAR_LIST_OPTIONS = {
+  ...SIMILAR_LIST_OPTIONS,
+  scoreKey: "average",
+};
+
+// Gene lists of the single-dataset Table tab.
+const buildSignatureTableLists = (rows) => {
+  const up = [];
+  const down = [];
+  (rows || []).forEach((row) => {
+    if (!row?.Gene) return;
+    if (row.Effect === "UP") up.push(row.Gene);
+    else if (row.Effect === "DOWN") down.push(row.Gene);
+  });
+  return {
+    "All UP": up.join(),
+    "All DOWN": down.join(),
+    ...buildTopBottomGeneLists(rows, TABLE_LIST_OPTIONS),
+  };
+};
+
+// Tooltip of the signature scatter. Point data: [zScore, jitterY, gene, score, highlighted]
+const formatScore = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : undefined;
+
+const signatureTooltipFormatter = createGeneTooltipFormatter({
+  parseData: (params) => ({
+    geneSymbol: params?.data?.[2],
+    zScore: params?.data?.[0],
+    originalScore: params?.data?.[3],
+    isHighlighted: params?.data?.[4] === true,
+  }),
+  renderTooltip: (geneSymbol, geneInfo, parsed, state) => {
+    const z = parsed.zScore;
+    const effect =
+      z > 2
+        ? { label: "Increases Signature", color: "#4caf50" }
+        : z < -2
+          ? { label: "Decreases Signature", color: "#f44336" }
+          : { label: "No Significant Effect", color: "#9e9e9e" };
+    return buildGeneScoreTooltip({
+      geneSymbol,
+      geneInfo,
+      state,
+      highlighted: parsed.isHighlighted,
+      rows: [
+        { label: "Effect", value: effect.label, color: effect.color, bold: true },
+        { label: "Z-Score", value: formatScore(z) },
+        { label: "Signature Score", value: formatScore(parsed.originalScore) },
+      ],
+    });
+  },
+});
 
 echarts.use([
   TitleComponent,
@@ -107,44 +199,28 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   const [keyedDataMultiSimilar, setkeyedDataMultiSimilar] = useState([]); // New state for multi-dataset similar genes
   const prevMultiDataLengthRef = useRef(0); // Track previous data length to detect new calculations
   const prevMultiSimilarDataLengthRef = useRef(0); // Track previous similar data length
-  const signatureGeneSet = useMemo(() => {
-    const normalized = (coreSettings.targetGeneList || "")
-      .replace(/[,\s;]+/g, "+")
-      .replace(/\++|\-+/g, "+")
-      .trimStart("+")
-      .split("+")
-      .filter(Boolean)
-      .map((g) => g.split("_")[0]);
-    return new Set(normalized);
-  }, [coreSettings.targetGeneList]);
+  // Upper-cased symbols of the signature (see utils/geneFormula for the
+  // operator / hyphenated-symbol rules shared by all components).
+  const signatureGeneSet = useMemo(
+    () => formulaSymbolSet(coreSettings.targetGeneList || ""),
+    [coreSettings.targetGeneList]
+  );
+  const isInSignature = useCallback(
+    (gene) => signatureGeneSet.has(String(gene || "").split("_")[0].toUpperCase()),
+    [signatureGeneSet]
+  );
   const toggleGeneInSignature = useCallback(
     (gene) => {
       if (!gene) return;
-      const cleanGene = gene.split("_")[0];
-      const tokens = (coreSettings.targetGeneList || "")
-        .replace(/\s+/g, "")
-        .split(/(?=[+-])/)
-        .filter(Boolean);
-      const exists = tokens.some(
-        (t) => t.replace(/[+-]/g, "") === cleanGene
-      );
-      let newTokens;
-      if (exists) {
-        newTokens = tokens.filter((t) => t.replace(/[+-]/g, "") !== cleanGene);
-      } else {
-        if (tokens.length === 0) newTokens = [cleanGene];
-        else newTokens = [...tokens, `+${cleanGene}`];
-      }
-      const newFormula = newTokens.join("") || "";
-      dispatch(
-        coreSettingsChanged({
-          settingName: CoreSettingsTypes.TARGET_LIST,
-          newValue: newFormula,
-        })
-      );
+      const newFormula = toggleGeneInFormula(coreSettings.targetGeneList || "", gene);
+      // `coreSettingsChanged` is already bound to dispatch by mapDispatchToProps.
+      coreSettingsChanged({
+        settingName: CoreSettingsTypes.TARGET_LIST,
+        newValue: newFormula,
+      });
       setSignatureDirty(true);
     },
-    [coreSettings.targetGeneList, dispatch]
+    [coreSettings.targetGeneList, coreSettingsChanged]
   );
   
   const [selectedTab, setSelectedTab] = useState({
@@ -190,89 +266,26 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   const [genelistsMultiSimilar, setGeneListsMultiSimilar] = useState([]);
   
   // Callback functions to update gene lists when table data changes (sorted/filtered)
-  const handleTableDataChange = useCallback((sortedData) => {
-    if (!sortedData || sortedData.length === 0) return;
-    
-    const tableGeneLists = {};
-    const sortedByZScore = [...sortedData]; // Already sorted by table
-    const upreg = sortedByZScore.filter(g => g.Effect === "UP").map(g => g.Gene);
-    const dowreg = sortedByZScore.filter(g => g.Effect === "DOWN").map(g => g.Gene);
-    const topGenes = sortedByZScore.map(g => g.Gene);
-    const bottomGenes = [...topGenes].reverse();
-    
-    tableGeneLists["All UP"] = upreg.join();
-    tableGeneLists["All DOWN"] = dowreg.join();
-    tableGeneLists["Top 10 Increasing"] = topGenes.slice(0, 10).join();
-    tableGeneLists["Top 20 Increasing"] = topGenes.slice(0, 20).join();
-    tableGeneLists["Top 50 Increasing"] = topGenes.slice(0, 50).join();
-    tableGeneLists["Top 100 Increasing"] = topGenes.slice(0, 100).join();
-    tableGeneLists["Bottom 10 Decreasing"] = bottomGenes.slice(0, 10).join();
-    tableGeneLists["Bottom 20 Decreasing"] = bottomGenes.slice(0, 20).join();
-    tableGeneLists["Bottom 50 Decreasing"] = bottomGenes.slice(0, 50).join();
-    tableGeneLists["Bottom 100 Decreasing"] = bottomGenes.slice(0, 100).join();
-    setGeneListsTable(tableGeneLists);
+  const handleTableDataChange = useCallback((rows) => {
+    if (!rows || rows.length === 0) return;
+    setGeneListsTable(buildSignatureTableLists(rows));
   }, []);
-  
-  const handleSimilarDataChange = useCallback((sortedData) => {
-    if (!sortedData || sortedData.length === 0) return;
-    
-    const similarGeneLists = {};
-    const topSimilar = sortedData.filter(g => (g.Similarity || 0) > 0).map(g => g.Gene);
-    const bottomSimilar = sortedData.filter(g => (g.Similarity || 0) < 0).map(g => g.Gene);
-    
-    similarGeneLists["All Positively Correlated"] = topSimilar.join();
-    similarGeneLists["All Negatively Correlated"] = bottomSimilar.join();
-    similarGeneLists["Top 10 Similar"] = topSimilar.slice(0, 10).join();
-    similarGeneLists["Top 20 Similar"] = topSimilar.slice(0, 20).join();
-    similarGeneLists["Top 50 Similar"] = topSimilar.slice(0, 50).join();
-    similarGeneLists["Top 100 Similar"] = topSimilar.slice(0, 100).join();
-    similarGeneLists["Bottom 10 Anti-correlated"] = bottomSimilar.slice(0, 10).join();
-    similarGeneLists["Bottom 20 Anti-correlated"] = bottomSimilar.slice(0, 20).join();
-    similarGeneLists["Bottom 50 Anti-correlated"] = bottomSimilar.slice(0, 50).join();
-    similarGeneLists["Bottom 100 Anti-correlated"] = bottomSimilar.slice(0, 100).join();
-    setGeneListsSimilar(similarGeneLists);
+
+  const handleSimilarDataChange = useCallback((rows) => {
+    if (!rows || rows.length === 0) return;
+    setGeneListsSimilar(buildTopBottomGeneLists(rows, SIMILAR_LIST_OPTIONS));
   }, []);
-  
-  const handleMultiDataChange = useCallback((sortedData) => {
-    if (!sortedData || sortedData.length === 0) return;
-    
-    const multiGeneLists = {};
-    const topMulti = sortedData.filter(g => (g.average || 0) > 0).map(g => g.gene);
-    const bottomMulti = sortedData.filter(g => (g.average || 0) < 0).map(g => g.gene);
-    
-    multiGeneLists["All Increasing"] = topMulti.join();
-    multiGeneLists["All Decreasing"] = bottomMulti.join();
-    multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
-    multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
-    multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
-    multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
-    multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(0, 10).join();
-    multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(0, 20).join();
-    multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(0, 50).join();
-    multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(0, 100).join();
-    setGeneListsMulti(multiGeneLists);
+
+  const handleMultiDataChange = useCallback((rows) => {
+    if (!rows || rows.length === 0) return;
+    setGeneListsMulti(buildTopBottomGeneLists(rows, MULTI_LIST_OPTIONS));
   }, []);
-  
-  const handleMultiSimilarDataChange = useCallback((sortedData) => {
-    if (!sortedData || sortedData.length === 0) return;
-    
-    const multiSimilarGeneLists = {};
-    const topMultiSimilar = sortedData.filter(g => (g.average || 0) > 0).map(g => g.Gene);
-    const bottomMultiSimilar = sortedData.filter(g => (g.average || 0) < 0).map(g => g.Gene);
-    
-    multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
-    multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
-    multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
-    multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
-    multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
-    multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
-    multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(0, 10).join();
-    multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(0, 20).join();
-    multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(0, 50).join();
-    multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(0, 100).join();
-    setGeneListsMultiSimilar(multiSimilarGeneLists);
+
+  const handleMultiSimilarDataChange = useCallback((rows) => {
+    if (!rows || rows.length === 0) return;
+    setGeneListsMultiSimilar(buildTopBottomGeneLists(rows, MULTI_SIMILAR_LIST_OPTIONS));
   }, []);
-  
+
   // Multi-dataset local settings
   const [showRanks, setShowRanks] = useState(false);
   
@@ -579,7 +592,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         },
         Cell: ({ row }) => {
           const gene = (row?.original?.Gene || "").split("_")[0];
-          const isIncluded = signatureGeneSet.has(gene);
+          const isIncluded = isInSignature(gene);
           return (
             <button
               onClick={() => toggleGeneInSignature(gene)}
@@ -599,7 +612,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         },
       },
     ],
-    [signatureGeneSet, toggleGeneInSignature]
+    [isInSignature, toggleGeneInSignature]
   );
 
   const columnsMulti = useMemo(() => {
@@ -607,7 +620,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     const datasetsForColumns = normalizedSelectedDatasets;
     if (!datasetsForColumns || datasetsForColumns.length === 0) return [];
     
-    console.log('GeneSignature - Creating columns with showRanks:', showRanks);
+    debugLog('GeneSignature - Creating columns with showRanks:', showRanks);
     
     const columns = [];
     
@@ -799,7 +812,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         muiFilterTextFieldProps: { placeholder: "Select", size: "small" },
         Cell: ({ row }) => {
           const gene = (row?.original?.Gene || "").split("_")[0];
-          const isIncluded = signatureGeneSet.has(gene);
+          const isIncluded = isInSignature(gene);
           return (
             <button
               onClick={() => toggleGeneInSignature(gene)}
@@ -821,7 +834,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     });
 
     return cols;
-  }, [data?.datasets, similarData?.datasets, hasMultiDatasetSelection, normalizedSelectedDatasets, showRanks, signatureGeneSet, toggleGeneInSignature]);
+  }, [data?.datasets, similarData?.datasets, hasMultiDatasetSelection, normalizedSelectedDatasets, showRanks, isInSignature, toggleGeneInSignature]);
 
   function roundToThree(num) {
     return +(Math.round(num + "e+3") + "e-3");
@@ -836,7 +849,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
   // Function to process multi-dataset data on frontend
   const processMultiDatasetData = useCallback((data, minDatasets = 1, blacklistData = null, genesignatureSettings = null) => {
-    console.log('GeneSignature - processMultiDatasetData called with:', {
+    debugLog('GeneSignature - processMultiDatasetData called with:', {
       showRanks,
       rankOrder,
       datasets: data?.datasets,
@@ -979,7 +992,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       return row;
     });
 
-    console.log('GeneSignature - Processed data sample:', processedData.slice(0, 2));
+    debugLog('GeneSignature - Processed data sample:', processedData.slice(0, 2));
 
     // Sort by average rank or score
     processedData.sort((a, b) => {
@@ -1010,11 +1023,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
     const correlations = data.correlations; // Now this is per-dataset correlations
     const datasets = data.datasets || [];
-    const signatureGenes = new Set(coreSettings.targetGeneList
-      .replaceAll(/[,\s;]+/g, "+")
-      .replaceAll(/\++|\-+/g, "+")
-      .trimStart("+")
-      .split("+"));
+    const signatureGenes = formulaSymbolSet(coreSettings.targetGeneList || "");
 
     // Get all unique genes that have correlations in any dataset
     const allGenesWithCorrelations = new Set();
@@ -1026,7 +1035,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       }
     });
 
-    console.log('GeneSignature - Found genes with correlations:', {
+    debugLog('GeneSignature - Found genes with correlations:', {
       totalGenes: allGenesWithCorrelations.size,
       datasets: datasets,
       sampleGenes: Array.from(allGenesWithCorrelations).slice(0, 5)
@@ -1057,7 +1066,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         
         // Skip genes that have no correlation data in any dataset
         if (datasetCount === 0) {
-          console.log(`Skipping gene ${gene} - no correlation data in any dataset`);
+          debugLog(`Skipping gene ${gene} - no correlation data in any dataset`);
           return null;
         }
         
@@ -1082,7 +1091,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           rowData.Similarity = avgCorrelation; // This is now the averaged correlation
           rowData.average = avgCorrelation;
           rowData.Datasets = datasetCount;
-          rowData.Included = signatureGenes.has(gene.split("_")[0]) ? "YES" : "";
+          rowData.Included = signatureGenes.has(gene.split("_")[0].toUpperCase()) ? "YES" : "";
           
           return rowData;
         }
@@ -1157,7 +1166,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       }
     });
 
-    console.log('GeneSignature - Processed similar genes:', {
+    debugLog('GeneSignature - Processed similar genes:', {
       totalGenes: allGenesWithCorrelations.size,
       filteredGenes: similarGenesData.length,
       sampleGenes: similarGenesData.slice(0, 3),
@@ -1207,22 +1216,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     setkeyedDataMulti(multiTableInfo);
 
     if (Array.isArray(multiTableInfo) && multiTableInfo.length > 0) {
-      const multiGeneLists = {};
-      const sortedMultiByAvg = [...multiTableInfo].sort((a, b) => (b.average || 0) - (a.average || 0));
-      const topMulti = sortedMultiByAvg.filter((g) => (g.average || 0) > 0).map((g) => g.gene);
-      const bottomMulti = sortedMultiByAvg.filter((g) => (g.average || 0) < 0).map((g) => g.gene);
-
-      multiGeneLists["All Increasing"] = topMulti.join();
-      multiGeneLists["All Decreasing"] = bottomMulti.join();
-      multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
-      multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
-      multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
-      multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
-      multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 10, 0)).join();
-      multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 20, 0)).join();
-      multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 50, 0)).join();
-      multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 100, 0)).join();
-      setGeneListsMulti(multiGeneLists);
+      setGeneListsMulti(buildTopBottomGeneLists(multiTableInfo, MULTI_LIST_OPTIONS));
     } else {
       setGeneListsMulti({});
     }
@@ -1248,21 +1242,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     setkeyedDataMultiSimilar(filteredMultiSimilarInfo);
 
     if (Array.isArray(filteredMultiSimilarInfo) && filteredMultiSimilarInfo.length > 0) {
-      const multiSimilarGeneLists = {};
-      const topMultiSimilar = filteredMultiSimilarInfo.filter((g) => (g.average || 0) > 0).map((g) => g.Gene);
-      const bottomMultiSimilar = filteredMultiSimilarInfo.filter((g) => (g.average || 0) < 0).map((g) => g.Gene);
-
-      multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
-      multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
-      multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
-      multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
-      multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
-      multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
-      multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 10, 0)).join();
-      multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 20, 0)).join();
-      multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
-      multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
-      setGeneListsMultiSimilar(multiSimilarGeneLists);
+      setGeneListsMultiSimilar(
+        buildTopBottomGeneLists(filteredMultiSimilarInfo, MULTI_SIMILAR_LIST_OPTIONS)
+      );
     } else {
       setGeneListsMultiSimilar({});
     }
@@ -1297,7 +1279,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     }*/
   ];
 
-  //console.log("Start of the page")
+  //debugLog("Start of the page")
 
   //Function to find nearest index
 
@@ -1330,7 +1312,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     const nearest = target - arr[right] < arr[left] - target ? right : left;
 
     if (target > 5)
-      //console.log(target, nearest, distY[nearest])
+      //debugLog(target, nearest, distY[nearest])
       //we have the nearest index
       //return a random Y in the range
       return getRandomArbitrary(
@@ -1371,12 +1353,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     if (savedView !== null) {
       const savedViewNum = parseInt(savedView, 10);
       if (savedViewNum !== selectedView && savedViewNum >= 0 && savedViewNum <= 4) {
-        console.log('GeneSignature - Restoring selectedView from sessionStorage:', savedViewNum);
+        debugLog('GeneSignature - Restoring selectedView from sessionStorage:', savedViewNum);
         setSelectedView(savedViewNum);
       }
     }
     
-    console.log('GeneSignature - Data processing useEffect triggered:', {
+    debugLog('GeneSignature - Data processing useEffect triggered:', {
       hasData: !!data,
       hasResults: !!(data?.results),
       resultsLength: data?.results?.length || 0,
@@ -1398,23 +1380,23 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     
     // Don't return early if blacklist is loading - process data anyway
     if (!data) {
-      console.log('GeneSignature - No data, returning early');
+      debugLog('GeneSignature - No data, returning early');
       return;
     }
     
-    let signatureGenes = coreSettings.targetGeneList
-      .replaceAll(/[,\s;]+/g, "+")
-      .replaceAll(/\++|\-+/g, "+")
-      .trimStart("+")
-      .split("+");
-    let highlightList = new Set(
-      genesignatureSettings?.genesTolabel
-        .replaceAll(/[,\s;]+/g, "\n")
-        .trimStart("\n")
-        .split("\n")
-    );
-    highlightList = new Set([...highlightList, ...signatureGenes]);
-    
+    // Symbols of the signature (upper-cased; see utils/geneFormula)
+    const signatureSymbols = formulaSymbolSet(coreSettings.targetGeneList || "");
+    // Genes to label in the chart: the signature itself + the user's list
+    const highlightSet = new Set(signatureSymbols);
+    String(genesignatureSettings?.genesTolabel || "")
+      .split(/[,\s;]+/)
+      .filter(Boolean)
+      .forEach((gene) => highlightSet.add(gene.toUpperCase()));
+    const isHighlighted = (label) => {
+      const upper = String(label ?? "").toUpperCase();
+      return highlightSet.has(upper) || highlightSet.has(upper.split("_")[0]);
+    };
+
     // Process chart data if we have results (from main data prop)
     // Now data is not overwritten by multi-dataset, so we can use it directly
     if (
@@ -1423,7 +1405,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       data.genes &&
       data.genes.length > 0
     ) {
-      console.log('GeneSignature - Processing chart data:', {
+      debugLog('GeneSignature - Processing chart data:', {
         resultsLength: data.results.length,
         genesLength: data.genes.length
       });
@@ -1436,13 +1418,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       let tableInfo = [];
       let similarGenesTableInfo = [];
 
-      let signatureGenesSet = new Set(signatureGenes);
-
       Object.keys(similarGenes).forEach((gene) =>
         similarGenesTableInfo.push({
           Gene: gene,
           Similarity: similarGenes[gene],
-          Included: signatureGenesSet.has(gene.split("_")[0]) ? "YES" : "",
+          Included: signatureSymbols.has(gene.split("_")[0].toUpperCase()) ? "YES" : "",
         })
       );
       const sortedSimilarGenes = similarGenesTableInfo.sort(
@@ -1450,50 +1430,55 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       );
       setkeyedData2(sortedSimilarGenes);
       
-      // Create gene lists for Similar Genes tab enrichment
-      const similarGeneLists = {};
-      const topSimilar = sortedSimilarGenes.filter(g => g.Similarity > 0).map(g => g.Gene);
-      const bottomSimilar = sortedSimilarGenes.filter(g => g.Similarity < 0).map(g => g.Gene);
-      
-      similarGeneLists["All Positively Correlated"] = topSimilar.join();
-      similarGeneLists["All Negatively Correlated"] = bottomSimilar.join();
-      similarGeneLists["Top 10 Similar"] = topSimilar.slice(0, 10).join();
-      similarGeneLists["Top 20 Similar"] = topSimilar.slice(0, 20).join();
-      similarGeneLists["Top 50 Similar"] = topSimilar.slice(0, 50).join();
-      similarGeneLists["Top 100 Similar"] = topSimilar.slice(0, 100).join();
-      similarGeneLists["Bottom 10 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 10, 0)).join();
-      similarGeneLists["Bottom 20 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 20, 0)).join();
-      similarGeneLists["Bottom 50 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 50, 0)).join();
-      similarGeneLists["Bottom 100 Anti-correlated"] = bottomSimilar.slice(Math.max(bottomSimilar.length - 100, 0)).join();
-      setGeneListsSimilar(similarGeneLists);
+      // Gene lists for Similar Genes tab enrichment
+      setGeneListsSimilar(
+        buildTopBottomGeneLists(sortedSimilarGenes, SIMILAR_LIST_OPTIONS)
+      );
 
       const pointData = [];
 
       var results = trimmedMean(xValues, 0.2);
-      if (results.mean === undefined) results.mean = 0;
-      if (results.std === undefined) results.std = 1;
+      // Guard against degenerate distributions (single value / zero variance),
+      // which would turn every z-score into NaN.
+      if (!Number.isFinite(results.mean)) results.mean = 0;
+      if (!Number.isFinite(results.std) || results.std === 0) results.std = 1;
       // Calculate the Z-scores for each data point
       const zScores = xValues.map(
         (value) => (value - results.mean) / results.std
       );
 
-      //console.log("highlightList", highlightList,coreSettings )
+      //debugLog("highlightList", highlightList,coreSettings )
 
-      // Determine the range of the data
-      let min = Math.min(...zScores);
-      let max = Math.max(...zScores);
+      // Determine the range of the data (loop: no argument-count limit, NaN-safe)
+      let min = Number.POSITIVE_INFINITY;
+      let max = Number.NEGATIVE_INFINITY;
+      for (const value of zScores) {
+        if (!Number.isFinite(value)) continue;
+        if (value < min) min = value;
+        if (value > max) max = value;
+      }
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        min = 0;
+        max = 0;
+      }
 
       // Initialize bins
       let bins = [];
       let binSize = 0.05;
-      for (let i = min; i <= max; i += binSize) {
-        bins.push({ binStart: i, binEnd: i + binSize, count: 0 });
+      const binCount = Math.floor((max - min) / binSize) + 1;
+      for (let b = 0; b < binCount; b++) {
+        const start = min + b * binSize;
+        bins.push({ binStart: start, binEnd: start + binSize, count: 0 });
       }
+      const binIndexOf = (value) =>
+        Number.isFinite(value)
+          ? Math.min(bins.length - 1, Math.max(0, Math.floor((value - min) / binSize)))
+          : 0;
 
       // Iterate through data and increment the count of the corresponding bin
       for (let value of zScores) {
-        let binIndex = Math.floor((value - min) / binSize);
-        bins[binIndex].count++;
+        if (!Number.isFinite(value)) continue;
+        bins[binIndexOf(value)].count++;
       }
 
       //Calculate rolling average for distribution graph
@@ -1510,7 +1495,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         ]);
       }
       setPointDistribution(pointDistribution);
-      //console.log("pointDistribution", pointDistribution)
+      //debugLog("pointDistribution", pointDistribution)
 
       //findNearestIndex(distX,distY, xValues[i])
       for (let i = 0; i < xValues.length; i++) {
@@ -1534,25 +1519,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         )
           continue;
 
-        //For sgRNAs that are not significant we dont need to show all.
-        if (
-          zScores[i] < 1.5 &&
-          zScores[i] > -1.5 &&
-          !highlightList.has(labels[i])
-        ) {
-          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
-          if (randomNum < 7) continue;
-        }
-
-        let binLoc = bins[Math.floor((zScores[i] - min) / binSize)].count;
-        let histY = Math.random() * 2 * binLoc - binLoc;
-        pointData.push([
-          zScores[i],
-          histY,
-          labels[i],
-          xValues[i],
-          highlightList.has(labels[i]),
-        ]);
+        // Every perturbation goes into the table (and therefore into its
+        // export and the derived gene lists).
         tableInfo.push({
           Gene: labels[i],
           Effect:
@@ -1560,38 +1528,35 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           Score: xValues[i],
           "Z-Score": roundToThree(zScores[i]),
         });
+
+        // Only the scatter is thinned: non-significant points are sampled so
+        // the chart stays responsive. Highlighted genes are always drawn.
+        const highlighted = isHighlighted(labels[i]);
+        if (zScores[i] < 1.5 && zScores[i] > -1.5 && !highlighted) {
+          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
+          if (randomNum < 7) continue;
+        }
+
+        let binLoc = bins[binIndexOf(zScores[i])]?.count || 0;
+        let histY = Math.random() * 2 * binLoc - binLoc;
+        pointData.push([
+          zScores[i],
+          histY,
+          labels[i],
+          xValues[i],
+          highlighted,
+        ]);
       }
 
-      const sortedtableInfo = tableInfo.sort(
-        (geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]
+      tableInfo.sort((geneA, geneB) => geneB["Z-Score"] - geneA["Z-Score"]);
+
+      // Gene lists for the Chart tab enrichment (derived from the z-scores)
+      const upreg = tableInfo.filter((g) => g.Effect === "UP").map((g) => g.Gene);
+      const dowreg = tableInfo.filter((g) => g.Effect === "DOWN").map((g) => g.Gene);
+      const { positive: topGenes, negative: bottomGenes } = splitGenesByScore(
+        tableInfo,
+        { geneKey: "Gene", scoreKey: "Z-Score" }
       );
-
-      const upreg = [];
-      const dowreg = [];
-
-      tableInfo.forEach((gene) => {
-        if (gene.Effect === "UP") {
-          upreg.push(gene.Gene);
-        } else if (gene.Effect === "DOWN") {
-          dowreg.push(gene.Gene);
-        }
-      });
-
-      const topRange = 100; // Adjust this value based on the maximum top range you're interested in
-      const bottomRange = 100; // Adjust for the maximum bottom range
-      const totalLength = sortedtableInfo.length;
-
-      // Calculate slices to map, ensuring we don't map more than necessary
-      const maxTopIndex = Math.min(topRange, totalLength);
-      const minBottomIndex = Math.max(totalLength - bottomRange, 0);
-
-      // Map only the necessary parts
-      const topGenes = sortedtableInfo
-        .slice(0, maxTopIndex)
-        .map((gene) => gene.Gene);
-      const bottomGenes = sortedtableInfo
-        .slice(minBottomIndex, totalLength)
-        .map((gene) => gene.Gene);
 
       const temp = {};
       temp["Increases Gene Signature"] = upreg.join();
@@ -1599,44 +1564,27 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       temp["Top 20 Increasing"] = topGenes.slice(0, 20).join();
       temp["Top 50 Increasing"] = topGenes.slice(0, 50).join();
       temp["Top 100 Increasing"] = topGenes.slice(0, 100).join();
-      temp["Top 20 Decreasing"] = bottomGenes
-        .slice(Math.max(bottomGenes.length - 20, 0))
-        .join();
-      temp["Top 50 Decreasing"] = bottomGenes
-        .slice(Math.max(bottomGenes.length - 50, 0))
-        .join();
-      temp["Top 100 Decreasing"] = bottomGenes.join();
+      temp["Top 20 Decreasing"] = bottomGenes.slice(0, 20).join();
+      temp["Top 50 Decreasing"] = bottomGenes.slice(0, 50).join();
+      temp["Top 100 Decreasing"] = bottomGenes.slice(0, 100).join();
 
-      console.log('GeneSignature - Setting table and point data:', {
+      debugLog('GeneSignature - Setting table and point data:', {
         tableInfoLength: tableInfo.length,
         pointDataLength: pointData.length,
-        sampleTableInfo: tableInfo.slice(0, 3),
-        samplePointData: pointData.slice(0, 3)
       });
-      
+
       setGeneLists(temp);
       setkeyedData(tableInfo);
-      
-      // Create gene lists for Table tab enrichment
-      const tableGeneLists = {};
-      tableGeneLists["All UP"] = upreg.join();
-      tableGeneLists["All DOWN"] = dowreg.join();
-      tableGeneLists["Top 10 Increasing"] = topGenes.slice(0, 10).join();
-      tableGeneLists["Top 20 Increasing"] = topGenes.slice(0, 20).join();
-      tableGeneLists["Top 50 Increasing"] = topGenes.slice(0, 50).join();
-      tableGeneLists["Top 100 Increasing"] = topGenes.slice(0, 100).join();
-      tableGeneLists["Bottom 10 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 10, 0)).join();
-      tableGeneLists["Bottom 20 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 20, 0)).join();
-      tableGeneLists["Bottom 50 Decreasing"] = bottomGenes.slice(Math.max(bottomGenes.length - 50, 0)).join();
-      tableGeneLists["Bottom 100 Decreasing"] = bottomGenes.join();
-      setGeneListsTable(tableGeneLists);
-      
+
+      // Gene lists for Table tab enrichment
+      setGeneListsTable(buildSignatureTableLists(tableInfo));
+
       pointData.sort((a, b) => b[0] - a[0]);
-      console.log("GeneSignature - Final pointData:", pointData.slice(0, 5));
+      debugLog("GeneSignature - Final pointData:", pointData.slice(0, 5));
       setPointData(pointData);
     } else {
       // Log when chart data is not available
-      console.log('GeneSignature - Chart data not available');
+      debugLog('GeneSignature - Chart data not available');
     }
     }, [data, multiDatasetData, coreSettings.targetGeneList, genesignatureSettings, blacklistData, blacklistLoading, showRanks, rankOrder, processMultiDatasetData, hasMultiDatasetSelection]);
 
@@ -1648,22 +1596,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         setkeyedDataMulti(multiTableInfo);
         
         // Update gene lists for Multi-Dataset tab
-        const multiGeneLists = {};
-        const sortedMultiByAvg = [...multiTableInfo].sort((a, b) => (b.average || 0) - (a.average || 0));
-        const topMulti = sortedMultiByAvg.filter(g => (g.average || 0) > 0).map(g => g.gene);
-        const bottomMulti = sortedMultiByAvg.filter(g => (g.average || 0) < 0).map(g => g.gene);
-        
-        multiGeneLists["All Increasing"] = topMulti.join();
-        multiGeneLists["All Decreasing"] = bottomMulti.join();
-        multiGeneLists["Top 10 Increasing"] = topMulti.slice(0, 10).join();
-        multiGeneLists["Top 20 Increasing"] = topMulti.slice(0, 20).join();
-        multiGeneLists["Top 50 Increasing"] = topMulti.slice(0, 50).join();
-        multiGeneLists["Top 100 Increasing"] = topMulti.slice(0, 100).join();
-        multiGeneLists["Bottom 10 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 10, 0)).join();
-        multiGeneLists["Bottom 20 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 20, 0)).join();
-        multiGeneLists["Bottom 50 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 50, 0)).join();
-        multiGeneLists["Bottom 100 Decreasing"] = bottomMulti.slice(Math.max(bottomMulti.length - 100, 0)).join();
-        setGeneListsMulti(multiGeneLists);
+        setGeneListsMulti(buildTopBottomGeneLists(multiTableInfo, MULTI_LIST_OPTIONS));
       }
       if (selectedView === 4) {
         const source = (similarData && similarData.correlations) ? similarData : multiDatasetData;
@@ -1671,30 +1604,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         setkeyedDataMultiSimilar(multiSimilarInfo);
         
         // Update gene lists for Multi-Dataset Similar Genes tab
-        const multiSimilarGeneLists = {};
-        const topMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) > 0).map(g => g.Gene);
-        const bottomMultiSimilar = multiSimilarInfo.filter(g => (g.average || 0) < 0).map(g => g.Gene);
-        
-        multiSimilarGeneLists["All Positively Correlated"] = topMultiSimilar.join();
-        multiSimilarGeneLists["All Negatively Correlated"] = bottomMultiSimilar.join();
-        multiSimilarGeneLists["Top 10 Similar"] = topMultiSimilar.slice(0, 10).join();
-        multiSimilarGeneLists["Top 20 Similar"] = topMultiSimilar.slice(0, 20).join();
-        multiSimilarGeneLists["Top 50 Similar"] = topMultiSimilar.slice(0, 50).join();
-        multiSimilarGeneLists["Top 100 Similar"] = topMultiSimilar.slice(0, 100).join();
-        multiSimilarGeneLists["Bottom 10 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 10, 0)).join();
-        multiSimilarGeneLists["Bottom 20 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 20, 0)).join();
-        multiSimilarGeneLists["Bottom 50 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 50, 0)).join();
-        multiSimilarGeneLists["Bottom 100 Anti-correlated"] = bottomMultiSimilar.slice(Math.max(bottomMultiSimilar.length - 100, 0)).join();
-        setGeneListsMultiSimilar(multiSimilarGeneLists);
+        setGeneListsMultiSimilar(
+          buildTopBottomGeneLists(multiSimilarInfo, MULTI_SIMILAR_LIST_OPTIONS)
+        );
       }
     }
   }, [showRanks, rankOrder, multiDatasetData, similarData, selectedView,
     processMultiDatasetData, processMultiDatasetSimilarGenes,
     blacklistData, genesignatureSettings, hasMultiDatasetSelection]);
 
-  console.log('GeneSignature - pointData state:', pointData);
+  debugLog('GeneSignature - pointData state:', pointData);
   useEffect(() => {
-    console.log('GeneSignature - Chart options useEffect triggered:', {
+    debugLog('GeneSignature - Chart options useEffect triggered:', {
       hasData: !!data,
       pointDataLength: pointData?.length || 0,
       pointDistributionLength: pointDistribution?.length || 0,
@@ -1703,7 +1624,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     // Allow chart to render if we have pointData, even if current data doesn't have results
     // This handles the case where multi-dataset overwrote the data but we have preserved chart data
     if (!pointData || pointData.length === 0) {
-      console.log('GeneSignature - No pointData for chart options, returning early');
+      debugLog('GeneSignature - No pointData for chart options, returning early');
       return;
     }
 
@@ -1714,129 +1635,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         backgroundColor: "#ffffff",
         borderColor: "#e0e0e0",
         borderWidth: 1,
-        formatter: function (params, ticket, callback) {
-          // params.data structure: [zScore, histY, geneSymbol, originalScore, isHighlighted]
-          const geneSymbol = params.data[2];
-          const zScore = params.data[0];
-          const originalScore = params.data[3];
-          const isHighlighted = params.data[4];
-          
-          if (!geneSymbol) return '';
-          
-          // Determine effect type based on z-score
-          let effectType = "";
-          let effectColor = "#666";
-          if (zScore > 2) {
-            effectType = "Increases Signature";
-            effectColor = "#4caf50"; // green
-          } else if (zScore < -2) {
-            effectType = "Decreases Signature";
-            effectColor = "#f44336"; // red
-          } else {
-            effectType = "No Significant Effect";
-            effectColor = "#9e9e9e"; // gray
-          }
-          
-          // Create a custom parseData function for the gene tooltip formatter
-          const parseData = (params) => ({
-            geneSymbol: geneSymbol,
-            geneType: effectType,
-            effectColor: effectColor,
-            zScore: zScore?.toFixed(3),
-            originalScore: originalScore?.toFixed(3),
-            isHighlighted: isHighlighted,
-            // Add score information to additional info
-            signatureScore: originalScore?.toFixed(3),
-            normalizedScore: zScore?.toFixed(3),
-            effectType: effectType
-          });
-          
-          // Enhanced createGeneTooltipFormatter that includes score information
-          const enhancedFormatter = createGeneTooltipFormatter({
-            useCache: true,
-            parseData: (params) => ({
-              geneSymbol: geneSymbol,
-              geneType: effectType,
-              signatureScore: originalScore?.toFixed(3),
-              normalizedScore: zScore?.toFixed(3),
-              effectType: effectType,
-              isHighlighted: isHighlighted
-            })
-          });
-          
-          // For now, let's create a custom formatter that includes scores and then fetches gene info
-          const customFormatter = function(params, ticket, callback) {
-            // Create base tooltip with score information
-            let baseTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
-              ${geneSymbol}
-            </div>
-            <div style="font-size:12px;color:${effectColor};margin:4px 0;padding:0;font-weight:500;">
-              <strong>Effect:</strong> ${effectType}
-            </div>
-            <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-              <strong>Z-Score:</strong> ${zScore?.toFixed(3)}
-            </div>
-            <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-              <strong>Signature Score:</strong> ${originalScore?.toFixed(3)}
-            </div>`;
-            
-            if (isHighlighted) {
-              baseTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
-                <strong>★ Highlighted Gene</strong>
-              </div>`;
-            }
-            
-            // Add gene description placeholder
-            baseTooltip += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
-            
-            // Try to fetch gene information asynchronously
-            import('../../utils/geneFunctionUtils').then(({ fetchGeneInfo }) => {
-              fetchGeneInfo(geneSymbol).then(content => {
-                if (content) {
-                  let parsedContent;
-                  try {
-                    parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
-                  } catch (e) {
-                    parsedContent = { description: content };
-                  }
-                  
-                  // Update tooltip with gene information
-                  let enhancedTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
-                    ${geneSymbol}${parsedContent?.name ? ` (${parsedContent.name})` : ''}
-                  </div>
-                  <div style="font-size:12px;color:${effectColor};margin:4px 0;padding:0;font-weight:500;">
-                    <strong>Effect:</strong> ${effectType}
-                  </div>
-                  <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-                    <strong>Z-Score:</strong> ${zScore?.toFixed(3)}
-                  </div>
-                  <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-                    <strong>Signature Score:</strong> ${originalScore?.toFixed(3)}
-                  </div>`;
-                  if (isHighlighted) {
-                    enhancedTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
-                      <strong>★ Highlighted Gene</strong>
-                    </div>`;
-                  }
-                  
-                  if (parsedContent?.description) {
-                    enhancedTooltip += `<div style="font-size:11px;color:#444;margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${parsedContent.description}</div>`;
-                  }
-                  
-                  callback(ticket, enhancedTooltip);
-                }
-              }).catch(() => {
-                // If gene info fetch fails, just show the base tooltip without the loading message
-                let finalTooltip = baseTooltip.replace('<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>', '');
-                callback(ticket, finalTooltip);
-              });
-            });
-            
-            return baseTooltip;
-          };
-          
-          return customFormatter(params, ticket, callback);
-        },
+        // Shared formatter: cached gene info, escaped HTML, and it never
+        // stays on "Loading..." when Harmonizome has no entry for a gene.
+        formatter: signatureTooltipFormatter,
       },
       xAxis: [
         {
@@ -2509,6 +2310,11 @@ const mapDispatchToProps = (dispatch) => ({
   coreSettingsChanged: (payload) => dispatch(coreSettingsChanged(payload)),
 });
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GeneSignature);
+const ConnectedGeneSignature = connect(mapStateToProps, mapDispatchToProps)(GeneSignature);
+
+const MainContainer = withErrorBoundary(ConnectedGeneSignature, {
+  label: "Gene signature",
+  resetKeys: (props) => [props.data],
+});
 
 export { MainContainer as GeneSignature };

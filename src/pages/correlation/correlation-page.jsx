@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { connect } from "react-redux";
-import { runCorrCalc } from "../../store/api";
+import { runCorrCalc, runCorrCalcMultiDataset } from "../../store/api";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
@@ -29,20 +29,26 @@ const moduleDescription = {
   ]
 };
 
+// Single-dataset results are the heatmap itself; multi-dataset results wrap the
+// combined heatmap in `combined_data`.
+const getHeatmapPayload = (parsed) =>
+  parsed?.combined_data?.data ? parsed.combined_data : parsed;
+
 // Function to identify genes with significant correlations
-const getSignificantGenes = (data, trimThreshold) => {
+const getSignificantGenes =  (data, trimThreshold) => {
   // Parse data if it's a string
   const parsedData = safeJsonParse(data, {
     defaultValue: null,
     throwOnError: false
   });
   
-  if (!parsedData?.data?.nodes) {
+  const heatmap = getHeatmapPayload(parsedData);
+  if (!heatmap?.data?.nodes) {
     return null;
   }
-  
+
   const threshold = trimThreshold || 0.1;
-  const nodes = parsedData.data.nodes;
+  const nodes = heatmap.data.nodes;
   const significantGenes = new Set();
   
   // Find genes with at least one significant correlation
@@ -141,165 +147,154 @@ const CorrelationPage = ({
     return () => clearTimeout(timer);
   }, [dispatch]);
 
-  // Effect to handle correlation filtering
+  // Inputs the displayed result was calculated with (stored with the result)
+  const resultRequestParams = calcResults?.["corrCluster"]?.requestParams;
+  const trimRequestIdRef = useRef(0); // identifies the latest trim request
+  const trimInFlightRef = useRef(false);
+
+  // Effect to handle correlation filtering ("Trim Low Correlations")
   useEffect(() => {
-    console.log('useEffect triggered:', { 
-      hasCorrResults: !!corrResults, 
-      trimEnabled: correlationSettings?.trimEnabled, 
-      threshold: correlationSettings?.trimThreshold 
-    });
-    
+    // Any trim request that is still running belongs to older inputs: its
+    // response must not be shown any more.
+    const requestId = ++trimRequestIdRef.current;
+
+    const stopPendingTrim = () => {
+      setIsFilteringInProgress(false);
+      if (trimInFlightRef.current) {
+        trimInFlightRef.current = false;
+        dispatch({
+          type: 'calcResults/calcRunningChanged',
+          payload: { module: 'corrCluster', status: false }
+        });
+      }
+    };
+
     // Parse corrResults if it's a string
     const parsedCorrResults = safeJsonParse(corrResults, {
       defaultValue: null,
       throwOnError: false
     });
-    
+
     if (!parsedCorrResults) {
       setFilteredCorrResults(null);
       setTrimStats(null);
+      stopPendingTrim();
       return;
     }
 
     // If trimming is not enabled, use original results
     if (!correlationSettings?.trimEnabled) {
-      console.log('Trimming disabled, using original results');
       setFilteredCorrResults(parsedCorrResults);
       setTrimStats(null);
+      stopPendingTrim();
       return;
     }
 
     // Get significant genes for server-side filtering
     const significantGenes = getSignificantGenes(parsedCorrResults, correlationSettings.trimThreshold);
-    console.log('Significant genes found:', significantGenes?.length || 0);
-    console.log('Original corrResults structure:', {
-      hasData: !!parsedCorrResults?.data,
-      dataKeys: parsedCorrResults?.data ? Object.keys(parsedCorrResults.data) : 'no data',
-      hasNodes: !!parsedCorrResults?.data?.nodes,
-      nodesCount: parsedCorrResults?.data?.nodes ? Object.keys(parsedCorrResults.data.nodes).length : 'no nodes',
-      hasFeatureNames: !!parsedCorrResults?.data?.feature_names,
-      featureNamesCount: parsedCorrResults?.data?.feature_names?.length || 'no feature names'
-    });
-    
+
     if (!significantGenes || significantGenes.length < 2) {
       console.warn('Not enough significant genes found, using original data');
       setFilteredCorrResults(parsedCorrResults);
       setTrimStats(null);
+      stopPendingTrim();
       return;
     }
 
     // Calculate original stats
-    const originalRowCount = Object.keys(parsedCorrResults.data.nodes).filter(
-      nodeId => parsedCorrResults.data.nodes[nodeId].count === 1
+    const heatmap = getHeatmapPayload(parsedCorrResults);
+    const originalRowCount = Object.keys(heatmap.data.nodes).filter(
+      nodeId => heatmap.data.nodes[nodeId].count === 1
     ).length;
-    const originalColCount = parsedCorrResults.data.feature_names?.length || 0;
+    const originalColCount = heatmap.data.feature_names?.length || 0;
+    const stats = {
+      originalRows: originalRowCount,
+      filteredRows: significantGenes.length,
+      removedRows: originalRowCount - significantGenes.length,
+      originalCols: originalColCount,
+      filteredCols: significantGenes.length,
+      removedCols: originalColCount - significantGenes.length
+    };
 
-    // Make server request with proper dataset information
-    console.log(`Filtering to ${significantGenes.length} genes from ${originalRowCount} total genes`);
-    console.log('Significant genes:', significantGenes.slice(0, 10), '...');
-    
-    setIsFilteringInProgress(true);
-    
-    // Create core and corr parameters with proper dataset information
-    // Preserve the original targetList behavior - if it was empty, keep it empty
-    const originalTargetList = coreSettings?.targetGeneList || "";
-    
-    console.log('Core settings available:', !!coreSettings, 'Target list:', originalTargetList);
-    
+    // Recalculate with exactly the inputs of the displayed result (dataset(s),
+    // data type, gene subset, clustering options) - not with whatever the
+    // sidebar shows now. Only the perturbation list is replaced.
+    const usedCore = resultRequestParams?.core || coreSettings || {};
+    const usedCorr = resultRequestParams?.correlation || correlationSettings || {};
+    const usedDatasets = resultRequestParams?.datasets || correlationSettings?.selectedDatasets || [];
+    const isMultiDatasetResult =
+      !!parsedCorrResults?.combined_data && usedDatasets.length > 1;
+
     const coreParams = {
       peturbationList: significantGenes.join(';'),
-      targetGeneList: originalTargetList, // Keep original target list, don't change it
-      dataType: coreSettings?.dataType || "genes",
-      cellLine: coreSettings?.cellLine || { id: "" }
+      targetGeneList: usedCore.targetGeneList || "",
+      dataType: usedCore.dataType || "genes",
+      cellLine: usedCore.cellLine || { id: "" },
+      selectedDatasets: usedDatasets,
     };
 
     const corrParams = {
-      row_distance: correlationSettings?.row_distance || "euclidean",
-      column_distance: correlationSettings?.column_distance || "euclidean", 
-      row_linkage: correlationSettings?.row_linkage || "average",
-      column_linkage: correlationSettings?.column_linkage || "average",
-      axis: correlationSettings?.axis || 1,
-      normalize: correlationSettings?.normalize || false,
-      write_original: correlationSettings?.write_original || false,
-      corrType: correlationSettings?.corrType || "spearman"
+      row_distance: usedCorr.row_distance || "euclidean",
+      column_distance: usedCorr.column_distance || "euclidean",
+      row_linkage: usedCorr.row_linkage || "average",
+      column_linkage: usedCorr.column_linkage || "average",
+      axis: usedCorr.axis || "both",
+      normalize: usedCorr.normalize || false,
+      write_original: usedCorr.write_original || false,
+      corrType: usedCorr.corrType || "spearman",
+      combineMethod: usedCorr.combineMethod || "average",
     };
 
-  
-    // Set running state for progress indicator
+    setIsFilteringInProgress(true);
+    trimInFlightRef.current = true;
+
+    // Set running state for progress indicator. The request itself is not
+    // tracked by the store (disableModuleTracking), so a superseded request can
+    // never switch the running state back on.
     dispatch({
       type: 'calcResults/calcRunningChanged',
       payload: { module: 'corrCluster', status: true }
     });
 
-    // Request filtered correlation data from server
-    runCorrCalc(coreParams, corrParams)
+    const requestOptions = { disableModuleTracking: true };
+    const request = isMultiDatasetResult
+      ? runCorrCalcMultiDataset(coreParams, corrParams, requestOptions)
+      : runCorrCalc(coreParams, corrParams, requestOptions);
+
+    request
       .then(response => {
-        
-        // Parse the response if it's a string
+        if (requestId !== trimRequestIdRef.current) return; // superseded
+
         const parsedResponse = safeJsonParse(response, {
           defaultValue: null,
           throwOnError: false
         });
-        
-        
-        // Check if we got a valid response (runCorrCalc handles task polling)
+
         if (!parsedResponse) {
           console.warn('No valid response received from server, falling back to original data');
-          setFilteredCorrResults(corrResults);
-          const stats = {
-            originalRows: originalRowCount,
-            filteredRows: significantGenes.length,
-            removedRows: originalRowCount - significantGenes.length,
-            originalCols: originalColCount,
-            filteredCols: significantGenes.length,
-            removedCols: originalColCount - significantGenes.length
-          };
-          setTrimStats(stats);
-          setIsFilteringInProgress(false);
-          return;
         }
-        
-        const stats = {
-          originalRows: originalRowCount,
-          filteredRows: significantGenes.length,
-          removedRows: originalRowCount - significantGenes.length,
-          originalCols: originalColCount,
-          filteredCols: significantGenes.length,
-          removedCols: originalColCount - significantGenes.length
-        };
-
-        setFilteredCorrResults(parsedResponse);
+        // Fall back to the original data when the response is unusable; the
+        // stats still show what would have been filtered.
+        setFilteredCorrResults(parsedResponse || parsedCorrResults);
         setTrimStats(stats);
-        setIsFilteringInProgress(false);
-        
-        // Clear running state
-        dispatch({
-          type: 'calcResults/calcRunningChanged',
-          payload: { module: 'corrCluster', status: false }
-        });
       })
       .catch(error => {
+        if (requestId !== trimRequestIdRef.current) return; // superseded
         console.error('Error fetching filtered correlation data:', error);
-        // Fall back to original data on error, but keep the stats to show what would be filtered
         setFilteredCorrResults(parsedCorrResults);
-        const stats = {
-          originalRows: originalRowCount,
-          filteredRows: significantGenes.length,
-          removedRows: originalRowCount - significantGenes.length,
-          originalCols: originalColCount,
-          filteredCols: significantGenes.length,
-          removedCols: originalColCount - significantGenes.length
-        };
         setTrimStats(stats);
+      })
+      .finally(() => {
+        if (requestId !== trimRequestIdRef.current) return; // superseded
+        // Always leave the loading state, whatever the outcome was
+        trimInFlightRef.current = false;
         setIsFilteringInProgress(false);
-        
-        // Clear running state on error
         dispatch({
           type: 'calcResults/calcRunningChanged',
           payload: { module: 'corrCluster', status: false }
         });
       });
-    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [corrResults, correlationSettings?.trimEnabled, correlationSettings?.trimThreshold]);
 
   // Check if correlation calculation is running
@@ -374,7 +369,7 @@ const CorrelationPage = ({
               borderRadius: '4px',
               color: '#1565c0'
             }}>
-              💡 To start, please add genes to the input list from the left menu and click "Run Calculation" to generate correlation map.
+              💡 To start, please add genes to the input list from the left menu select at least one dataset and click "Calculate Correlation" to generate the correlation map.
             </div>
             )}
            

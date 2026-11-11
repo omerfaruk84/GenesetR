@@ -5,10 +5,17 @@ import React, {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useMemo,
+  useRef,
 } from "react";
 import { connect } from "react-redux";
 import { FaTrash, FaUser } from "react-icons/fa";
-import { coreSettingsChanged, removeUserDataset } from "../../store/settings/core-settings";
+import {
+  coreSettingsChanged,
+  removeUserDataset,
+  addDrResultDataset,
+  fetchDatasetsFromBackend,
+} from "../../store/settings/core-settings";
 import { correlationSettingsChanged } from "../../store/settings/correlation-settings";
 import { pathfinderSettingsChanged } from "../../store/settings/pathfinder-settings";
 import { deregulatedGenesSettingsChanged } from "../../store/settings/deregulated-genes-settings";
@@ -23,7 +30,7 @@ import {
 import styles from "./AccordionMenu.scss";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
-import { updateGeneLists, fetchDatasets, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
+import { updateGeneLists, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
 
 const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
@@ -99,7 +106,7 @@ const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
             alignItems: "center",
             gap: "6px",
           }}>
-            {item.name} {item.id.toString().length > 17 ? "(DR Result)" : ""}
+            {item.name} {item.isDrResult === true ? "(DR Result)" : ""}
             {item.isUserUploaded && (
               <FaUser
                 style={{
@@ -175,9 +182,12 @@ const DatasetSelector = forwardRef(
     deregulatedGenesSettings,
     genesignatureSettings,
     sessionId,
-    dispatch,
+    drResultDatasets,
+    removeUserDataset,
+    addDrResultDataset,
+    fetchDatasetsFromBackend,
     wholeGenomeOnly = false,
-  }, ref, onlyMain) => {
+  }, ref) => {
     const location = useLocation();
     const isCorrelationModule =
       location.pathname === ROUTES.CORRELATION ||
@@ -187,8 +197,10 @@ const DatasetSelector = forwardRef(
     const isGeneSignatureModule = location.pathname === ROUTES.GENESIGNATURE;
     const isMultiSelectMode = isCorrelationModule || isPathFinderModule || isDeregulatedModule || isGeneSignatureModule;
 
-    const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape) => {
-      setDatasetList(prevList => 
+    // `meta` is the dataset the selection comes from; its flags travel with the
+    // active dataset so other code never has to guess the dataset kind from its id.
+    const updateActivityById = useCallback((id, perturbationCount, geneCount, isMixscape, meta = {}) => {
+      setDatasetList(prevList =>
         prevList.map(item => ({
           ...item,
           active: item.id === id
@@ -201,9 +213,24 @@ const DatasetSelector = forwardRef(
           perturbationCount,
           geneCount,
           isMixscape,
+          ...(meta?.name !== undefined ? { name: meta.name } : {}),
+          isWholeGenome: meta?.isWholeGenome === true,
+          isUserUploaded: meta?.isUserUploaded === true,
+          isDrResult: meta?.isDrResult === true,
         },
       });
     }, [coreSettingsChanged]);
+
+    const selectDataset = useCallback((dataset) => {
+      if (!dataset) return;
+      updateActivityById(
+        dataset.id,
+        dataset.perturbationCount,
+        dataset.geneCount,
+        dataset.isMixscape,
+        dataset
+      );
+    }, [updateActivityById]);
 
     const [datasetList, setDatasetList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -222,9 +249,23 @@ const DatasetSelector = forwardRef(
         await deleteUserDatasetAPI(datasetId, sessionId);
 
         // Remove from Redux
-        if (dispatch) {
-          dispatch(removeUserDataset(datasetId));
-        }
+        removeUserDataset(datasetId);
+
+        // A deleted dataset must not stay selected in any multi-select module
+        [
+          [correlationSettings, correlationSettingsChanged, CorrelationSettingsTypes.SELECTED_DATASETS],
+          [pathfinderSettings, pathfinderSettingsChanged, PathFinderSettingsTypes.SELECTED_DATASETS],
+          [deregulatedGenesSettings, deregulatedGenesSettingsChanged, DeregulatedGenesSettingsTypes.SELECTED_DATASETS],
+          [genesignatureSettings, genesignatureSettingsChanged, GeneSignatureSettingsTypes.SELECTED_DATASETS],
+        ].forEach(([moduleSettings, changeHandler, settingName]) => {
+          const selected = moduleSettings?.selectedDatasets || [];
+          if (selected.includes(datasetId)) {
+            changeHandler({
+              settingName,
+              newValue: selected.filter((ds) => ds !== datasetId),
+            });
+          }
+        });
 
         // Remove from local state
         setDatasetList(prevList => prevList.filter(d => d.id !== datasetId));
@@ -233,20 +274,28 @@ const DatasetSelector = forwardRef(
         if (coreSettings.cellLine?.id === datasetId) {
           const remainingDatasets = datasetList.filter(d => d.id !== datasetId && !d.isUserUploaded);
           if (remainingDatasets.length > 0) {
-            const firstDataset = remainingDatasets[0];
-            updateActivityById(
-              firstDataset.id,
-              firstDataset.perturbationCount,
-              firstDataset.geneCount,
-              firstDataset.isMixscape
-            );
+            selectDataset(remainingDatasets[0]);
           }
         }
       } catch (error) {
         console.error('Failed to delete dataset:', error);
         alert('Failed to delete dataset: ' + error.message);
       }
-    }, [sessionId, dispatch, coreSettings.cellLine?.id, datasetList, updateActivityById]);
+    }, [
+      sessionId,
+      removeUserDataset,
+      coreSettings.cellLine?.id,
+      datasetList,
+      selectDataset,
+      correlationSettings?.selectedDatasets,
+      pathfinderSettings?.selectedDatasets,
+      deregulatedGenesSettings?.selectedDatasets,
+      genesignatureSettings?.selectedDatasets,
+      correlationSettingsChanged,
+      pathfinderSettingsChanged,
+      deregulatedGenesSettingsChanged,
+      genesignatureSettingsChanged,
+    ]);
 
     // Function to handle checkbox change for correlation or pathfinder module
     const handleCheckboxChange = useCallback((datasetId, checked) => {
@@ -314,179 +363,88 @@ const DatasetSelector = forwardRef(
         onClick: isMultiSelectMode 
           ? undefined // No onClick for multi-select (use checkboxes instead)
           : () => updateActivityById(
-              dataset.id, 
-              dataset.perturbationCount, 
-              dataset.geneCount, 
-              dataset.isMixscape
+              dataset.id,
+              dataset.perturbationCount,
+              dataset.geneCount,
+              dataset.isMixscape,
+              dataset
             ),
         // active property is no longer used for state updates, handled in render
       };
     }, [updateActivityById, isMultiSelectMode]);
 
     // Load datasets from backend
+    // The dataset list lives in Redux (loaded once at application start and
+    // refreshed after uploads); it is not fetched again on every page change.
+    const reduxDatasets = coreSettings?.datasetList;
+    const datasetsLoading = coreSettings?.datasetsLoading === true;
+    const datasetRetryRef = useRef(false);
+
+    // Retry once if the initial load left Redux without datasets (e.g. the
+    // backend was unreachable when the application started).
     useEffect(() => {
-      const loadDatasets = async () => {
-        try {
-          setLoading(true);
-          const datasets = await fetchDatasets(sessionId);
-          const transformedDatasets = datasets.map(transformDataset);
-      
-          // For multi-select modules, we don't auto-select datasets - user must select manually
+      if (
+        sessionId &&
+        !datasetsLoading &&
+        (!reduxDatasets || reduxDatasets.length === 0) &&
+        !datasetRetryRef.current
+      ) {
+        datasetRetryRef.current = true;
+        fetchDatasetsFromBackend(sessionId);
+      }
+    }, [sessionId, datasetsLoading, reduxDatasets, fetchDatasetsFromBackend]);
 
-          // Filter for whole genome datasets if wholeGenomeOnly is true (for non-correlation modules)
-          if (wholeGenomeOnly && !isCorrelationModule) {
-            const filteredDatasets = transformedDatasets.filter(dataset => dataset.isWholeGenome === true);
-            // Ensure the first whole genome dataset is active if current selection is not in the filtered list
-            // Note: We check against coreSettings.cellLine.id directly here since datasets don't have active prop anymore
-            const hasActiveDataset = filteredDatasets.some(dataset => dataset.id === coreSettings.cellLine?.id);
-            if (!hasActiveDataset && filteredDatasets.length > 0 && !isMultiSelectMode && !coreSettings.cellLine?.id) {
-               // Only auto-select if nothing is selected
-               // We can't set active state on the object, but we can trigger the update
-               const first = filteredDatasets[0];
-               updateActivityById(first.id, first.perturbationCount, first.geneCount, first.isMixscape);
-            }
-            setDatasetList(filteredDatasets);
-          } else {
-            setDatasetList(transformedDatasets);
-          }
-        } catch (error) {
-          console.error("Failed to load datasets:", error);
-          setDatasetList([]);
-        } finally {
-          setLoading(false);
+    useEffect(() => {
+      const transformedDatasets = (reduxDatasets || [])
+        .filter((dataset) => dataset.isDrResult !== true)
+        .map(transformDataset);
+
+      // For multi-select modules, we don't auto-select datasets - user must select manually
+
+      // Filter for whole genome datasets if wholeGenomeOnly is true (for non-correlation modules)
+      if (wholeGenomeOnly && !isCorrelationModule) {
+        const filteredDatasets = transformedDatasets.filter(dataset => dataset.isWholeGenome === true);
+        const hasActiveDataset = filteredDatasets.some(dataset => dataset.id === coreSettings.cellLine?.id);
+        if (!hasActiveDataset && filteredDatasets.length > 0) {
+          // The active dataset is not offered on this page (it is not a whole
+          // genome dataset): switch to the first one that is, so requests never
+          // run on a dataset the list does not show.
+          selectDataset(filteredDatasets[0]);
         }
-      };
-
-      loadDatasets();
+        setDatasetList(filteredDatasets);
+      } else {
+        setDatasetList(transformedDatasets);
+      }
+      setLoading(datasetsLoading && transformedDatasets.length === 0);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wholeGenomeOnly, transformDataset, isCorrelationModule, isMultiSelectMode, isDeregulatedModule, sessionId]);
-
-    const deleteItemAndChildren = (id) => {
-      let parent = "";
-
-      datasetList.forEach((item, index) => {
-        if (item.id.toString() === id) {
-          parent =   {id: item.id, 
-            perturbationCount: item.perturbationCount,
-        geneCount: item.geneCount,
-        isMixscape:  item.isMixscape,
-        };
-        }
-      });
-
-      let arr = deleteItemAndChildrenHelper(id);
-
-      setDatasetList(arr);
-
-      coreSettingsChanged({
-        settingName: CoreSettingsTypes.CELL_LINE,
-        newValue: parent,
-      });
-    };
-
-    function deleteItemAndChildrenHelper(id, ds = datasetList) {
-      let arr = [...ds];
-
-      arr.forEach((item, index) => {
-        if (item.id.toString() === id) {
-          arr.splice(index, 1); // remove the item
-          // recursively delete its children
-          arr
-            .filter((child) => child.parent.toString() === id)
-            .forEach((child) =>
-              deleteItemAndChildrenHelper(child.id.toString(), arr)
-            );
-        }
-      });
-      return arr;
-    }
+    }, [reduxDatasets, datasetsLoading, wholeGenomeOnly, transformDataset, isCorrelationModule]);
 
     useImperativeHandle(ref, () => ({
+      // Adds a dimensionality-reduction result as a dataset (DR chaining). The
+      // result is kept in Redux and flagged with `isDrResult`, so it survives
+      // dataset reloads and is never confused with backend datasets.
       saveDataset: (newID, name, parentID, dataShape, dataType) => {
-        console.log("saveDataset called with:", { newID, name, parentID, dataShape, dataType });
-        setDatasetList((prevDatasetList) => {
-          let arr = [];
-          var isParentMixscape = false;
-
-          for (var e in prevDatasetList) {
-            var itemx = prevDatasetList[e];
-            if (itemx.id === newID) continue;
-
-            var actionsNew = [];
-            if (itemx?.actions && itemx.id.toString().length > 17) {
-              actionsNew = [
-                {
-                  icon: <FaTrash />,
-                  label: "Delete",
-                  onClick: (
-                    (id) => () =>
-                      deleteItemAndChildren(id)
-                  )(itemx.id),
-                },
-              ];
-            }
-            if(itemx.id === parentID) isParentMixscape = itemx.isMixscape;
-            var newItem = {
-              resultShape: itemx?.resultShape,
-              perturbationCount: itemx?.perturbationCount || itemx?.resultShape?.split(" ")[0],
-              geneCount: itemx?.geneCount || itemx?.resultShape?.split(" ")[1],
-              isMixscape: itemx.isMixscape,              
-              droppable: false,
-              isOpen: itemx.id === parentID,
-              id: itemx.id,
-              dataType: itemx?.dataType,
-              name: itemx?.name,
-              parent: itemx?.parent,
-              onClick: (
-                (id, perturbationCount, geneCount, isMixscape) => () =>
-                  updateActivityById(id, perturbationCount, geneCount, isMixscape)
-              )(itemx.id, itemx.perturbationCount, itemx.geneCount, itemx.isMixscape),
-              actions: actionsNew,
-              active: false,
-            };
-            arr.push(newItem);
-          }
-
-          var newItem = {
-            resultShape: dataShape,
-            perturbationCount: dataShape.split(" ")[0],
-            geneCount:  dataShape.split(" ")[1],
-            isMixscape: isParentMixscape,
-            dataType: dataType,
-            droppable: false,
-            isOpen: true,
-            id: newID,
-            name: name,
-            parent: parentID,
-            onClick: (
-              (id, perturbationCount, geneCount, isMixscape) => () =>
-                updateActivityById(id, perturbationCount, geneCount, isMixscape)
-            )(newID, dataShape.split(" ")[0], dataShape.split(" ")[1], isParentMixscape),
-            actions: [
-              {
-                icon: <FaTrash />,
-                label: "Delete",
-                onClick: (
-                  (id) => () =>
-                    deleteItemAndChildren(id)
-                )(newID),
-              },
-            ],
-            active: true,
-          };
-          arr.push(newItem);
-          //Save the settings
-          coreSettingsChanged({
-            settingName: CoreSettingsTypes.CELL_LINE,
-            newValue:   {id: newItem.id, 
-            perturbationCount: newItem.perturbationCount,
-        geneCount: newItem.geneCount,
-        isMixscape:  newItem.isMixscape,
-        },
-          });
-
-          return arr;
-        });
+        const shape = String(dataShape || "").trim().split(/\s+/);
+        const toCount = (value) => {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) && value !== undefined && value !== "" ? parsed : value;
+        };
+        const parent = [...datasetList, ...(drResultDatasets || [])].find(
+          (item) => item.id === parentID
+        );
+        const newItem = {
+          id: newID,
+          name: name,
+          parent: parentID,
+          resultShape: dataShape,
+          perturbationCount: toCount(shape[0]),
+          geneCount: toCount(shape[1]),
+          isMixscape: parent?.isMixscape === true,
+          dataType: dataType,
+          isDrResult: true,
+        };
+        addDrResultDataset(newItem);
+        selectDataset(newItem);
       },
     }));
 
@@ -509,12 +467,7 @@ const DatasetSelector = forwardRef(
           // Also update core settings cellLine to the first selected dataset for compatibility
           const firstDataset = datasetList.find(d => d.id === firstSelectedId);
           if (firstDataset && coreSettings.cellLine?.id !== firstSelectedId) {
-            updateActivityById(
-              firstSelectedId,
-              firstDataset.perturbationCount,
-              firstDataset.geneCount,
-              firstDataset.isMixscape
-            );
+            selectDataset(firstDataset);
           }
         }
       }
@@ -572,18 +525,28 @@ const DatasetSelector = forwardRef(
     ]);
 
     useEffect(() => {
-      if (
-        location.pathname === ROUTES.CORRELATION ||
-        location.pathname === ROUTES.CORRELATION_WEBGL ||
-        location.pathname === ROUTES.HEATMAP ||
-        location.pathname === ROUTES.GENE_REGULATION ||
-        location.pathname === ROUTES.EXPRESSIONANALYZER || 
-        location.pathname === ROUTES.GENESIGNATURE
-      ) {
-        if (coreSettings.cellLine.id.length > 17)
-          updateActivityById("K562gwps", 11258, 8248, false);
+      // A dimensionality-reduction result can only be analysed on the DR page.
+      // (User-uploaded datasets are regular datasets and stay selected.)
+      if (location.pathname !== ROUTES.DR && coreSettings.cellLine?.isDrResult === true) {
+        const fallback =
+          datasetList.find((d) => d.id === "K562gwps") ||
+          datasetList.find((d) => d.isDrResult !== true && d.isUserUploaded !== true);
+        if (fallback) {
+          selectDataset(fallback);
+        } else {
+          updateActivityById("K562gwps", 11258, 8248, false, {
+            name: "K562 Whole Genome",
+            isWholeGenome: true,
+          });
+        }
       }
     }, [location.pathname]);
+
+    // DR results (kept in Redux) are offered on the DR page only
+    const drResultItems = useMemo(
+      () => (drResultDatasets || []).map(transformDataset),
+      [drResultDatasets, transformDataset]
+    );
 
     if (loading) {
       return (
@@ -599,10 +562,11 @@ const DatasetSelector = forwardRef(
     }
 
     // Filter datasets based on route
-    // Exclude DR results (long UUIDs) but include user-uploaded datasets
+    // DR results are flagged explicitly; user-uploaded datasets are regular datasets
+    const backendDatasets = datasetList.filter((x) => x.isDrResult !== true);
     const filteredDatasets = location.pathname !== ROUTES.DR
-      ? datasetList.filter((x) => x.id.length < 17 || x.isUserUploaded === true)
-      : datasetList;
+      ? backendDatasets
+      : [...backendDatasets, ...drResultItems];
 
     // For multi-select modules with checkboxes, render custom checkbox list
     if (isMultiSelectMode) {
@@ -1065,7 +1029,7 @@ const DatasetSelector = forwardRef(
         </div>
 
         {/* For DR module, show chaining hint when DR results are available */}
-        {location.pathname === ROUTES.DR && filteredDatasets.some(d => d.id.toString().length > 17) && (
+        {location.pathname === ROUTES.DR && filteredDatasets.some(d => d.isDrResult === true) && (
           <div style={{
             marginTop: "12px",
             padding: "10px 12px",
@@ -1090,6 +1054,7 @@ const mapStateToProps = ({ settings }) => ({
   deregulatedGenesSettings: settings?.deregulatedGenes ?? {},
   genesignatureSettings: settings?.genesignature ?? {},
   sessionId: settings?.core?.sessionId,
+  drResultDatasets: settings?.core?.drResultDatasets,
 });
 
 const mapDispatchToProps = { 
@@ -1098,6 +1063,9 @@ const mapDispatchToProps = {
   pathfinderSettingsChanged,
   deregulatedGenesSettingsChanged,
   genesignatureSettingsChanged,
+  removeUserDataset,
+  addDrResultDataset,
+  fetchDatasetsFromBackend,
 };
 
 const MainContainer = connect(mapStateToProps, mapDispatchToProps, null, {

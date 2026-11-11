@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
+import { SERVER_ADDRESS } from "../../store/api/config";
 import styles from "./v2-release-popup.module.scss";
 
 const STORAGE_KEY = "genesetr.v2.releasePopup.dismissed.v1";
@@ -17,11 +18,23 @@ const V2ReleasePopup = () => {
   const modalRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const isDevEnv = process.env.NODE_ENV !== "production";
-  const apiBaseUrl = useMemo(
-    () => (isDevEnv ? "http://localhost:8443" : "https://genesetr.uio.no/api"),
-    [isDevEnv]
-  );
+  const apiBaseUrl = SERVER_ADDRESS;
+
+  // Persist the dismissal when "Don't show this again" is ticked (it is by
+  // default), whichever way the popup is closed: Dismiss, the close button,
+  // Escape, a click on the backdrop or one of the action buttons.
+  const dismissRef = useRef(null);
+  const dismiss = () => {
+    if (disableForThisBrowser) {
+      try {
+        localStorage.setItem(STORAGE_KEY, "1");
+      } catch (e) {
+        // ignore
+      }
+    }
+    setOpen(false);
+  };
+  dismissRef.current = dismiss;
 
   useEffect(() => {
     try {
@@ -39,7 +52,7 @@ const V2ReleasePopup = () => {
     if (!open) return;
 
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") dismissRef.current?.();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -169,24 +182,13 @@ const V2ReleasePopup = () => {
     };
   }, [open]);
 
-  const dismiss = () => {
-    if (disableForThisBrowser) {
-      try {
-        localStorage.setItem(STORAGE_KEY, "1");
-      } catch (e) {
-        // ignore
-      }
-    }
-    setOpen(false);
-  };
-
   if (!open) return null;
 
   return (
     <div
       className={styles.backdrop}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) dismiss();
       }}
       aria-hidden={false}
     >
@@ -199,7 +201,7 @@ const V2ReleasePopup = () => {
             <h2 id="v2-title" className={styles.title}>
               GeneSetR v2 is here
             </h2>
-            <button className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
+            <button className={styles.close} onClick={dismiss} aria-label="Close">
               {"\u00D7"}
             </button>
           </div>
@@ -319,7 +321,7 @@ const V2ReleasePopup = () => {
             <button
               className={styles.primary}
               onClick={() => {
-                setOpen(false);
+                dismiss();
                 navigate(ROUTES.MULTIDATASET_COMPARISON);
               }}
             >
@@ -328,7 +330,7 @@ const V2ReleasePopup = () => {
             <button
               className={styles.secondary}
               onClick={() => {
-                setOpen(false);
+                dismiss();
                 navigate(ROUTES.UPLOAD_DATASET);
               }}
             >

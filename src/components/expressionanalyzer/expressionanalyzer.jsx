@@ -39,16 +39,82 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
-import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
-import { download } from "export-to-csv";
+import { createGeneTooltipFormatter, buildGeneScoreTooltip } from "../../utils/geneFunctionUtils";
+import { withErrorBoundary } from "../error-boundary";
 import { ModulePathNames } from "../../store/results/enums";
-import { set } from "idb-keyval";
 import { LoadingPage } from "../loading-page";
-import { useFetcher } from "react-router-dom";
 import { runCalculation } from "../../store/results";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../side-bar/settings/enums";
 import { fetchCellCycleComparisonV2 } from "../../store/api/v2";
+
+const isDevEnv = process.env.NODE_ENV !== "production";
+// Development-only logging.
+const debugLog = (...args) => {
+  if (isDevEnv) {
+    // eslint-disable-next-line no-console
+    console["log"](...args);
+  }
+};
+
+const formatScore = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : undefined;
+
+// Tooltip of the expression / correlation scatter.
+// Point data: [score, jitterY, gene, rawScore, highlighted]
+const createAnalyzerTooltipFormatter = (isCorrelationMode) =>
+  createGeneTooltipFormatter({
+    parseData: (params) => ({
+      geneSymbol: params?.data?.[2],
+      score: params?.data?.[0],
+      originalScore: params?.data?.[3],
+      isHighlighted: params?.data?.[4] === true,
+    }),
+    renderTooltip: (geneSymbol, geneInfo, parsed, state) => {
+      const score = parsed.score;
+      let analysis;
+      if (isCorrelationMode) {
+        analysis =
+          score > 0.5
+            ? { label: "Strong Positive Correlation", color: "#4caf50" }
+            : score < -0.5
+              ? { label: "Strong Negative Correlation", color: "#f44336" }
+              : score > 0.2
+                ? { label: "Moderate Positive Correlation", color: "#8bc34a" }
+                : score < -0.2
+                  ? { label: "Moderate Negative Correlation", color: "#ff5722" }
+                  : { label: "Weak Correlation", color: "#9e9e9e" };
+      } else {
+        analysis =
+          score > 2
+            ? { label: "Strong Upregulation", color: "#4caf50" }
+            : score < -2
+              ? { label: "Strong Downregulation", color: "#f44336" }
+              : score > 0.5
+                ? { label: "Moderate Upregulation", color: "#8bc34a" }
+                : score < -0.5
+                  ? { label: "Moderate Downregulation", color: "#ff5722" }
+                  : { label: "No Significant Change", color: "#9e9e9e" };
+      }
+      const rows = [
+        { label: "Analysis", value: analysis.label, color: analysis.color, bold: true },
+        {
+          label: isCorrelationMode ? "Correlation Score" : "Expression Score",
+          value: formatScore(score),
+        },
+      ];
+      if (parsed.originalScore !== undefined && parsed.originalScore !== score) {
+        rows.push({ label: "Raw Score", value: formatScore(parsed.originalScore) });
+      }
+      return buildGeneScoreTooltip({
+        geneSymbol,
+        geneInfo,
+        state,
+        highlighted: parsed.isHighlighted,
+        rows,
+      });
+    },
+  });
 
 // Add module description for Expression Analyzer
 const moduleDescription = {
@@ -91,12 +157,6 @@ const ExpressionAnalyzer = ({
   blacklistData,
   blacklistLoading,
 }) => {
-  console.log('ExpressionAnalyzer - Component props:', {
-    hasData: !!data,
-    dataType: typeof data,
-    dataKeys: data ? Object.keys(data) : [],
-    dataPreview: data ? JSON.stringify(data).substring(0, 200) + '...' : null
-  });
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
@@ -241,7 +301,7 @@ const ExpressionAnalyzer = ({
   }, [calcResults?.[ModulePathNames["/expressionanalyzer"]]?.running]);
 
   useEffect(() => {
-    console.log('ExpressionAnalyzer - Data processing useEffect triggered:', {
+    debugLog('ExpressionAnalyzer - Data processing useEffect triggered:', {
       hasData: !!data,
       isCalcRunning,
       dataKeys: data ? Object.keys(data) : [],
@@ -254,26 +314,26 @@ const ExpressionAnalyzer = ({
     if (!isCalcRunning && data) {
       // Process downstream data
       if (data.downstream && data.downstream.length > 0) {
-        console.log('ExpressionAnalyzer - Processing downstream data:', {
+        debugLog('ExpressionAnalyzer - Processing downstream data:', {
           downstreamType: typeof data.downstream,
           downstreamLength: data.downstream.length
         });
-        const newTabs2 = tabOptions;
-        newTabs2[0].disabled = false;
-        settabOptions(newTabs2);
-        setSelectedTab(selectedTab);
+        // New array/objects: never mutate state in place
+        settabOptions((prev) =>
+          prev.map((tab, idx) => (idx === 0 ? { ...tab, disabled: false } : tab))
+        );
         setdownStream(safeJsonParse(data.downstream, { defaultValue: {} }));
       } else {
         setdownStream({});
-        const newTabs = tabOptions;
-        newTabs[0].disabled = true;
-        settabOptions(newTabs);
-        setSelectedTab(tabOptions[1]);
+        settabOptions((prev) =>
+          prev.map((tab, idx) => (idx === 0 ? { ...tab, disabled: true } : tab))
+        );
+        setSelectedTab({ label: tabOptions[1].label, value: tabOptions[1].value });
       }
 
       // Process upstream data
       if (data.upstream && data.upstream.length > 0) {
-        console.log('ExpressionAnalyzer - Processing upstream data:', {
+        debugLog('ExpressionAnalyzer - Processing upstream data:', {
           upstreamType: typeof data.upstream,
           upstreamLength: data.upstream.length
         });
@@ -282,7 +342,7 @@ const ExpressionAnalyzer = ({
 
       // Process pertCorr data
       if (data.pertCorr && data.pertCorr.length > 0) {
-        console.log('ExpressionAnalyzer - Processing pertCorr data:', {
+        debugLog('ExpressionAnalyzer - Processing pertCorr data:', {
           pertCorrType: typeof data.pertCorr,
           pertCorrLength: data.pertCorr.length
         });
@@ -291,7 +351,7 @@ const ExpressionAnalyzer = ({
 
       // Process expCorr data
       if (data.expCorr && data.expCorr.length > 0) {
-        console.log('ExpressionAnalyzer - Processing expCorr data:', {
+        debugLog('ExpressionAnalyzer - Processing expCorr data:', {
           expCorrType: typeof data.expCorr,
           expCorrLength: data.expCorr.length
         });
@@ -414,8 +474,11 @@ const ExpressionAnalyzer = ({
     // Remove the specified number of elements from both ends
     var trimmedArr = arr.slice(trimCount, arr.length - trimCount);
 
+    // Nothing to average (empty probe)
+    if (trimmedArr.length === 0) return { mean: 0, std: 1 };
+
     // Calculate the mean of the remaining elements
-    const mean = trimmedArr.reduce((a, b) => a + b) / trimmedArr.length;
+    const mean = trimmedArr.reduce((a, b) => a + b, 0) / trimmedArr.length;
     const std = Math.sqrt(
       trimmedArr.reduce((a, b) => a + (b - mean) ** 2, 0) /
         (trimmedArr.length - 1)
@@ -428,8 +491,10 @@ const ExpressionAnalyzer = ({
 
   function calculateZscore(data) {
     var results = trimmedMean(data, 0.2);
-    if (results.mean === undefined) results.mean = 0;
-    if (results.std === undefined) results.std = 1;
+    // Guard against degenerate distributions (single value / zero variance),
+    // which would turn every z-score into NaN.
+    if (!Number.isFinite(results.mean)) results.mean = 0;
+    if (!Number.isFinite(results.std) || results.std === 0) results.std = 1;
     // Calculate the Z-scores for each data point
     return data.map((value) => (value - results.mean) / results.std);
   }
@@ -440,6 +505,7 @@ const ExpressionAnalyzer = ({
     let max = Number.NEGATIVE_INFINITY;
 
     for (let num of data) {
+      if (!Number.isFinite(num)) continue;
       if (num < min) {
         min = num;
       }
@@ -447,16 +513,23 @@ const ExpressionAnalyzer = ({
         max = num;
       }
     }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      min = 0;
+      max = 0;
+    }
 
-    // Initialize bins
+    // Initialize bins (always at least one)
     let bins = [];
-    for (let i = min; i <= max; i += binSize) {
-      bins.push({ binStart: i, binEnd: i + binSize, count: 0 });
+    const binCount = Math.floor((max - min) / binSize) + 1;
+    for (let b = 0; b < binCount; b++) {
+      const start = min + b * binSize;
+      bins.push({ binStart: start, binEnd: start + binSize, count: 0 });
     }
 
     // Iterate through data and increment the count of the corresponding bin
     for (let value of data) {
-      let binIndex = Math.floor((value - min) / binSize) - 1;
+      if (!Number.isFinite(value)) continue;
+      let binIndex = Math.floor((value - min) / binSize);
       if (binIndex < 0) binIndex = 0;
       if (binIndex > bins.length - 1) binIndex = bins.length - 1;
 
@@ -482,7 +555,7 @@ const ExpressionAnalyzer = ({
 
   // Memoize expensive calculations
   const processedData = useMemo(() => {
-    console.log('ExpressionAnalyzer - Processing data:', {
+    debugLog('ExpressionAnalyzer - Processing data:', {
       hasData: !!data,
       hasBlacklistData: !!blacklistData,
       blacklistLoading,
@@ -496,13 +569,17 @@ const ExpressionAnalyzer = ({
     
     if (!data) return null;
     
-    let highlightList = new Set(
-      expressionanalyzerSettings?.genesTolabel
-        .replaceAll(/[,\s;]+/g, "\n")
-        .trimStart("\n")
-        .split("\n")
+    // Genes to label (case-insensitive; a "_2" guide matches its gene)
+    const highlightSet = new Set(
+      String(expressionanalyzerSettings?.genesTolabel || "")
+        .split(/[,\s;]+/)
+        .filter(Boolean)
+        .map((gene) => gene.toUpperCase())
     );
-    highlightList = new Set([...highlightList]);
+    const isHighlighted = (label) => {
+      const upper = String(label ?? "").toUpperCase();
+      return highlightSet.has(upper) || highlightSet.has(upper.split("_")[0]);
+    };
 
     let selectedData;
     var zScoreConv = false;
@@ -578,27 +655,33 @@ const ExpressionAnalyzer = ({
       )
         continue;
 
-      if (
-        ((zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
-          (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1)) &&
-        !highlightList.has(labels[i])
-      ) {
-        let randomNum = Math.floor(Math.random() * 10) + 1;
-        if (randomNum < 7) continue;
+      const highlighted = isHighlighted(labels[i]);
+
+      // Only the scatter is thinned: non-significant points are sampled so the
+      // chart stays responsive. The table below always gets every row.
+      const isNonSignificant =
+        (zScoreConv && zScores[i] < 1.5 && zScores[i] > -1.5) ||
+        (!zScoreConv && zScores[i] < 0.1 && zScores[i] > -0.1);
+      const drawPoint =
+        !isNonSignificant ||
+        highlighted ||
+        Math.floor(Math.random() * 10) + 1 >= 7;
+
+      if (drawPoint) {
+        let index = Math.floor((zScores[i] - result.min) / result.binSize);
+        if (!Number.isFinite(index)) index = 0;
+        if (index >= result.bins.length) index = result.bins.length - 1;
+
+        let binLoc = result.bins[Math.max(0, index)]?.count || 0;
+        let histY = Math.random() * 2 * binLoc - binLoc;
+        pointData2.push([
+          zScores[i],
+          histY,
+          labels[i],
+          xValues[i],
+          highlighted,
+        ]);
       }
-
-      let index = Math.floor((zScores[i] - result.min) / result.binSize);
-      if (index >= result.bins.length) index = result.bins.length - 1;
-
-      let binLoc = result.bins[Math.max(0, index)].count;
-      let histY = Math.random() * 2 * binLoc - binLoc;
-      pointData2.push([
-        zScores[i],
-        histY,
-        labels[i],
-        xValues[i],
-        highlightList.has(labels[i]),
-      ]);
 
       if (zScoreConv) {
         tableInfo.push({
@@ -765,143 +848,9 @@ const ExpressionAnalyzer = ({
         backgroundColor: "#ffffff",
         borderColor: "#e0e0e0",
         borderWidth: 1,
-        formatter: function (params, ticket, callback) {
-          // params.data structure: [correlationScore, histY, geneSymbol, originalScore, isHighlighted]
-          const geneSymbol = params.data[2];
-          const correlationScore = params.data[0];
-          const originalScore = params.data[3];
-          const isHighlighted = params.data[4];
-          
-          if (!geneSymbol) return '';
-          
-          // Determine the analysis type and data interpretation based on current tab
-          const isCorrelationMode = selectedInnerTab.value === 1;
-          const score = params.data[0];
-          
-          let analysisType = "";
-          let analysisColor = "#666";
-          let scoreLabel = "";
-          
-          if (isCorrelationMode) {
-            // Correlation mode
-            scoreLabel = "Correlation Score";
-            if (score > 0.5) {
-              analysisType = "Strong Positive Correlation";
-              analysisColor = "#4caf50"; // green
-            } else if (score < -0.5) {
-              analysisType = "Strong Negative Correlation";
-              analysisColor = "#f44336"; // red
-            } else if (score > 0.2) {
-              analysisType = "Moderate Positive Correlation";
-              analysisColor = "#8bc34a"; // light green
-            } else if (score < -0.2) {
-              analysisType = "Moderate Negative Correlation";
-              analysisColor = "#ff5722"; // orange red
-            } else {
-              analysisType = "Weak Correlation";
-              analysisColor = "#9e9e9e"; // gray
-            }
-          } else {
-            // Expression mode
-            scoreLabel = "Expression Score";
-            if (score > 2) {
-              analysisType = "Strong Upregulation";
-              analysisColor = "#4caf50"; // green
-            } else if (score < -2) {
-              analysisType = "Strong Downregulation";
-              analysisColor = "#f44336"; // red
-            } else if (score > 0.5) {
-              analysisType = "Moderate Upregulation";
-              analysisColor = "#8bc34a"; // light green
-            } else if (score < -0.5) {
-              analysisType = "Moderate Downregulation";
-              analysisColor = "#ff5722"; // orange red
-            } else {
-              analysisType = "No Significant Change";
-              analysisColor = "#9e9e9e"; // gray
-            }
-          }
-          
-          // Create custom formatter with score information and gene data
-          const customFormatter = function(params, ticket, callback) {
-            // Create base tooltip with score information
-            let baseTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
-              ${geneSymbol}
-            </div>
-            <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
-              <strong>Analysis:</strong> ${analysisType}
-            </div>
-            <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-              <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
-            </div>`;
-            
-            if (originalScore !== undefined && originalScore !== score) {
-              baseTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-                <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
-              </div>`;
-            }
-            
-            if (isHighlighted) {
-              baseTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
-                <strong>★ Highlighted Gene</strong>
-              </div>`;
-            }
-            
-            // Add gene description placeholder
-            baseTooltip += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
-            
-            // Try to fetch gene information asynchronously
-            import('../../utils/geneFunctionUtils').then(({ fetchGeneInfo }) => {
-              fetchGeneInfo(geneSymbol).then(content => {
-                if (content) {
-                  let parsedContent;
-                  try {
-                    parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
-                  } catch (e) {
-                    parsedContent = { description: content };
-                  }
-                  
-                  // Update tooltip with gene information
-                  let enhancedTooltip = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">
-                    ${geneSymbol}${parsedContent?.name ? ` (${parsedContent.name})` : ''}
-                  </div>
-                  <div style="font-size:12px;color:${analysisColor};margin:4px 0;padding:0;font-weight:500;">
-                    <strong>Analysis:</strong> ${analysisType}
-                  </div>
-                  <div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-                    <strong>${scoreLabel}:</strong> ${score?.toFixed(3)}
-                  </div>`;
-                  
-                  if (originalScore !== undefined && originalScore !== score) {
-                    enhancedTooltip += `<div style="font-size:12px;color:#555;margin:4px 0;padding:0;">
-                      <strong>Raw Score:</strong> ${originalScore?.toFixed(3)}
-                    </div>`;
-                  }
-                  
-                  if (isHighlighted) {
-                    enhancedTooltip += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;">
-                      <strong>★ Highlighted Gene</strong>
-                    </div>`;
-                  }
-                  
-                  if (parsedContent?.description) {
-                    enhancedTooltip += `<div style="font-size:11px;color:#444;margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${parsedContent.description}</div>`;
-                  }
-                  
-                  callback(ticket, enhancedTooltip);
-                }
-              }).catch(() => {
-                // If gene info fetch fails, just show the base tooltip without the loading message
-                let finalTooltip = baseTooltip.replace('<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>', '');
-                callback(ticket, finalTooltip);
-              });
-            });
-            
-            return baseTooltip;
-          };
-          
-          return customFormatter(params, ticket, callback);
-        },
+        // Shared formatter: cached gene info, escaped HTML, and it never
+        // stays on "Loading..." when Harmonizome has no entry for a gene.
+        formatter: createAnalyzerTooltipFormatter(selectedInnerTab.value === 1),
       },
       xAxis: [
         {
@@ -1001,8 +950,9 @@ const ExpressionAnalyzer = ({
                 return "rgba(39, 245, 55, 0.4)";
               } else if (
                 selectedInnerTab.value === 1 &&
-                params.data[0] < -0.5
+                params.data[0] < -0.15
               ) {
+                // moderate negative correlation (mirror of the > 0.15 branch)
                 return "rgba(245, 55, 39, 0.4)";
               } else {
                 return (
@@ -1698,9 +1648,14 @@ const mapDispatchToProps = {
   coreSettingsChanged,
 };
 
-const MainContainer = connect(
+const ConnectedExpressionAnalyzer = connect(
   mapStateToProps,
   mapDispatchToProps
 )(ExpressionAnalyzer);
+
+const MainContainer = withErrorBoundary(ConnectedExpressionAnalyzer, {
+  label: "Expression analyzer",
+  resetKeys: (props) => [props.data],
+});
 
 export { MainContainer as ExpressionAnalyzer };

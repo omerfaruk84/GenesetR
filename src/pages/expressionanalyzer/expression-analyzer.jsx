@@ -3,8 +3,6 @@ import { connect } from "react-redux";
 import { ExpressionAnalyzer } from "../../components/expressionanalyzer/expressionanalyzer";
 import styles from "./expression-analyzer.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
-import VideoHelpPage from "../../components/video-help";
-import helpVideo from "../../common/videos/6.webm";
 
 const ExpressionAnalyzerPage = ({ geneRegulationResults, blacklistData, blacklistLoading }) => {
   const hasResults = Boolean(geneRegulationResults);
@@ -17,7 +15,20 @@ const ExpressionAnalyzerPage = ({ geneRegulationResults, blacklistData, blacklis
           blacklistLoading={blacklistLoading}
         />
       ) : (
-        <VideoHelpPage videoFile={helpVideo} />
+        <div
+          style={{
+            padding: "12px",
+            backgroundColor: "#e3f2fd",
+            borderLeft: "4px solid #1976d2",
+            borderRadius: "4px",
+            color: "#1565c0",
+            marginBottom: "8px",
+          }}
+        >
+          To start, select a dataset and a gene in the left sidebar. The
+          analysis runs when a gene is selected; use "Analyze Expression" to
+          run it again.
+        </div>
       )}
     </div>
   );

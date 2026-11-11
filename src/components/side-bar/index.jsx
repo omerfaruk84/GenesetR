@@ -20,6 +20,8 @@ const SideBar = ({
   coreSettingsChanged,
   multidatasetComparisonSettings,
   correlationSettings,
+  geneRegulationCoreSettings,
+  geneRegulationEnhancedSettings,
 }) => {
   const [sideBarWith, setSideBarWith] = useState(300);
   const handleSideBarResize = (size) => {
@@ -42,6 +44,12 @@ const SideBar = ({
     isCalcRunning = calcResults?.[ModulePathNames?.[pathname]]?.running;
   }
 
+  // Multi-dataset gene signature runs track their state in a separate module
+  if (pathname === ROUTES.GENESIGNATURE) {
+    isCalcRunning =
+      isCalcRunning || calcResults?.genesignatureMultiDataset?.running;
+  }
+
   const isCorrelationRoute =
     pathname === ROUTES.CORRELATION || pathname === ROUTES.CORRELATION_WEBGL;
 
@@ -54,6 +62,7 @@ const SideBar = ({
     [ROUTES.PATHFINDER]: "Find Path",
     [ROUTES.EXPRESSIONANALYZER]: "Analyze Expression",
     [ROUTES.MULTIDATASET_COMPARISON]: "Compare Datasets",
+    [ROUTES.GENE_REGULATION]: "Build Gene Network",
     [ROUTES.GENE_REGULATION_ENHANCED]: "Expand Gene Network",
     // Default for DR and other modules
     default: "Run Calculation",
@@ -88,7 +97,11 @@ const SideBar = ({
       hasSelectedDatasets) ||
     (pathname === ROUTES.DR &&
       coreSettings.peturbationList?.trim().split("\n").length > 9) ||
-    pathname === ROUTES.GENE_REGULATION ||
+    (pathname === ROUTES.GENE_REGULATION &&
+      geneRegulationCoreSettings?.selectedGene?.trim()?.length > 0) ||
+    (pathname === ROUTES.GENE_REGULATION_ENHANCED &&
+      geneRegulationEnhancedSettings?.selectedGene?.trim()?.length > 0 &&
+      geneRegulationEnhancedSettings?.selectedExperiments?.length > 0) ||
     (pathname === ROUTES.HEATMAP &&
       (coreSettings.peturbationList?.trim().split("\n").length > 2 ||
         coreSettings.targetGeneList?.trim().split("\n").length > 2)) ||
@@ -105,6 +118,33 @@ const SideBar = ({
   )
     isDisabled = false;
 
+  // Tell the user what is missing while the button is disabled
+  let disabledReason = "";
+  if (isDisabled && !isCalcRunning) {
+    if (isCorrelationRoute) {
+      disabledReason = !hasSelectedDatasets
+        ? "Select at least one dataset"
+        : "Enter at least 2 genes";
+    } else if (pathname === ROUTES.DR) {
+      disabledReason = "Enter at least 10 genes";
+    } else if (pathname === ROUTES.HEATMAP) {
+      disabledReason = "Enter at least 3 genes in one of the lists";
+    } else if (pathname === ROUTES.PATHFINDER) {
+      disabledReason = "Enter at least 2 genes";
+    } else if (pathname === ROUTES.GENESIGNATURE) {
+      disabledReason = "Enter a gene signature";
+    } else if (pathname === ROUTES.DEREGULATED_GENES) {
+      disabledReason = "Enter at least one perturbation";
+    } else if (
+      pathname === ROUTES.MULTIDATASET_COMPARISON ||
+      pathname === ROUTES.GENE_REGULATION
+    ) {
+      disabledReason = "Select a gene";
+    } else if (pathname === ROUTES.GENE_REGULATION_ENHANCED) {
+      disabledReason = "Select a gene and at least one experiment";
+    }
+  }
+
   return (
     <div>
       <Drawer
@@ -116,7 +156,6 @@ const SideBar = ({
         onResize={handleSideBarResize}
       >
         {pathname !== ROUTES.GENELISTCOMPARE &&
-          pathname !== ROUTES.GENE_REGULATION &&
           pathname !== ROUTES.CELL_CYCLE &&
           !(pathname === ROUTES.DR && coreSettings.currentModule === "precomputed") && (
             <>
@@ -136,6 +175,19 @@ const SideBar = ({
                   }}
                 />
               </Flex>
+              {disabledReason && (
+                <div
+                  role="status"
+                  style={{
+                    textAlign: "center",
+                    fontSize: "12px",
+                    color: "#8a6d3b",
+                    marginTop: "4px",
+                  }}
+                >
+                  {disabledReason}
+                </div>
+              )}
             </>
           )}
         <Spacer />
@@ -164,6 +216,8 @@ const mapStateToProps = ({ calcResults, settings }) => ({
   coreSettings: settings?.core ?? {},
   multidatasetComparisonSettings: settings?.multidatasetComparison ?? {},
   correlationSettings: settings?.correlation ?? {},
+  geneRegulationCoreSettings: settings?.geneRegulationCore ?? {},
+  geneRegulationEnhancedSettings: settings?.geneRegulationEnhanced ?? {},
 });
 
 const mapDispatchToProps = {

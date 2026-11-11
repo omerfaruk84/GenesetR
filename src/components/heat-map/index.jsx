@@ -27,6 +27,34 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { saveAs } from "file-saver";
 import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
+import { withErrorBoundary } from "../error-boundary";
+
+// Optional InCHlib methods. The two bundled library versions (1.2.0 canvas and
+// 2.0 WebGL) implement different subsets, so every control that depends on one
+// of them is only offered when the loaded instance actually has it.
+const INCHLIB_OPTIONAL_METHODS = [
+  "resetCamera",
+  "fitToScreen",
+  "setRowIdsVisibility",
+  "setColumnIdsVisibility",
+  "setCellValueVisibility",
+  "setDendrogramVisibility",
+  "setColumnDendrogramVisibility",
+  "setDendrogramWidth",
+  "updateCellColors",
+  "updateCellColorsPercentile",
+  "updateDendrogramLineWidth",
+];
+
+const detectInchlibCapabilities = (instance) => {
+  const caps = {};
+  INCHLIB_OPTIONAL_METHODS.forEach((method) => {
+    caps[method] = !!instance && typeof instance[method] === "function";
+  });
+  return caps;
+};
+
+const NO_CAPABILITIES = detectInchlibCapabilities(null);
 
 const moduleDescription = {
   title: "Interactive Heatmap Visualization",
@@ -57,6 +85,7 @@ const HeatMap = ({
   //const [keyedData, setKeyedData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
+  const [capabilities, setCapabilities] = useState(NO_CAPABILITIES);
 
   const heatmapContainerRef = useRef(null);
   const heatmapRef = useRef(null);
@@ -333,13 +362,21 @@ const HeatMap = ({
   }, [selectedGenes]);
 
   const heatmapWidth = useMemo(() => {
-    if (graphData) {
-      return Math.min(
-        Math.max(graphData.data.feature_names.length * 32, 200),
-        6500
-      );
+    const featureCount = graphData?.data?.feature_names?.length;
+    if (featureCount) {
+      return Math.min(Math.max(featureCount * 32, 200), 6500);
     }
     return 200;
+  }, [graphData]);
+
+  // The data is only drawable when it has the InCHlib structure.
+  const hasValidData =
+    !!graphData?.data?.nodes && Array.isArray(graphData?.data?.feature_names);
+
+  // A cluster selected on a previous result must not drive the enrichment of
+  // a new one.
+  useEffect(() => {
+    setSelectedGenes([]);
   }, [graphData]);
 
   useEffect(() => {
@@ -364,6 +401,9 @@ const HeatMap = ({
   }, []);
 
 const keyedData = useMemo(() => {
+  // The pair table can hold rows x columns entries; only build it while the
+  // Table view is open.
+  if (selectedView !== 1) return [];
   if (!graphData?.data?.nodes) return [];
 
   // Multi-dataset mode: use dataset_scores
@@ -442,7 +482,7 @@ const keyedData = useMemo(() => {
     }
     return tableInfo;
   }
-}, [graphData, isMultiDataset, datasetScores, datasets]);
+}, [graphData, isMultiDataset, datasetScores, datasets, selectedView]);
 
 
   const logMemoryUsage = useCallback((label) => {
@@ -538,7 +578,7 @@ const keyedData = useMemo(() => {
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       inchlibInstance.current.updateCellColors?.(
-        inchlibSettings.color_scale.color
+        inchlibSettings.color_scale?.color
       );
     }
   }, [inchlibSettings.color_scale]);
@@ -561,7 +601,7 @@ const keyedData = useMemo(() => {
   }, [
     inchlibSettings.color_percentile_min,
     inchlibSettings.color_percentile_max,
-    inchlibSettings.color_scale.color,
+    inchlibSettings.color_scale?.color,
   ]);
 
   useEffect(() => {
@@ -633,7 +673,14 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (!graphData) return;
-    
+    if (!graphData?.data?.nodes || !Array.isArray(graphData?.data?.feature_names)) {
+      // Not an InCHlib payload (e.g. an empty or failed result): nothing to draw.
+      destroyInchlibInstance();
+      setCapabilities(NO_CAPABILITIES);
+      setLoading(false);
+      return;
+    }
+
     // Increment instance ID
     const currentInstanceId = ++instanceIdRef.current;
     
@@ -649,7 +696,12 @@ const keyedData = useMemo(() => {
     // Create new InCHlib instance
     const InchlibCtor = inchlibConstructor || InCHlib;
     const isWebGL = Boolean(inchlibConstructor);
-    const rowCount = graphData?.data?.nodes?.length ?? 0;
+    // `nodes` is an object keyed by node id; rows are its leaf nodes.
+    const nodeList = Object.values(graphData?.data?.nodes || {});
+    const rowCount = nodeList.reduce(
+      (count, node) => (node && node.count === 1 ? count + 1 : count),
+      0
+    );
     const isLargeHeatmap = rowCount > 120;
     const useLod = rowCount > 350;
     const minRowHeight =
@@ -667,7 +719,7 @@ const keyedData = useMemo(() => {
       max_height: maxHeatmapHeight,
       dendrogram: true,
       width: heatmapWidth,
-      heatmap_colors: inchlibSettings.color_scale.color ?? "BuWhRd",
+      heatmap_colors: inchlibSettings.color_scale?.color ?? "BuWhRd",
       metadata_colors: "Reds",
       independent_columns: false,
       draw_row_ids: isWebGL ? true : !isLargeHeatmap,
@@ -691,6 +743,14 @@ const keyedData = useMemo(() => {
     
     inchlibInstance.current = inchlib;
 
+    // Record which optional controls this library version supports.
+    const nextCapabilities = detectInchlibCapabilities(inchlib);
+    setCapabilities((prev) =>
+      INCHLIB_OPTIONAL_METHODS.every((m) => prev[m] === nextCapabilities[m])
+        ? prev
+        : nextCapabilities
+    );
+
     // Set event handlers
     inchlib.events.row_onclick = function (ids) {
       if (ids.length === 1) {
@@ -700,9 +760,27 @@ const keyedData = useMemo(() => {
     };
 
     inchlib.events.column_dendrogram_node_onclick = function (column_indexes) {
-      const selectedGenesTemp = Object.keys(column_indexes).map(
-        (gene) => inchlib.data?.feature_names[gene].split("_")[0]
-      );
+      // InCHlib passes the *values* (column indexes) of the clicked cluster,
+      // either as an array or as an object keyed by position.
+      const indexes = Array.isArray(column_indexes)
+        ? column_indexes
+        : Object.values(column_indexes || {});
+      // The indexes are column positions. With a custom columns_order (rows
+      // and columns in the same order) position p shows feature
+      // columns_order[p]; otherwise position and feature index coincide.
+      const featureNames = inchlib.data?.feature_names || [];
+      const order = inchlib.settings?.columns_order;
+      const hasCustomOrder =
+        Array.isArray(order) &&
+        order.length >= featureNames.length &&
+        order.some((value, position) => position < featureNames.length && value !== position);
+      const selectedGenesTemp = indexes
+        .map((index) => {
+          const featureIndex = hasCustomOrder ? order[index] : index;
+          const name = featureNames[featureIndex];
+          return typeof name === "string" ? name.split("_")[0] : null;
+        })
+        .filter(Boolean);
       if (selectedGenesTemp.length > 3 && isMountedRef.current) {
         setSelectedGenes(selectedGenesTemp);
       }
@@ -710,7 +788,9 @@ const keyedData = useMemo(() => {
 
     inchlib.events.dendrogram_node_onclick = function (object_ids) {
       if (isMountedRef.current) {
-        setSelectedGenes(object_ids.map((gene) => gene.split("_")[0]));
+        setSelectedGenes(
+          (object_ids || []).map((gene) => String(gene).split("_")[0])
+        );
       }
       inchlib.highlight_rows([]);
     };
@@ -758,12 +838,23 @@ const keyedData = useMemo(() => {
             graphData.data.feature_names.findIndex((f) => f === gene)
           );
 
-        inchlib.update_settings({
-          columns_order: columnOrder.reverse(),
-          column_dendrogram: true,
-          heatmap: true,
-        });
-        inchlib.redraw();
+        // Only reorder when every row maps onto a column (square matrix);
+        // otherwise the order would contain -1 / undefined entries.
+        const orderIsComplete =
+          columnOrder.length === graphData.data.feature_names.length &&
+          columnOrder.every((idx) => Number.isInteger(idx) && idx >= 0);
+        if (orderIsComplete) {
+          inchlib.update_settings({
+            columns_order: columnOrder.reverse(),
+            column_dendrogram: true,
+            heatmap: true,
+          });
+          inchlib.redraw();
+        } else {
+          console.warn(
+            "Rows and columns differ; keeping the clustered column order"
+          );
+        }
       } else {
         console.warn('InCHlib properties not yet initialized, skipping same order application');
       }
@@ -952,27 +1043,50 @@ const keyedData = useMemo(() => {
                 visibility: selectedView === 0 && !loading ? "visible" : "hidden",
               }}
             >
-              <div className={styles.zoomControls}>
-                <button
-                  onClick={handleResetZoom}
-                  className={styles.zoomButton}
-                  aria-label="Reset Zoom"
-                >
-                  RESET ZOOM
-                </button>
-                <button
-                  onClick={handleManualFitToScreen}
-                  className={styles.zoomButton}
-                  aria-label="Fit to Screen"
-                >
-                  FIT TO SCREEN
-                </button>
-              </div>
+              {(capabilities.resetCamera || capabilities.fitToScreen) && (
+                <div className={styles.zoomControls}>
+                  {capabilities.resetCamera && (
+                    <button
+                      onClick={handleResetZoom}
+                      className={styles.zoomButton}
+                      aria-label="Reset Zoom"
+                    >
+                      RESET ZOOM
+                    </button>
+                  )}
+                  {capabilities.fitToScreen && (
+                    <button
+                      onClick={handleManualFitToScreen}
+                      className={styles.zoomButton}
+                      aria-label="Fit to Screen"
+                    >
+                      FIT TO SCREEN
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           
           <Spacer height={5} />
-          
+
+          {graphData && !hasValidData && (
+            <div
+              role="alert"
+              style={{
+                padding: "12px",
+                backgroundColor: "#fff3cd",
+                borderLeft: "4px solid #ffc107",
+                borderRadius: "4px",
+                color: "#8a6d3b",
+                marginBottom: "8px",
+              }}
+            >
+              The result does not contain heatmap data. Please check the gene
+              lists and run the calculation again.
+            </div>
+          )}
+
           {keyedData && selectedView === 1 && (
             <div className={styles.geneTable}>
               <EnrichmentTable data={keyedData} columns={columns} />
@@ -1042,33 +1156,39 @@ const keyedData = useMemo(() => {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
         >
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              closeContextMenu();
-              handleResetZoom();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              <FaUndo />
-            </span>
-            Reset zoom
-          </button>
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              closeContextMenu();
-              handleManualFitToScreen();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              <FaArrowsAlt />
-            </span>
-            Fit to screen
-          </button>
-          <div className={styles.contextMenuSeparator} />
+          {capabilities.resetCamera && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                closeContextMenu();
+                handleResetZoom();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                <FaUndo />
+              </span>
+              Reset zoom
+            </button>
+          )}
+          {capabilities.fitToScreen && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                closeContextMenu();
+                handleManualFitToScreen();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                <FaArrowsAlt />
+              </span>
+              Fit to screen
+            </button>
+          )}
+          {(capabilities.resetCamera || capabilities.fitToScreen) && (
+            <div className={styles.contextMenuSeparator} />
+          )}
           <button
             type="button"
             className={styles.contextMenuItem}
@@ -1098,91 +1218,101 @@ const keyedData = useMemo(() => {
             Export JPEG
           </button>
           <div className={styles.contextMenuSeparator} />
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              toggleInchlibSetting(InchlibSettingsTypes.DRAW_ROW_IDS);
-              closeContextMenu();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              {asBool(inchlibSettings?.draw_row_ids) ? (
-                <FaRegCheckSquare />
-              ) : (
-                <FaRegSquare />
-              )}
-            </span>
-            {asBool(inchlibSettings?.draw_row_ids) ? "Hide" : "Show"} row IDs
-          </button>
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_NAMES);
-              closeContextMenu();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              {asBool(inchlibSettings?.show_column_names) ? (
-                <FaRegCheckSquare />
-              ) : (
-                <FaRegSquare />
-              )}
-            </span>
-            {asBool(inchlibSettings?.show_column_names) ? "Hide" : "Show"} column IDs
-          </button>
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              toggleInchlibSetting(InchlibSettingsTypes.SHOW_ROW_DENDROGRAM);
-              closeContextMenu();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              {asBool(inchlibSettings?.show_row_dendrogram) ? (
-                <FaRegCheckSquare />
-              ) : (
-                <FaRegSquare />
-              )}
-            </span>
-            {asBool(inchlibSettings?.show_row_dendrogram) ? "Hide" : "Show"} row dendrogram
-          </button>
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_DENDROGRAM);
-              closeContextMenu();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              {asBool(inchlibSettings?.show_column_dendrogram) ? (
-                <FaRegCheckSquare />
-              ) : (
-                <FaRegSquare />
-              )}
-            </span>
-            {asBool(inchlibSettings?.show_column_dendrogram) ? "Hide" : "Show"} column dendrogram
-          </button>
-          <button
-            type="button"
-            className={styles.contextMenuItem}
-            onClick={() => {
-              toggleInchlibSetting(InchlibSettingsTypes.SHOW_CELL_VALUES);
-              closeContextMenu();
-            }}
-          >
-            <span className={styles.contextMenuIcon} aria-hidden="true">
-              {asBool(inchlibSettings?.show_cell_values) ? (
-                <FaRegCheckSquare />
-              ) : (
-                <FaRegSquare />
-              )}
-            </span>
-            {asBool(inchlibSettings?.show_cell_values) ? "Hide" : "Show"} cell values
-          </button>
+          {capabilities.setRowIdsVisibility && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                toggleInchlibSetting(InchlibSettingsTypes.DRAW_ROW_IDS);
+                closeContextMenu();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                {asBool(inchlibSettings?.draw_row_ids) ? (
+                  <FaRegCheckSquare />
+                ) : (
+                  <FaRegSquare />
+                )}
+              </span>
+              {asBool(inchlibSettings?.draw_row_ids) ? "Hide" : "Show"} row IDs
+            </button>
+          )}
+          {capabilities.setColumnIdsVisibility && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_NAMES);
+                closeContextMenu();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                {asBool(inchlibSettings?.show_column_names) ? (
+                  <FaRegCheckSquare />
+                ) : (
+                  <FaRegSquare />
+                )}
+              </span>
+              {asBool(inchlibSettings?.show_column_names) ? "Hide" : "Show"} column IDs
+            </button>
+          )}
+          {capabilities.setDendrogramVisibility && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                toggleInchlibSetting(InchlibSettingsTypes.SHOW_ROW_DENDROGRAM);
+                closeContextMenu();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                {asBool(inchlibSettings?.show_row_dendrogram) ? (
+                  <FaRegCheckSquare />
+                ) : (
+                  <FaRegSquare />
+                )}
+              </span>
+              {asBool(inchlibSettings?.show_row_dendrogram) ? "Hide" : "Show"} row dendrogram
+            </button>
+          )}
+          {capabilities.setColumnDendrogramVisibility && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                toggleInchlibSetting(InchlibSettingsTypes.SHOW_COLUMN_DENDROGRAM);
+                closeContextMenu();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                {asBool(inchlibSettings?.show_column_dendrogram) ? (
+                  <FaRegCheckSquare />
+                ) : (
+                  <FaRegSquare />
+                )}
+              </span>
+              {asBool(inchlibSettings?.show_column_dendrogram) ? "Hide" : "Show"} column dendrogram
+            </button>
+          )}
+          {capabilities.setCellValueVisibility && (
+            <button
+              type="button"
+              className={styles.contextMenuItem}
+              onClick={() => {
+                toggleInchlibSetting(InchlibSettingsTypes.SHOW_CELL_VALUES);
+                closeContextMenu();
+              }}
+            >
+              <span className={styles.contextMenuIcon} aria-hidden="true">
+                {asBool(inchlibSettings?.show_cell_values) ? (
+                  <FaRegCheckSquare />
+                ) : (
+                  <FaRegSquare />
+                )}
+              </span>
+              {asBool(inchlibSettings?.show_cell_values) ? "Hide" : "Show"} cell values
+            </button>
+          )}
         </div>
       )}
 
@@ -1201,6 +1331,13 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   inchlibSettings: settings?.inchlib ?? {},
 });
 
-const MainContainer = connect(mapStateToProps)(HeatMap);
+const ConnectedHeatMap = connect(mapStateToProps)(HeatMap);
+
+// InCHlib draws imperatively inside effects; a failure there must not blank
+// the whole application. A new result resets the boundary automatically.
+const MainContainer = withErrorBoundary(ConnectedHeatMap, {
+  label: "Heatmap",
+  resetKeys: (props) => [props.graphData],
+});
 
 export { MainContainer as HeatMap };

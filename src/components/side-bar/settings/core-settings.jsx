@@ -102,6 +102,12 @@ const CoreSettings = ({
 
   var location = useLocation().pathname;
 
+  // What kind of symbols each list holds (for validation, labels and examples).
+  // The "Data Type" switch only applies to the modules that show it; elsewhere
+  // the first list holds perturbations and the second one genes.
+  const firstListHoldsPerturbations =
+    !showdataTypeOptions || coreSettings?.dataType === "pert";
+
   const setPerturbationList = useCallback(
     (value) => {
       coreSettingsChanged({
@@ -151,11 +157,6 @@ const CoreSettings = ({
       <div style={{ display: showcellLineOptions === true ? "block" : "none" }}>
         <DatasetSelector
           ref={childRef}
-          onlyMain={
-            location === ROUTES.CORRELATION ||
-            location === ROUTES.CORRELATION_WEBGL ||
-            location === ROUTES.HEATMAP
-          }
           wholeGenomeOnly={wholeGenomeOnly}
         />{" "}
         <Spacer height={5} />
@@ -208,7 +209,7 @@ const CoreSettings = ({
                 newValue: value,
               })
             }
-            disabled={coreSettings?.cellLine.id?.length > 27}
+            disabled={coreSettings?.cellLine?.isDrResult === true}
             options={dataTypeOptions}
             value={coreSettings?.dataType}
           />
@@ -272,7 +273,8 @@ const CoreSettings = ({
           textTooltip={helpText1}
           listTitle={perturbationListTitle}
           setPerturbationList={setPerturbationList}
-          isPerturbationList={coreSettings?.dataType === "pert"}
+          field={CoreSettingsTypes.PETURBATION_LIST}
+          isPerturbationList={firstListHoldsPerturbations}
         />
       </div>
       <div style={{ display: showGeneList === true ? "block" : "none" }}>
@@ -280,7 +282,8 @@ const CoreSettings = ({
           textTooltip={helpText2}
           listTitle={geneListTitle}
           setPerturbationList={setGeneList}
-          isPerturbationList={!coreSettings?.dataType === "pert"}
+          field={CoreSettingsTypes.TARGET_LIST}
+          isPerturbationList={!firstListHoldsPerturbations}
           isGeneSignature={isGeneSignature}
         />
       </div>

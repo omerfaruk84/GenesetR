@@ -25,6 +25,7 @@ const GeneRegulationSettings = ({
   geneRegulationCoreSettings,
   geneRegulationCoreSettingsChanged,
   coreSettingsChanged,
+  coreSettings,
 }) => {
   const layoutOption = [
     {
@@ -42,26 +43,33 @@ const GeneRegulationSettings = ({
   ];
   const [geneOptions, setGeneOptions] = useState([]);
 
+  // Gene options come from the dataset that is selected in the sidebar
+  const selectedDatasetId = coreSettings?.cellLine?.id || "K562gwps";
+
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchDataAndPopulate() {
       let check = new Set();
 
       try {
-        await updateGeneLists("K562gwps");
+        await updateGeneLists(selectedDatasetId);
 
-        const perturbVal = await get("geneList_K562gwps_perturb");
-        console.log("perturbVal", perturbVal);
+        const perturbVal = await get("geneList_" + selectedDatasetId + "_perturb");
         addToCheckSet(perturbVal, check);
 
-        const genesVal = await get("geneList_K562gwps_genes");
+        const genesVal = await get("geneList_" + selectedDatasetId + "_genes");
         addToCheckSet(genesVal, check);
 
         check.delete(""); // Remove any empty values
 
         // Convert the set to array, filter, and map.
         let temp = Array.from(check)
-          .filter((val) => !val.startsWith("non-"))
+          .filter((val) => !val.toUpperCase().startsWith("NON-"))
           .map((val) => ({ label: val, value: val }));
+
+        // Ignore the answer if another dataset was selected in the meantime
+        if (cancelled) return;
 
         // Now that all asynchronous operations are done, sort and set gene options.
         setGeneOptions(temp.sort((a, b) => a.label.localeCompare(b.label)));
@@ -79,7 +87,10 @@ const GeneRegulationSettings = ({
     };
 
     fetchDataAndPopulate();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDatasetId]);
 
   return (
     <>

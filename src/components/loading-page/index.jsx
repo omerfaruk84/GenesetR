@@ -6,7 +6,9 @@ const LoadingPage = ({ progressMessage = null, progressPercentage = null }) => {
   const displayMessage = progressMessage || "Calculation in progress...";
   const clampedPercentage =
     typeof progressPercentage === "number"
-      ? Math.max(0, Math.min(100, Math.round(progressPercentage)))
+      ? // This page is only shown while the result is still outstanding, so
+        // the display stops at 99 % until the result has actually arrived.
+        Math.max(0, Math.min(99, Math.round(progressPercentage)))
       : null;
   
   // Determine stage from message content

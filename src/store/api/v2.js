@@ -7,14 +7,7 @@ import { store } from "../store";
 import { progressUpdateReceived } from "../results";
 import { connectTaskWebSocket, waitForTaskCompletion, cancelTask } from "./websocket";
 
-let SERVER_ADDRESS = "https://genesetr.uio.no/api";
-const isDevEnv = process.env.NODE_ENV !== "production";
-
-if (isDevEnv) {
-  SERVER_ADDRESS = "http://localhost:8443";
-}
-
-const API_V1_PREFIX = "/api/v1";
+import { SERVER_ADDRESS, API_V1_PREFIX, isDevEnv } from "./config";
 
 const debugLog = (...args) => {
   if (isDevEnv) {

@@ -5,7 +5,9 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import ForceGraph3D from "react-force-graph-3d";
-import { fetchGeneInfo, cleanGeneSymbol } from "../../utils/geneFunctionUtils";
+import { getGeneInfo } from "../../utils/geneFunctionUtils";
+import { escapeHtml } from "../../utils/escapeHtml";
+import { ErrorBoundary } from "../error-boundary";
 
 // ---- Optional libraries (try to load, but keep app running if missing) ----
 let CytoscapeComponent; // react-cytoscapejs
@@ -207,7 +209,17 @@ function edgeWidth(e) {
   return style.width;
 }
 
-function nodeSize(n, deg, settings) {
+// Largest degree in the graph. Computed once per graph and passed to nodeSize
+// (it used to be recomputed for every node on every style pass / frame).
+function maxDegreeOf(deg) {
+  let max = 0;
+  for (const key in deg) {
+    if (deg[key] > max) max = deg[key];
+  }
+  return max;
+}
+
+function nodeSize(n, deg, settings, maxDegree) {
   const baseSize = 8;
   const degree = deg[n.id] || 0;
   const neighbourCount = n.neighbourCount || 0;
@@ -223,17 +235,34 @@ function nodeSize(n, deg, settings) {
     const minSize = 6;
     const maxSize = 30;
     const minNeighbours = 1;
-    const maxNeighbours = Math.max(10, Math.max(...Object.values(deg)));
+    const maxNeighbours = Math.max(
+      10,
+      Number.isFinite(maxDegree) ? maxDegree : maxDegreeOf(deg)
+    );
     const sizeRange = maxSize - minSize;
     const neighbourRange = maxNeighbours - minNeighbours;
-    
+
     if (neighbourRange > 0) {
       const normalizedCount = (neighbourCount - minNeighbours) / neighbourRange;
-      return minSize + normalizedCount * sizeRange;
+      return Math.max(3, minSize + normalizedCount * sizeRange);
     }
     return baseSize + Math.min(6, neighbourCount);
   }
   return baseSize + Math.min(6, degree);
+}
+
+// Stable, cheap signature of a node set: changes whenever the genes change,
+// not only when their number does.
+function nodeSignature(nodes) {
+  let hash = 0;
+  for (const n of nodes) {
+    const id = String(n.id);
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * 31 + id.charCodeAt(i)) | 0;
+    }
+    hash = (hash * 31 + 124) | 0;
+  }
+  return `${nodes.length}:${hash}`;
 }
 
 // ------------------ Main exported component ------------------
@@ -292,28 +321,46 @@ export default function NetworkGraphAlternatives({
     [filteredNodes, filteredEdges]
   );
 
-  const common = { nodes: filteredNodes, edges: filteredEdges, deg, height, settings };
+  // Lookups shared by all renderers (avoid O(n) searches per node per frame)
+  const nodeById = useMemo(
+    () => new Map(filteredNodes.map((node) => [node.id, node])),
+    [filteredNodes]
+  );
+  const maxDegree = useMemo(() => maxDegreeOf(deg), [deg]);
+
+  const common = {
+    nodes: filteredNodes,
+    edges: filteredEdges,
+    deg,
+    height,
+    settings,
+    nodeById,
+    maxDegree,
+  };
 
   return (
     <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
       <Header renderer={renderer} setRenderer={setRenderer} />
       <div style={{ height }}>
-        {renderer === "Cytoscape" &&
-          (CytoscapeComponent ? (
-            <CytoscapeRenderer {...common} />
-          ) : (
-            <CytoscapeFallback {...common} />
-          ))}
-        {renderer === "Sigma" &&
-          (SigmaContainer ? (
-            <SigmaRenderer {...common} />
-          ) : DirectSigma ? (
-            <DirectSigmaRenderer {...common} />
-          ) : (
-            <SigmaFallback {...common} />
-          ))}
-        {renderer === "ForceGraph2D" && <ForceGraph2DRenderer {...common} />}
-        {renderer === "ForceGraph3D" && <ForceGraph3DRenderer {...common} />}
+        {/* A failing renderer must not blank the page: the user can pick another one. */}
+        <ErrorBoundary label={`${renderer} network view`} resetKeys={[renderer, graph]}>
+          {renderer === "Cytoscape" &&
+            (CytoscapeComponent ? (
+              <CytoscapeRenderer {...common} />
+            ) : (
+              <CytoscapeFallback {...common} />
+            ))}
+          {renderer === "Sigma" &&
+            (SigmaContainer ? (
+              <SigmaRenderer {...common} />
+            ) : DirectSigma ? (
+              <DirectSigmaRenderer {...common} />
+            ) : (
+              <SigmaFallback {...common} />
+            ))}
+          {renderer === "ForceGraph2D" && <ForceGraph2DRenderer {...common} />}
+          {renderer === "ForceGraph3D" && <ForceGraph3DRenderer {...common} />}
+        </ErrorBoundary>
       </div>
     </div>
   );
@@ -371,7 +418,7 @@ function Header({ renderer, setRenderer }) {
 }
 
 // ------------------ Cytoscape renderer (stable layout + rich tooltips) ------------------
-function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
+function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree }) {
   const [layoutName, setLayoutName] = useState(settings?.cyLayout || "cose");
   const [colorMode, setColorMode] = useState(
     settings?.cyColorMode ||
@@ -379,7 +426,6 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
   );
   const [showLabels, setShowLabels] = useState(settings?.cyShowLabels ?? true);
   const cyRef = useRef(null);
-  const [geneInfoCache, setGeneInfoCache] = useState({});
 
   const elements = useMemo(() => {
     const cyNodes = nodes.map((n) => ({
@@ -525,18 +571,11 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
         selector: "node",
         style: {
           label: showLabels ? "data(label)" : "",
-          "background-color": (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
-            return colorForNode(node);
-          },
-          width: (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
-            return nodeSize(node || {}, deg, settings) * 2;
-          },
-          height: (ele) => {
-            const node = nodes.find((n) => n.id === ele.id());
-            return nodeSize(node || {}, deg, settings) * 2;
-          },
+          "background-color": (ele) => colorForNode(nodeById.get(ele.id())),
+          width: (ele) =>
+            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2,
+          height: (ele) =>
+            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2,
           color: "#0f172a",
           "font-size": 10,
           "text-valign": "center",
@@ -558,13 +597,15 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
         },
       },
     ],
-    [nodes, deg, settings, colorForNode, showLabels]
+    [nodeById, deg, settings, maxDegree, colorForNode, showLabels]
   );
 
-  // Run layout ONLY when data size or layoutName changes
+  // Run layout ONLY when the node set, the number of edges or layoutName
+  // changes (not on hover / style updates). The node signature covers the
+  // case of a new graph that happens to have the same node and edge counts.
   const dataKey = useMemo(
-    () => `${nodes.length}:${edges.length}:${layoutName}`,
-    [nodes.length, edges.length, layoutName]
+    () => `${nodeSignature(nodes)}:${edges.length}:${layoutName}`,
+    [nodes, edges.length, layoutName]
   );
 
   useEffect(() => {
@@ -574,114 +615,103 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
     layout.run();
   }, [dataKey, layoutOptions]);
 
-  // Tooltips (do not trigger layout)
+  // Tooltips (do not trigger layout). Mount-only: gene info comes from the
+  // shared cache in utils, so loading it never re-runs this effect (which used
+  // to remove the tooltip the moment the information arrived).
   useEffect(() => {
     const cy = cyRef.current;
-    if (!cy) return;
+    if (!cy) return undefined;
 
-    let tooltip = document.getElementById("cy-tooltip");
-    if (!tooltip) {
-      tooltip = document.createElement("div");
-      tooltip.id = "cy-tooltip";
-      tooltip.style.cssText = `
-        position: fixed;
-        background: rgba(0,0,0,0.85);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        pointer-events: none;
-        z-index: 9999;
-        display: none;
-        max-width: 350px;
-        line-height: 1.4;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      `;
-      document.body.appendChild(tooltip);
-    }
+    const tooltip = document.createElement("div");
+    tooltip.setAttribute("data-cy-tooltip", "true");
+    tooltip.style.cssText = `
+      position: fixed;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      max-width: 350px;
+      line-height: 1.4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    document.body.appendChild(tooltip);
+
+    // Id of the element the pointer is currently over (null when none).
+    let hoveredId = null;
 
     const showTooltip = (e, content) => {
       tooltip.innerHTML = content;
       tooltip.style.display = "block";
-      tooltip.style.left = e.originalEvent.clientX + 10 + "px";
-      tooltip.style.top = e.originalEvent.clientY + 10 + "px";
+      const x = e.originalEvent?.clientX ?? 0;
+      const y = e.originalEvent?.clientY ?? 0;
+      tooltip.style.left = x + 10 + "px";
+      tooltip.style.top = y + 10 + "px";
     };
-    const hideTooltip = () => (tooltip.style.display = "none");
+    const hideTooltip = () => {
+      hoveredId = null;
+      tooltip.style.display = "none";
+    };
 
-    cy.on("mouseover", "node", async (e) => {
+    const nodeHtml = (node, geneInfo, loading) => {
+      const kd = node.data("kd");
+      let html = `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(node.id())}`;
+      if (geneInfo?.name) html += ` (${escapeHtml(geneInfo.name)})`;
+      html += `</div>`;
+      html += `<div>Category: ${escapeHtml(node.data("category") ?? "N/A")}</div>`;
+      html += `<div>Degree: ${escapeHtml(node.data("degree"))}</div>`;
+      if (Number.isFinite(kd)) html += `<div>Knockdown: ${(+kd).toFixed(3)}</div>`;
+      if (loading) {
+        html += `<div style="font-style:italic;color:#ccc;margin-top:4px;">Loading gene info...</div>`;
+      } else if (geneInfo?.description) {
+        html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2);">${escapeHtml(geneInfo.description)}</div>`;
+      }
+      return html;
+    };
+
+    const onNodeOver = (e) => {
       const node = e.target;
       const nodeId = node.id();
-      const category = node.data("category");
-      const kd = node.data("kd");
-      const degree = node.data("degree");
+      hoveredId = nodeId;
+      showTooltip(e, nodeHtml(node, null, true));
 
-      let html = `<div style="font-weight:600;margin-bottom:4px;">${nodeId}</div>`;
-      html += `<div>Category: ${category ?? "N/A"}</div>`;
-      html += `<div>Degree: ${degree}</div>`;
-      if (Number.isFinite(kd)) html += `<div>Knockdown: ${(+kd).toFixed(3)}</div>`;
-      html += `<div style="font-style:italic;color:#ccc;margin-top:4px;">Loading gene info...</div>`;
-      showTooltip(e, html);
+      getGeneInfo(nodeId).then((geneInfo) => {
+        // Only update when the pointer is still on the same node.
+        if (hoveredId !== nodeId) return;
+        tooltip.innerHTML = nodeHtml(node, geneInfo, false);
+      });
+    };
 
-      try {
-        const clean = cleanGeneSymbol(nodeId);
-        let geneInfo = geneInfoCache[clean];
-        if (!geneInfo) {
-          const cached = localStorage.getItem(clean);
-          if (cached) {
-            geneInfo = JSON.parse(cached);
-            setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-          } else {
-            const content = await fetchGeneInfo(nodeId);
-            if (content) {
-              geneInfo = typeof content === "string" ? JSON.parse(content) : content;
-              localStorage.setItem(clean, JSON.stringify(geneInfo));
-              setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-            }
-          }
-        }
-        if (geneInfo && tooltip.style.display === "block") {
-          let enhanced = `<div style="font-weight:600;margin-bottom:4px;">${nodeId}`;
-          if (geneInfo.name) enhanced += ` (${geneInfo.name})`;
-          enhanced += `</div>`;
-          enhanced += `<div>Category: ${category ?? "N/A"}</div>`;
-          enhanced += `<div>Degree: ${degree}</div>`;
-          if (Number.isFinite(kd)) enhanced += `<div>Knockdown: ${(+kd).toFixed(3)}</div>`;
-          if (geneInfo.description) {
-            enhanced += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2);">${geneInfo.description}</div>`;
-          }
-          tooltip.innerHTML = enhanced;
-        }
-      } catch (err) {
-        console.error("Gene info error:", err);
-      }
-    });
-
-    cy.on("mouseout", "node", hideTooltip);
-
-    cy.on("mouseover", "edge", (e) => {
+    const onEdgeOver = (e) => {
       const edge = e.target;
-      const source = edge.source().id();
-      const target = edge.target().id();
-      const type = edge.data("Type");
-      const type2 = edge.data("Type2");
+      hoveredId = edge.id();
       const value = edge.data("value");
-      let html = `<div style="font-weight:600;margin-bottom:4px;">${source} → ${target}</div>`;
-      html += `<div>Type: ${type || "N/A"}</div>`;
-      html += `<div>Class: ${type2}</div>`;
+      let html = `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(
+        edge.source().id()
+      )} → ${escapeHtml(edge.target().id())}</div>`;
+      html += `<div>Type: ${escapeHtml(edge.data("Type") || "N/A")}</div>`;
+      html += `<div>Class: ${escapeHtml(edge.data("Type2"))}</div>`;
       if (Number.isFinite(value)) html += `<div>Value: ${(+value).toFixed(3)}</div>`;
       showTooltip(e, html);
-    });
+    };
+
+    cy.on("mouseover", "node", onNodeOver);
+    cy.on("mouseout", "node", hideTooltip);
+    cy.on("mouseover", "edge", onEdgeOver);
     cy.on("mouseout", "edge", hideTooltip);
 
     return () => {
-      cy.off("mouseover", "node");
-      cy.off("mouseout", "node");
-      cy.off("mouseover", "edge");
-      cy.off("mouseout", "edge");
-      const el = document.getElementById("cy-tooltip");
-      if (el) el.remove();
+      hoveredId = null;
+      cy.off("mouseover", "node", onNodeOver);
+      cy.off("mouseout", "node", hideTooltip);
+      cy.off("mouseover", "edge", onEdgeOver);
+      cy.off("mouseout", "edge", hideTooltip);
+      tooltip.remove();
     };
-  }, [geneInfoCache]);
+  }, []);
 
   return (
     <div style={{ position: "relative", width: "100%", height }}>
@@ -749,91 +779,102 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings }) {
 }
 
 // ------------------ Enhanced Sigma.js renderer with full interactivity ------------------
-function SigmaRenderer({ nodes, edges, deg, height, settings }) {
+function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
   const [sigmaLayout, setSigmaLayout] = useState("fa2");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [geneInfoCache, setGeneInfoCache] = useState({});
   const [tooltip, setTooltip] = useState(null);
   const [showLabels, setShowLabels] = useState(true);
   const [nodeSizeMode, setNodeSizeMode] = useState("degree"); // 'degree' | 'knockdown' | 'fixed'
-  
+  // Latest hovered node; a gene-info lookup that resolves late is ignored.
+  const hoverRef = useRef(null);
+
   // Create the graph with enhanced features
   const graph = useMemo(() => {
     if (!GraphClass) return null;
-    
-    const g = new GraphClass({ multi: false, type: "directed", allowSelfLoops: false });
 
-    // Add nodes with enhanced properties
+    try {
+      // multi: true - an expression edge and a correlation edge may connect the
+      // same ordered pair of genes; a simple graph would throw on the second.
+      const g = new GraphClass({ multi: true, type: "directed", allowSelfLoops: false });
+
+      let maxNeighbourCount = 0;
+      nodes.forEach((n) => {
+        if ((n?.neighbourCount || 0) > maxNeighbourCount) maxNeighbourCount = n.neighbourCount;
+      });
+
+      // Add nodes with enhanced properties
       const radius = Math.max(50, nodes.length * 3);
       nodes.forEach((n, i) => {
         if (!n?.id) return;
+        const id = String(n.id);
+        if (g.hasNode(id)) return;
         const angle = (2 * Math.PI * i) / nodes.length;
         const x = Number.isFinite(n.x) ? n.x : radius * Math.cos(angle);
         const y = Number.isFinite(n.y) ? n.y : radius * Math.sin(angle);
-      
-      // Dynamic node sizing
-      let size = 8;
-      if (nodeSizeMode === "degree") {
-        size = 8 + Math.min(12, (deg[n.id] || 0) * 1.5);
-      } else if (nodeSizeMode === "knockdown" && n.kd !== undefined) {
-        size = 8 + Math.abs(n.kd) * 4;
-      } else if (nodeSizeMode === "mixed") {
-        size = 8 + Math.min(8, (deg[n.id] || 0)) + (n.kd ? Math.abs(n.kd) * 2 : 0);
-      } else if (nodeSizeMode === "neighbourCount") {
-        // Use neighbor count for sizing, similar to original module
-        const neighbourCount = n.neighbourCount || 0;
-        const minSize = 6;
-        const maxSize = 30;
-        const minNeighbours = 1;
-        const maxNeighbours = Math.max(10, Math.max(...nodes.map(n => n.neighbourCount || 0)));
-        const sizeRange = maxSize - minSize;
-        const neighbourRange = maxNeighbours - minNeighbours;
-        
-        if (neighbourRange > 0) {
-          const normalizedCount = (neighbourCount - minNeighbours) / neighbourRange;
-          size = minSize + normalizedCount * sizeRange;
-        } else {
-          size = 8 + Math.min(6, neighbourCount);
+
+        // Dynamic node sizing
+        let size = 8;
+        if (nodeSizeMode === "degree") {
+          size = 8 + Math.min(12, (deg[n.id] || 0) * 1.5);
+        } else if (nodeSizeMode === "knockdown" && n.kd !== undefined) {
+          size = 8 + Math.abs(n.kd) * 4;
+        } else if (nodeSizeMode === "mixed") {
+          size = 8 + Math.min(8, (deg[n.id] || 0)) + (n.kd ? Math.abs(n.kd) * 2 : 0);
+        } else if (nodeSizeMode === "neighbourCount") {
+          // Use neighbor count for sizing, similar to original module
+          const neighbourCount = n.neighbourCount || 0;
+          const minSize = 6;
+          const maxSize = 30;
+          const minNeighbours = 1;
+          const maxNeighbours = Math.max(10, maxNeighbourCount);
+          const sizeRange = maxSize - minSize;
+          const neighbourRange = maxNeighbours - minNeighbours;
+
+          if (neighbourRange > 0) {
+            const normalizedCount = (neighbourCount - minNeighbours) / neighbourRange;
+            size = Math.max(3, minSize + normalizedCount * sizeRange);
+          } else {
+            size = 8 + Math.min(6, neighbourCount);
+          }
         }
-      }
-      
-          g.addNode(String(n.id), {
-            x,
-            y,
-            size,
-            label: String(n.id),
-            color: nodeColor(n, settings),
-            category: n.category,
-            kd: n.kd,
-            degree: deg[n.id] || 0,
-            neighbourCount: n.neighbourCount || 0,
-        // Enhanced properties for interactivity
-        highlighted: false,
-        selected: false,
-        hovered: false,
-          });
+        if (!Number.isFinite(size)) size = 8;
+
+        g.addNode(id, {
+          x,
+          y,
+          size,
+          label: id,
+          color: nodeColor(n, settings),
+          category: n.category,
+          kd: n.kd,
+          degree: deg[n.id] || 0,
+          neighbourCount: n.neighbourCount || 0,
+          // Enhanced properties for interactivity
+          highlighted: false,
+          selected: false,
+          hovered: false,
+        });
       });
 
-    // Add edges with enhanced properties
+      // Add edges with enhanced properties
       edges.forEach((e) => {
         const s = String(e.source);
         const t = String(e.target);
         if (s === t || !g.hasNode(s) || !g.hasNode(t)) return;
-      
-          g.addEdge(s, t, {
-            size: edgeWidth(e),
-            color: edgeColor(e),
-            Type2: e.Type2,
-            Type: e.Type,
-            value: e.value,
-        highlighted: false,
-          });
+
+        g.addEdge(s, t, {
+          size: edgeWidth(e),
+          color: edgeColor(e),
+          Type2: e.Type2,
+          Type: e.Type,
+          value: e.value,
+          highlighted: false,
+        });
       });
 
-    // Apply layout
-    switch (sigmaLayout) {
+      // Apply layout
+      switch (sigmaLayout) {
         case "circular":
           circular?.assign?.(g);
           break;
@@ -865,11 +906,17 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
           }
       }
 
-    return g;
+      return g;
+    } catch (err) {
+      console.error("Sigma graph could not be built:", err);
+      return null;
+    }
   }, [nodes, edges, deg, settings, sigmaLayout, nodeSizeMode]);
 
-  // Enhanced tooltip system
-  const handleNodeHover = useCallback(async (nodeId) => {
+  // Tooltip: shown immediately, completed when the (cached) gene info arrives.
+  // Stable identity, so the Sigma event listeners are registered only once.
+  const handleNodeHover = useCallback((nodeId) => {
+    hoverRef.current = nodeId || null;
     if (!nodeId) {
       setTooltip(null);
       setHoveredNode(null);
@@ -877,50 +924,26 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
     }
 
     setHoveredNode(nodeId);
-    
-    // Fetch gene information
-    const clean = cleanGeneSymbol(nodeId);
-    let geneInfo = geneInfoCache[clean];
-    
-    if (!geneInfo) {
-      try {
-        const cached = localStorage.getItem(clean);
-        if (cached) {
-          geneInfo = JSON.parse(cached);
-          setGeneInfoCache(prev => ({ ...prev, [clean]: geneInfo }));
-        } else {
-          const content = await fetchGeneInfo(nodeId);
-          if (content) {
-            geneInfo = typeof content === "string" ? JSON.parse(content) : content;
-            localStorage.setItem(clean, JSON.stringify(geneInfo));
-            setGeneInfoCache(prev => ({ ...prev, [clean]: geneInfo }));
-          }
-        }
-      } catch (err) {
-        console.error("Gene info error:", err);
-      }
-    }
 
-    const node = nodes.find(n => n.id === nodeId);
-    setTooltip({
+    const node = nodeById?.get(nodeId);
+    const base = {
       nodeId,
       node,
-      geneInfo,
+      geneInfo: null,
       degree: deg[nodeId] || 0,
       neighbourCount: node?.neighbourCount || 0,
       category: node?.category,
       kd: node?.kd,
-    });
-  }, [nodes, deg, geneInfoCache]);
+    };
+    setTooltip(base);
 
-  // Search functionality
-  // Note: filteredNodes is computed but currently not used in rendering
-  // const filteredNodes = useMemo(() => {
-  //   if (!searchTerm) return nodes;
-  //   return nodes.filter(n => 
-  //     n.id.toLowerCase().includes(searchTerm.toLowerCase())
-  //   );
-  // }, [nodes, searchTerm]);
+    getGeneInfo(nodeId).then((geneInfo) => {
+      if (hoverRef.current !== nodeId || !geneInfo) return;
+      setTooltip({ ...base, geneInfo });
+    });
+  }, [nodeById, deg]);
+
+  const handleNodeClick = useCallback((nodeId) => setSelectedNode(nodeId), []);
 
   if (!graph) {
     return <SigmaFallback nodes={nodes} edges={edges} height={height} />;
@@ -929,14 +952,14 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
   return (
     <div style={{ width: "100%", height, position: "relative", background: "#fff", borderRadius: 8, overflow: "hidden" }}>
       {/* Enhanced Control Panel */}
-      <div style={{ 
-        position: "absolute", 
-        top: 12, 
-        right: 12, 
-        zIndex: 10, 
-        background: "rgba(255,255,255,0.95)", 
-        padding: "12px", 
-        borderRadius: 8, 
+      <div style={{
+        position: "absolute",
+        top: 12,
+        right: 12,
+        zIndex: 10,
+        background: "rgba(255,255,255,0.95)",
+        padding: "12px",
+        borderRadius: 8,
         border: "1px solid #e5e7eb",
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         display: "flex",
@@ -945,13 +968,13 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
         minWidth: "200px"
       }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Controls</div>
-        
+
         {/* Layout Selection */}
         <div>
           <label style={{ fontSize: 11, color: "#666", display: "block", marginBottom: 2 }}>Layout</label>
-          <select 
-            value={sigmaLayout} 
-            onChange={(e) => setSigmaLayout(e.target.value)} 
+          <select
+            value={sigmaLayout}
+            onChange={(e) => setSigmaLayout(e.target.value)}
             style={{ fontSize: 11, padding: "4px 6px", width: "100%" }}
           >
             <option value="fa2">ForceAtlas2</option>
@@ -965,9 +988,9 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
         {/* Node Size Mode */}
         <div>
           <label style={{ fontSize: 11, color: "#666", display: "block", marginBottom: 2 }}>Node Size</label>
-          <select 
-            value={nodeSizeMode} 
-            onChange={(e) => setNodeSizeMode(e.target.value)} 
+          <select
+            value={nodeSizeMode}
+            onChange={(e) => setNodeSizeMode(e.target.value)}
             style={{ fontSize: 11, padding: "4px 6px", width: "100%" }}
           >
             <option value="degree">By Degree</option>
@@ -987,18 +1010,6 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
           />
           Show Labels
         </label>
-
-        {/* Search */}
-        <div>
-          <label style={{ fontSize: 11, color: "#666", display: "block", marginBottom: 2 }}>Search Gene</label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Type gene name..."
-            style={{ fontSize: 11, padding: "4px 6px", width: "100%", border: "1px solid #ddd", borderRadius: 4 }}
-          />
-        </div>
       </div>
 
       {/* Enhanced Tooltip */}
@@ -1062,9 +1073,9 @@ function SigmaRenderer({ nodes, edges, deg, height, settings }) {
         }}
       >
         <SigmaAutoFit />
-        <SigmaInteractivity 
+        <SigmaInteractivity
           onNodeHover={handleNodeHover}
-          onNodeClick={(nodeId) => setSelectedNode(nodeId)}
+          onNodeClick={handleNodeClick}
           selectedNode={selectedNode}
           hoveredNode={hoveredNode}
         />
@@ -1083,62 +1094,48 @@ function SigmaInteractivity({ onNodeHover, onNodeClick, selectedNode, hoveredNod
   const sigma = useSigma?.();
 
   useEffect(() => {
-    if (!sigma) return;
+    if (!sigma) return undefined;
 
-    const handleNodeHover = (event) => {
-      const nodeId = event.node;
-      if (onNodeHover) {
-        onNodeHover(nodeId);
-      }
-    };
+    // Named handlers: the very same function objects are passed to off(), so
+    // every listener added here is removed again on cleanup.
+    const handleEnterNode = (event) => onNodeHover?.(event.node);
+    const handleLeaveNode = () => onNodeHover?.(null);
+    const handleClickNode = (event) => onNodeClick?.(event.node);
+    const handleClickStage = () => onNodeClick?.(null);
 
-    const handleNodeClick = (event) => {
-      const nodeId = event.node;
-      if (onNodeClick) {
-        onNodeClick(nodeId);
-      }
-    };
-
-    const handleStageClick = () => {
-      if (onNodeClick) {
-        onNodeClick(null);
-      }
-    };
-
-    // Add event listeners
-    sigma.on('enterNode', handleNodeHover);
-    sigma.on('leaveNode', () => onNodeHover?.(null));
-    sigma.on('clickNode', handleNodeClick);
-    sigma.on('clickStage', handleStageClick);
+    sigma.on('enterNode', handleEnterNode);
+    sigma.on('leaveNode', handleLeaveNode);
+    sigma.on('clickNode', handleClickNode);
+    sigma.on('clickStage', handleClickStage);
 
     return () => {
-      sigma.off('enterNode', handleNodeHover);
-      sigma.off('leaveNode', () => onNodeHover?.(null));
-      sigma.off('clickNode', handleNodeClick);
-      sigma.off('clickStage', handleStageClick);
+      sigma.off('enterNode', handleEnterNode);
+      sigma.off('leaveNode', handleLeaveNode);
+      sigma.off('clickNode', handleClickNode);
+      sigma.off('clickStage', handleClickStage);
     };
   }, [sigma, onNodeHover, onNodeClick]);
 
   // Update node highlighting
   useEffect(() => {
     if (!sigma) return;
-    
+
     const graph = sigma.getGraph();
     if (!graph) return;
 
     // Reset all nodes
-    graph.forEachNode((nodeId, attributes) => {
+    graph.forEachNode((nodeId) => {
       graph.setNodeAttribute(nodeId, 'highlighted', false);
       graph.setNodeAttribute(nodeId, 'selected', false);
     });
 
-    // Highlight hovered node
-    if (hoveredNode) {
+    // Highlight hovered node (it may belong to a previous graph)
+    if (hoveredNode && graph.hasNode(hoveredNode)) {
       graph.setNodeAttribute(hoveredNode, 'highlighted', true);
     }
 
     // Highlight selected node
-    if (selectedNode) {
+    if (selectedNode && graph.hasNode(selectedNode)) {
       graph.setNodeAttribute(selectedNode, 'selected', true);
     }
 
@@ -1149,48 +1146,30 @@ function SigmaInteractivity({ onNodeHover, onNodeClick, selectedNode, hoveredNod
   return null;
 }
 
-// Auto-fit camera to current graph bounds (once per mount)
-function SigmaAutoFit({ padding = 60 }) {
+// Show the whole graph when a Sigma instance is created.
+// Sigma cameras work in normalised coordinates: (0.5, 0.5) with ratio 1 frames
+// the entire graph, whatever the graph's own coordinate range is.
+function SigmaAutoFit() {
   const sigma = useSigma?.();
   useEffect(() => {
     if (!sigma) return;
     const g = sigma.getGraph();
     if (!g || g.order === 0) return;
-
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    g.forEachNode((key, a) => {
-      if (Number.isFinite(a.x) && Number.isFinite(a.y)) {
-        minX = Math.min(minX, a.x);
-        minY = Math.min(minY, a.y);
-        maxX = Math.max(maxX, a.x);
-        maxY = Math.max(maxY, a.y);
-      }
-    });
-    if (!isFinite(minX)) return;
-
-    const width = sigma.getContainer().clientWidth || 1;
-    const height = sigma.getContainer().clientHeight || 1;
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    const dx = (maxX - minX) + padding;
-    const dy = (maxY - minY) + padding;
-    const ratio = Math.max(dx / width, dy / height) || 1;
-
-    sigma.getCamera().setState({ x: cx, y: cy, ratio: ratio * 1.1 });
-  }, [sigma, padding]);
+    try {
+      sigma.getCamera().setState({ x: 0.5, y: 0.5, ratio: 1, angle: 0 });
+    } catch (e) {
+      // keep the default camera
+    }
+  }, [sigma]);
   return null;
 }
 
 // ------------------ ForceGraph2D renderer (layouts + drag + details) ------------------
-function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
+function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree }) {
   const [layout, setLayout] = useState("force"); // 'force' | 'circular' | 'grid' | 'radialByCategory' | 'layersByDegree'
   const [hoverNode, setHoverNode] = useState(null);
   const [hoverLink, setHoverLink] = useState(null);
   const [selNode, setSelNode] = useState(null);
-  const [geneInfoCache, setGeneInfoCache] = useState({});
   const [nodeTooltips, setNodeTooltips] = useState({});
 
   const data = useMemo(
@@ -1214,34 +1193,46 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
 
   const fgRef = useRef();
 
-  // Force vs static layouts
+  // Force vs static layouts.
+  // Static layouts pin every node at its seeded position; "Force" releases the
+  // pins and reheats the simulation. The forces themselves are never removed,
+  // so switching back to "Force" always works and links stay resolved.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
-    const sim = fg.d3Force; // function accessor
+
+    const n = data.nodes;
 
     if (layout === "force") {
-      sim("charge")?.strength(-120);
-      sim("link")?.distance(80).strength(0.6);
-      sim("center")?.strength(0.1);
+      fg.d3Force("charge")?.strength(-120);
+      fg.d3Force("link")?.distance(80).strength(0.6);
+      fg.d3Force("center")?.strength(0.1);
+      n.forEach((node) => {
+        node.fx = undefined;
+        node.fy = undefined;
+      });
+      fg.d3ReheatSimulation?.();
       return;
     }
 
-    // Static: disable forces & seed positions
-    sim("charge", null);
-    sim("link", null);
-    sim("center", null);
-
-    const n = data.nodes;
+    // Static: seed positions and pin them
     if (layout === "circular") seedCircular(n, 260);
     else if (layout === "grid") seedGrid(n);
     else if (layout === "radialByCategory") seedRadialByCategory(n, (x) => x.category, 160);
     else if (layout === "layersByDegree") seedLayersByDegree(n, (x) => x.degree, 90);
 
-    fg.refresh();
+    n.forEach((node) => {
+      node.fx = node.x;
+      node.fy = node.y;
+    });
+
+    fg.d3ReheatSimulation?.();
+    fg.refresh?.(); // only the 3D graph has refresh()
     try {
-      fg.zoomToFit(400, 60);
-    } catch {}
+      fg.zoomToFit?.(400, 60);
+    } catch (e) {
+      // zoomToFit can fail before the first frame; harmless
+    }
   }, [layout, data]);
 
   // Drag handlers keep node in place
@@ -1254,55 +1245,41 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
     node.fy = node.y;
   }, []);
 
-  const getNode = (id) => nodes.find((n) => n.id === id);
+  const getNode = (id) => nodeById?.get(id);
 
-  // Fetch gene info on first hover
+  // Fetch gene info on first hover (shared, cached lookup in utils)
   useEffect(() => {
-    if (!hoverNode) return;
+    if (!hoverNode) return undefined;
     const nodeId = hoverNode.id;
-    const clean = cleanGeneSymbol(nodeId);
-    if (nodeTooltips[nodeId]) return;
+    if (nodeTooltips[nodeId] !== undefined) return undefined;
 
-    (async () => {
-      try {
-        let geneInfo = geneInfoCache[clean];
-        if (!geneInfo) {
-          const cached = localStorage.getItem(clean);
-          if (cached) {
-            geneInfo = JSON.parse(cached);
-            setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-          } else {
-            const content = await fetchGeneInfo(nodeId);
-            if (content) {
-              geneInfo = typeof content === "string" ? JSON.parse(content) : content;
-              localStorage.setItem(clean, JSON.stringify(geneInfo));
-              setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-            }
-          }
-        }
-        if (geneInfo) setNodeTooltips((p) => ({ ...p, [nodeId]: geneInfo }));
-      } catch (err) {
-        console.error("Gene info (2D):", err);
-      }
-    })();
-  }, [hoverNode, geneInfoCache, nodeTooltips]);
+    let cancelled = false;
+    getGeneInfo(nodeId).then((geneInfo) => {
+      if (cancelled) return;
+      // false = looked up, nothing available (stops the "Loading" hint)
+      setNodeTooltips((p) => ({ ...p, [nodeId]: geneInfo || false }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hoverNode, nodeTooltips]);
 
   const getNodeLabel = useCallback(
     (n) => {
       const geneInfo = nodeTooltips[n.id];
-      let label = `${n.id}`;
-      if (geneInfo?.name) label += ` (${geneInfo.name})`;
-      label += `\nCategory: ${n.category ?? "N/A"}`;
-      label += `\nDegree: ${n.degree}`;
-      if (Number.isFinite(n.kd)) label += `\nKD: ${(+n.kd).toFixed(2)}`;
+      let label = escapeHtml(n.id);
+      if (geneInfo?.name) label += ` (${escapeHtml(geneInfo.name)})`;
+      label += `<br/>Category: ${escapeHtml(n.category ?? "N/A")}`;
+      label += `<br/>Degree: ${escapeHtml(n.degree)}`;
+      if (Number.isFinite(n.kd)) label += `<br/>KD: ${(+n.kd).toFixed(2)}`;
       if (geneInfo?.description) {
         const d =
           geneInfo.description.length > 120
             ? geneInfo.description.slice(0, 120) + "..."
             : geneInfo.description;
-        label += `\n\n${d}`;
-      } else if (hoverNode?.id === n.id && !geneInfo) {
-        label += `\n\nLoading gene info...`;
+        label += `<br/><br/>${escapeHtml(d)}`;
+      } else if (hoverNode?.id === n.id && geneInfo === undefined) {
+        label += `<br/><br/>Loading gene info...`;
       }
       return label;
     },
@@ -1336,10 +1313,10 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
         onNodeClick={(n) => setSelNode(n)}
         nodeLabel={(n) => getNodeLabel(n)}
         linkLabel={(l) =>
-          `${l.source?.id || l.source} → ${l.target?.id || l.target}\nType: ${
+          `${escapeHtml(l.source?.id || l.source)} → ${escapeHtml(l.target?.id || l.target)}<br/>Type: ${escapeHtml(
             l.Type || "N/A"
-          }\nClass: ${l.t2 || "N/A"}${
-            Number.isFinite(l.value) ? `\nValue: ${(+l.value).toFixed(2)}` : ""
+          )}<br/>Class: ${escapeHtml(l.t2 || "N/A")}${
+            Number.isFinite(l.value) ? `<br/>Value: ${(+l.value).toFixed(2)}` : ""
           }`
         }
         linkDirectionalArrowLength={6}
@@ -1353,7 +1330,7 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings }) {
         linkDirectionalParticleSpeed={0.006}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const ndata = getNode(node.id) || {};
-          const size = nodeSize(ndata, deg, settings);
+          const size = nodeSize(ndata, deg, settings, maxDegree);
           const color = nodeColor(ndata, settings);
 
           if (hoverNode?.id === node.id || selNode?.id === node.id) {
@@ -1397,7 +1374,6 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
   const [hoverNode, setHoverNode] = useState(null);
   const [hoverLink, setHoverLink] = useState(null);
   const [selNode, setSelNode] = useState(null);
-  const [geneInfoCache, setGeneInfoCache] = useState({});
   const [nodeTooltips, setNodeTooltips] = useState({});
 
   const data = useMemo(
@@ -1421,32 +1397,48 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
 
   const fgRef = useRef();
 
+  // Force vs static layouts.
+  // Static layouts pin every node at its seeded position; "Force" releases the
+  // pins and reheats the simulation. The forces themselves are never removed,
+  // so switching back to "Force" always works and links stay resolved.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
+
+    const n = data.nodes;
 
     if (layout === "force") {
       fg.d3Force("charge")?.strength(-120);
       fg.d3Force("link")?.distance(80).strength(0.6);
       fg.d3Force("center")?.strength(0.1);
+      n.forEach((node) => {
+        node.fx = undefined;
+        node.fy = undefined;
+        node.fz = undefined;
+      });
+      fg.d3ReheatSimulation?.();
       return;
     }
 
-    // Disable forces and seed 3D coordinates for static layouts
-    fg.d3Force("charge", null);
-    fg.d3Force("link", null);
-    fg.d3Force("center", null);
-
-    const n = data.nodes;
+    // Static: seed positions and pin them
     if (layout === "circular") seedCircular3D(n, 260);
     else if (layout === "grid") seedGrid3D(n);
     else if (layout === "radialByCategory") seedRadialByCategory3D(n, (x) => x.category, 160);
     else if (layout === "layersByDegree") seedLayersByDegree3D(n, (x) => x.degree, 120);
 
-    fg.refresh();
+    n.forEach((node) => {
+      node.fx = node.x;
+      node.fy = node.y;
+      node.fz = node.z;
+    });
+
+    fg.d3ReheatSimulation?.();
+    fg.refresh?.(); // only the 3D graph has refresh()
     try {
-      fg.zoomToFit(400, 60);
-    } catch {}
+      fg.zoomToFit?.(400, 60);
+    } catch (e) {
+      // zoomToFit can fail before the first frame; harmless
+    }
   }, [layout, data]);
 
   // Drag handlers keep node in place
@@ -1464,53 +1456,39 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
   // Note: getNode is defined but not currently used
   // const getNode = (id) => nodes.find((n) => n.id === id);
 
-  // Fetch gene info on first hover
+  // Fetch gene info on first hover (shared, cached lookup in utils)
   useEffect(() => {
-    if (!hoverNode) return;
+    if (!hoverNode) return undefined;
     const nodeId = hoverNode.id;
-    const clean = cleanGeneSymbol(nodeId);
-    if (nodeTooltips[nodeId]) return;
+    if (nodeTooltips[nodeId] !== undefined) return undefined;
 
-    (async () => {
-      try {
-        let geneInfo = geneInfoCache[clean];
-        if (!geneInfo) {
-          const cached = localStorage.getItem(clean);
-          if (cached) {
-            geneInfo = JSON.parse(cached);
-            setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-          } else {
-            const content = await fetchGeneInfo(nodeId);
-            if (content) {
-              geneInfo = typeof content === "string" ? JSON.parse(content) : content;
-              localStorage.setItem(clean, JSON.stringify(geneInfo));
-              setGeneInfoCache((p) => ({ ...p, [clean]: geneInfo }));
-            }
-          }
-        }
-        if (geneInfo) setNodeTooltips((p) => ({ ...p, [nodeId]: geneInfo }));
-      } catch (err) {
-        console.error("Gene info (3D):", err);
-      }
-    })();
-  }, [hoverNode, geneInfoCache, nodeTooltips]);
+    let cancelled = false;
+    getGeneInfo(nodeId).then((geneInfo) => {
+      if (cancelled) return;
+      // false = looked up, nothing available (stops the "Loading" hint)
+      setNodeTooltips((p) => ({ ...p, [nodeId]: geneInfo || false }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hoverNode, nodeTooltips]);
 
   const getNodeLabel = useCallback(
     (n) => {
       const geneInfo = nodeTooltips[n.id];
-      let label = `${n.id}`;
-      if (geneInfo?.name) label += ` (${geneInfo.name})`;
-      label += `\nCategory: ${n.category ?? "N/A"}`;
-      label += `\nDegree: ${n.degree}`;
-      if (Number.isFinite(n.kd)) label += `\nKD: ${(+n.kd).toFixed(2)}`;
+      let label = escapeHtml(n.id);
+      if (geneInfo?.name) label += ` (${escapeHtml(geneInfo.name)})`;
+      label += `<br/>Category: ${escapeHtml(n.category ?? "N/A")}`;
+      label += `<br/>Degree: ${escapeHtml(n.degree)}`;
+      if (Number.isFinite(n.kd)) label += `<br/>KD: ${(+n.kd).toFixed(2)}`;
       if (geneInfo?.description) {
         const d =
           geneInfo.description.length > 120
             ? geneInfo.description.slice(0, 120) + "..."
             : geneInfo.description;
-        label += `\n\n${d}`;
-      } else if (hoverNode?.id === n.id && !geneInfo) {
-        label += `\n\nLoading gene info...`;
+        label += `<br/><br/>${escapeHtml(d)}`;
+      } else if (hoverNode?.id === n.id && geneInfo === undefined) {
+        label += `<br/><br/>Loading gene info...`;
       }
       return label;
     },
@@ -1544,10 +1522,10 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
         onNodeClick={(n) => setSelNode(n)}
         nodeLabel={(n) => getNodeLabel(n)}
         linkLabel={(l) =>
-          `${l.source?.id || l.source} → ${l.target?.id || l.target}\nType: ${
+          `${escapeHtml(l.source?.id || l.source)} → ${escapeHtml(l.target?.id || l.target)}<br/>Type: ${escapeHtml(
             l.Type || "N/A"
-          }\nClass: ${l.t2 || "N/A"}${
-            Number.isFinite(l.value) ? `\nValue: ${(+l.value).toFixed(2)}` : ""
+          )}<br/>Class: ${escapeHtml(l.t2 || "N/A")}${
+            Number.isFinite(l.value) ? `<br/>Value: ${(+l.value).toFixed(2)}` : ""
           }`
         }
         linkDirectionalArrowLength={4}
@@ -1746,7 +1724,8 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
 
     try {
       // Create a new graph instance
-      const g = new GraphClass({ multi: false, type: "directed", allowSelfLoops: false });
+      // multi: true - parallel Exp/Corr edges between the same genes are allowed
+      const g = new GraphClass({ multi: true, type: "directed", allowSelfLoops: false });
 
       // Add nodes
       const radius = Math.max(50, nodes.length * 3);

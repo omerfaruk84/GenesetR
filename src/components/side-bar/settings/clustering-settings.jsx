@@ -97,13 +97,14 @@ const ClusteringSettings = ({
       <Field labelLeft labelWidth="130px" label='Cluster Selection Epsilon' helpText="Distance threshold for merging clusters. Higher values result in fewer, larger clusters. Set to 0 for automatic selection.">
         <div className={styles.inputRange}>          
           <Slider
-            label={clusteringSettings?.clusterSelectionEpsilon}
+            label={Number(clusteringSettings?.clusterSelectionEpsilon || 0).toFixed(2)}
             max={100}
-            min={3}
-            value={clusteringSettings?.clusterSelectionEpsilon}
+            min={0}
+            value={Math.round((Number(clusteringSettings?.clusterSelectionEpsilon) || 0) * 100)}
             onChange={({ target: { value } }) => clusteringSettingsChanged({
               settingName: ClusteringSettingsTypes.CLUSTER_SELECTION_EPSILON,
-              newValue: value
+              // Slider works in hundredths: 0 (automatic) .. 1.00
+              newValue: Number(value) / 100
             })}
           />
         </div>

@@ -6,17 +6,12 @@ import { get, set } from "../safeIdb";
 import { store } from "../store";
 import { progressUpdateReceived } from "../results";
 // Import WebSocket support at the top
-import { waitForTaskCompletion, cancelTask } from "./websocket";
+import { waitForTaskCompletion, cancelTask, isTaskCancelledError } from "./websocket";
 
-let SERVER_ADRESS = "https://genesetr.uio.no/api";
-//const SERVER_ADRESS = "https://727b-2001-700-100-400a-00-f-f95c.ngrok-free.app";
+import { SERVER_ADDRESS, isDevEnv } from "./config";
 
-const isDevEnv = process.env.NODE_ENV !== "production";
-
-if (isDevEnv) {
-  SERVER_ADRESS = "https://b74f-2001-700-100-400a-00-f-f95c.ngrok-free.app";
-  SERVER_ADRESS = "http://localhost:8443";
-}
+// Backend address (configured in ./config.js, REACT_APP_API_URL)
+const SERVER_ADRESS = SERVER_ADDRESS;
 
 const debugLog = (...args) => {
   if (isDevEnv) {
@@ -42,6 +37,7 @@ const requestToModuleMap = {
   "expandGeneEnhanced": "geneRegulationEnhancedGraph",
   "findPath": "pathFinderGraph",
   "corrCluster": "corrCluster",
+  "corrClusterMultiDataset": "corrCluster",
   "heatMap": "heatmapGraph",
   "calcGeneSignature": "genesignatureGraph",
   "calcGeneSignatureMultiDataset": "genesignatureMultiDataset",
@@ -51,6 +47,54 @@ const requestToModuleMap = {
   "calcDeregulatedGenes": "deregulatedGenesGraph",
   "calcDeregulatedGenesMultiDataset": "deregulatedGenesMultiDataset",
 };
+
+/**
+ * Convert a free-text gene list (new lines, spaces, commas or semicolons) into
+ * the ";"-separated string the backend expects.
+ */
+const toGeneListParam = (value) =>
+  value
+    ? String(value).replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
+    : "";
+
+// Minimum size of the optional gene subset for dimensionality reduction. The
+// sidebar help text promises that shorter lists are ignored (all genes are used).
+const DR_MIN_TARGET_GENES = 20;
+
+/**
+ * Optional gene subset (second list in the sidebar) a dimensionality reduction
+ * is restricted to. Returns `{ targetList }` or `{}` when no usable list is given.
+ */
+const drTargetListParam = (core) => {
+  const targetList = toGeneListParam(core?.targetGeneList);
+  if (!targetList) return {};
+  return targetList.split(";").length >= DR_MIN_TARGET_GENES ? { targetList } : {};
+};
+
+/**
+ * Normalise a gene signature formula ("A+B-C") before it is sent.
+ * White space / new lines / commas / semicolons are treated as "+", but never
+ * next to a minus sign: "A - B" must stay "A-B" (B is subtracted); it must not
+ * become "A+-+B", which the backend would read as "+B".
+ */
+const normalizeSignatureFormula = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/[\s,;]+/g, "+")
+    .replace(/\++/g, "+")
+    .replace(/-+/g, "-")
+    .replace(/\+?-\+?/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\++/, "")
+    .replace(/[+-]+$/, "");
+
+/**
+ * The pathfinder task historically compared these flags with the string "True".
+ * Always send that exact spelling, whatever the UI state holds (a boolean after
+ * the checkbox was toggled, "True"/"False" strings initially).
+ */
+const toPythonBoolString = (value) =>
+  value === true || String(value).toLowerCase() === "true" ? "True" : "False";
 
 const getData = async (body, moduleName = null, options = {}) => {
   const disableModuleTracking = !!options.disableModuleTracking;
@@ -102,8 +146,25 @@ const getData = async (body, moduleName = null, options = {}) => {
 
     return await waitForTaskCompletion(task_id, disableModuleTracking ? null : trackedModuleName, defaultOptions);
   } catch (error) {
+    if (isTaskCancelledError(error)) {
+      // The caller cancelled this task; nothing went wrong.
+      throw error;
+    }
+
     debugError("Error in getData:", error);
-    
+
+    if (error.response?.status === 429) {
+      const retryAfter = Number(error.response.headers?.["retry-after"]);
+      const waitHint = Number.isFinite(retryAfter) && retryAfter > 0
+        ? ` Please try again in ${Math.ceil(retryAfter)} seconds.`
+        : " Please wait a moment and try again.";
+      const rateError = new Error(
+        (error.response.data?.error?.message || "Too many requests.") + waitHint
+      );
+      rateError.code = error.response.data?.error?.code || "RATE_LIMITED";
+      throw rateError;
+    }
+
     // Handle standardized error format
     if (error.response?.data?.error) {
       const apiError = error.response.data.error;
@@ -125,6 +186,7 @@ const runPcaGraphCalc = async (core, pca, clustering) => {
       : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
+    ...drTargetListParam(core),
     numcomponents: pca.numberOfComponents,
     min_cluster_size: clustering.minimumClusterSize,
     clusteringMetric: clustering.clusteringMetric,
@@ -144,6 +206,7 @@ const runMdeGraphCalc = async (core, mde, clustering) => {
       : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
+    ...drTargetListParam(core),
 
     numcomponents: mde.numcomponents,
     PreprocessingMethod: mde.preprocessingMethod,
@@ -169,6 +232,7 @@ const runUMAPGraphCalc = async (core, umap, clustering) => {
       : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
+    ...drTargetListParam(core),
 
     numcomponents: umap.numcomponents,
     n_neighbors: umap.n_neighbors,
@@ -193,8 +257,11 @@ const runtSNEGraphCalc = async (core, tsne, clustering) => {
       : "",
     dataType: core.dataType,
     cell_line: core.cellLine.id,
+    ...drTargetListParam(core),
 
     numcomponents: tsne.numcomponents,
+    // Sent under both names: the backend reads "early_exaggeration"
+    early_exaggeration: tsne.earlyExaggeration,
     earlyExaggeration: tsne.earlyExaggeration,
     perplexity: tsne.perplexity,
     metric: tsne.metric,
@@ -261,11 +328,14 @@ const runPathFinderCalc = async (core, pathfinder) => {
     selectedDatasets: selectedDatasets,
     combinationStrategy: pathfinder.combinationStrategy || 'intersection',
     upgeneList: core.targetGeneList?.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";"),
-    cutoff: 0.2, //pathfinder.cutoff,
+    // Z-score cutoff from the sidebar (0.2 when it is not set)
+    cutoff: Number.isFinite(Number(pathfinder.cutoff)) && pathfinder.cutoff !== null && pathfinder.cutoff !== ""
+      ? Number(pathfinder.cutoff)
+      : 0.2,
     depth: pathfinder.depth,
-    checkCorr: pathfinder.checkCorr,
+    checkCorr: toPythonBoolString(pathfinder.checkCorr),
     corrCutOff: pathfinder.corrCutOff,
-    BioGridData: "" + pathfinder.BioGridData,
+    BioGridData: toPythonBoolString(pathfinder.BioGridData),
 
     retType: 0,
     request: "findPath",
@@ -273,7 +343,7 @@ const runPathFinderCalc = async (core, pathfinder) => {
   return await getData(body);
 };
 
-const runCorrCalc = async (core, corr) => {
+const runCorrCalc = async (core, corr, options = {}) => {
   const body = {
     geneList: core.peturbationList
       ? core.peturbationList.replaceAll(/[\s,;\r\n]+/g, ";").split(";").filter(Boolean).join(";")
@@ -296,10 +366,10 @@ const runCorrCalc = async (core, corr) => {
     retType: 0,
     request: "corrCluster",
   };
-  return await getData(body);
+  return await getData(body, null, options);
 };
 
-const runCorrCalcMultiDataset = async (core, corr) => {
+const runCorrCalcMultiDataset = async (core, corr, options = {}) => {
   // Ensure datasets is an array of strings
   let datasets = core.selectedDatasets || [];
   if (Array.isArray(datasets)) {
@@ -332,8 +402,8 @@ const runCorrCalcMultiDataset = async (core, corr) => {
     request: "corrClusterMultiDataset",
   };
   
-  console.log('Multi-dataset correlation body:', body);
-  return await getData(body);
+  debugLog('Multi-dataset correlation body:', body);
+  return await getData(body, null, options);
 };
 
 const runHeatMap = async (core, heatMap) => {
@@ -388,7 +458,7 @@ const runGeneRegulationEnhanced = async (core, geneRegulationEnhanced) => {
 
 const runGeneSignature = async (core, options = {}) => {
   const body = {
-    formula: core.targetGeneList.trim("\n", " "),
+    formula: normalizeSignatureFormula(core.targetGeneList),
     cell_line: core.cellLine.id,
     request: "calcGeneSignature",
   };
@@ -409,7 +479,7 @@ const runGeneSignatureMultiDataset = async (core, genesignatureSettings) => {
   }
 
   const body = {
-    formula: core.targetGeneList.trim("\n", " "),
+    formula: normalizeSignatureFormula(core.targetGeneList),
     datasets: datasets,
     min_datasets: genesignatureSettings.minDatasets ?? 1,
     ranking_enabled: genesignatureSettings.rankingEnabled ?? true,
@@ -433,7 +503,7 @@ const runGeneSignatureMultiDatasetSimilar = async (core, genesignatureSettings) 
   }
 
   const body = {
-    formula: core.targetGeneList.trim("\n", " "),
+    formula: normalizeSignatureFormula(core.targetGeneList),
     datasets: datasets,
     ranking_order: genesignatureSettings.rankingOrder || "desc",
     request: "calcGeneSignatureMultiDatasetSimilar",
@@ -722,6 +792,13 @@ const uploadDataset = async ({ file, name, description, isZScored, isTransposed,
       throw new Error(apiError.message || "Upload failed");
     }
 
+    if (error.response?.status === 413) {
+      throw new Error("The file is too large to upload. The maximum size is 100 MB.");
+    }
+    if (error.response?.status === 429) {
+      throw new Error("Too many requests. Please wait a moment and try again.");
+    }
+
     throw error;
   }
 };
@@ -817,7 +894,8 @@ const getSessionStats = async (sessionId) => {
 };
 
 // Export task cancellation function
-export { cancelTask } from "./websocket";
+export { cancelTask, isTaskCancelledError } from "./websocket";
+export { SERVER_ADDRESS } from "./config";
 
 // Export new RESTful API functions (optional - can be used instead of legacy functions)
 export {
@@ -857,6 +935,7 @@ export {
   fetchPrecomputedDR,
   listPrecomputedDR,
   getData,
+  normalizeSignatureFormula,
   // User dataset upload functions
   uploadDataset,
   checkUploadProgress,

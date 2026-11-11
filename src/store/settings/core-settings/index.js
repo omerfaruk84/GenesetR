@@ -111,6 +111,9 @@ const initialState = {
   datasetsError: null,
   sessionId: null, // User session ID for uploaded datasets
   userUploadedDatasets: [], // User-uploaded datasets for current session
+  // Dimensionality-reduction results the user added as datasets (DR chaining).
+  // They only exist client side and are flagged with `isDrResult: true`.
+  drResultDatasets: [],
 };
 
 // Async thunk to fetch datasets from backend
@@ -147,6 +150,31 @@ export const coreSettingsSlice = createSlice({
         state.datasetList.push(dataset);
       }
     },
+    addDrResultDataset: (state, action) => {
+      const dataset = action.payload;
+      if (!dataset || !dataset.id) return;
+      state.drResultDatasets = (state.drResultDatasets || []).filter(
+        (d) => d.id !== dataset.id
+      );
+      state.drResultDatasets.push({ ...dataset, isDrResult: true });
+    },
+    removeDrResultDataset: (state, action) => {
+      const datasetId = action.payload;
+      const all = state.drResultDatasets || [];
+      // Remove the result and every result that was computed from it
+      const toRemove = new Set([datasetId]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        all.forEach((d) => {
+          if (!toRemove.has(d.id) && toRemove.has(d.parent)) {
+            toRemove.add(d.id);
+            grew = true;
+          }
+        });
+      }
+      state.drResultDatasets = all.filter((d) => !toRemove.has(d.id));
+    },
     removeUserDataset: (state, action) => {
       const datasetId = action.payload;
       // Remove from user datasets
@@ -170,14 +198,16 @@ export const coreSettingsSlice = createSlice({
       })
       .addCase(fetchDatasetsFromBackend.fulfilled, (state, action) => {
         state.datasetsLoading = false;
-        state.datasetList = action.payload;
+        const datasets = Array.isArray(action.payload) ? action.payload : [];
+        state.datasetList = datasets;
         // Separate user-uploaded datasets
-        state.userUploadedDatasets = action.payload.filter(d => d.isUserUploaded === true);
+        state.userUploadedDatasets = datasets.filter(d => d.isUserUploaded === true);
         // Update cellLine to first available dataset if current one doesn't exist
-        if (action.payload.length > 0) {
-          const currentExists = action.payload.find(dataset => dataset.id === state.cellLine.id);
+        // (a selected DR result only exists client side and is left alone)
+        if (datasets.length > 0 && state.cellLine?.isDrResult !== true) {
+          const currentExists = datasets.find(dataset => dataset.id === state.cellLine.id);
           if (!currentExists) {
-            state.cellLine = action.payload[0];
+            state.cellLine = datasets[0];
           } else {
             // Update cellLine with latest data from backend
             state.cellLine = currentExists;
@@ -195,7 +225,9 @@ export const {
   coreSettingsChanged,
   setSessionId,
   addUserDataset,
-  removeUserDataset
+  removeUserDataset,
+  addDrResultDataset,
+  removeDrResultDataset,
 } = coreSettingsSlice.actions;
 
 const coreSettingsReducer = coreSettingsSlice.reducer;

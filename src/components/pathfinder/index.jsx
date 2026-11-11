@@ -20,6 +20,12 @@ import dagre from "dagre";
 import styles from "./pathfinder.module.scss";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { escapeHtml } from "../../utils/escapeHtml";
+import { withErrorBoundary } from "../error-boundary";
+
+// Networks above this size are drawn with the circular layout; dagre is only
+// computed for networks it will actually be used for.
+const DAGRE_MAX_NODES = 30;
 
 // Add module description for PathFinder (Pathway Explorer)
 const moduleDescription = {
@@ -178,12 +184,22 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
     []
   );
 
+  // BioGRID annotations arrive as text with a small, fixed set of <b> labels
+  // and " # " separators. Everything is escaped and only that markup restored.
+  function formatAnnotation(text) {
+    return escapeHtml(text)
+      .replace(/&lt;b&gt;/g, "<b>")
+      .replace(/&lt;\/b&gt;/g, "</b>")
+      .replaceAll(" # ", "<br />");
+  }
+
   function fixTextLength(text) {
-    // Custom tooltip formatter function
+    // Break long annotation text into lines of at most 60 characters
+    const plain = String(text ?? "").replace(/<\/?b>/g, "");
     var content = "";
     var maxLength = 60; // Maximum characters per line
-    for (var i = 0; i < text.length; i += maxLength) {
-      content += text.substring(i, i + maxLength) + "<br/>";
+    for (var i = 0; i < plain.length; i += maxLength) {
+      content += escapeHtml(plain.substring(i, i + maxLength)) + "<br/>";
     }
     return content;
   }
@@ -218,7 +234,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         kd: node.kd,
       }));
 
-      const edges = pathFinderGraph.edges.map((edge) => ({
+      const edges = (pathFinderGraph.edges || []).map((edge) => ({
         source: edge.source,
         target: edge.target,
         id: edge.id,
@@ -257,20 +273,20 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           formatter:
             edge.type === "Cor"
               ? "Corr. R: " +
-                edge.value +
+                escapeHtml(edge.value) +
                 "<br />" +
-                edge.id.replace("+cor+", " ~ ")
+                escapeHtml(`${edge.source} ~ ${edge.target}`)
               : edge.type === "Int"
                 ? "<b>Prot.-Prot. Int.:</b> " +
-                  edge.id.replace("+int+", " ¤ ") +
+                  escapeHtml(`${edge.source} ¤ ${edge.target}`) +
                   "<br />" +
-                  edge.info?.replaceAll(" # ", "<br />") +
+                  formatAnnotation(edge.info ?? "") +
                   "<br />" +
                   fixTextLength(edge.info2)
                 : "Effect: " +
-                  edge.value +
+                  escapeHtml(edge.value) +
                   "<br />" +
-                  edge.id.replace("+", " → "),
+                  escapeHtml(`${edge.source} → ${edge.target}`),
         },
         //value: edge.value,
       }));
@@ -527,6 +543,16 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       // Update node counts in nodes array
       nodesFiltered.forEach((node) => {
         const { id } = node;
+        if (!nodeCounts[id]) {
+          // Isolated node (only kept when "isolated nodes" is switched on)
+          node["neighbours"] = 0;
+          node["symbolSize"] = 8;
+          node["label"] = { show: true, position: "right", color: "black" };
+          node["itemStyle"] = {
+            color: "orange",
+            opacity: pathfinderSettings.minNodeopacity,
+          };
+        }
         if (nodeCounts[id]) {
           node["symbolSize"] =
             ((pathfinderSettings.maxNodeSize - 8) / (maxNodeCount - 1)) *
@@ -556,6 +582,9 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       });
 
       nodesFiltered = nodesFiltered.filter(function (node) {
+        // Isolated nodes have no neighbours by definition; when the user asked
+        // to see them they are exempt from the minimum-neighbour filter.
+        if (pathfinderSettings.isolatednodes && !node["neighbours"]) return true;
         return node["neighbours"] > pathfinderSettings.minNeighbourCount;
       });
 
@@ -586,9 +615,22 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       let nodesFinal = [];
       let edgesFinal = [];
 
-      if (pathfinderSettings.layout === "none") {
-        // Create a new directed graph
-        var g = new dagre.graphlib.Graph();
+      // Edges whose endpoints were filtered out must not reach the chart, the
+      // layout or the table.
+      const keptIds = new Set(nodesFiltered.map((node) => node.id));
+      edgesFiltered = edgesFiltered.filter(
+        (edge) => keptIds.has(edge.source) && keptIds.has(edge.target)
+      );
+
+      const useDagre =
+        pathfinderSettings.layout === "none" &&
+        nodesFiltered.length <= DAGRE_MAX_NODES;
+
+      if (useDagre) {
+        // Create a new directed multigraph: an expression edge, a correlation
+        // edge and a protein interaction may all connect the same two genes,
+        // and each must survive as its own edge.
+        var g = new dagre.graphlib.Graph({ multigraph: true });
         // Set an object for the graph label
 
         g.setGraph({
@@ -610,49 +652,51 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           if (node !== undefined) g.setNode(node.id, node);
         }
 
-        // Add edges
-        for (let i in edgesFiltered) {
+        // Add edges (named, so parallel edges are kept apart)
+        for (let i = 0; i < edgesFiltered.length; i++) {
           var edge = edgesFiltered[i];
-          //if(edge.type2 === "Corr") continue;
-          g.setEdge(edge.source, edge.target, edge);
+          g.setEdge(
+            edge.source,
+            edge.target,
+            edge,
+            String(edge.id ?? `${edge.type}:${i}`)
+          );
         }
         dagre.layout(g);
 
-        for (let x in g._edgeLabels)
-          if (g._edgeLabels[x]) edgesFinal.push(g._edgeLabels[x]);
-
-        for (let x in g._nodes) if (g._nodes[x]) nodesFinal.push(g._nodes[x]);
+        // dagre writes the coordinates onto the node objects; the edge list
+        // itself is unchanged, so the chart and the table share one array.
+        nodesFinal = nodesFiltered;
+        edgesFinal = edgesFiltered;
       } else {
         nodesFinal = nodesFiltered;
         edgesFinal = edgesFiltered;
       }
 
-      //Generate the table from filtered data
+      //Generate the table from the same edges that are drawn
       let tableInfo = [];
       let idSet = new Set(nodesFinal.map((node) => node.id));
 
       for (let m = edgesFinal.length - 1; m > -1; m--) {
-        if (
-          !idSet.has(edgesFinal[m].source) ||
-          !idSet.has(edgesFinal[m].target)
-        )
+        const tableEdge = edgesFinal[m];
+        if (!idSet.has(tableEdge.source) || !idSet.has(tableEdge.target))
           continue;
 
         tableInfo.push({
-          "Regulation Type": edgesFinal[m].type,
-          From: edgesFiltered[m].source,
-          To: edgesFiltered[m].target,
-          Score: edgesFiltered[m].value,
-          "Source NC": nodeCounts[edgesFiltered[m].source],
-          "Target NC": nodeCounts[edgesFiltered[m].target],
+          "Regulation Type": tableEdge.type,
+          From: tableEdge.source,
+          To: tableEdge.target,
+          Score: tableEdge.value,
+          "Source NC": nodeCounts[tableEdge.source],
+          "Target NC": nodeCounts[tableEdge.target],
           "Total NC":
-            nodeCounts[edgesFiltered[m].target] +
-            nodeCounts[edgesFiltered[m].source],
+            (nodeCounts[tableEdge.target] || 0) +
+            (nodeCounts[tableEdge.source] || 0),
         });
       }
-      setkeyedData(tableInfo);
 
       tableInfo.sort((edge1, edge2) => edge2["Total NC"] - edge1["Total NC"]);
+      setkeyedData(tableInfo);
 
       debugLog(nodesFinal, edgesFiltered);
 
@@ -703,7 +747,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
               rotateLabel: true,
             },
             layout:
-              pathfinderSettings.layout === "none" && nodesFinal.length > 30
+              pathfinderSettings.layout === "none" && !useDagre
                 ? "circular"
                 : pathfinderSettings.layout,
             data: nodesFinal,
@@ -884,8 +928,8 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         options.series.length > 0 &&
         options.series[0].data?.length > 0 && (
           <>
-            {(pathfinderSettings.layout === "none") &
-            (options.series[0].data?.length > 30)
+            {pathfinderSettings.layout === "none" &&
+            options.series[0].data?.length > DAGRE_MAX_NODES
               ? "Dagre layout can not be applied due to the size of the network. Using circular layout instead."
               : ""}
             <div className={styles.mainView}>
@@ -941,6 +985,11 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   // Note: blacklistData is passed as a prop from the parent page component
 });
 
-const MainContainer = connect(mapStateToProps)(PathFinder);
+const ConnectedPathFinder = connect(mapStateToProps)(PathFinder);
+
+const MainContainer = withErrorBoundary(ConnectedPathFinder, {
+  label: "Pathway network",
+  resetKeys: (props) => [props.pathFinderGraph],
+});
 
 export { MainContainer as PathFinder };

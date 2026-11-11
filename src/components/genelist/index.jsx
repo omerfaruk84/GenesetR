@@ -39,6 +39,68 @@ var db;
 const dbPromise = window.indexedDB.open("GeneListDB", 1);
 */
 
+// ---------------------------------------------------------------------------
+// Text normalisation
+// ---------------------------------------------------------------------------
+
+/**
+ * Gene signature ("A+B-C"). White space, commas, semicolons and new lines act
+ * as "+", but never next to a minus sign: "A - B" stays "A-B" (B is
+ * subtracted) instead of becoming "A+-+B", which the backend reads as "+B".
+ */
+const normalizeSignatureText = (value) =>
+  (value || "")
+    .toString()
+    .toUpperCase()
+    .replaceAll(/NON-TARGETING_\d+/g, "")
+    .replace(/[\s,;]+/g, "+")
+    .replace(/\++/g, "+")
+    .replace(/-+/g, "-")
+    .replace(/\+?-\+?/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\+/, "");
+
+/**
+ * Plain gene list: one symbol per line. Separators are white space, commas,
+ * semicolons and "+". A hyphen is part of the symbol (HLA-A, MT-CO1, NKX2-1)
+ * unless the text is known to be a signature (`fromSignature`).
+ * Duplicates are only removed when `dedupe` is set (paste / blur / load), never
+ * while typing - otherwise "RPS3A" could not be typed after "RPS3".
+ */
+const normalizeListText = (value, { dedupe = false, fromSignature = false } = {}) => {
+  const separators = fromSignature ? /[\s,;+-]+/g : /[\s,;+]+/g;
+  let lines = (value || "")
+    .toString()
+    .toUpperCase()
+    .replaceAll(/NON-TARGETING_\d+/g, "")
+    .replace(separators, "\n")
+    .replace(/^\n+/, "")
+    .split("\n")
+    .map((v) => v.replace(/_.+/g, ""));
+
+  if (dedupe) {
+    const seen = new Set();
+    const lastIndex = lines.length - 1;
+    lines = lines.filter((v, i) => {
+      if (v === "") return i === lastIndex; // keep a trailing new line only
+      if (seen.has(v)) return false;
+      seen.add(v);
+      return true;
+    });
+  }
+  return lines.join("\n");
+};
+
+/** Bring a value that comes from outside (Redux, saved list) into the form of the current mode. */
+const toModeText = (value, isGeneSignature) => {
+  const text = (value || "").toString();
+  if (isGeneSignature) return normalizeSignatureText(text);
+  // A "+" can only come from a gene signature: split its operators as well
+  return normalizeListText(text, { dedupe: true, fromSignature: text.includes("+") });
+};
+
+const comparableText = (value) => (value || "").trim().replace(/\s+/g, "\n");
+
 const Genelist = ({
   setPerturbationList,
   coreSettings,
@@ -55,9 +117,24 @@ const Genelist = ({
   showAddList = false,
   showSavedGeneLists = true,
   newListName = undefined,
+  // Redux core-settings field this list is bound to ("peturbationList" or
+  // "targetGeneList"). Independent of `isPerturbationList`, which only says
+  // what kind of symbols the list holds (used for validation and labels).
+  field = undefined,
   runCalculation,
 }) => {
-  const [currentGenes, setGenes] = useState(""); //sets the current genes in textarea
+  // Lists used in "add list" dialogs are not bound to Redux
+  const boundField = showAddList
+    ? null
+    : field || (isPerturbationList ? "peturbationList" : "targetGeneList");
+
+  // Current text of the textarea. A bound list starts with the value Redux
+  // already holds, so mounting the sidebar never wipes the user's lists.
+  const [currentGenes, setGenes] = useState(() =>
+    boundField && !genes
+      ? toModeText(coreSettings?.[boundField] || "", isGeneSignature)
+      : ""
+  );
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
   const [selectedGeneList, setSelectedGeneList] = useState(); //sets the currently selected gene list in the select box
   const [newGeneListName, setNewGeneListName] = useState(newListName);
@@ -67,10 +144,12 @@ const Genelist = ({
   const location = useLocation();
   const [isGeneSignaturePopupOpen, setGeneSignaturePopupOpen] = useState(false);
   const { pathname } = location;
-  const perturbationListInitializedRef = useRef(false); // Track if perturbation list has initialized
-  const targetListInitializedRef = useRef(false); // Track if target list has initialized
-  const prevPerturbationListRef = useRef(null); // Track previous perturbation list value
-  const prevTargetListRef = useRef(null); // Track previous target list value
+  const currentGenesRef = useRef(currentGenes); // latest text, for callbacks
+  currentGenesRef.current = currentGenes;
+  const lastSyncedRef = useRef(null); // last value exchanged with Redux (read or written)
+  const isFirstWriteRef = useRef(true); // the first write effect must not overwrite Redux
+  const prevIsGeneSignatureRef = useRef(isGeneSignature);
+  const modeTextRef = useRef({}); // text last used per mode ("signature" / "list")
 
   // Optimize geneListNames loading with useEffect
   const [geneListNames, setGeneListNames] = useState(new Set());
@@ -87,9 +166,16 @@ const Genelist = ({
     };
   }, []);
 
-  const saveGeneListNames = useCallback(() => {
-    set("geneListNames", geneListNames);
-  }, [geneListNames]);
+  // The name index is shared by every gene list box (and browser tab): always
+  // read the stored set right before changing it, never write a stale copy.
+  const updateGeneListNames = useCallback(async (mutate) => {
+    const stored = await get("geneListNames");
+    const names = new Set(stored ? [...stored] : []);
+    mutate(names);
+    await set("geneListNames", names);
+    setGeneListNames(names);
+    return names;
+  }, []);
 
   // Get all available genelists from the database
   const getAllGenelists = () => {
@@ -156,76 +242,56 @@ const Genelist = ({
     [isGeneSignature]
   );
 
-  //Retrieves local genelists from database
+  //Retrieves local genelists from database (resolves with the list of names)
   const refreshList = useCallback(() => {
-    return new Promise((resolve, reject) => {
-      getAllGenelists()
-        .then((genelists) => {
-          //console.log("refreshList", genelists);
-          if (genelists) {
-            setGeneLists([...genelists]); //converts sets to array
-            resolve();
-          } else {
-            return;
-            //reject("No saved genelists were found!");
-            //throw new Error("No saved genelists were found!")
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-          toast({
-            message: {
-              type: "Error",
-              icon: true,
-              heading: "Genelist Retrival",
-              content: "Failed to get genelists." + error,
-            },
-            autoClose: 2000,
-          });
-          reject(error);
+    return getAllGenelists()
+      .then((genelists) => {
+        const names = genelists ? [...genelists] : []; //converts sets to array
+        setGeneLists(names);
+        return names;
+      })
+      .catch((error) => {
+        console.log(error);
+        toast({
+          message: {
+            type: "Error",
+            icon: true,
+            heading: "Genelist Retrival",
+            content: "Failed to get genelists." + error,
+          },
+          autoClose: 2000,
         });
-    });
+        throw error;
+      });
   }, []);
 
   const genesChanged = useCallback(
-    (value) => {
-      let normalizedValue = (value || "").toUpperCase();
+    (value, options = {}) => {
       if (newGeneListName === selectedGeneList && !saveListChecked)
         setsaveListChecked(true);
 
+      const raw = (value || "").toString();
+      let normalizedValue;
       if (isGeneSignature) {
-        normalizedValue = normalizedValue
-          .replaceAll(/NON-TARGETING_\d+/g, "")
-          .replaceAll(/\s+|,|\n+|;/g, "+")
-          .replaceAll(/\++/g, "+")
-          .replaceAll(/-+/g, "-")
-          .replace(/^\+/, "");
+        normalizedValue = normalizeSignatureText(raw);
       } else {
-        normalizedValue = normalizedValue
-          .replaceAll(/NON-TARGETING_\d+/g, "")
-          .replaceAll(/\s+|,|;|\+|-/g, "\n") // Convert plus/minus to new lines for regular gene lists
-          .replaceAll(/\n+/g, "\n")
-          .trimStart("\n")
-          .split("\n")
-          .map((v) => v.replaceAll(/_.+/g, "")) // Split into an array by newline
-          .filter((v, i, a) => a.indexOf(v) === i) // Filter out duplicates
-          .join("\n"); // Join back into a string separated by newlines
+        // Typing changes the text one character at a time. Anything bigger
+        // (paste, example, loaded list) is de-duplicated right away; typed
+        // text is de-duplicated when the field loses focus.
+        const previous = currentGenesRef.current || "";
+        const isBulkChange =
+          options.dedupe === true || Math.abs(raw.length - previous.length) > 1;
+        normalizedValue = normalizeListText(raw, { dedupe: isBulkChange });
       }
 
-      setGenes(normalizedValue, () => {
-        setProps(() => ({
-          validatingGenes: true,
-          replaceGene: replaceGene,
-          genes: {
-            found: [],
-            suggestions: [],
-          },
-          currentGenes: normalizedValue,
-        }));
-      });
+      setGenes(normalizedValue);
     },
-    [newGeneListName, selectedGeneList, saveListChecked, isGeneSignature, replaceGene]
+    [newGeneListName, selectedGeneList, saveListChecked, isGeneSignature]
   );
+
+  // Latest genesChanged for effects that must not re-run when it changes
+  const genesChangedRef = useRef(genesChanged);
+  genesChangedRef.current = genesChanged;
 
   // Get a genelist from the database based on ID
   const getGenelistById = (id) => {
@@ -254,240 +320,169 @@ const Genelist = ({
     ]
   );
 
-  // Sync local state from Redux when Redux state changes (e.g., when opened from enrichment table)
-  // Only sync from the field that this component is responsible for
-  // Use separate effects to ensure only the correct field triggers updates
-  
-  // Sync from perturbation list when this is the perturbation list component
-  // Skip syncing when used in modal/popup mode for adding new lists (showAddList=true)
-  useEffect(() => {
-    if (!isPerturbationList) return;
-    if (showAddList) return; // Don't sync from Redux when adding a new list from enrichment
-    
-    const reduxGeneList = coreSettings?.peturbationList;
-    
-    // Skip if value hasn't changed
-    if (prevPerturbationListRef.current === reduxGeneList) {
-      return;
-    }
-    
-    // On first render, initialize after a delay to let page component set values first
-    if (!perturbationListInitializedRef.current) {
-      const timer = setTimeout(() => {
-        perturbationListInitializedRef.current = true;
-        // Sync the current value after initialization
-        const currentReduxList = coreSettings?.peturbationList;
-        prevPerturbationListRef.current = currentReduxList;
-        if (currentReduxList && currentReduxList.trim().length > 0) {
-          setGenes(currentReduxList.trim());
-        } else {
-          // Clear if empty (including empty string)
-          setGenes("");
-        }
-      }, 250); // Wait 250ms for page component to set values (longer than page's 100ms)
-      return () => clearTimeout(timer);
-    }
-    
-    // Update the ref to track this value
-    prevPerturbationListRef.current = reduxGeneList;
-    
-    // After initialization, sync normally
-    if (reduxGeneList && reduxGeneList.trim().length > 0) {
-      // Only update if different from current local state to avoid infinite loops
-      const normalizedRedux = reduxGeneList.trim().replace(/\s+/g, '\n');
-      setGenes((prevGenes) => {
-        const normalizedCurrent = prevGenes.trim().replace(/\s+/g, '\n');
-        if (normalizedRedux !== normalizedCurrent) {
-          return reduxGeneList.trim();
-        }
-        return prevGenes; // Return unchanged if same
-      });
-    } else {
-      // If Redux is empty or cleared, clear local state
-      setGenes((prevGenes) => {
-        if (prevGenes.trim().length > 0) {
-          return "";
-        }
-        return prevGenes; // Return unchanged if already empty
-      });
-    }
-  }, [coreSettings?.peturbationList, isPerturbationList]);
-  
-  // Sync from target gene list when this is the target gene list component
-  // Skip syncing when used in modal/popup mode for adding new lists (showAddList=true)
-  useEffect(() => {
-    if (isPerturbationList) return;
-    if (showAddList) return; // Don't sync from Redux when adding a new list from enrichment
-    
-    const reduxGeneList = coreSettings?.targetGeneList;
-    
-    // Skip if value hasn't changed
-    if (prevTargetListRef.current === reduxGeneList) {
-      return;
-    }
-    
-    // On first render, initialize after a delay to let page component set values first
-    if (!targetListInitializedRef.current) {
-      const timer = setTimeout(() => {
-        targetListInitializedRef.current = true;
-        // Sync the current value after initialization
-        const currentReduxList = coreSettings?.targetGeneList;
-        prevTargetListRef.current = currentReduxList;
-        if (currentReduxList && currentReduxList.trim().length > 0) {
-          setGenes(currentReduxList.trim());
-        } else {
-          // Clear if empty (including empty string)
-          setGenes("");
-        }
-      }, 250); // Wait 250ms for page component to set values (longer than page's 100ms)
-      return () => clearTimeout(timer);
-    }
-    
-    // Update the ref to track this value
-    prevTargetListRef.current = reduxGeneList;
-    
-    // After initialization, sync normally
-    if (reduxGeneList && reduxGeneList.trim().length > 0) {
-      // Only update if different from current local state to avoid infinite loops
-      const normalizedRedux = reduxGeneList.trim().replace(/\s+/g, '\n');
-      setGenes((prevGenes) => {
-        const normalizedCurrent = prevGenes.trim().replace(/\s+/g, '\n');
-        if (normalizedRedux !== normalizedCurrent) {
-          return reduxGeneList.trim();
-        }
-        return prevGenes; // Return unchanged if same
-      });
-    } else {
-      // If Redux is empty or cleared, clear local state
-      setGenes((prevGenes) => {
-        if (prevGenes.trim().length > 0) {
-          return "";
-        }
-        return prevGenes; // Return unchanged if already empty
-      });
-    }
-  }, [coreSettings?.targetGeneList, isPerturbationList]);
+  const reduxValue = boundField ? coreSettings?.[boundField] ?? "" : null;
 
-  // Initialize refs with current Redux values on mount to prevent initial sync issues
+  // Redux -> textarea: only for changes made elsewhere (e.g. a gene list sent
+  // from the enrichment table); values this component wrote itself are skipped.
   useEffect(() => {
-    if (isPerturbationList) {
-      if (prevPerturbationListRef.current === null) {
-        prevPerturbationListRef.current = coreSettings?.peturbationList;
-      }
-    } else {
-      if (prevTargetListRef.current === null) {
-        prevTargetListRef.current = coreSettings?.targetGeneList;
-      }
-    }
-  }, [isPerturbationList]); // Only run when isPerturbationList changes (component type)
+    if (!boundField) return;
+    if (reduxValue === lastSyncedRef.current) return;
+    lastSyncedRef.current = reduxValue;
 
+    const incoming = toModeText(reduxValue, isGeneSignature);
+    setGenes((prevGenes) =>
+      comparableText(prevGenes) === comparableText(incoming) ? prevGenes : incoming
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduxValue, boundField]);
+
+  // The same box is used for plain gene lists and for gene signatures (Gene
+  // Signature page). When the mode changes, remember the text of the mode that
+  // is left and bring back the text last used in the new mode; without one the
+  // current text is converted (list -> "A+B+C", signature -> one gene per line).
   useEffect(() => {
+    if (prevIsGeneSignatureRef.current === isGeneSignature) return;
+    const previousMode = prevIsGeneSignatureRef.current ? "signature" : "list";
+    const nextMode = isGeneSignature ? "signature" : "list";
+    prevIsGeneSignatureRef.current = isGeneSignature;
+
+    const currentText = currentGenesRef.current || "";
+    modeTextRef.current[previousMode] = currentText;
+
+    const remembered = modeTextRef.current[nextMode];
+    if (typeof remembered === "string" && remembered.trim().length > 0) {
+      setGenes(remembered);
+    } else if (isGeneSignature) {
+      setGenes(normalizeSignatureText(currentText));
+    } else {
+      setGenes(normalizeListText(currentText, { dedupe: true, fromSignature: true }));
+    }
+  }, [isGeneSignature]);
+
+  // Textarea -> owner (Redux for the sidebar lists)
+  useEffect(() => {
+    if (boundField && isFirstWriteRef.current) {
+      isFirstWriteRef.current = false;
+      // The state was initialised from Redux: only write back when
+      // normalisation changed the text.
+      if (currentGenes === (coreSettings?.[boundField] ?? "")) return;
+    }
+    isFirstWriteRef.current = false;
+    if (boundField) lastSyncedRef.current = currentGenes;
     setPerturbationList(currentGenes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentGenes, setPerturbationList]);
+
+  // Validate the symbols (debounced) when the text or the dataset changes
+  useEffect(() => {
     debouncedChangeHandler(currentGenes);
-  }, [currentGenes, coreSettings.cellLine.id, setPerturbationList, debouncedChangeHandler]);
+    return () => {
+      if (typeof debouncedChangeHandler.cancel === "function") {
+        debouncedChangeHandler.cancel();
+      }
+    };
+  }, [currentGenes, debouncedChangeHandler]);
 
   useEffect(() => {
     //When page loaded refresh genelist
-    refreshList();
+    refreshList().catch(() => {});
 
     //check whether  all gene list exists if not download the all gene list
     fetchHugoGenes();
 
     //if gene and perturbation list was not downloaded before, download it.
     updateGeneLists(coreSettings?.cellLine.id);
+  }, [coreSettings?.cellLine.id, refreshList]);
 
-    if (genes?.length > 1) genesChanged(genes);
-  }, [coreSettings?.cellLine.id, genes, genesChanged, refreshList]);
+  // Genes handed in by the parent (e.g. "add list" dialog). Applied only when
+  // the prop itself changes, so typing a name does not undo edits to the text.
+  useEffect(() => {
+    if (genes?.length > 1) genesChangedRef.current(genes, { dedupe: true });
+  }, [genes]);
 
   const numberOfGenesEntered = currentGenes
     ? currentGenes
         .trim()
-        .replace(/\s+|,|;|[+-]|\n+/g, "\n")
+        .replace(isGeneSignature ? /[\s,;+-]+/g : /[\s,;+]+/g, "\n")
         .split("\n")
         .reduce((prev, step) => (step.trim() ? prev + 1 : prev), 0)
     : 0;
 
   // Insert a new genelist into the database
   const addGenelist = (genelistID, geneList) => {
-    console.log("We are in addgenelist", genelistID, geneList);
-    if (genelistID && geneList)
-      get("genelist_" + genelistID).then((val) => {
-        if (val) {
-          console.log("We are updating genelist", genelistID, geneList);
-          set("genelist_" + genelistID, geneList).then(() => {
-            toast({
-              message: {
-                type: "Success",
-                icon: true,
-                heading: "Genelist",
-                content: "Genelist updated successfully",
-              },
-              autoClose: 2000,
-            });
-            refreshList().then(() => {
-              setSelectedGeneList(genelistID);
-              setGenes(geneList.genes);
-            });
-          });
-        } else {
-          console.log("We are creating genelist", genelistID, geneList);
-          set("genelist_" + genelistID, geneList).then(() => {
-            geneListNames.add(genelistID);
-            saveGeneListNames();
-            toast({
-              message: {
-                type: "Success",
-                icon: true,
-                heading: "Genelist",
-                content: "Genelist saved successfully",
-              },
-              autoClose: 2000,
-            });
-            refreshList().then(() => {
-              setSelectedGeneList(genelistID);
+    if (!genelistID || !geneList) return;
 
-              setGenes(geneList.genes);
-            });
-          });
-        }
+    get("genelist_" + genelistID)
+      .then(async (existing) => {
+        await set("genelist_" + genelistID, geneList);
+        // (Re-)register the name: also repairs an index that lost the entry
+        await updateGeneListNames((names) => names.add(genelistID));
+
+        toast({
+          message: {
+            type: "Success",
+            icon: true,
+            heading: "Genelist",
+            content: existing
+              ? "Genelist updated successfully"
+              : "Genelist saved successfully",
+          },
+          autoClose: 2000,
+        });
+
+        await refreshList();
+        setSelectedGeneList(genelistID);
+        setGenes(geneList.genes);
+      })
+      .catch((error) => {
+        console.error(error);
+        toast({
+          message: {
+            type: "Error",
+            icon: true,
+            heading: "Genelist",
+            content: "Failed to save the genelist. " + error,
+          },
+          autoClose: 3000,
+        });
       });
   };
 
   // Remove a genelist from the database based on ID
   const removeGenelistById = (id) => {
-    del("genelist_" + id).then(() => {
-      toast({
-        message: {
-          type: "Warning",
-          icon: true,
-          heading: "Genelist",
-          content: "Genelist deleted successfully",
-        },
-        autoClose: 2000,
-      });
-      geneListNames.delete(id);
-      saveGeneListNames();
-      refreshList().then(() => {
-        if (currentGeneLists.length > 0) {
-          setSelectedGeneList(currentGeneLists[0]);
+    del("genelist_" + id)
+      .then(async () => {
+        await updateGeneListNames((names) => names.delete(id));
 
-          getGenelistById(currentGeneLists[0])
-            .then((result) => {
-              setNewGeneListName(result.name);
-              setGenes(result.genes);
-              setNewGeneListDescription(result?.description);
-            })
-            .catch((error) => {
-              console.error(error);
-            });
+        toast({
+          message: {
+            type: "Warning",
+            icon: true,
+            heading: "Genelist",
+            content: "Genelist deleted successfully",
+          },
+          autoClose: 2000,
+        });
+
+        // Continue with the lists that are left after the deletion
+        const remaining = await refreshList();
+        if (remaining.length > 0) {
+          const next = remaining[0];
+          setSelectedGeneList(next);
+          const result = await getGenelistById(next);
+          setNewGeneListName(result?.name ?? result?.value ?? next);
+          setGenes(result?.genes || "");
+          setNewGeneListDescription(result?.description);
         } else {
-          setSelectedGeneList([]);
+          setSelectedGeneList(undefined);
           setGenes("");
           setNewGeneListDescription(undefined);
           setNewGeneListName(undefined);
         }
+      })
+      .catch((error) => {
+        console.error(error);
       });
-    });
   };
 
   return (
@@ -514,6 +509,20 @@ const Genelist = ({
                         let genes = await get(
                           "geneList_" + coreSettings?.cellLine.id + extension
                         );
+
+                        if (!genes || genes.size === 0) {
+                          toast({
+                            message: {
+                              type: "Warning",
+                              icon: true,
+                              heading: "Example",
+                              content:
+                                "The gene list of the selected dataset is not available yet. Please try again in a moment.",
+                            },
+                            autoClose: 3000,
+                          });
+                          return;
+                        }
 
                         genes = [...genes];
 
@@ -542,7 +551,7 @@ const Genelist = ({
                             genelist += genes[randomIndex] + ",";
                           }
                         }
-                        genesChanged(genelist);
+                        genesChanged(genelist, { dedupe: true });
                       }
                     }}
                   />
@@ -625,6 +634,14 @@ const Genelist = ({
                 resize="vertical"
                 value={currentGenes}
                 onChange={({ target: { value } }) => genesChanged(value)}
+                onBlur={() => {
+                  // Remove duplicates once editing is finished
+                  if (!isGeneSignature) {
+                    setGenes((prevGenes) =>
+                      normalizeListText(prevGenes, { dedupe: true })
+                    );
+                  }
+                }}
               />
               <Spacer height={3} />
               {currentGenes.length > 0 && (
@@ -789,8 +806,9 @@ const Genelist = ({
                             label="Save"
                             icon={<FaSave />}
                             disabled={
-                              currentGeneLists.length === 0 ||
-                              newGeneListName?.length < 3
+                              !newGeneListName ||
+                              newGeneListName.trim().length < 3 ||
+                              numberOfGenesEntered === 0
                             }
                             onClick={() => {
                               addGenelist(newGeneListName, {

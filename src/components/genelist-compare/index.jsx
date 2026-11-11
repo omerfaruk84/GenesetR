@@ -14,6 +14,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { get } from "idb-keyval";
 import GenelistAdd from "../genelist-add";
 import { genelistcompareSettingsChanged } from "../../store/settings/genelist-compare-settings";
+import { parseGeneFormula } from "../../utils/geneFormula";
+import { withErrorBoundary } from "../error-boundary";
 
 // Add module description for Gene List Comparison
 const moduleDescription = {
@@ -73,34 +75,13 @@ const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChang
     return geneName;
   };
 
+  // Saved lists may be plain gene lists or signature formulas ("A+B-C").
+  // The shared formula rules keep hyphenated symbols (HLA-A, MT-ND1) whole;
+  // an explicit sign stays in front of the gene, as before ("+B", "-C").
   const parseGenesText = (raw) => {
     const text = String(raw || "").trim();
     if (!text) return [];
-
-    const tokens = [];
-    let current = "";
-
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (ch === "+" || ch === "-") {
-        const trimmed = current.trim();
-        if (trimmed) tokens.push(trimmed);
-        current = ch;
-        continue;
-      }
-      if (ch === "\n" || ch === "\r" || ch === "\t" || ch === " " || ch === "," || ch === ";") {
-        const trimmed = current.trim();
-        if (trimmed) tokens.push(trimmed);
-        current = "";
-        continue;
-      }
-      current += ch;
-    }
-
-    const trimmed = current.trim();
-    if (trimmed) tokens.push(trimmed);
-
-    return tokens.filter((t) => t && t !== "+" && t !== "-");
+    return parseGeneFormula(text).map((term) => `${term.op || ""}${term.gene}`);
   };
 
   const syncGenelistsFromIdb = async ({ autoSelect = false } = {}) => {
@@ -259,7 +240,15 @@ const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChang
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Refresh after the "new gene list" dialog closes. Skipped on mount: the
+  // effect above already loads the lists then, and a second concurrent sync
+  // (started from the same empty settings) would undo its auto-selection.
+  const didMountRef = React.useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      if ((genelistcompareSettings?.genelists || []).length === 0) return;
+    }
     if (!newListVisible) {
       syncGenelistsFromIdb().catch((e) => console.error("Failed to refresh saved gene lists:", e));
     }
@@ -605,7 +594,11 @@ const mapDispatchToProps = {
   genelistcompareSettingsChanged,
 };
 
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GenelistCompare);
+const ConnectedGenelistCompare = connect(mapStateToProps, mapDispatchToProps)(GenelistCompare);
+
+const MainContainer = withErrorBoundary(ConnectedGenelistCompare, {
+  label: "Gene list comparison",
+});
 
 export { MainContainer as GenelistCompare };
 

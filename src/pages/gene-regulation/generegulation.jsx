@@ -379,10 +379,10 @@ const GeneRegulation = ({
             if (
               (blacklistData.blackListExpUp[edges[m].target] !== undefined &&
                 blacklistData.blackListExpUp[edges[m].target] >
-                  geneRegulationCoreSettings.filterBlackListed) ||
+                  geneRegulationCoreSettings.filterBlackListedExp) ||
               (blacklistData.blackListExpDown[edges[m].target] !== undefined &&
                 blacklistData.blackListExpDown[edges[m].target] >
-                  geneRegulationCoreSettings.filterBlackListed)
+                  geneRegulationCoreSettings.filterBlackListedExp)
             )
               continue;
           }
@@ -390,10 +390,10 @@ const GeneRegulation = ({
             if (
               (blacklistData.blackListExpUp[edges[m].source] !== undefined &&
                 blacklistData.blackListExpUp[edges[m].source] >
-                  geneRegulationCoreSettings.filterBlackListed) ||
+                  geneRegulationCoreSettings.filterBlackListedExp) ||
               (blacklistData.blackListExpDown[edges[m].source] !== undefined &&
                 blacklistData.blackListExpDown[edges[m].source] >
-                  geneRegulationCoreSettings.filterBlackListed)
+                  geneRegulationCoreSettings.filterBlackListedExp)
             )
               continue;
           }
@@ -563,16 +563,28 @@ const GeneRegulation = ({
                 geneRegulationCoreSettings.filter2Directional ||
                 blacklistData.blackListExpUp[node.id] <=
                   geneRegulationCoreSettings.filterBlackListedExp))) &&
-            ((node.category !== 0 && node.category === 1) ||
+            // Non-directional sgRNA blacklist: applies to upstream regulators
+            // (categories 0/1) and honours the threshold slider in both directions.
+            ((node.category !== 0 && node.category !== 1) ||
               !geneRegulationCoreSettings.filter1Enabled ||
               geneRegulationCoreSettings.filter1Directional ||
-              (blacklistData.blackListDown[node.id] === undefined &&
-                blacklistData.blackListUp[node.id] === undefined)) &&
-            ((node.category !== 2 && node.category === 3) ||
+              ((blacklistData.blackListDown[node.id] === undefined ||
+                blacklistData.blackListDown[node.id] <=
+                  geneRegulationCoreSettings.filterBlackListed) &&
+                (blacklistData.blackListUp[node.id] === undefined ||
+                  blacklistData.blackListUp[node.id] <=
+                    geneRegulationCoreSettings.filterBlackListed))) &&
+            // Non-directional gene blacklist: applies to downstream targets
+            // (categories 2/3) and honours its own threshold slider.
+            ((node.category !== 2 && node.category !== 3) ||
               !geneRegulationCoreSettings.filter2Enabled ||
               geneRegulationCoreSettings.filter2Directional ||
-              (blacklistData.blackListExpDown[node.id] === undefined &&
-                blacklistData.blackListExpUp[node.id] === undefined)) &&
+              ((blacklistData.blackListExpDown[node.id] === undefined ||
+                blacklistData.blackListExpDown[node.id] <=
+                  geneRegulationCoreSettings.filterBlackListedExp) &&
+                (blacklistData.blackListExpUp[node.id] === undefined ||
+                  blacklistData.blackListExpUp[node.id] <=
+                    geneRegulationCoreSettings.filterBlackListedExp))) &&
             (!geneRegulationCoreSettings.filter3Enabled ||
               blacklistData.blackListPCount[node.id] === undefined ||
               blacklistData.blackListPCount[node.id] <=
@@ -833,9 +845,13 @@ const GeneRegulation = ({
           } else if (nodeCounts[id]) {
             node["neighbourCount"] = nodeCounts[id];
             //node["symbolSize"] = Math.max(Math.min(nodeCounts[id]*2 +2,100),8);
+            // All neighbours share the same count (e.g. a single neighbour):
+            // avoid 0/0 = NaN, which makes the node invisible.
             node["symbolSize"] =
-              minSize +
-              ((nodeCounts[id] - minValue) / (maxValue - minValue)) * sizeRange;
+              maxValue > minValue
+                ? minSize +
+                  ((nodeCounts[id] - minValue) / (maxValue - minValue)) * sizeRange
+                : (minSize + maxSize) / 2;
           }
         });
       }

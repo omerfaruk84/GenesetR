@@ -3,8 +3,6 @@ import { connect } from "react-redux";
 import { MultiDatasetComparison } from "../../components/multidataset-comparison/multidataset-comparison";
 import styles from "./multidataset-comparison-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
-import VideoHelpPage from "../../components/video-help";
-import helpVideo from "../../common/videos/6.webm";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from "../../components/loading-page";
@@ -116,10 +114,8 @@ const MultiDatasetComparisonPage = ({
             color: '#1565c0',
             marginBottom: '8px'
           }}>
-            💡 To start, select a gene from the left sidebar and click "Run Multi-Dataset Analysis".
+            💡 To start, select a gene from the left sidebar and click "Compare Datasets".
           </div>
-
-          <VideoHelpPage videoFile={helpVideo} />
         </div>
       )}
       </>
