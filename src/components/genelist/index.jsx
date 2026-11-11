@@ -23,7 +23,7 @@ import styles from "./main-view.module.scss";
 import { FaTrash, FaSave, FaTimesCircle, FaPlusSquare } from "react-icons/fa";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { get, set, del } from "idb-keyval";
+import { get, set, del } from "../../store/safeIdb";
 import GeneSymbolValidatorMessage from "../GeneSelectionBox/GeneSymbolValidatorMessage";
 import { debounce } from "lodash";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
@@ -519,9 +519,10 @@ const Genelist = ({
 
                         var exampleGeneCount = 50;
                         if (
-                          pathname === "/correlation" ||
-                          pathname === "/dr" ||
-                          pathname === "/heatmap"
+                          pathname === ROUTES.CORRELATION ||
+                          pathname === ROUTES.CORRELATION_WEBGL ||
+                          pathname === ROUTES.DR ||
+                          pathname === ROUTES.HEATMAP
                         ) {
                           exampleGeneCount =
                             Math.floor(Math.random() * 151) + 100;

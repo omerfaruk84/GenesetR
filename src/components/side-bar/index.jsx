@@ -42,10 +42,14 @@ const SideBar = ({
     isCalcRunning = calcResults?.[ModulePathNames?.[pathname]]?.running;
   }
 
+  const isCorrelationRoute =
+    pathname === ROUTES.CORRELATION || pathname === ROUTES.CORRELATION_WEBGL;
+
   // Custom button labels per module
   const buttonLabels = {
     [ROUTES.GENESIGNATURE]: "Calculate Gene Signature",
     [ROUTES.CORRELATION]: "Calculate Correlation",
+    [ROUTES.CORRELATION_WEBGL]: "Calculate Correlation",
     [ROUTES.HEATMAP]: "Generate Heatmap",
     [ROUTES.PATHFINDER]: "Find Path",
     [ROUTES.EXPRESSIONANALYZER]: "Analyze Expression",
@@ -79,7 +83,7 @@ const SideBar = ({
                                correlationSettings.selectedDatasets.length > 0;
   
   if (
-    (pathname === ROUTES.CORRELATION &&
+    (isCorrelationRoute &&
       coreSettings.peturbationList?.trim().split("\n").length > 1 &&
       hasSelectedDatasets) ||
     (pathname === ROUTES.DR &&

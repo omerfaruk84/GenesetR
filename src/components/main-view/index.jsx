@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
 import { CorrelationPage } from "../../pages/correlation/correlation-page";
+import { CorrelationPageWebGL } from "../../pages/correlation/correlation-page-webgl";
 import { TopBar } from "../top-bar";
 import styles from "./main-view.module.scss";
 import { NotFoundPage } from "../not-found-page";
@@ -55,6 +56,10 @@ const MainView = () => {
             <Route
               path={ROUTES.CORRELATION}
               element={<CorrelationPage path={ROUTES.CORRELATION} />}
+            />
+            <Route
+              path={ROUTES.CORRELATION_WEBGL}
+              element={<CorrelationPageWebGL path={ROUTES.CORRELATION_WEBGL} />}
             />
             <Route
               path={ROUTES.PATHFINDER}

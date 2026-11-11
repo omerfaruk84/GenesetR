@@ -13,7 +13,7 @@ import {
 import { geneRegulationCoreSettingsChanged } from "../../../store/settings/gene-regulation-core-settings";
 import { GeneRegulationCoreSettingsTypes } from "./enums";
 import styles from "./settings.module.scss";
-import { set, get } from "idb-keyval";
+import { set, get } from "../../../store/safeIdb";
 import Axios from "axios";
 import { updateGeneLists } from "../../../store/api";
 import { runCalculation } from "../../../store/results";

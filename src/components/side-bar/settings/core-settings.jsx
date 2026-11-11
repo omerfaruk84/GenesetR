@@ -152,7 +152,9 @@ const CoreSettings = ({
         <DatasetSelector
           ref={childRef}
           onlyMain={
-            location === ROUTES.CORRELATION || location === ROUTES.HEATMAP
+            location === ROUTES.CORRELATION ||
+            location === ROUTES.CORRELATION_WEBGL ||
+            location === ROUTES.HEATMAP
           }
           wholeGenomeOnly={wholeGenomeOnly}
         />{" "}

@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import axios from 'axios';
-import { set, get } from 'idb-keyval';
+import { set, get } from '../../store/safeIdb';
 
 const batchSize = 5;
 const limit = pLimit(5); // limit to 5 requests at a time

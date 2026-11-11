@@ -411,6 +411,7 @@ const runCalculation = (module) => async (dispatch, getState) => {
           resultReceived({ result, module: ModulePathNames[module] })
         );
       }
+      case ROUTES.CORRELATION_WEBGL:
       case ROUTES.CORRELATION: {
         // Validate that at least one dataset is selected
         if (!correlation?.selectedDatasets || correlation.selectedDatasets.length === 0) {

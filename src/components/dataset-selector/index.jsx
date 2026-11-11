@@ -115,7 +115,9 @@ const DatasetTreeItem = ({ item, level = 0, activeId }) => {
 const DatasetSelector = forwardRef(
   ({ coreSettingsChanged, correlationSettingsChanged, pathfinderSettingsChanged, coreSettings, correlationSettings, pathfinderSettings, wholeGenomeOnly = false }, ref, onlyMain) => {
     const location = useLocation();
-    const isCorrelationModule = location.pathname === ROUTES.CORRELATION;
+    const isCorrelationModule =
+      location.pathname === ROUTES.CORRELATION ||
+      location.pathname === ROUTES.CORRELATION_WEBGL;
     const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
     const isMultiSelectMode = isCorrelationModule || isPathFinderModule;
 
@@ -415,8 +417,9 @@ const DatasetSelector = forwardRef(
     useEffect(() => {
       if (
         location.pathname === ROUTES.CORRELATION ||
+        location.pathname === ROUTES.CORRELATION_WEBGL ||
         location.pathname === ROUTES.HEATMAP ||
-        location.pathname === ROUTES.GENE_REGULATION||
+        location.pathname === ROUTES.GENE_REGULATION ||
         location.pathname === ROUTES.EXPRESSIONANALYZER || 
         location.pathname === ROUTES.GENESIGNATURE
       ) {

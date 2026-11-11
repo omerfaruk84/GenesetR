@@ -46,6 +46,11 @@ const TopBar = () => {
       toLink: ROUTES.CORRELATION,
     },      
     {
+      icon: () => <FcScatterPlot size={"2em"} />,
+      name: TabNames.CORRELATION_WEBGL,
+      toLink: ROUTES.CORRELATION_WEBGL,
+    },
+    {
       icon: () => <FcElectricalSensor size={"2em"} />,
       name: TabNames.GENESIGNATURE,
       toLink: ROUTES.GENESIGNATURE,

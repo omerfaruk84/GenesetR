@@ -2,7 +2,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import Axios from "axios";
-import { get, set } from "idb-keyval";
+import { get, set } from "../safeIdb";
 import { store } from "../store";
 import { progressUpdateReceived } from "../results";
 // Import WebSocket support at the top
@@ -29,6 +29,7 @@ const debugError = (...args) => {
     console.error(...args);
   }
 };
+
 
 // Mapping from request type to module name
 const requestToModuleMap = {
@@ -563,8 +564,16 @@ const getBlackList = async () => {
 const updateGeneLists = async (dataType) => {
   try {
     // Check if perturb already exists in DB
-    const perturbVal = await get("geneList_" + dataType + "_perturb");
-    const genesVal = await get("geneList_" + dataType + "_genes");
+    let perturbVal;
+    let genesVal;
+    try {
+      perturbVal = await get("geneList_" + dataType + "_perturb");
+      genesVal = await get("geneList_" + dataType + "_genes");
+    } catch (e) {
+      debugError("updateGeneLists: could not read IndexedDB for dataset", dataType, e);
+      perturbVal = null;
+      genesVal = null;
+    }
     if (perturbVal && perturbVal.size > 0 && genesVal && genesVal.size > 0)
       return;
 
@@ -584,17 +593,15 @@ const updateGeneLists = async (dataType) => {
       }
     );
 
-    if (response && response.data) {
-      set(
-        "geneList_" + dataType + "_perturb",
-        new Set(response.data.result.perturbations.map((x) => x.split("_")[0].toUpperCase()))
-      );
-      set(
-        "geneList_" + dataType + "_genes",
-        new Set(response.data.result.genes.map((x) => x.split("_")[0].toUpperCase()))
-      );
+    const result = response?.data?.result;
+    if (result && Array.isArray(result.perturbations) && Array.isArray(result.genes)) {
+      const perturbSet = new Set(result.perturbations.map((x) => x.split("_")[0].toUpperCase()));
+      const genesSet = new Set(result.genes.map((x) => x.split("_")[0].toUpperCase()));
+      await set("geneList_" + dataType + "_perturb", perturbSet);
+      await set("geneList_" + dataType + "_genes", genesSet);
+      debugLog("updateGeneLists: cached", dataType, "perturb=", perturbSet.size, "genes=", genesSet.size);
     } else {
-      debugError("Something is wornge cant get genes", response);
+      debugError("updateGeneLists: unexpected response shape", response?.data);
     }
   } catch (error) {
     debugError("Error updating gene lists:", error);
@@ -602,21 +609,35 @@ const updateGeneLists = async (dataType) => {
 };
 
 const fetchHugoGenes = async () => {
-  const storedGenes = await get("allHugoGenes");
+  let storedGenes;
+  try {
+    storedGenes = await get("allHugoGenes");
+  } catch (e) {
+    debugError("fetchHugoGenes: could not read IndexedDB (allHugoGenes)", e);
+    storedGenes = null;
+  }
 
   if (!storedGenes || storedGenes.size === 0) {
     try {
-      const response = await Axios.post(SERVER_ADRESS + "/getData", {
-        headers: {
-          "ngrok-skip-browser-warning": "69420",
+      const response = await Axios.post(
+        SERVER_ADRESS + "/getData",
+        {
+          body: JSON.stringify({
+            request: "getHugoGenes",
+          }),
         },
-        body: JSON.stringify({
-          request: "getHugoGenes",
-        }),
-      });
+        {
+          headers: {
+            "ngrok-skip-browser-warning": "69420",
+          },
+        }
+      );
 
-      if (response && response.data) {
-        set("allHugoGenes", new Set(response.data.result));
+      const genes = response?.data?.result;
+      if (Array.isArray(genes) && genes.length > 0) {
+        await set("allHugoGenes", new Set(genes));
+      } else {
+        debugError("fetchHugoGenes: unexpected response shape", response?.data);
       }
     } catch (error) {
       debugError("Failed to fetch Hugo genes: ", error);

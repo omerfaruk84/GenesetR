@@ -1,6 +1,7 @@
 const ROUTES = Object.freeze({
   HOME: "/",
   CORRELATION: "/correlation",
+  CORRELATION_WEBGL: "/correlation-webgl",
   DR: "/dr",
   PCA: "/pca",
   MDE: "/mde",

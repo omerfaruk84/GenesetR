@@ -267,6 +267,8 @@ function InCHlib2(settings) {
     heatmap_colors: "Greens",
     heatmap_font_color: "black",
     heatmap_part_width: 0.7,
+    show_cell_values: true,
+    show_column_names: true,
     column_dendrogram: false,
     independent_columns: true,
     metadata_colors: "Reds",
@@ -296,6 +298,26 @@ function InCHlib2(settings) {
       hint_button: true,
     },
     dendrogram_map: {},
+    render_visible_only: true,
+    render_margin_rows: 2,
+    row_id_min_zoom: 1,
+    column_header_min_zoom: 1,
+    cell_value_min_zoom: 1,
+    max_zoom_resolution: 4,
+    max_cell_value_text_updates: 2000,
+    allow_row_ids_on_zoom: true,
+    allow_column_headers_on_zoom: true,
+    use_tiled_heatmap: true,
+    tile_rows: 64,
+    tile_cols: 64,
+    camera_min_scale: 0.1,
+    camera_max_scale: 8,
+    camera_zoom_step: 1.12,
+    lod_enabled: false,
+    lod_min_zoom: 0.6,
+    lod_resolution: 0.25,
+    lod_max_texture_size: 4096,
+    debug: false,
   };
 
   self.update_settings(settings);
@@ -307,6 +329,45 @@ function InCHlib2(settings) {
     self.settings.heatmap_part_width > 0.9
       ? 0.9
       : self.settings.heatmap_part_width;
+
+  self._renderPending = false;
+  self._cullPending = false;
+  self._scrollParent = null;
+  self._scrollListener = null;
+  self._resizeListener = null;
+  self._pendingColLabelEvent = null;
+  self._colLabelPending = false;
+  self._lastCullSignature = null;
+  self._label_nodes = { row_ids: [], column_headers: [], cell_values: [] };
+  self._label_visibility_state = null;
+  self._rowIdsCreated = false;
+  self._columnHeadersCreated = false;
+  self._lastZoomScale = 1;
+  self._baseResolution = null;
+  self._currentResolution = null;
+  self._zoomResolutionPending = false;
+  self._pendingZoomResolutionScale = 1;
+  self._zoomStatePending = false;
+  self._pendingZoomStateScale = 1;
+  self._lodSprite = null;
+  self._lodTexture = null;
+  self._lodActive = false;
+  self._lodDirty = true;
+  self.camera = null;
+  self._cameraDragging = false;
+  self._cameraDragStart = null;
+  self._cameraStartPos = null;
+  self._cameraMoved = false;
+  self._cameraEventsAttached = false;
+  self._cameraUpdatePending = false;
+  self._cameraHandlers = null;
+  self._ordered_heatmap_array = null;
+  self._visible_columns = [];
+  self.heatmap_tiles = [];
+  self.heatmap_tiles_layer = null;
+  self.interaction_layer = null;
+  self._hoverRowIndex = null;
+  self._hoverColIndex = null;
 
   self.header_height = 150;
   self.footer_height = 70;
@@ -869,6 +930,9 @@ function InCHlib2(settings) {
       text.defaultResolution = 2;
       text.interactive = false;
       text.defaultAutoResolution = false;
+      text.__inchlibType = "cell_value";
+      text.__inchlibText = true;
+      self._register_label_node(text, "cell_value");
 
       return text;
     },
@@ -947,6 +1011,8 @@ function InCHlib2(settings) {
       return texture;
     },
     tooltip_text: function createTooltipText(options) {
+      var textResolution =
+        options.resolution || self._currentResolution || window.devicePixelRatio || 1;
       var tooltip = new PIXI.Text(options.text, {
         fontFamily: options.font || self.settings.font,
         fontSize: 12,
@@ -956,6 +1022,7 @@ function InCHlib2(settings) {
         padding: 8,
         //lineHeight: 1.2,
         wordWrap: true,
+        resolution: textResolution,
       });
 
       //tooltip.anchor.set(0.5, 0.5);
@@ -963,9 +1030,19 @@ function InCHlib2(settings) {
       tooltip.y = options.y || (50 - tooltip.height) / 2;
       //tooltip.y = options.y || (50-tooltip.height)/2;
       tooltip.interactive = false;
+      tooltip.roundPixels = true;
+      tooltip.__inchlibTooltipText = true;
       return tooltip;
     },
     column_header: function createColumn_header(options) {
+      var rotation =
+        typeof options.rotationDeg === "number"
+          ? (options.rotationDeg * Math.PI) / 180
+          : typeof options.rotation === "number"
+            ? options.rotation
+            : 0;
+      var textResolution =
+        options.resolution || self._currentResolution || window.devicePixelRatio || 1;
       var columnHeader = new PIXI.Text(options.text, {
         fontFamily: options.font ? options.font : self.settings.font,
         fontSize: options.fontSize ? options.fontSize : 12,
@@ -974,12 +1051,21 @@ function InCHlib2(settings) {
         //align: "center",
         //padding: 8,
         //lineHeight: 1.2,
+        resolution: textResolution,
       });
       columnHeader.x = options.x;
       columnHeader.y = options.y;
-      columnHeader.rotation = options.rotation ? options.rotation : 0;
+      columnHeader.rotation = rotation;
+      if (options.anchor) {
+        columnHeader.anchor.set(options.anchor.x, options.anchor.y);
+      }
       columnHeader.position_index = options.position_index;
       columnHeader.interactive = false;
+      columnHeader.__inchlibType = "column_header";
+      columnHeader.__inchlibText = true;
+      columnHeader.__rowY = columnHeader.y;
+      columnHeader.__rowHeight = options.fontSize ? options.fontSize : 12;
+      self._register_label_node(columnHeader, "column_header");
       return columnHeader;
     },
     count: function count(options) {
@@ -1195,6 +1281,584 @@ function InCHlib2(settings) {
       "M15.5,2.833c-3.866,0-7,3.134-7,7c0,3.859,3.945,4.937,4.223,9.499h5.553c0.278-4.562,4.224-5.639,4.224-9.499C22.5,5.968,19.366,2.833,15.5,2.833zM15.5,28.166c1.894,0,2.483-1.027,2.667-1.666h-5.334C13.017,27.139,13.606,28.166,15.5,28.166zM12.75,25.498h5.5v-5.164h-5.5V25.498z",
   };
 }
+
+InCHlib2.prototype._ensure_app = function () {
+  var self = this;
+  if (self.app && self.app.renderer && self.app.stage) {
+    return;
+  }
+
+  var width =
+    self.settings?.width ||
+    (self.target_element && self.target_element.width()) ||
+    800;
+  var height =
+    self.settings?.height ||
+    self.settings?.max_height ||
+    (self.target_element && self.target_element.height()) ||
+    600;
+
+  self.app = new PIXI.Application({
+    width: width,
+    height: height,
+    autoDensity: true,
+    resolution: window.devicePixelRatio || 1,
+    antialias: true,
+    backgroundColor: 0xffffff,
+    autoStart: false,
+  });
+  self._baseResolution = self._baseResolution || self.app.renderer.resolution;
+  self._currentResolution = self.app.renderer.resolution;
+
+  if (self.target_element && self.target_element[0]) {
+    var targetEl = self.target_element[0];
+    if (self.app.view && self.app.view.parentElement !== targetEl) {
+      targetEl.innerHTML = "";
+      targetEl.appendChild(self.app.view);
+    }
+  }
+};
+
+InCHlib2.prototype._sync_target_height = function () {
+  if (this.target_element && this.target_element[0]) {
+    this.target_element[0].style.height = `${this.settings.height}px`;
+    this.target_element[0].style.minHeight = "0px";
+  }
+  if (this.app && this.app.view) {
+    this.app.view.style.height = `${this.settings.height}px`;
+  }
+};
+
+InCHlib2.prototype._init_camera = function () {
+  if (!this.stage) return;
+  if (!this.camera) {
+    this.camera = new PIXI.Container();
+    this.stage.addChild(this.camera);
+  }
+};
+
+InCHlib2.prototype._add_to_camera = function () {
+  var parent = this.camera || this.stage;
+  if (!parent) return;
+  parent.addChild.apply(parent, arguments);
+};
+
+InCHlib2.prototype._clamp_scale = function (scale) {
+  var minScale = this.settings.camera_min_scale || 0.1;
+  var maxScale = this.settings.camera_max_scale || 8;
+  return Math.min(Math.max(scale, minScale), maxScale);
+};
+
+InCHlib2.prototype._set_camera_transform = function (x, y, scale) {
+  if (!this.camera) return;
+  var nextScale = this._clamp_scale(scale);
+  this.camera.scale.set(nextScale);
+  this.camera.position.set(x, y);
+  this._lastZoomScale = nextScale;
+  this._schedule_camera_update();
+};
+
+InCHlib2.prototype._get_camera_bounds = function () {
+  if (!this.camera || !this.app || !this.app.renderer) return null;
+  var scale = this.camera.scale.x || 1;
+  var viewWidth = this.app.renderer.screen.width;
+  var viewHeight = this.app.renderer.screen.height;
+  var left = -this.camera.position.x / scale;
+  var top = -this.camera.position.y / scale;
+  return {
+    left: left,
+    top: top,
+    right: left + viewWidth / scale,
+    bottom: top + viewHeight / scale,
+  };
+};
+
+InCHlib2.prototype._screen_to_world = function (screenX, screenY) {
+  if (!this.camera) return { x: screenX, y: screenY };
+  var scale = this.camera.scale.x || 1;
+  return {
+    x: (screenX - this.camera.position.x) / scale,
+    y: (screenY - this.camera.position.y) / scale,
+  };
+};
+
+InCHlib2.prototype._schedule_camera_update = function () {
+  if (this._cameraUpdatePending) return;
+  this._cameraUpdatePending = true;
+  requestAnimationFrame(() => {
+    this._cameraUpdatePending = false;
+    var scale = this._lastZoomScale || 1;
+    if (
+      this.settings.allow_row_ids_on_zoom &&
+      this.settings.draw_row_ids &&
+      !this._rowIdsCreated &&
+      scale >= this.settings.row_id_min_zoom
+    ) {
+      this._draw_row_ids();
+    }
+    if (
+      this.settings.allow_column_headers_on_zoom &&
+      this.settings.heatmap_header &&
+      !this._columnHeadersCreated &&
+      scale >= this.settings.column_header_min_zoom
+    ) {
+      this._draw_heatmap_header();
+    }
+    this._apply_zoom_resolution(scale);
+    this._update_label_visibility(scale);
+    this._update_lod(scale);
+    this._update_visible_tiles();
+    this.refresh();
+  });
+};
+
+InCHlib2.prototype.resetCamera = function () {
+  if (!this.camera) return;
+  this._set_camera_transform(0, 0, 1);
+};
+
+InCHlib2.prototype.fitToScreen = function (viewWidth, viewHeight) {
+  if (!this.camera) return;
+  var width = this.settings.width || 1;
+  var height = this.settings.height || 1;
+  var availableWidth = viewWidth || width;
+  var availableHeight = viewHeight || height;
+  var scale = Math.min(availableWidth / width, availableHeight / height);
+  scale = Math.min(scale, 1);
+  var nextScale = this._clamp_scale(scale);
+  var x = (availableWidth - width * nextScale) / 2;
+  var y = (availableHeight - height * nextScale) / 2;
+  this._set_camera_transform(x, y, nextScale);
+};
+
+InCHlib2.prototype._attach_camera_controls = function () {
+  if (!this.app || !this.app.view || this._cameraEventsAttached) return;
+  var view = this.app.view;
+  view.style.touchAction = "none";
+
+  var getLocalPoint = (event) => {
+    var rect = view.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  var onWheel = (event) => {
+    event.preventDefault();
+    if (!this.camera) return;
+    var point = getLocalPoint(event);
+    var world = this._screen_to_world(point.x, point.y);
+    var scale = this.camera.scale.x || 1;
+    var zoomStep = this.settings.camera_zoom_step || 1.12;
+    var direction = event.deltaY < 0 ? 1 : -1;
+    var nextScale =
+      direction > 0 ? scale * zoomStep : scale / zoomStep;
+    nextScale = this._clamp_scale(nextScale);
+    var nextX = point.x - world.x * nextScale;
+    var nextY = point.y - world.y * nextScale;
+    this._set_camera_transform(nextX, nextY, nextScale);
+  };
+
+  var onPointerDown = (event) => {
+    if (event.button !== 0) return;
+    var point = getLocalPoint(event);
+    this._cameraDragging = true;
+    this._cameraMoved = false;
+    this._cameraDragStart = point;
+    this._cameraStartPos = {
+      x: this.camera ? this.camera.position.x : 0,
+      y: this.camera ? this.camera.position.y : 0,
+    };
+  };
+
+  var onPointerMove = (event) => {
+    if (!this._cameraDragging || !this.camera) return;
+    var point = getLocalPoint(event);
+    var dx = point.x - this._cameraDragStart.x;
+    var dy = point.y - this._cameraDragStart.y;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      this._cameraMoved = true;
+    }
+    this._set_camera_transform(
+      this._cameraStartPos.x + dx,
+      this._cameraStartPos.y + dy,
+      this.camera.scale.x || 1
+    );
+  };
+
+  var onPointerUp = () => {
+    this._cameraDragging = false;
+    this._cameraDragStart = null;
+    this._cameraStartPos = null;
+  };
+
+  view.addEventListener("wheel", onWheel, { passive: false });
+  view.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+
+  this._cameraHandlers = {
+    onWheel: onWheel,
+    onPointerDown: onPointerDown,
+    onPointerMove: onPointerMove,
+    onPointerUp: onPointerUp,
+  };
+  this._cameraEventsAttached = true;
+};
+
+InCHlib2.prototype._register_label_node = function (node, type) {
+  if (!node) return;
+  if (!this._label_nodes) {
+    this._label_nodes = { row_ids: [], column_headers: [], cell_values: [] };
+  }
+  if (type === "row_id") {
+    this._label_nodes.row_ids.push(node);
+  } else if (type === "column_header") {
+    this._label_nodes.column_headers.push(node);
+  } else if (type === "cell_value") {
+    this._label_nodes.cell_values.push(node);
+  }
+  node.__inchlibLabelType = type;
+};
+
+InCHlib2.prototype._set_label_nodes_visibility = function (nodes, visible) {
+  if (!nodes || nodes.length === 0) return;
+  for (var i = 0; i < nodes.length; i++) {
+    var node = nodes[i];
+    if (!node) continue;
+    node.visible = visible;
+    node.renderable = visible;
+  }
+};
+
+InCHlib2.prototype._update_label_visibility = function (scale) {
+  var self = this;
+  var zoom = Number.isFinite(scale) ? scale : 1;
+  var showRowIds =
+    self.settings.draw_row_ids && zoom >= self.settings.row_id_min_zoom;
+  var showColumnHeaders =
+    self.settings.heatmap_header &&
+    self.settings.show_column_names !== false &&
+    zoom >= self.settings.column_header_min_zoom;
+  var showCellValues =
+    self.settings.show_cell_values !== false &&
+    zoom >= self.settings.cell_value_min_zoom;
+
+  if (!self._label_visibility_state) {
+    self._label_visibility_state = {};
+  }
+  if (self._label_visibility_state.row_ids !== showRowIds) {
+    self._set_label_nodes_visibility(self._label_nodes.row_ids, showRowIds);
+    self._label_visibility_state.row_ids = showRowIds;
+  }
+  if (self._label_visibility_state.column_headers !== showColumnHeaders) {
+    self._set_label_nodes_visibility(
+      self._label_nodes.column_headers,
+      showColumnHeaders
+    );
+    self._label_visibility_state.column_headers = showColumnHeaders;
+  }
+  if (self._label_visibility_state.cell_values !== showCellValues) {
+    self._set_label_nodes_visibility(
+      self._label_nodes.cell_values,
+      showCellValues
+    );
+    self._label_visibility_state.cell_values = showCellValues;
+  }
+};
+
+InCHlib2.prototype.setZoomState = function (scale) {
+  var self = this;
+  if (!Number.isFinite(scale)) return;
+  self._pendingZoomStateScale = scale;
+  if (self._zoomStatePending) return;
+  self._zoomStatePending = true;
+  requestAnimationFrame(function () {
+    self._zoomStatePending = false;
+    var nextScale = self._pendingZoomStateScale;
+    self._lastZoomScale = nextScale;
+
+    if (
+      self.settings.allow_row_ids_on_zoom &&
+      self.settings.draw_row_ids &&
+      !self._rowIdsCreated &&
+      nextScale >= self.settings.row_id_min_zoom
+    ) {
+      self._draw_row_ids();
+    }
+
+    if (
+      self.settings.allow_column_headers_on_zoom &&
+      self.settings.heatmap_header &&
+      !self._columnHeadersCreated &&
+      nextScale >= self.settings.column_header_min_zoom
+    ) {
+      self._draw_heatmap_header();
+    }
+
+    self._update_label_visibility(nextScale);
+    self._update_lod(nextScale);
+    self._schedule_heatmap_culling();
+    self.refresh();
+  });
+};
+
+InCHlib2.prototype.setZoomQuality = function (scale) {
+  var self = this;
+  if (!self.app || !self.app.renderer) return;
+  if (!Number.isFinite(scale)) return;
+  self._pendingZoomResolutionScale = scale;
+  if (self._zoomResolutionTimer) {
+    clearTimeout(self._zoomResolutionTimer);
+  }
+  self._zoomResolutionTimer = setTimeout(function () {
+    self._zoomResolutionTimer = null;
+    self._apply_zoom_resolution(self._pendingZoomResolutionScale);
+  }, 120);
+};
+
+InCHlib2.prototype._apply_zoom_resolution = function (scale) {
+  var self = this;
+  if (!self.app || !self.app.renderer) return;
+  if (self._lodActive) return;
+  var baseResolution =
+    self._baseResolution || (window.devicePixelRatio || 1);
+  var maxZoomResolution = self.settings.max_zoom_resolution || 2;
+  var targetScale = Math.max(1, Math.min(scale, maxZoomResolution));
+  var targetResolution = baseResolution * targetScale;
+  if (
+    self._currentResolution &&
+    Math.abs(targetResolution - self._currentResolution) < 0.1
+  ) {
+    return;
+  }
+  self._currentResolution = targetResolution;
+  if (!self.settings.use_tiled_heatmap) {
+    if (self.app.renderer.resolution !== targetResolution) {
+      self.app.renderer.resolution = targetResolution;
+      self.app.renderer.resize(self.settings.width, self.settings.height);
+      self._sync_target_height();
+    }
+  }
+  self._update_text_resolution(targetResolution);
+  self._update_tooltip_resolution(targetResolution);
+  requestAnimationFrame(function () {
+    self.refresh();
+  });
+};
+
+InCHlib2.prototype._update_text_resolution = function (resolution) {
+  var self = this;
+  var nodes = []
+    .concat(self._label_nodes.row_ids || [])
+    .concat(self._label_nodes.column_headers || []);
+  var maxCellUpdates = self.settings.max_cell_value_text_updates || 0;
+  if (
+    maxCellUpdates > 0 &&
+    self._label_nodes.cell_values &&
+    self._label_nodes.cell_values.length <= maxCellUpdates
+  ) {
+    nodes = nodes.concat(self._label_nodes.cell_values);
+  }
+
+  for (var i = 0; i < nodes.length; i++) {
+    var node = nodes[i];
+    if (!node || !node.style) continue;
+    node.resolution = resolution;
+    node.style.resolution = resolution;
+    node.dirty = true;
+    if (typeof node.updateText === "function") {
+      node.updateText();
+    }
+  }
+};
+
+InCHlib2.prototype._update_tooltip_resolution = function (resolution) {
+  var updateContainer = function (container) {
+    if (!container || !container.children) return;
+    for (var i = 0; i < container.children.length; i++) {
+      var child = container.children[i];
+      if (!child || !child.__inchlibTooltipText || !child.style) continue;
+      child.resolution = resolution;
+      child.style.resolution = resolution;
+      child.dirty = true;
+      if (typeof child.updateText === "function") {
+        child.updateText();
+      }
+    }
+  };
+  updateContainer(this.tooltip);
+  updateContainer(this.icon_tooltip);
+};
+
+InCHlib2.prototype._invalidate_lod = function () {
+  this._lodDirty = true;
+};
+
+InCHlib2.prototype._update_lod = function (scale) {
+  var self = this;
+  if (!self.settings.lod_enabled || !self.app || !self.app.renderer) {
+    return;
+  }
+  if (!self.heatmap_layer) return;
+
+  var zoom = Number.isFinite(scale) ? scale : 1;
+  var useLod = zoom < self.settings.lod_min_zoom;
+
+  if (!useLod) {
+    if (self._lodActive) {
+      if (self._lodSprite) {
+        self._lodSprite.visible = false;
+        self._lodSprite.renderable = false;
+      }
+      self._set_heatmap_layers_visibility(true);
+      self._lodActive = false;
+    }
+    return;
+  }
+
+  if (self._lodDirty || !self._lodTexture) {
+    self._set_heatmap_layers_visibility(true);
+    if (self.settings.render_visible_only) {
+      self._set_all_heatmap_rows_visibility(true);
+    }
+    var maxSize = self.settings.lod_max_texture_size || 4096;
+    var lodResolution = self.settings.lod_resolution || 0.25;
+    var bounds = self.heatmap_layer.getLocalBounds();
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+      if (self._lodSprite) {
+        self._lodSprite.visible = false;
+        self._lodSprite.renderable = false;
+      }
+      self._lodActive = false;
+      self._set_heatmap_layers_visibility(true);
+      return;
+    }
+    var widthScale = maxSize / bounds.width;
+    var heightScale = maxSize / bounds.height;
+    var clampResolution = Math.min(lodResolution, widthScale, heightScale);
+    if (!Number.isFinite(clampResolution) || clampResolution <= 0) {
+      if (self._lodSprite) {
+        self._lodSprite.visible = false;
+        self._lodSprite.renderable = false;
+      }
+      self._lodActive = false;
+      self._set_heatmap_layers_visibility(true);
+      return;
+    }
+    if (self._lodTexture) {
+      self._lodTexture.destroy(true);
+      self._lodTexture = null;
+    }
+    self._lodTexture = self.app.renderer.generateTexture(self.heatmap_layer, {
+      resolution: clampResolution,
+      region: bounds,
+    });
+    self._lodDirty = false;
+  }
+
+  if (!self._lodTexture) {
+    if (self._lodSprite) {
+      self._lodSprite.visible = false;
+      self._lodSprite.renderable = false;
+    }
+    self._lodActive = false;
+    self._set_heatmap_layers_visibility(true);
+    return;
+  }
+
+  if (!self._lodSprite) {
+    self._lodSprite = new PIXI.Sprite(self._lodTexture);
+    self._lodSprite.interactive = false;
+    self._add_to_camera(self._lodSprite);
+  } else {
+    self._lodSprite.texture = self._lodTexture;
+  }
+  var lodBounds = self.heatmap_layer.getLocalBounds();
+  self._lodSprite.x = lodBounds.x;
+  self._lodSprite.y = lodBounds.y;
+  self._lodSprite.width = lodBounds.width;
+  self._lodSprite.height = lodBounds.height;
+  self._lodSprite.visible = true;
+  self._lodSprite.renderable = true;
+  if (self.camera && self.heatmap_layer && self.heatmap_layer.parent === self.camera) {
+    var heatmapIndex = self.camera.getChildIndex(self.heatmap_layer);
+    self.camera.setChildIndex(self._lodSprite, heatmapIndex);
+  }
+
+  self._set_heatmap_layers_visibility(false);
+  self._lodActive = true;
+};
+
+InCHlib2.prototype._set_all_heatmap_rows_visibility = function (visible) {
+  if (!this.heatmap_layer || !this.heatmap_layer.children) return;
+  for (var i = 0; i < this.heatmap_layer.children.length; i++) {
+    var child = this.heatmap_layer.children[i];
+    if (!child || !child.__inchlibType) continue;
+    child.visible = visible;
+    child.renderable = visible;
+    if (child.__interactiveDefault !== undefined) {
+      child.interactive = visible && child.__interactiveDefault;
+    }
+  }
+};
+
+InCHlib2.prototype._set_heatmap_layers_visibility = function (visible) {
+  if (this.heatmap_layer) {
+    this.heatmap_layer.visible = visible;
+    this.heatmap_layer.renderable = visible;
+  }
+  if (this.heatmap_overlay) {
+    this.heatmap_overlay.visible = visible;
+    this.heatmap_overlay.renderable = visible;
+  }
+  if (this.highlighted_rows_layer) {
+    this.highlighted_rows_layer.visible = visible;
+    this.highlighted_rows_layer.renderable = visible;
+  }
+};
+
+InCHlib2.prototype.setRowIdsVisibility = function (visibility) {
+  if (typeof visibility !== "boolean") return;
+  this.settings.draw_row_ids = visibility;
+  if (
+    visibility &&
+    !this._rowIdsCreated &&
+    (!this.settings.allow_row_ids_on_zoom ||
+      (this._lastZoomScale || 1) >= this.settings.row_id_min_zoom)
+  ) {
+    this._draw_row_ids();
+  }
+  this._update_label_visibility(this._lastZoomScale || 1);
+  this._schedule_heatmap_culling();
+  this.refresh();
+};
+
+InCHlib2.prototype.setColumnIdsVisibility = function (visibility) {
+  if (typeof visibility !== "boolean") return;
+  this.settings.show_column_names = visibility;
+  if (
+    visibility &&
+    this.settings.heatmap_header &&
+    !this._columnHeadersCreated &&
+    (!this.settings.allow_column_headers_on_zoom ||
+      (this._lastZoomScale || 1) >= this.settings.column_header_min_zoom)
+  ) {
+    this._draw_heatmap_header();
+  }
+  this._update_label_visibility(this._lastZoomScale || 1);
+  this._schedule_heatmap_culling();
+  this.refresh();
+};
+
+InCHlib2.prototype.setCellValueVisibility = function (visibility) {
+  if (typeof visibility !== "boolean") return;
+  this.settings.show_cell_values = visibility;
+  this._update_label_visibility(this._lastZoomScale || 1);
+  this._schedule_heatmap_culling();
+  this.refresh();
+};
 
 InCHlib2.prototype._update_user_settings = function (settings) {
   var self = this;
@@ -1699,7 +2363,10 @@ InCHlib2.prototype._reorder_heatmap = function (column_index) {
     }
   }
 
-  var y = self.pixels_for_leaf / 2 + self.header_height;
+  var y =
+    self.pixels_for_leaf / 2 +
+    self.header_height +
+    (self.column_metadata_height || 0);
 
   for (var i = 0, len = self.heatmap_array.length; i < len; i++) {
     self.leaves_y_coordinates[self.heatmap_array[i][0]] = y;
@@ -1707,6 +2374,9 @@ InCHlib2.prototype._reorder_heatmap = function (column_index) {
   }
 
   self.ordered_by_index = column_index;
+  if (self.settings.use_tiled_heatmap) {
+    self._build_ordered_heatmap_array();
+  }
 };
 
 /**
@@ -1714,14 +2384,17 @@ InCHlib2.prototype._reorder_heatmap = function (column_index) {
  */
 InCHlib2.prototype.draw = function () {
   var self = this;
-  console.log("CRITICAL 3", self.app === null);
+  self._ensure_app();
   if (!self.app || !self.app.renderer || !self.app.stage) return;
-  console.log("STARTING TO DRAW");
   self.zoomed_clusters = { row: [], column: [] };
   self.last_highlighted_cluster = null;
   self.current_object_ids = [];
   self.current_column_ids = [];
   self.highlighted_rows_y = [];
+  self._label_nodes = { row_ids: [], column_headers: [], cell_values: [] };
+  self._label_visibility_state = null;
+  self._rowIdsCreated = false;
+  self._columnHeadersCreated = false;
   self.heatmap_array = self._preprocess_heatmap_data();
   self.on_features = { data: [], metadata: [], count_column: [] };
 
@@ -1766,9 +2439,11 @@ InCHlib2.prototype.draw = function () {
   self.settings.height =
     self.heatmap_array.length * self.pixels_for_leaf +
     self.header_height +
-    self.footer_height;
+    self.footer_height +
+    self.column_metadata_height;
 
   self.app?.renderer?.resize(self.settings.width, self.settings.height);
+  self._sync_target_height();
 
   /*
   self.app = new PIXI.Application({
@@ -1783,13 +2458,16 @@ InCHlib2.prototype.draw = function () {
 
   if (self.stage) self.stage.removeChildren();
   self.stage = self.app?.stage;
+  self._init_camera();
+  self._attach_camera_controls();
   console.log(self.app, "self.app");
 
   //document.body.appendChild(this.app.view);
   self.settings.height =
     self.heatmap_array.length * self.pixels_for_leaf +
     self.header_height +
-    self.footer_height;
+    self.footer_height +
+    self.column_metadata_height;
 
   //document.getElementById(self.settings.target).innerHTML = "";
   //document.getElementById(self.settings.target)?.appendChild(self.app.view);
@@ -1823,7 +2501,11 @@ InCHlib2.prototype.draw = function () {
     self.image_counter = 0;
   }
   this.app.ticker.stop();
-  self._draw_heatmap();
+  if (self.settings.use_tiled_heatmap) {
+    self._draw_heatmap_tiled();
+  } else {
+    self._draw_heatmap();
+  }
   self._draw_heatmap_header();
   //self.stage.removeChild(self.heatmap_layer);
   self.heatmap_layer.zIndex = 10;
@@ -1836,6 +2518,7 @@ InCHlib2.prototype.draw = function () {
   self._draw_navigation();
   moveToTop(self.navigation_layer);
   self.highlight_rows(self.settings.highlighted_rows);
+  self._update_label_visibility(self._lastZoomScale || 1);
   self.refresh();
 };
 
@@ -1847,7 +2530,7 @@ InCHlib2.prototype._draw_dendrogram_layers = function () {
     console.log("Stage missing!");
     return;
   }
-  self.stage.addChild(self.dendrogram_hover_layer, self.cluster_layer);
+  self._add_to_camera(self.dendrogram_hover_layer, self.cluster_layer);
   self.cluster_layer.interactive = true;
   self.cluster_layer.on("click", function (evt) {
     console.log("This click is working  self.cluster_layer.on");
@@ -1878,6 +2561,7 @@ InCHlib2.prototype._draw_row_dendrogram = function (node_id) {
   //self.stage.setWidth(self.settings.width); //TODO: DO we need these?
   //self.stage.setHeight(self.settings.height);
   self.app.renderer.resize(self.settings.width, self.settings.height);
+  self._sync_target_height();
   self.app.cullable =true;
   var current_left_count = 0;
   var current_right_count = 0;
@@ -1899,7 +2583,7 @@ InCHlib2.prototype._draw_row_dendrogram = function (node_id) {
   self.middle_item_count = (self.min_item_count + self.max_item_count) / 2;
   self._draw_distance_scale(node.distance);
   self.dendrogram_layer.interactive = true;
-  self.stage.addChild(self.dendrogram_layer);
+  self._add_to_camera(self.dendrogram_layer);
   moveToTop(self.dendrogram_layer);
   self._bind_dendrogram_hover_events(self.dendrogram_layer);
 
@@ -2029,7 +2713,7 @@ InCHlib2.prototype._draw_stage_layer = function () {
 
   if (self.stage === null) return;
 
-  self.stage.addChild(self.stage_layer);
+  self._add_to_camera(self.stage_layer);
   moveToBottom(self.stage_layer);
 
   self.stage_layer.interactive = true;
@@ -2065,7 +2749,7 @@ InCHlib2.prototype._draw_column_dendrogram = function (node_id) {
     0,
     0
   );
-  self.stage.addChild(self.column_dendrogram_layer);
+  self._add_to_camera(self.column_dendrogram_layer);
 
   if (!self.nodes2columns) {
     self.nodes2columns = self._get_nodes2columns();
@@ -2444,6 +3128,9 @@ InCHlib2.prototype._draw_heatmap = function () {
   if (self.value_font_size < 4) {
     self.current_draw_values = false;
   }
+  if (self.settings.show_cell_values === false) {
+    self.current_draw_values = false;
+  }
 
   var x1 = self.heatmap_distance;
   var key;
@@ -2458,6 +3145,7 @@ InCHlib2.prototype._draw_heatmap = function () {
     y = self.leaves_y_coordinates[key];
     heatmap_row = self._draw_heatmap_row(key, x1, y); //return heatmap container all rect for a row
     heatmap_row.interactive = true;
+    heatmap_row.__interactiveDefault = true;
     self.heatmap_layer.addChild(heatmap_row);
     self._bind_row_events(heatmap_row);
   }
@@ -2507,6 +3195,7 @@ InCHlib2.prototype._draw_heatmap = function () {
         x1,
         y1
       );
+      heatmap_row.__interactiveDefault = true;
       self.heatmap_layer.addChild(heatmap_row);
       self._bind_row_events(heatmap_row);
       y1 = y1 + self.settings.column_metadata_row_height;
@@ -2523,7 +3212,7 @@ InCHlib2.prototype._draw_heatmap = function () {
 
   self.stage.removeChild(self.highlighted_rows_layer);
 
-  self.stage.addChild(self.highlighted_rows_layer);
+  self._add_to_camera(self.highlighted_rows_layer);
   moveToTop(self.heatmap_layer);
   moveToBottom(self.stage_layer);
   //self.highlighted_rows_layer.moveToTop();
@@ -2546,18 +3235,491 @@ InCHlib2.prototype._draw_heatmap = function () {
 */
   self.heatmap_layer.on("pointerdown", function (evt) {
     const position = evt.data.global; // This gives you the position in the global (renderer view) coordinates
-    console.log(`Clicked position: `, evt);
-
-    // Log the position to the console
-    console.log(`Clicked position: x=${position.x}, y=${position.y}`);
   });
 
-  self.stage.addChild(
+  self._add_to_camera(
     self.heatmap_overlay,
     self.heatmap_layer,
-
     self.highlighted_rows_layer
   );
+
+  self._invalidate_lod();
+  self._attach_scroll_listener();
+  self._schedule_heatmap_culling();
+};
+
+InCHlib2.prototype._build_visible_columns = function () {
+  var self = this;
+  self._visible_columns = [];
+  self._data_column_positions = {};
+  for (var i = 0; i < self.on_features["data"].length; i++) {
+    var dataIndex = self.on_features["data"][i];
+    self._data_column_positions[dataIndex] = self._visible_columns.length;
+    self._visible_columns.push({
+      type: "d",
+      index: dataIndex,
+      arrayIndex: 1 + dataIndex,
+      desc: self.data_descs[dataIndex],
+      colorScale: self.settings.heatmap_colors,
+      header: self.heatmap_header ? self.heatmap_header[dataIndex] : "",
+    });
+  }
+  for (var j = 0; j < self.on_features["metadata"].length; j++) {
+    var metaIndex = self.on_features["metadata"][j];
+    self._visible_columns.push({
+      type: "m",
+      index: metaIndex,
+      arrayIndex: 1 + self.dimensions["data"] + metaIndex,
+      desc: self.metadata_descs[metaIndex],
+      colorScale: self.settings.metadata_colors,
+      header: self.metadata_header ? self.metadata_header[metaIndex] : "",
+    });
+  }
+  if (self.settings.count_column && self.features[self.dimensions["overall"] - 1]) {
+    self._visible_columns.push({
+      type: "Count",
+      index: 0,
+      arrayIndex: null,
+      desc: {
+        min: self.min_item_count,
+        max: self.max_item_count,
+        middle: self.middle_item_count,
+      },
+      colorScale: self.settings.count_column_colors,
+      header: "Count",
+    });
+  }
+};
+
+InCHlib2.prototype._get_active_heatmap_array = function () {
+  return this._ordered_heatmap_array || this.heatmap_array;
+};
+
+InCHlib2.prototype._build_ordered_heatmap_array = function () {
+  var self = this;
+  if (!self.leaves_y_coordinates || !self.heatmap_array) {
+    self._ordered_heatmap_array = self.heatmap_array || [];
+    return;
+  }
+  var rowMap = {};
+  for (var i = 0; i < self.heatmap_array.length; i++) {
+    rowMap[self.heatmap_array[i][0]] = self.heatmap_array[i];
+  }
+  var ordered = Object.entries(self.leaves_y_coordinates)
+    .sort(function (a, b) {
+      return a[1] - b[1];
+    })
+    .map(function (entry) {
+      return rowMap[entry[0]];
+    })
+    .filter(Boolean);
+  self._ordered_heatmap_array = ordered;
+};
+
+InCHlib2.prototype._get_cell_value = function (rowData, rowId, columnInfo) {
+  if (!columnInfo) return null;
+  if (columnInfo.type === "Count") {
+    var node = this.data.nodes[rowId];
+    return node ? node.objects.length : null;
+  }
+  if (columnInfo.arrayIndex === null || columnInfo.arrayIndex === undefined) {
+    return null;
+  }
+  var value = rowData[columnInfo.arrayIndex];
+  if (columnInfo.type === "m" && columnInfo.desc && columnInfo.desc.str2num) {
+    if (columnInfo.desc.str2num[value] !== undefined) {
+      value = columnInfo.desc.str2num[value];
+    }
+  }
+  return value;
+};
+
+InCHlib2.prototype._get_cell_color = function (value, columnInfo) {
+  if (!columnInfo || value === null || value === undefined) return null;
+  var desc = columnInfo.desc || {};
+  return this._get_color_for_value(
+    value,
+    desc.min,
+    desc.max,
+    desc.middle,
+    columnInfo.colorScale
+  );
+};
+
+InCHlib2.prototype._draw_column_metadata_rows = function () {
+  var self = this;
+  if (!self.settings.column_metadata) return;
+  self.column_metadata_descs = self._get_data_min_max_middle(
+    self.column_metadata.features,
+    "row"
+  );
+  var rowHeight = self.settings.column_metadata_row_height;
+  var yStart = self.header_height;
+  for (var rowIndex = 0; rowIndex < self.column_metadata.features.length; rowIndex++) {
+    var rowData = self.column_metadata.features[rowIndex];
+    var gfx = new PIXI.Graphics();
+    gfx.x = self.heatmap_origin_x;
+    gfx.y = yStart + rowIndex * rowHeight;
+    for (var i = 0; i < self.on_features["data"].length; i++) {
+      var dataIndex = self.on_features["data"][i];
+      var colPos = self._data_column_positions[dataIndex];
+      if (colPos === undefined) continue;
+      var value = rowData[dataIndex];
+      if (value === null || value === undefined) continue;
+      var desc = self.column_metadata_descs[rowIndex];
+      if (desc && desc.str2num && desc.str2num[value] !== undefined) {
+        value = desc.str2num[value];
+      }
+      var color = self._get_color_for_value(
+        value,
+        desc.min,
+        desc.max,
+        desc.middle,
+        self.settings.column_metadata_colors
+      );
+      if (typeof color === "string") {
+        color = PIXI.utils.string2hex(color);
+      }
+      gfx.beginFill(color);
+      gfx.drawRect(
+        colPos * self.pixels_for_dimension,
+        0,
+        self.pixels_for_dimension,
+        rowHeight
+      );
+      gfx.endFill();
+    }
+    gfx.__inchlibType = "column_metadata_row";
+    gfx.__rowY = gfx.y + rowHeight / 2;
+    gfx.__rowHeight = rowHeight;
+    self.heatmap_layer.addChild(gfx);
+  }
+};
+
+InCHlib2.prototype._draw_heatmap_tiles = function () {
+  var self = this;
+  var rows = self._get_active_heatmap_array();
+  var rowCount = rows.length;
+  var colCount = self._visible_columns.length;
+  var tileRows = self.settings.tile_rows || 64;
+  var tileCols = self.settings.tile_cols || 64;
+  var cellWidth = self.pixels_for_dimension;
+  var cellHeight = self.pixels_for_leaf;
+  self.heatmap_tiles = [];
+  for (var rowStart = 0; rowStart < rowCount; rowStart += tileRows) {
+    for (var colStart = 0; colStart < colCount; colStart += tileCols) {
+      var gfx = new PIXI.Graphics();
+      var tileX = self.heatmap_origin_x + colStart * cellWidth;
+      var tileY = self.heatmap_origin_y + rowStart * cellHeight;
+      gfx.x = tileX;
+      gfx.y = tileY;
+      var rowEnd = Math.min(rowStart + tileRows, rowCount);
+      var colEnd = Math.min(colStart + tileCols, colCount);
+      for (var r = rowStart; r < rowEnd; r++) {
+        var rowData = rows[r];
+        var rowId = rowData[0];
+        var y = (r - rowStart) * cellHeight;
+        for (var c = colStart; c < colEnd; c++) {
+          var columnInfo = self._visible_columns[c];
+          var value = self._get_cell_value(rowData, rowId, columnInfo);
+          if (value === null || value === undefined) continue;
+          var color = self._get_cell_color(value, columnInfo);
+          if (!color) continue;
+          if (typeof color === "string") {
+            color = PIXI.utils.string2hex(color);
+          }
+          gfx.beginFill(color);
+          gfx.drawRect(
+            (c - colStart) * cellWidth,
+            y,
+            cellWidth,
+            cellHeight
+          );
+          gfx.endFill();
+        }
+      }
+      gfx.__tileBounds = {
+        x: tileX,
+        y: tileY,
+        width: (colEnd - colStart) * cellWidth,
+        height: (rowEnd - rowStart) * cellHeight,
+      };
+      self.heatmap_tiles_layer.addChild(gfx);
+      self.heatmap_tiles.push(gfx);
+    }
+  }
+};
+
+InCHlib2.prototype._build_interaction_layer = function () {
+  var self = this;
+  if (self.interaction_layer) {
+    self.interaction_layer.removeAllListeners();
+    self.interaction_layer.destroy({ children: true });
+  }
+  var width = self._visible_columns.length * self.pixels_for_dimension;
+  var height = self._get_active_heatmap_array().length * self.pixels_for_leaf;
+  var gfx = new PIXI.Graphics();
+  gfx.beginFill(0xffffff, 0.001);
+  gfx.drawRect(
+    self.heatmap_origin_x,
+    self.heatmap_origin_y,
+    width,
+    height
+  );
+  gfx.endFill();
+  gfx.interactive = true;
+  gfx.cursor = "crosshair";
+  gfx.on("pointermove", function (evt) {
+    self._handle_heatmap_pointer_move(evt);
+  });
+  gfx.on("pointerout", function () {
+    self._clear_hover();
+  });
+  gfx.on("pointertap", function (evt) {
+    self._handle_heatmap_click(evt);
+  });
+  self.interaction_layer = gfx;
+  self.heatmap_layer.addChild(gfx);
+};
+
+InCHlib2.prototype._get_heatmap_indices_from_event = function (evt) {
+  if (!evt) return null;
+  var point = null;
+  if (evt.data && typeof evt.data.getLocalPosition === "function") {
+    var target = this.heatmap_layer || this.camera || this.stage;
+    if (target) {
+      point = evt.data.getLocalPosition(target);
+    }
+  }
+  if (!point && evt.data && evt.data.global) {
+    var global = evt.data.global;
+    point = this.camera ? this.camera.toLocal(global) : global;
+  }
+  if (!point) return null;
+  var localX = point.x - this.heatmap_origin_x;
+  var localY = point.y - this.heatmap_origin_y;
+  if (localX < 0 || localY < 0) return null;
+  var eps = 1e-6;
+  var colIndex = Math.floor((localX + eps) / this.pixels_for_dimension);
+  var rowIndex = Math.floor((localY + eps) / this.pixels_for_leaf);
+  var rowCount = this._get_active_heatmap_array().length;
+  if (rowIndex < 0 || rowIndex >= rowCount || colIndex < 0 || colIndex >= this._visible_columns.length) {
+    return null;
+  }
+  return { rowIndex: rowIndex, colIndex: colIndex };
+};
+
+InCHlib2.prototype._handle_heatmap_pointer_move = function (evt) {
+  if (this._cameraDragging) {
+    return;
+  }
+  var indices = this._get_heatmap_indices_from_event(evt);
+  if (!indices) {
+    this._clear_hover();
+    return;
+  }
+  if (
+    indices.rowIndex === this._hoverRowIndex &&
+    indices.colIndex === this._hoverColIndex
+  ) {
+    return;
+  }
+  this._hoverRowIndex = indices.rowIndex;
+  this._hoverColIndex = indices.colIndex;
+  this._show_cell_tooltip(indices.rowIndex, indices.colIndex);
+};
+
+InCHlib2.prototype._handle_heatmap_click = function (evt) {
+  if (this._cameraMoved) {
+    return;
+  }
+  var indices = this._get_heatmap_indices_from_event(evt);
+  if (!indices) return;
+  var rowData = this._get_active_heatmap_array()[indices.rowIndex];
+  var rowId = rowData[0];
+  var node = this.data.nodes[rowId];
+  if (!node) return;
+  var items = node.objects || [];
+  this.events.row_onclick(items.slice(), evt);
+};
+
+InCHlib2.prototype._clear_hover = function () {
+  if (this._hoverRowIndex !== null && this.events && this.events.row_onmouseout) {
+    this.events.row_onmouseout(null);
+  }
+  this._hoverRowIndex = null;
+  this._hoverColIndex = null;
+  if (this.tooltip && this.tooltip.parent) {
+    this.tooltip.destroy();
+    this.tooltip = null;
+  }
+  if (this.row_overlay && this.row_overlay.parent) {
+    this.row_overlay.parent.removeChild(this.row_overlay);
+    this.row_overlay = null;
+  }
+  if (this.column_overlay && this.column_overlay.parent) {
+    this.column_overlay.parent.removeChild(this.column_overlay);
+    this.column_overlay = null;
+  }
+  this.refresh();
+};
+
+InCHlib2.prototype._show_cell_tooltip = function (rowIndex, colIndex) {
+  var self = this;
+  var rowData = self._get_active_heatmap_array()[rowIndex];
+  var rowId = rowData[0];
+  var rowLabel = rowId;
+  var rowNode = self.data && self.data.nodes ? self.data.nodes[rowId] : null;
+  if (rowNode && rowNode.objects && rowNode.objects.length) {
+    rowLabel = rowNode.objects[0];
+  }
+  var columnInfo = self._visible_columns[colIndex];
+  var value = self._get_cell_value(rowData, rowId, columnInfo);
+  var formatValue = function (raw) {
+    if (raw === null || raw === undefined) return raw;
+    var num = typeof raw === "number" ? raw : parseFloat(raw);
+    if (!Number.isFinite(num)) return raw;
+    var rounded = Math.round(num * 100) / 100;
+    return rounded.toString();
+  };
+
+  var label = [
+    "Row: " + rowLabel,
+    "Col: " + (columnInfo && columnInfo.header ? columnInfo.header : ""),
+    "Val: " + formatValue(value),
+  ].join("\n");
+
+  var cellX =
+    self.heatmap_origin_x + colIndex * self.pixels_for_dimension;
+  var cellY =
+    self.heatmap_origin_y + rowIndex * self.pixels_for_leaf;
+
+  if (self.tooltip) {
+    self.tooltip.destroy();
+  }
+
+  var tooltip = self.objects_ref.tooltip_label({
+    x: cellX + self.pixels_for_dimension / 2 - 50,
+    y: cellY - 50,
+  });
+  tooltip.addChild(
+    self.objects_ref.tooltip_tag({ pointerDirection: "up", fill: "#f3ca20" }),
+    self.objects_ref.tooltip_text({
+      text: label,
+      fill: "#000000",
+      resolution: self._currentResolution || window.devicePixelRatio || 1,
+    })
+  );
+  self.tooltip = tooltip;
+  self.heatmap_overlay.addChild(tooltip);
+
+  if (self.row_overlay) {
+    self.row_overlay.destroy();
+  }
+  self.row_overlay = new PIXI.Graphics();
+  self.row_overlay.beginFill(0xffffff, 0.2);
+  self.row_overlay.drawRect(
+    self.heatmap_origin_x,
+    cellY,
+    self._visible_columns.length * self.pixels_for_dimension,
+    self.pixels_for_leaf
+  );
+  self.row_overlay.endFill();
+  self.heatmap_overlay.addChild(self.row_overlay);
+
+  if (self.column_overlay) {
+    self.column_overlay.destroy();
+  }
+  self.column_overlay = new PIXI.Graphics();
+  self.column_overlay.beginFill(0xffffff, 0.2);
+  self.column_overlay.drawRect(
+    cellX,
+    self.heatmap_origin_y,
+    self.pixels_for_dimension,
+    self._get_active_heatmap_array().length * self.pixels_for_leaf
+  );
+  self.column_overlay.endFill();
+  self.heatmap_overlay.addChild(self.column_overlay);
+
+  if (self.events && self.events.row_onmouseover) {
+    var node = self.data.nodes[rowId];
+    if (node) {
+      self.events.row_onmouseover(node.objects, null);
+    }
+  }
+
+  self.refresh();
+};
+
+InCHlib2.prototype._update_visible_tiles = function () {
+  if (!this.heatmap_tiles || this.heatmap_tiles.length === 0) return;
+  var bounds = this._get_camera_bounds();
+  if (!bounds) return;
+  var marginRows = this.settings.render_margin_rows || 0;
+  var margin = marginRows * this.pixels_for_leaf;
+  bounds = {
+    left: bounds.left - margin,
+    right: bounds.right + margin,
+    top: bounds.top - margin,
+    bottom: bounds.bottom + margin,
+  };
+  var changed = false;
+  for (var i = 0; i < this.heatmap_tiles.length; i++) {
+    var tile = this.heatmap_tiles[i];
+    var b = tile.__tileBounds;
+    if (!b) continue;
+    var visible =
+      b.x + b.width >= bounds.left &&
+      b.x <= bounds.right &&
+      b.y + b.height >= bounds.top &&
+      b.y <= bounds.bottom;
+    if (tile.visible !== visible) {
+      tile.visible = visible;
+      tile.renderable = visible;
+      changed = true;
+    }
+  }
+  if (changed) {
+    this.refresh();
+  }
+};
+
+InCHlib2.prototype._draw_heatmap_tiled = function () {
+  var self = this;
+  if (!self.settings.heatmap) return;
+
+  self.heatmap_layer = new PIXI.Container();
+  self.heatmap_overlay = new PIXI.Container();
+  self.heatmap_tiles_layer = new PIXI.Container();
+  self.heatmap_layer.addChild(self.heatmap_tiles_layer);
+
+  self.heatmap_origin_x = self.heatmap_distance;
+  self.heatmap_origin_y = self.header_height + self.column_metadata_height;
+
+  self._build_visible_columns();
+  self._build_ordered_heatmap_array();
+  self._draw_heatmap_tiles();
+  self._draw_column_metadata_rows();
+  self._build_interaction_layer();
+
+  if (self.settings.draw_row_ids) {
+    var scale = self._lastZoomScale || 1;
+    if (
+      !self.settings.allow_row_ids_on_zoom ||
+      scale >= self.settings.row_id_min_zoom
+    ) {
+      self._draw_row_ids();
+    }
+  }
+
+  self.highlighted_rows_layer = new PIXI.Container();
+  self.heatmap_layer.id = "self.heatmap_layer";
+  self.heatmap_overlay.id = "self.heatmap_overlay";
+
+  self._add_to_camera(self.heatmap_overlay, self.heatmap_layer, self.highlighted_rows_layer);
+
+  self._update_visible_tiles();
+  self.refresh();
 };
 
 InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
@@ -2566,6 +3728,8 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
   var row_id = node.objects[0];
   //console.log(node);
   var row = new PIXI.Container();
+  var startX = x1;
+  var cellNodes = [];
   //row.interactive = true;
   row.name = node_id;
   //var row = new Kinetic.Group({ id: node_id });
@@ -2578,6 +3742,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
     y2 = y1;
     value = node.features[col_index];
     text_value = value;
+    var cellNode = null;
     // if (row_id === "PSMA4") console.log(value, node, col_index, self.data);
 
     if (self.settings.alternative_data) {
@@ -2640,6 +3805,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
         */
         //row.addChild(image);
         row.addChild(self.path2image[text_value]);
+        cellNode = self.path2image[text_value];
       }
     }
 
@@ -2669,9 +3835,9 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
       //line.interactive = true;
 
       row.addChild(line);
+      cellNode = line;
 
       if (self.current_draw_values) {
-        console.log("We are here");
         text = self.objects_ref.heatmap_value({
           x: self._hack_round(
             (x1 + x2) / 2 -
@@ -2685,6 +3851,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
       }
     }
 
+    cellNodes.push(cellNode);
     x1 = x2;
   }
 
@@ -2697,6 +3864,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
         value = metadata[col_index];
         x2 = x1 + self.pixels_for_dimension;
         y2 = y1;
+        var cellNode = null;
 
         if (value !== null && value !== undefined) {
           text_value = value;
@@ -2726,6 +3894,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
           });
 
           row.addChild(line);
+          cellNode = line;
 
           if (self.current_draw_values) {
             text = self.objects_ref.heatmap_value({
@@ -2740,6 +3909,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
             row.addChild(text);
           }
         }
+        cellNodes.push(cellNode);
         x1 = x2;
       }
     }
@@ -2774,6 +3944,7 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
     });
 
     row.addChild(line);
+    cellNodes.push(line);
 
     if (self.current_draw_values) {
       text = self.objects_ref.heatmap_value({
@@ -2788,6 +3959,13 @@ InCHlib2.prototype._draw_heatmap_row = function (node_id, x1, y1) {
     }
   }
   //console.log(row);
+  row.__inchlibType = "data_row";
+  row.__rowY = y1;
+  row.__rowHeight = self.pixels_for_leaf;
+  row.__cellSprites = cellNodes;
+  row.__cellStartX = startX;
+  row.__cellWidth = self.pixels_for_dimension;
+  row.__cellCount = cellNodes.length;
   return row;
 };
 
@@ -2803,6 +3981,8 @@ InCHlib2.prototype._draw_column_metadata_row = function (
   row.metadata = { class: "column_metadata" };
 
   var x2, y2, color, line, value, text, text_value, width, col_index, col_id;
+  var startX = x1;
+  var cellNodes = [];
   var str2num =
     self.column_metadata_descs[row_index]["str2num"] === undefined
       ? false
@@ -2841,8 +4021,16 @@ InCHlib2.prototype._draw_column_metadata_row = function (
       col_id: col_id,
     });
     row.addChild(line);
+    cellNodes.push(line);
     x1 = x2;
   }
+  row.__inchlibType = "column_metadata_row";
+  row.__rowY = y1;
+  row.__rowHeight = self.settings.column_metadata_row_height;
+  row.__cellSprites = cellNodes;
+  row.__cellStartX = startX;
+  row.__cellWidth = self.pixels_for_dimension;
+  row.__cellCount = cellNodes.length;
   return row;
 };
 
@@ -2859,13 +4047,13 @@ InCHlib2.prototype._bind_row_events = function (row) {
 
   row.on("mouseover", function (evt) {
     //console.log("Mouse over the row");
-    self._draw_col_label(evt);
+    self._schedule_col_label(evt);
     //self.refresh();
   });
 
-    row.on("mousemove", function (evt) {
+  row.on("mousemove", function (evt) {
       //console.log("Mouse move over the row");
-      self._draw_col_label(evt);
+      self._schedule_col_label(evt);
       
     });
 
@@ -2875,25 +4063,37 @@ InCHlib2.prototype._bind_row_events = function (row) {
   });*/
 
   row.on("click", function (evt) {
-    console.log("aaaaaaaaaaa");
-    var row_id = evt.target.parent.attrs.id;
-    if (evt.target.parent.attrs.class !== "column_metadata") {
-      var items = self.data.nodes[row_id].objects;
-      var item_ids = [];
-
-      for (var i = 0; i < items.length; i++) {
-        item_ids.push(items[i]);
-      }
-
-      self.events.row_onclick(item_ids, evt);
+    var target = evt.currentTarget || row;
+    if (!target) return;
+    if (target.metadata && target.metadata.class === "column_metadata") {
+      return;
     }
+    var row_id = target.name;
+    if (!row_id || !self.data.nodes || !self.data.nodes[row_id]) return;
+    var items = self.data.nodes[row_id].objects || [];
+    var item_ids = [];
+    for (var i = 0; i < items.length; i++) {
+      item_ids.push(items[i]);
+    }
+    self.events.row_onclick(item_ids, evt);
   });
 };
 
 InCHlib2.prototype._draw_row_ids = function () {
   var self = this;
-  if (self.pixels_for_leaf < 6 || self.row_id_size < 5) {
+  if (self._rowIdsCreated || !self.settings.draw_row_ids) {
     return;
+  }
+  if (!self.row_id_size) {
+    self._get_row_id_size();
+  }
+  if (!self.settings.allow_row_ids_on_zoom) {
+    if (self.pixels_for_leaf < 6 || self.row_id_size < 5) {
+      return;
+    }
+  }
+  if (!self.row_id_size || self.row_id_size < 1) {
+    self.row_id_size = 1;
   }
   var i,
     objects,
@@ -2903,6 +4103,44 @@ InCHlib2.prototype._draw_row_ids = function () {
     len,
     values = [],
     text;
+
+  if (self.settings.use_tiled_heatmap) {
+    var heatmapArray = self._get_active_heatmap_array();
+    var xTiled =
+      self.distance + self._get_visible_count() * self.pixels_for_dimension + 15;
+    for (i = 0; i < heatmapArray.length; i++) {
+      var rowId = heatmapArray[i][0];
+      var node = self.data.nodes[rowId];
+      var label = rowId;
+      if (node && node.objects && node.objects.length) {
+        label = node.objects[0];
+      }
+      var y =
+        self.heatmap_origin_y +
+        i * self.pixels_for_leaf +
+        self.pixels_for_leaf / 2;
+      text = new PIXI.Text(String(label), {
+        fontFamily: self.settings.font,
+        fontSize: self.row_id_size,
+        fill: "#000000",
+        fontStyle: "italic",
+        fontWeight: "bold",
+        resolution: self._currentResolution || window.devicePixelRatio || 1,
+      });
+      text.roundPixels = false;
+      text.x = xTiled;
+      text.y = y - self.row_id_size / 2;
+      text.interactive = false;
+      text.__inchlibType = "row_id";
+      text.__inchlibText = true;
+      text.__rowY = y;
+      text.__rowHeight = self.pixels_for_leaf;
+      self._register_label_node(text, "row_id");
+      self.heatmap_layer.addChild(text);
+    }
+    self._rowIdsCreated = true;
+    return;
+  }
 
   for (
     i = 0, keys = Object.keys(self.leaves_y_coordinates), len = keys.length;
@@ -2921,16 +4159,26 @@ InCHlib2.prototype._draw_row_ids = function () {
     self.distance + self._get_visible_count() * self.pixels_for_dimension + 15;
 
   for (i = 0; i < object_y.length; i++) {
-    text = self.objects_ref.heatmap_value({
-      x: x,
-      y: self._hack_round(object_y[i][1] - self.row_id_size / 2),
+    text = new PIXI.Text(object_y[i][0], {
+      fontFamily: self.settings.font,
       fontSize: self.row_id_size,
-      text: object_y[i][0],
+      fill: "#000000",
       fontStyle: "italic",
-      fill: "gray",
+      fontWeight: "bold",
+      resolution: self._currentResolution || window.devicePixelRatio || 1,
     });
+    text.roundPixels = true;
+    text.x = x;
+    text.y = self._hack_round(object_y[i][1] - self.row_id_size / 2);
+    text.interactive = false;
+    text.__inchlibType = "row_id";
+    text.__inchlibText = true;
+    text.__rowY = object_y[i][1];
+    text.__rowHeight = self.pixels_for_leaf;
+    self._register_label_node(text, "row_id");
     self.heatmap_layer.addChild(text);
   }
+  self._rowIdsCreated = true;
 };
 
 InCHlib2.prototype._get_row_id_size = function () {
@@ -2995,6 +4243,17 @@ InCHlib2.prototype._get_row_id_size = function () {
 InCHlib2.prototype._draw_heatmap_header = function () {
   var self = this;
   if (self.settings.heatmap_header && self.header.length > 0) {
+    if (
+      !self._columnHeadersCreated &&
+      self.settings.allow_column_headers_on_zoom &&
+      (self._lastZoomScale || 1) < self.settings.column_header_min_zoom
+    ) {
+      return;
+    }
+    if (self.header_layer && self.header_layer.parent) {
+      self.header_layer.parent.removeChild(self.header_layer);
+      self.header_layer.destroy({ children: true });
+    }
     self.header_layer = new PIXI.Container();
     var count = self._hack_size(self.leaves_y_coordinates);
     var y =
@@ -3004,8 +4263,7 @@ InCHlib2.prototype._draw_heatmap_header = function () {
           10 +
           self.column_metadata_height
         : self.header_height - 20;
-    var rotation =
-      self.settings.column_dendrogram && self.heatmap_header ? 45 : -45;
+    var rotation = -90;
     var distance_step = 0;
     var x, i, column_header, key;
     var current_headers = [],
@@ -3033,7 +4291,7 @@ InCHlib2.prototype._draw_heatmap_header = function () {
       self.pixels_for_dimension,
       16
     );
-    if (font_size < 8) {
+    if (font_size < 8 && !self.settings.allow_column_headers_on_zoom) {
       return;
     }
 
@@ -3049,12 +4307,15 @@ InCHlib2.prototype._draw_heatmap_header = function () {
         position_index: i,
         fontSize: font_size,
         rotationDeg: rotation,
+        anchor: { x: 0.5, y: 1 },
+        resolution: self._currentResolution || window.devicePixelRatio || 1,
       });
       self.header_layer.addChild(column_header);
       distance_step++;
     }
 
-    self.stage.addChild(self.header_layer);
+    self._add_to_camera(self.header_layer);
+    self._columnHeadersCreated = true;
 
     if (!self.settings.dendrogram) {
       self.header_layer.on("click", function (evt) {
@@ -3604,8 +4865,151 @@ InCHlib2.prototype._highlight_path = function (node_id, color) {
   }
 };
 
-InCHlib2.prototype.refresh = function (stage = this.app.stage) {
-  requestAnimationFrame(()=>this.app.renderer.render(stage));
+InCHlib2.prototype.refresh = function (stage = this.app && this.app.stage) {
+  if (!this.app || !this.app.renderer || !stage) return;
+  if (this._renderPending) return;
+  this._renderPending = true;
+  const renderer = this.app.renderer;
+  requestAnimationFrame(() => {
+    this._renderPending = false;
+    if (!renderer) return;
+    renderer.render(stage);
+  });
+};
+
+InCHlib2.prototype._get_scroll_parent = function () {
+  const target = (this.app && this.app.view) || this.target_element?.[0];
+  if (!target || typeof window === "undefined") return null;
+  let parent = target.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    const overflowY = style.overflowY || style.overflow;
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+};
+
+InCHlib2.prototype._get_visible_bounds = function () {
+  const cameraBounds = this._get_camera_bounds();
+  if (!cameraBounds) return null;
+  const zoomScale = this._lastZoomScale || 1;
+  return {
+    top: cameraBounds.top,
+    bottom: cameraBounds.bottom,
+    scaleY: zoomScale > 0 ? 1 / zoomScale : 1,
+  };
+};
+
+InCHlib2.prototype._schedule_heatmap_culling = function () {
+  if (!this.settings.render_visible_only) return;
+  if (this.settings.use_tiled_heatmap) {
+    this._update_visible_tiles();
+    return;
+  }
+  if (this._cullPending) return;
+  this._cullPending = true;
+  requestAnimationFrame(() => {
+    this._cullPending = false;
+    this._update_heatmap_culling();
+  });
+};
+
+InCHlib2.prototype._update_heatmap_culling = function () {
+  if (!this.settings.render_visible_only) return;
+  if (!this.heatmap_layer || !this.target_element?.length) return;
+
+  const bounds = this._get_visible_bounds();
+  if (!bounds || bounds.empty) return;
+
+  const marginRows = this.settings.render_margin_rows || 0;
+  const margin = marginRows * this.pixels_for_leaf;
+  const top = bounds.top - margin;
+  const bottom = bounds.bottom + margin;
+  const signature = `${Math.floor(top)}:${Math.floor(bottom)}:${margin}`;
+  if (signature === this._lastCullSignature) return;
+  this._lastCullSignature = signature;
+
+  let changed = false;
+  const applyCulling = (container) => {
+    if (!container || !container.children) return;
+    for (let i = 0; i < container.children.length; i++) {
+      const child = container.children[i];
+      if (!child || !child.__inchlibType) continue;
+      const rowY = child.__rowY;
+      const rowHeight = child.__rowHeight || this.pixels_for_leaf;
+      const half = rowHeight / 2;
+      const visible = rowY + half >= top && rowY - half <= bottom;
+      if (child.visible !== visible) {
+        child.visible = visible;
+        child.renderable = visible;
+        changed = true;
+      }
+      if (child.__interactiveDefault !== undefined) {
+        child.interactive = visible && child.__interactiveDefault;
+      }
+    }
+  };
+
+  applyCulling(this.heatmap_layer);
+  applyCulling(this.highlighted_rows_layer);
+  applyCulling(this.header_layer);
+
+  if (changed) {
+    this.refresh();
+  }
+};
+
+InCHlib2.prototype._attach_scroll_listener = function () {
+  if (!this.settings.render_visible_only) return;
+  if (this.settings.use_tiled_heatmap) return;
+  const scrollParent = this._get_scroll_parent();
+  if (!scrollParent) return;
+  if (this._scrollParent === scrollParent && this._scrollListener) {
+    return;
+  }
+  this._detach_scroll_listener();
+  this._scrollParent = scrollParent;
+
+  this._scrollListener = () => this._schedule_heatmap_culling();
+  if (scrollParent === window) {
+    window.addEventListener("scroll", this._scrollListener, { passive: true });
+  } else {
+    scrollParent.addEventListener("scroll", this._scrollListener, {
+      passive: true,
+    });
+  }
+
+  this._resizeListener = () => this._schedule_heatmap_culling();
+  window.addEventListener("resize", this._resizeListener, { passive: true });
+};
+
+InCHlib2.prototype.request_viewport_update = function () {
+  if (this.settings.use_tiled_heatmap) {
+    this._update_visible_tiles();
+  }
+  this._schedule_heatmap_culling();
+  this._schedule_camera_update();
+};
+
+InCHlib2.prototype._detach_scroll_listener = function () {
+  if (!this._scrollListener) return;
+  if (this._scrollParent === window) {
+    window.removeEventListener("scroll", this._scrollListener);
+  } else if (this._scrollParent) {
+    this._scrollParent.removeEventListener("scroll", this._scrollListener);
+  }
+  if (this._resizeListener) {
+    window.removeEventListener("resize", this._resizeListener);
+  }
+  this._scrollListener = null;
+  this._resizeListener = null;
+  this._scrollParent = null;
 };
 
 
@@ -3736,6 +5140,7 @@ InCHlib2.prototype.highlight_rows = function (row_ids) {
     );
     self.highlighted_rows_layer.addChild(row);
     row.interactive = false;
+    row.__interactiveDefault = false;
   }
 
   //self.highlighted_rows_layer.draw();
@@ -3743,6 +5148,9 @@ InCHlib2.prototype.highlight_rows = function (row_ids) {
 
   self.settings.heatmap_colors = original_colors;
   self.settings.metadata_colors = original_metadata_colors;
+
+  self._schedule_heatmap_culling();
+  self._invalidate_lod();
 
   self.highlighted_rows_layer.on("click", function (evt) {
     self.heatmap_layer.fire("click");
@@ -3842,11 +5250,6 @@ InCHlib2.prototype.highlight_column_cluster = function (node_id) {
  */
 InCHlib2.prototype.unhighlight_cluster = function () {
   var self = this;
-  console.log(
-    "Unhighlight cluster",
-    self.last_highlighted_cluster,
-    self.row_cluster_group
-  );
   if (self.last_highlighted_cluster) {
     self._highlight_path(self.last_highlighted_cluster, "0x7a7a7a"); //  0x7a7a7a should we change to black 0x000000
     //self.dendrogram_layer.draw();
@@ -3952,7 +5355,7 @@ InCHlib2.prototype._draw_cluster_layer = function (path_id) {
   self.row_cluster_group.addChild(cluster_border_2);
 
   self.cluster_layer.addChild(self.row_cluster_group);
-  self.stage.addChild(self.cluster_layer);
+  self._add_to_camera(self.cluster_layer);
   moveToTop(rows_desc);
   moveToTop(self.navigation_layer);
   self.refresh();
@@ -4060,7 +5463,7 @@ InCHlib2.prototype._draw_column_cluster_layer = function (path_id) {
   self.column_cluster_group.addChild(cluster_border_2);
 
   self.cluster_layer.addChild(self.column_cluster_group);
-  self.stage.addChild(self.cluster_layer);
+  self._add_to_camera(self.cluster_layer);
   //self.cluster_layer.draw();
   moveToTop(self.navigation_layer);
 
@@ -4481,7 +5884,7 @@ InCHlib2.prototype._draw_vertical_path = function (
 
   path_group.addChild(path);
   path_group.addChild(path_rect);
-  path_group.isInteractive = true; //TODO NOT SURE WHTHER SHOULD BE INTERACTIVE
+  path_group.interactive = true;
   return path_group;
 };
 
@@ -5128,6 +6531,17 @@ InCHlib2.prototype._recolor_heatmap = function () {
 
   self._set_color_settings();
 
+  if (self.settings.use_tiled_heatmap) {
+    if (self.heatmap_tiles_layer) {
+      self.heatmap_tiles_layer.removeChildren();
+    }
+    self._draw_heatmap_tiles();
+    self._update_visible_tiles();
+    self._invalidate_lod();
+    self.refresh();
+    return;
+  }
+
   for (var rows of this.heatmap_layer.children) {
     for (var sprite of rows.children) {
       var col_index = sprite.column.split("_").pop();
@@ -5141,6 +6555,7 @@ InCHlib2.prototype._recolor_heatmap = function () {
       sprite.tint = color;
     }
   }
+  self._invalidate_lod();
   self.refresh();
 };
 
@@ -5154,7 +6569,12 @@ InCHlib2.prototype._color_scale_mouseover = function (color_scale, layer) {
   self.icon_tooltip = self.objects_ref.tooltip_label({ x: x, y: y + 25 });
 
   self.icon_tooltip.addChild(self.objects_ref.tooltip_tag({ fill: "#808080" }));
-  self.icon_tooltip.addChild(self.objects_ref.tooltip_text({ text: label }));
+  self.icon_tooltip.addChild(
+    self.objects_ref.tooltip_text({
+      text: label,
+      resolution: self._currentResolution || window.devicePixelRatio || 1,
+    })
+  );
 
   layer.addChild(self.icon_tooltip);
   moveToTop(self.icon_tooltip);
@@ -5204,7 +6624,12 @@ InCHlib2.prototype._icon_mouseover = function (icon, icon_overlay, layer) {
     });
 
     self.icon_tooltip.addChild(self.objects_ref.tooltip_tag({}));
-    self.icon_tooltip.addChild(self.objects_ref.tooltip_text({ text: label }));
+    self.icon_tooltip.addChild(
+      self.objects_ref.tooltip_text({
+        text: label,
+        resolution: self._currentResolution || window.devicePixelRatio || 1,
+      })
+    );
     layer.addChild(self.icon_tooltip);
     console.log(self.icon_tooltip);
   }
@@ -5402,7 +6827,6 @@ InCHlib2.prototype._get_object_ids = function (node_id) {
 
 InCHlib2.prototype._collect_object_ids = function (node_id) {
   var self = this;
-  console.log(node_id, self.data.nodes);
   if (self.data.nodes[node_id]["left_child"] !== undefined) {
     self._collect_object_ids(self.data.nodes[node_id]["left_child"]);
     self._collect_object_ids(self.data.nodes[node_id]["right_child"]);
@@ -5454,12 +6878,12 @@ InCHlib2.prototype._is_number = function (n) {
 
 InCHlib2.prototype._row_mouseenter = function (evt) {
   var self = this;
-  var row_id = evt.target.name;
-  console.log("_row_mouseenter");
+  var target = evt.currentTarget || evt.target;
+  var row_id = target?.name;
 
   //var visible = self._get_visible_count();
 
-  if (evt.target.parent?.id !== "column_metadata") {
+  if (target?.metadata?.class !== "column_metadata") {
     self.highlighted_row = row_id;
     var y = self.leaves_y_coordinates[row_id];
     var x = self.heatmap_distance;
@@ -5478,10 +6902,9 @@ InCHlib2.prototype._row_mouseenter = function (evt) {
     });
 
     //self.heatmap_overlay.addChild(self.row_overlay);
-    console.log(self.row_overlay);
     //self.row_overlay.render(self.app.renderer)
     
-    this.app.stage.addChild(self.row_overlay);
+    this._add_to_camera(self.row_overlay);
     this.refresh();
 
 
@@ -5500,18 +6923,67 @@ InCHlib2.prototype._row_mouseleave = function (evt) {
   this.events.row_onmouseout(evt);
 }
 
+InCHlib2.prototype._schedule_col_label = function (evt) {
+  var self = this;
+  if (!evt) return;
+  const target = evt.currentTarget || evt.target;
+  if (!target) return;
+  const global =
+    evt.data && evt.data.global
+      ? evt.data.global
+      : evt.globalX !== undefined
+        ? { x: evt.globalX, y: evt.globalY }
+        : null;
+  if (!global) return;
+
+  self._pendingColLabelEvent = {
+    target: target,
+    globalX: global.x,
+    globalY: global.y,
+  };
+  if (self._colLabelPending) return;
+  self._colLabelPending = true;
+
+  requestAnimationFrame(function () {
+    self._colLabelPending = false;
+    if (!self._pendingColLabelEvent) return;
+    self._draw_col_label(self._pendingColLabelEvent);
+  });
+};
+
 InCHlib2.prototype._draw_col_label = function (evt) {
   var self = this;
-  var x_loc =
-    Math.floor(
-      (evt.globalX - evt.target.children[0].x) / evt.target.children[0].width
-    );
+  if (!evt || !evt.target || !evt.target.children || !evt.target.children[0]) {
+    return;
+  }
+  var row = evt.target;
+  var cells = row.__cellSprites;
+  var globalX =
+    evt.globalX !== undefined
+      ? evt.globalX
+      : evt.data && evt.data.global
+        ? evt.data.global.x
+        : undefined;
+  var globalY =
+    evt.globalY !== undefined
+      ? evt.globalY
+      : evt.data && evt.data.global
+        ? evt.data.global.y
+        : undefined;
+  if (globalX === undefined || globalY === undefined) return;
+  var localPoint = row.toLocal(new PIXI.Point(globalX, globalY));
+  var startX =
+    row.__cellStartX !== undefined ? row.__cellStartX : row.children[0].x;
+  var cellWidth =
+    row.__cellWidth ||
+    row.children[0].width ||
+    self.pixels_for_dimension ||
+    1;
+  var x_loc = Math.floor((localPoint.x - startX) / cellWidth);
   if (x_loc < 0) {
-    console.log(
-      "Something is wrong index is less than 0",
-      x_loc,
-      evt.target.children
-    );
+    return;
+  }
+  if (cells && (x_loc < 0 || x_loc >= cells.length)) {
     return;
   }
 
@@ -5519,29 +6991,28 @@ InCHlib2.prototype._draw_col_label = function (evt) {
     this.currentColumn &&
     this.highlighted_row &&
     (Number)(this.currentColumn) === x_loc &&
-    (String)(this.highlighted_row) === (String)(evt.target.name)
+    (String)(this.highlighted_row) === (String)(row.name)
   ){
-     console.log("Equal");
-return; 
+    return; 
   }
      
-
-    console.log(
-      this.currentColumn,
-      this.highlighted_row,
-      x_loc,
-      evt.target.name
-    );
   this.currentColumn = x_loc;
    
 
-  var current_data = evt.target.children[x_loc];
+  var current_data = cells ? cells[x_loc] : row.children[x_loc];
+  if (!current_data) return;
   //var attrs = evt.target.attrs;
 
-  var x = current_data.x;
+  var cellGlobal = row.toGlobal(
+    new PIXI.Point(current_data.x, current_data.y)
+  );
+  var overlayPoint = self.heatmap_overlay
+    ? self.heatmap_overlay.toLocal(cellGlobal)
+    : cellGlobal;
+  var x = overlayPoint.x;
 
   //var y = points[1] - 0.5 * self.pixels_for_leaf;
-  var y = current_data.y;
+  var y = overlayPoint.y;
   var column = current_data.column.split("_");
   var header_type2value = {
     d: self.heatmap_header[column[1]],
@@ -5554,9 +7025,15 @@ return;
   }
 
   var value = current_data.value;
+  var formatValue = function (raw) {
+    if (raw === null || raw === undefined) return raw;
+    var num = typeof raw === "number" ? raw : parseFloat(raw);
+    if (!Number.isFinite(num)) return raw;
+    var rounded = Math.round(num * 100) / 100;
+    return rounded.toString();
+  };
 
   var header = header_type2value[column[0]];
-  console.log(header, self.last_column);
 
   if (header !== self.last_column) {
     if(self.column_overlay)
@@ -5584,7 +7061,7 @@ return;
   var row_id = current_data.row_id;
 
   if (header !== undefined) {
-    value = ["Col: " + header, "Val: " + value].join("\n");
+    value = ["Col: " + header, "Val: " + formatValue(value)].join("\n");
   }
 
   if (row_id !== undefined) {
@@ -5598,7 +7075,11 @@ return;
 
   tooltip.addChild(
     self.objects_ref.tooltip_tag({ pointerDirection: "up", fill: "#f3ca20" }),
-    self.objects_ref.tooltip_text({ text: value, fill: "#000000" })
+    self.objects_ref.tooltip_text({
+      text: value,
+      fill: "#000000",
+      resolution: self._currentResolution || window.devicePixelRatio || 1,
+    })
   );
   //self.tooltip?.parent.removeChild(self.tooltip); 
   self.tooltip?.destroy()
@@ -5616,6 +7097,20 @@ InCHlib2.prototype._unprefix = function (prefixed) {
   var self = this;
   //console.log(prefixed);
   return prefixed.split(self.settings.target + "#")[1];
+};
+
+InCHlib2.prototype.cleanup = function () {
+  if (this._cameraHandlers && this.app && this.app.view) {
+    this.app.view.removeEventListener("wheel", this._cameraHandlers.onWheel);
+    this.app.view.removeEventListener(
+      "pointerdown",
+      this._cameraHandlers.onPointerDown
+    );
+    window.removeEventListener("pointermove", this._cameraHandlers.onPointerMove);
+    window.removeEventListener("pointerup", this._cameraHandlers.onPointerUp);
+  }
+  this._cameraHandlers = null;
+  this._cameraEventsAttached = false;
 };
 
 InCHlib2.prototype._prefix = function (nonprefixed) {
@@ -5659,6 +7154,7 @@ InCHlib2.prototype._get_visible_count = function () {
 InCHlib2.prototype.update_settings = function (settings_object) {
   var self = this;
   var navigation_toggle = self.settings.navigation_toggle;
+  var prevRenderVisible = self.settings.render_visible_only;
   $.extend(self.settings, settings_object);
 
   if (settings_object.navigation_toggle !== undefined) {
@@ -5667,6 +7163,12 @@ InCHlib2.prototype.update_settings = function (settings_object) {
       self.settings.navigation_toggle,
       settings_object.navigation_toggle
     );
+  }
+  if (prevRenderVisible && !self.settings.render_visible_only) {
+    self._detach_scroll_listener();
+  } else if (!prevRenderVisible && self.settings.render_visible_only) {
+    self._attach_scroll_listener();
+    self._schedule_heatmap_culling();
   }
 };
 
@@ -5687,6 +7189,11 @@ InCHlib2.prototype.redraw_heatmap = function () {
   console.log("Redrawing", this);
   this.stage.removeChildren();
   var self = this;
+  self._label_nodes = { row_ids: [], column_headers: [], cell_values: [] };
+  self._label_visibility_state = null;
+  self._rowIdsCreated = false;
+  self._columnHeadersCreated = false;
+  self._invalidate_lod();
   /*
   self._delete_layers([
     self.heatmap_layer,

@@ -20,7 +20,6 @@ import {
 import EnrichmentTable from "../enrichment-table-new/index.jsx";
 import { connect, useDispatch } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { LoadingPage } from "../loading-page";
 import { throttle } from "lodash";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
@@ -50,6 +49,7 @@ const HeatMap = ({
   datasetScores = null,
   datasets = null,
   isMultiDataset = false,
+  inchlibConstructor = null,
 }) => {
   const dispatch = useDispatch();
   const [selectedGenes, setSelectedGenes] = useState([]);
@@ -61,7 +61,6 @@ const HeatMap = ({
   const heatmapContainerRef = useRef(null);
   const heatmapRef = useRef(null);
   const inchlibInstance = useRef(null);
-  const transformWrapperRef = useRef(null);
   const resizeObserverRef = useRef(null);
   const instanceIdRef = useRef(0);
   const isMountedRef = useRef(false);
@@ -360,8 +359,7 @@ const HeatMap = ({
         clearTimeout(gcTimeoutRef.current);
         gcTimeoutRef.current = null;
       }
-      transformWrapperRef.current?.resetTransform();
-      transformWrapperRef.current = null;
+      inchlibInstance.current?.resetCamera?.();
     };
   }, []);
 
@@ -501,76 +499,45 @@ const keyedData = useMemo(() => {
   }, [forceGarbageCollection]);
 
   const handleResetZoom = useCallback(() => {
-    transformWrapperRef.current?.resetTransform();
+    inchlibInstance.current?.resetCamera?.();
   }, []);
 
   const handleFitToScreen = useCallback(() => {
-    const container = heatmapContainerRef.current;
-    const heatmap = heatmapRef.current;
-
-    if (container && heatmap && transformWrapperRef.current) {
-      // Wait for next frame to ensure DOM is updated
-      requestAnimationFrame(() => {
-        if (!isMountedRef.current) return;
-        try {
-          const containerWidth = container.offsetWidth - 50;
-          const heatmapWidth = heatmap.offsetWidth;
-          
-          // Ensure we have valid dimensions
-          if (containerWidth > 0 && heatmapWidth > 0) {
-            const scale = Math.min(containerWidth / heatmapWidth, 1); // Don't scale up beyond 100%
-            transformWrapperRef.current?.setTransform(0, 0, scale);
-          } else {
-            // Retry after a short delay if dimensions aren't ready
-            if (fitToScreenRetryTimeoutRef.current) {
-              clearTimeout(fitToScreenRetryTimeoutRef.current);
-            }
-            fitToScreenRetryTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current) {
-                handleFitToScreen();
-              }
-            }, 100);
-          }
-        } catch (error) {
-          console.error('Error in handleFitToScreen:', error);
-        }
-      });
-    }
+    const container =
+      heatmapRef.current?.closest(`.${styles.mainContent}`) ||
+      heatmapContainerRef.current;
+    if (!container || !inchlibInstance.current) return;
+    requestAnimationFrame(() => {
+      if (!isMountedRef.current) return;
+      const width = container.clientWidth || container.offsetWidth;
+      const height = container.clientHeight || container.offsetHeight;
+      if (width > 0 && height > 0) {
+        inchlibInstance.current.fitToScreen?.(width, height);
+      }
+    });
   }, []);
 
   const handleManualFitToScreen = useCallback(() => {
-    // Force a fit even if dimensions seem invalid
-    const container = heatmapContainerRef.current;
-    const heatmap = heatmapRef.current;
-
-    if (container && heatmap && transformWrapperRef.current) {
-      // Wait a bit longer for manual fit to ensure everything is ready
-      if (manualFitToScreenTimeoutRef.current) {
-        clearTimeout(manualFitToScreenTimeoutRef.current);
-      }
-      manualFitToScreenTimeoutRef.current = setTimeout(() => {
-        if (!isMountedRef.current) return;
-        try {
-          const containerWidth = container.offsetWidth - 50;
-          const heatmapWidth = heatmap.offsetWidth;
-          
-          if (containerWidth > 0 && heatmapWidth > 0) {
-            const scale = Math.min(containerWidth / heatmapWidth, 1);
-            transformWrapperRef.current?.setTransform(0, 0, scale);
-          } else {
-            // If dimensions are still invalid, try with a default scale
-            transformWrapperRef.current?.setTransform(0, 0, 0.5);
-          }
-        } catch (error) {
-          console.error('Error in manual fit to screen:', error);
-        }
-      }, 150);
+    const container =
+      heatmapRef.current?.closest(`.${styles.mainContent}`) ||
+      heatmapContainerRef.current;
+    if (!container || !inchlibInstance.current) return;
+    if (manualFitToScreenTimeoutRef.current) {
+      clearTimeout(manualFitToScreenTimeoutRef.current);
     }
+    manualFitToScreenTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      const width = container.clientWidth || container.offsetWidth;
+      const height = container.clientHeight || container.offsetHeight;
+      if (width > 0 && height > 0) {
+        inchlibInstance.current.fitToScreen?.(width, height);
+      }
+    }, 150);
   }, []);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.updateCellColors(
+      inchlibInstance.current.updateCellColors?.(
         inchlibSettings.color_scale.color
       );
     }
@@ -578,7 +545,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setDendrogramWidth(
+      inchlibInstance.current.setDendrogramWidth?.(
         inchlibSettings.max_dendrogram_width
       );
     }
@@ -586,7 +553,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.updateCellColorsPercentile({
+      inchlibInstance.current.updateCellColorsPercentile?.({
         minValue: inchlibSettings.color_percentile_min,
         maxValue: inchlibSettings.color_percentile_max,
       });
@@ -599,7 +566,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setRowIdsVisibility(
+      inchlibInstance.current.setRowIdsVisibility?.(
         asBool(inchlibSettings.draw_row_ids)
       );
     }
@@ -607,7 +574,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setColumnIdsVisibility(
+      inchlibInstance.current.setColumnIdsVisibility?.(
         asBool(inchlibSettings.show_column_names)
       );
     }
@@ -615,7 +582,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setCellValueVisibility(
+      inchlibInstance.current.setCellValueVisibility?.(
         asBool(inchlibSettings.show_cell_values)
       );
     }
@@ -625,14 +592,14 @@ const keyedData = useMemo(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       const ratio = Number(inchlibSettings.width_ratio);
       if (Number.isFinite(ratio)) {
-        inchlibInstance.current.setDendrogramWidth(ratio);
+        inchlibInstance.current.setDendrogramWidth?.(ratio);
       }
     }
   }, [inchlibSettings.width_ratio]);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setDendrogramVisibility(
+      inchlibInstance.current.setDendrogramVisibility?.(
         asBool(inchlibSettings.show_row_dendrogram)
       );
     }
@@ -640,7 +607,7 @@ const keyedData = useMemo(() => {
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.setColumnDendrogramVisibility(
+      inchlibInstance.current.setColumnDendrogramVisibility?.(
         asBool(inchlibSettings.show_column_dendrogram)
       );
     }
@@ -650,7 +617,7 @@ const keyedData = useMemo(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
       const lineWidth = Number(inchlibSettings.dendrogram_line_width);
       if (Number.isFinite(lineWidth)) {
-        inchlibInstance.current.updateDendrogramLineWidth(lineWidth);
+        inchlibInstance.current.updateDendrogramLineWidth?.(lineWidth);
       }
     }
   }, [inchlibSettings.dendrogram_line_width]);
@@ -680,24 +647,46 @@ const keyedData = useMemo(() => {
     }
     
     // Create new InCHlib instance
-    const inchlib = new InCHlib({
+    const InchlibCtor = inchlibConstructor || InCHlib;
+    const isWebGL = Boolean(inchlibConstructor);
+    const rowCount = graphData?.data?.nodes?.length ?? 0;
+    const isLargeHeatmap = rowCount > 120;
+    const useLod = rowCount > 350;
+    const minRowHeight =
+      rowCount > 2000 ? 0.25 : rowCount > 750 ? 0.5 : 1;
+    const maxHeatmapHeight = Math.max(
+      heatmapRef.current?.clientHeight || 0,
+      800
+    );
+    const inchlib = new InchlibCtor({
       target: containerId,
       metadata: false,
       column_metadata: true,
       heatmap_header: true,
       column_dendrogram: true,
-      max_height: heatmapWidth,
+      max_height: maxHeatmapHeight,
       dendrogram: true,
       width: heatmapWidth,
       heatmap_colors: inchlibSettings.color_scale.color ?? "BuWhRd",
       metadata_colors: "Reds",
       independent_columns: false,
-      draw_row_ids: (graphData?.data?.nodes?.length ?? 0) > 120 ? false : true,
+      draw_row_ids: isWebGL ? true : !isLargeHeatmap,
       heatmap_part_width: 0.95,
       max_column_width: 20,
       max_row_height: 20,
+      min_row_height: minRowHeight,
       heatmap: false,
-      fixed_row_id_size: (graphData?.data?.nodes?.length ?? 0) > 120 ? 0 : 14,
+      fixed_row_id_size: isWebGL ? 12 : isLargeHeatmap ? 0 : 14,
+      row_id_min_zoom: isLargeHeatmap ? 1.1 : 1,
+      column_header_min_zoom: isLargeHeatmap ? 1.0 : 1,
+      cell_value_min_zoom: isLargeHeatmap ? 1.3 : 1,
+      max_zoom_resolution: 4,
+      use_tiled_heatmap: true,
+      tile_rows: 64,
+      tile_cols: 64,
+      camera_min_scale: 0.1,
+      camera_max_scale: 8,
+      lod_enabled: isWebGL && useLod,
     });
     
     inchlibInstance.current = inchlib;
@@ -740,34 +729,44 @@ const keyedData = useMemo(() => {
     inchlib.update_settings({
       width: heatmapWidth,
       heatmap: true,
-      max_height: heatmapWidth,
+      max_height: maxHeatmapHeight,
       heatmap_header: true,
     });
     inchlib.draw();
+    if (heatmapRef.current && inchlib.settings?.height) {
+      heatmapRef.current.style.height = `${inchlib.settings.height}px`;
+      heatmapRef.current.style.minHeight = "0px";
+    }
+    inchlib.request_viewport_update?.();
 
     // Apply same order if needed
     if (correlationSettings?.row_col_sameorder) {
-      let coordinates = Object.entries(inchlib.leaves_y_coordinates).sort(
-        (a, b) => a[1] - b[1]
-      );
-
-      const valueKeyMap = new Map(
-        Object.entries(inchlib.objects2leaves).map(([k, v]) => [v, k])
-      );
-
-      const columnOrder = coordinates
-        .map(([key]) => valueKeyMap.get(key))
-//        .reverse()
-        .map((gene) =>
-          graphData.data.feature_names.findIndex((f) => f === gene)
+      // Check if properties exist before calling Object.entries
+      if (inchlib.leaves_y_coordinates && inchlib.objects2leaves) {
+        let coordinates = Object.entries(inchlib.leaves_y_coordinates).sort(
+          (a, b) => a[1] - b[1]
         );
 
-      inchlib.update_settings({
-        columns_order: columnOrder.reverse(),
-        column_dendrogram: true,
-        heatmap: true,
-      });
-      inchlib.redraw();
+        const valueKeyMap = new Map(
+          Object.entries(inchlib.objects2leaves).map(([k, v]) => [v, k])
+        );
+
+        const columnOrder = coordinates
+          .map(([key]) => valueKeyMap.get(key))
+//        .reverse()
+          .map((gene) =>
+            graphData.data.feature_names.findIndex((f) => f === gene)
+          );
+
+        inchlib.update_settings({
+          columns_order: columnOrder.reverse(),
+          column_dendrogram: true,
+          heatmap: true,
+        });
+        inchlib.redraw();
+      } else {
+        console.warn('InCHlib properties not yet initialized, skipping same order application');
+      }
     }
     
     if (isMountedRef.current && currentInstanceId === instanceIdRef.current) {
@@ -786,7 +785,14 @@ const keyedData = useMemo(() => {
         destroyInchlibInstance();
       }
     };
-  }, [graphData, correlationSettings?.row_col_sameorder, heatmapWidth, destroyInchlibInstance, handleFitToScreen]);
+  }, [
+    graphData,
+    correlationSettings?.row_col_sameorder,
+    heatmapWidth,
+    destroyInchlibInstance,
+    handleFitToScreen,
+    inchlibConstructor,
+  ]);
 
   // Resize observer
   useEffect(() => {
@@ -844,12 +850,6 @@ const keyedData = useMemo(() => {
       if (gcTimeoutRef.current) {
         clearTimeout(gcTimeoutRef.current);
         gcTimeoutRef.current = null;
-      }
-      
-      // Reset transform wrapper
-      if (transformWrapperRef.current) {
-        transformWrapperRef.current.resetTransform();
-        transformWrapperRef.current = null;
       }
       
       // Clear all refs
@@ -984,42 +984,26 @@ const keyedData = useMemo(() => {
             style={{ display: selectedView === 0 ? "flex" : "none" }}
           >
             <div
-              className={styles.mainContent}
+              className={styles.scaledWrapper}
               style={{
                 display: "block",
                 width: "100%",
                 overflow: "auto",
                 marginBottom: "10px",
+                position: "relative",
+                height: "auto",
               }}
             >
-              <TransformWrapper
-                key="fixed-wrapper"
-                initialScale={1}
-                minScale={0.125}
-                maxScale={4}
-                initialPositionX={0}
-                initialPositionY={0}
-                limitToBounds={false}
-                ref={transformWrapperRef}
-                wheel={{ step: 0.1 }}
-                doubleClick={{ disabled: true }}
-                pinch={{ step: 0.1 }}
-                zoomAnimation={{ disabled: true }}
-                className={styles.transformWrapper}
-              >
-                <TransformComponent>
-                  <div
-                    id={`heatmap-${instanceIdRef.current}`}
-                    style={{
-                      height: "calc(100vh + 100px)",
-                      minHeight: "800px",
-                      marginBottom: "10px",
-                    }}
-                    ref={heatmapRef}
-                    onContextMenu={handleHeatmapContextMenu}
-                  ></div>
-                </TransformComponent>
-              </TransformWrapper>
+              <div
+                id={`heatmap-${instanceIdRef.current}`}
+                style={{
+                  marginBottom: "10px",
+                  height: "auto",
+                  minHeight: "0px",
+                }}
+                ref={heatmapRef}
+                onContextMenu={handleHeatmapContextMenu}
+              ></div>
             </div>
             
             <div

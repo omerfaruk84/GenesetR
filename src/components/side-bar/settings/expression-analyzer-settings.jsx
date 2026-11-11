@@ -9,7 +9,7 @@ import {
   TextArea,
 } from "@oliasoft-open-source/react-ui-library";
 import { expressionanalyzerSettingsChanged } from "../../../store/settings/expression-analyzer-settings";
-import { get } from "idb-keyval";
+import { get } from "../../../store/safeIdb";
 import { ExpressionAnalyzerSettingsTypes } from "./enums";
 import styles from "./settings.module.scss";
 import { runCalculation } from "../../../store/results";

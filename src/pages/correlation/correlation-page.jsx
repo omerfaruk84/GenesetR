@@ -69,7 +69,14 @@ const getSignificantGenes = (data, trimThreshold) => {
 
 
 
-const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispatch, calcResults }) => {
+const CorrelationPage = ({
+  corrResults,
+  correlationSettings,
+  coreSettings,
+  dispatch,
+  calcResults,
+  inchlibConstructor,
+}) => {
   const [filteredCorrResults, setFilteredCorrResults] = useState(null);
   const [trimStats, setTrimStats] = useState(null);
   const [isFilteringInProgress, setIsFilteringInProgress] = useState(false);
@@ -474,6 +481,7 @@ const CorrelationPage = ({ corrResults, correlationSettings, coreSettings, dispa
                 datasetScores={datasetScores}
                 datasets={datasets}
                 isMultiDataset={isMultiDataset}
+                inchlibConstructor={inchlibConstructor}
               />
             ) : (
               <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>

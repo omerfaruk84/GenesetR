@@ -20,7 +20,7 @@ import {
 } from "../../../store/settings/gene-regulation-enhanced-settings";
 import { GeneRegulationEnhancedSettingsTypes } from "./enums";
 import styles from "./settings.module.scss";
-import { set, get } from "idb-keyval";
+import { set, get } from "../../../store/safeIdb";
 import { updateGeneLists, fetchWholeGenomeDatasets } from "../../../store/api";
 import { runCalculation } from "../../../store/results";
 import { CoreSettingsTypes } from "./enums";

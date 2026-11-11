@@ -179,7 +179,9 @@ const DatasetSelector = forwardRef(
     wholeGenomeOnly = false,
   }, ref, onlyMain) => {
     const location = useLocation();
-    const isCorrelationModule = location.pathname === ROUTES.CORRELATION;
+    const isCorrelationModule =
+      location.pathname === ROUTES.CORRELATION ||
+      location.pathname === ROUTES.CORRELATION_WEBGL;
     const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
     const isDeregulatedModule = location.pathname === ROUTES.DEREGULATED_GENES;
     const isGeneSignatureModule = location.pathname === ROUTES.GENESIGNATURE;
@@ -572,8 +574,9 @@ const DatasetSelector = forwardRef(
     useEffect(() => {
       if (
         location.pathname === ROUTES.CORRELATION ||
+        location.pathname === ROUTES.CORRELATION_WEBGL ||
         location.pathname === ROUTES.HEATMAP ||
-        location.pathname === ROUTES.GENE_REGULATION||
+        location.pathname === ROUTES.GENE_REGULATION ||
         location.pathname === ROUTES.EXPRESSIONANALYZER || 
         location.pathname === ROUTES.GENESIGNATURE
       ) {

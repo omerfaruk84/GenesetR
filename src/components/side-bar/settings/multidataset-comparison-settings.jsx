@@ -7,7 +7,7 @@ import {
   TextArea,
 } from "@oliasoft-open-source/react-ui-library";
 import { multidatasetComparisonSettingsChanged } from "../../../store/settings/multidataset-comparison-settings";
-import { get } from "idb-keyval";
+import { get } from "../../../store/safeIdb";
 import { MultiDatasetComparisonSettingsTypes } from "./enums";
 import { useLocation } from "react-router-dom";
 import { ROUTES } from "../../../common/routes";
