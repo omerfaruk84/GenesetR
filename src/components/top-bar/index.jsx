@@ -19,6 +19,17 @@ import styles from "./top-bar.module.scss";
 import heatmapicon from "../../common/images/heatmap.png";
 import clusteringicon from "../../common/images/clustering.png";
 //import generegicon from "../../common/images/generegulation.png";
+// Keep in sync with .topBar max-width in top-bar.module.scss
+const MAX_BAR_WIDTH = 1760;
+
+// Approximate rendered width of a nav link whose label may wrap onto two lines.
+const estimateLinkWidth = (label) => {
+  const text = String(label || "");
+  const longestWord = text.split(/\s+/).reduce((m, word) => Math.max(m, word.length), 0);
+  const chars = Math.max(longestWord, Math.ceil(text.length / 2));
+  return Math.max(58, Math.round(chars * 6.6 + 24));
+};
+
 const TopBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,7 +45,7 @@ const TopBar = () => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const navLinks = [
+  const navLinks = useMemo(() => [
     {
       icon: () => <FaHome size={"2em"} />,
       name: TabNames.HOME,
@@ -129,17 +140,30 @@ const TopBar = () => {
       name: TabNames.ABOUT,
       toLink: ROUTES.ABOUTUS,
     },
-  ];
+  ], []);
 
+  // How many links fit: estimate each link's width from its label (labels wrap
+  // onto two lines at spaces, see top-bar.module.scss) and show as many as fit
+  // next to the logo; the rest go into the "More" menu. Fixed breakpoints used
+  // to clip labels ("Ho", "Corre", ...) on ordinary desktop widths.
   const visibleCount = useMemo(() => {
     const w = viewportWidth;
     if (w <= 600) return 0;
-    if (w <= 760) return 4;
-    if (w <= 900) return 6;
-    if (w <= 1100) return 9;
-    if (w <= 1280) return 12;
-    return navLinks.length;
-  }, [viewportWidth, navLinks.length]);
+    const LOGO_AND_MARGINS = 230;
+    const MORE_BUTTON = 70;
+    const available = Math.min(w, MAX_BAR_WIDTH) - LOGO_AND_MARGINS;
+    const widths = navLinks.map((l) => estimateLinkWidth(l.name));
+    const total = widths.reduce((a, b) => a + b, 0);
+    if (total <= available) return navLinks.length;
+    let used = MORE_BUTTON;
+    let count = 0;
+    for (const width of widths) {
+      if (used + width > available) break;
+      used += width;
+      count += 1;
+    }
+    return count;
+  }, [viewportWidth, navLinks]);
 
   const visibleNavLinks = useMemo(
     () => navLinks.slice(0, Math.min(navLinks.length, visibleCount)),
