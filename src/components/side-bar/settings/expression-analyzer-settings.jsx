@@ -50,7 +50,6 @@ const ExpressionAnalyzerSettings = ({
         await updateGeneLists(cellline);
 
         const perturbVal = await get("geneList_" + cellline + "_perturb");
-        console.log("perturbVal", perturbVal);
         addToCheckSet(perturbVal, check);
 
         const genesVal = await get("geneList_" + cellline + "_genes");

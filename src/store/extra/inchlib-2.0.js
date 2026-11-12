@@ -237,7 +237,6 @@ function InCHlib2(settings) {
     PIXI.BaseTexture.from(sprites),
     iconsData
   );
-  console.log(self.spritesheet);
   /**
    * Default values for the settings
    * @name InCHlib2#settings
@@ -784,7 +783,7 @@ function InCHlib2(settings) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
-    return PIXI.Texture.from(canvas);
+    return self._own_texture(PIXI.Texture.from(canvas));
   }
 
   // Extend PIXI.Sprite to include fillLinearGradientColorStops
@@ -970,7 +969,7 @@ function InCHlib2(settings) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Convert the canvas to a PIXI texture and then to a sprite
-      let texture = PIXI.Texture.from(canvas);
+      let texture = self._own_texture(PIXI.Texture.from(canvas));
       let sprite = new PIXI.Sprite(texture);
 
       sprite.x = options.x || 0;
@@ -1006,7 +1005,7 @@ function InCHlib2(settings) {
       ctx.fillRect(0, 0, size, size);
 
       // Create a PIXI.Texture from the canvas
-      const texture = PIXI.Texture.from(canvas);
+      const texture = self._own_texture(PIXI.Texture.from(canvas));
 
       return texture;
     },
@@ -1309,6 +1308,21 @@ InCHlib2.prototype._ensure_app = function () {
   });
   self._baseResolution = self._baseResolution || self.app.renderer.resolution;
   self._currentResolution = self.app.renderer.resolution;
+
+  // PIXI stores the compiled WebGL program of a shader on the (often shared,
+  // globally cached) program object, keyed by context, and never removes it.
+  // A WebGL program keeps its context - and the context its canvas - alive,
+  // so the shaders compiled for this renderer are recorded for cleanup().
+  var shaderSystem = self.app.renderer.shader;
+  if (shaderSystem && typeof shaderSystem.generateProgram === "function") {
+    var compiledShaders = [];
+    var generateProgram = shaderSystem.generateProgram;
+    shaderSystem.generateProgram = function (shader) {
+      compiledShaders.push(shader);
+      return generateProgram.call(this, shader);
+    };
+    self._compiledShaders = compiledShaders;
+  }
 
   if (self.target_element && self.target_element[0]) {
     var targetEl = self.target_element[0];
@@ -4225,6 +4239,8 @@ InCHlib2.prototype._get_row_id_size = function () {
 
     self.row_id_size = self.settings.fixed_row_id_size;
     self.right_margin = 20 + test.width;
+    // Measuring only: release the canvas and the cached texture.
+    test.destroy(true);
 
     if (this.right_margin < 100) {
       self.right_margin = 100;
@@ -4730,7 +4746,6 @@ InCHlib2.prototype._draw_help = function () {
   });
 */
   self.spritesheet.parse();
-  console.log(self.spritesheet);
   var help_icon = new PIXI.Sprite(self.spritesheet.textures.help);
   help_icon.x = self.settings.width - 63;
   help_icon.y = 40;
@@ -7099,6 +7114,21 @@ InCHlib2.prototype._unprefix = function (prefixed) {
   return prefixed.split(self.settings.target + "#")[1];
 };
 
+function inchlibNoop() {}
+
+/**
+ * PIXI.Texture.from(canvas) registers the texture in PIXI's global texture
+ * cache, where it lives until it is destroyed explicitly. Textures created by
+ * an instance are recorded here so that cleanup() can release them.
+ */
+InCHlib2.prototype._own_texture = function (texture) {
+  if (texture) {
+    if (!this._ownedTextures) this._ownedTextures = [];
+    this._ownedTextures.push(texture);
+  }
+  return texture;
+};
+
 InCHlib2.prototype.cleanup = function () {
   if (this._cameraHandlers && this.app && this.app.view) {
     this.app.view.removeEventListener("wheel", this._cameraHandlers.onWheel);
@@ -7111,6 +7141,241 @@ InCHlib2.prototype.cleanup = function () {
   }
   this._cameraHandlers = null;
   this._cameraEventsAttached = false;
+
+  if (this._destroyed) return;
+  this._destroyed = true;
+
+  // The window scroll/resize listeners keep the whole instance (data, sprites,
+  // textures) alive for the lifetime of the page if they are not removed.
+  try {
+    this._detach_scroll_listener();
+  } catch (e) {
+    /* nothing to detach */
+  }
+  [this._zoomResolutionTimer, this.timer].forEach(function (timer) {
+    if (timer) clearTimeout(timer);
+  });
+  this._zoomResolutionTimer = null;
+  this.timer = null;
+
+  if (this.events) {
+    Object.keys(this.events).forEach((key) => {
+      this.events[key] = function () {};
+    });
+  }
+  if (this.target_element && this.target_element.length) {
+    try {
+      this.target_element.find("*").off();
+      this.target_element.off();
+    } catch (e) {
+      /* jQuery handlers are best effort */
+    }
+  }
+
+  var app = this.app;
+  var lodTexture = this._lodTexture;
+  var spritesheet = this.spritesheet;
+  var ownedTextures = this._ownedTextures || [];
+  var compiledShaders = this._compiledShaders || [];
+
+  // Callbacks that were already queued (requestAnimationFrame) may still run:
+  // every method becomes a no-op so they cannot touch the destroyed renderer
+  // or schedule new work.
+  for (var name in InCHlib2.prototype) {
+    if (typeof InCHlib2.prototype[name] === "function") {
+      this[name] = inchlibNoop;
+    }
+  }
+
+  // Drop everything the instance still holds (data, layers, sprites). The
+  // settings stay: callbacks that are already queued may still read them.
+  Object.keys(this).forEach((key) => {
+    if (key === "settings" || key === "_destroyed") return;
+    var value = this[key];
+    if (value !== null && typeof value === "object") this[key] = null;
+  });
+
+  var sheetBase = spritesheet && spritesheet.baseTexture;
+  var destroyPixi = function () {
+    try {
+      if (lodTexture && lodTexture.destroy) lodTexture.destroy(true);
+    } catch (e) {
+      /* already destroyed */
+    }
+    if (!app) {
+      ownedTextures.forEach(function (texture) {
+        try {
+          if (texture && texture.baseTexture) texture.destroy(true);
+        } catch (e) {
+          /* already destroyed */
+        }
+      });
+      ownedTextures.length = 0;
+      return;
+    }
+    try {
+      // Textures built from off-screen canvases are registered in PIXI's global
+      // texture cache and are never released unless destroyed explicitly. The
+      // sprite sheet image is shared between instances and is left alone.
+      var releaseTextures = function (node) {
+        if (!node) return;
+        var texture = node.texture;
+        if (
+          texture &&
+          !(node instanceof PIXI.Text) &&
+          texture !== PIXI.Texture.WHITE &&
+          texture !== PIXI.Texture.EMPTY &&
+          texture.baseTexture &&
+          texture.baseTexture !== sheetBase
+        ) {
+          try {
+            texture.destroy(true);
+          } catch (e) {
+            /* already destroyed */
+          }
+        }
+        if (node.children && node.children.length) {
+          node.children.slice().forEach(releaseTextures);
+        }
+      };
+      releaseTextures(app.stage);
+    } catch (e) {
+      console.warn("InCHlib2: texture release failed", e);
+    }
+    try {
+      // Every texture a renderer has uploaded keeps a 'dispose' listener that
+      // points back at the renderer's texture system (and through it at the
+      // WebGL context and its canvas). Shared textures such as
+      // PIXI.Texture.WHITE and the icon sheet outlive the renderer, so the
+      // listeners have to be removed or every heat map ever drawn stays in
+      // memory.
+      var textureSystem = app.renderer && app.renderer.texture;
+      if (textureSystem && textureSystem.managedTextures) {
+        textureSystem.managedTextures.slice().forEach(function (baseTexture) {
+          try {
+            textureSystem.destroyTexture(baseTexture);
+          } catch (e) {
+            /* texture already gone */
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("InCHlib2: renderer textures could not be released", e);
+    }
+    var renderer = app.renderer;
+    try {
+      // Geometries, buffers, framebuffers and shaders keep, per WebGL context,
+      // the GL object created for them and a dispose hook to the renderer's
+      // system. PIXI removes neither when a renderer is destroyed, and a GL
+      // object keeps its context (and the context its canvas) alive.
+      var contextUid = renderer && renderer.CONTEXT_UID;
+      var forget = function (item, system, glStore) {
+        if (!item) return;
+        if (item.disposeRunner && system) item.disposeRunner.remove(system);
+        if (item[glStore]) delete item[glStore][contextUid];
+      };
+      var geometrySystem = renderer && renderer.geometry;
+      if (geometrySystem && geometrySystem.managedGeometries) {
+        Object.keys(geometrySystem.managedGeometries).forEach(function (id) {
+          forget(geometrySystem.managedGeometries[id], geometrySystem, "glVertexArrayObjects");
+        });
+      }
+      var bufferSystem = renderer && renderer.buffer;
+      if (bufferSystem && bufferSystem.managedBuffers) {
+        Object.keys(bufferSystem.managedBuffers).forEach(function (id) {
+          forget(bufferSystem.managedBuffers[id], bufferSystem, "_glBuffers");
+        });
+      }
+      var framebufferSystem = renderer && renderer.framebuffer;
+      if (framebufferSystem && framebufferSystem.managedFramebuffers) {
+        framebufferSystem.managedFramebuffers.slice().forEach(function (framebuffer) {
+          forget(framebuffer, framebufferSystem, "glFramebuffers");
+        });
+      }
+      var shaderSystem = renderer && renderer.shader;
+      compiledShaders.forEach(function (shader) {
+        if (!shader) return;
+        if (shader.disposeRunner && shaderSystem) shader.disposeRunner.remove(shaderSystem);
+        if (shader.program && shader.program.glPrograms) {
+          delete shader.program.glPrograms[contextUid];
+        }
+      });
+      compiledShaders.length = 0;
+    } catch (e) {
+      console.warn("InCHlib2: renderer GL objects could not be released", e);
+    }
+    try {
+      // Removes the canvas, destroys every display object and releases the
+      // WebGL context (browsers allow only a handful of live contexts).
+      app.destroy(true, { children: true });
+    } catch (e) {
+      console.warn("InCHlib2: the WebGL application could not be destroyed", e);
+    }
+    try {
+      // PIXI's shared default shaders (used for large line drawings such as
+      // the dendrograms) keep every shader system that ever compiled them in
+      // a dispose runner, and there is no list to unregister from. The
+      // destroyed systems are therefore emptied, so that what stays reachable
+      // no longer holds the WebGL context, its canvas or any sprite.
+      if (renderer) {
+        var emptyValues = {
+          managedGeometries: function () { return {}; },
+          managedBuffers: function () { return {}; },
+          managedTextures: function () { return []; },
+        };
+        Object.keys(renderer).forEach(function (systemName) {
+          var system = renderer[systemName];
+          if (!system || typeof system !== "object" || system === renderer) return;
+          if (typeof Node !== "undefined" && system instanceof Node) return;
+          Object.keys(system).forEach(function (key) {
+            var value = system[key];
+            if (value === null || (typeof value !== "object" && typeof value !== "function")) return;
+            try {
+              system[key] = emptyValues[key] ? emptyValues[key]() : null;
+            } catch (e) {
+              /* read-only property */
+            }
+          });
+        });
+        Object.keys(renderer).forEach(function (key) {
+          var value = renderer[key];
+          if (value === null || (typeof value !== "object" && typeof value !== "function")) return;
+          try {
+            renderer[key] = null;
+          } catch (e) {
+            /* read-only property */
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("InCHlib2: renderer systems could not be emptied", e);
+    }
+    renderer = null;
+    // Canvas textures live in PIXI's global cache until destroyed.
+    ownedTextures.forEach(function (texture) {
+      try {
+        if (texture && texture.baseTexture) texture.destroy(true);
+      } catch (e) {
+        /* already destroyed */
+      }
+    });
+    ownedTextures.length = 0;
+  };
+
+  // Run after callbacks that are already queued for the next frame; the timeout
+  // covers background tabs, where animation frames do not fire.
+  var done = false;
+  var runOnce = function () {
+    if (done) return;
+    done = true;
+    destroyPixi();
+  };
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(runOnce);
+    });
+  }
+  setTimeout(runOnce, 1000);
 };
 
 InCHlib2.prototype._prefix = function (nonprefixed) {

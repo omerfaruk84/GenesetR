@@ -37,7 +37,6 @@ import {
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 const reorder = (list, startIndex, endIndex) => {
-  console.log("reorder", list, startIndex, endIndex);
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
@@ -71,7 +70,6 @@ const GenelistCompareSettings = ({
   };
 
   const onDeleteItem = (headingKey, itemIndex, item) => {
-    console.log(headingKey, itemIndex, item);
     const items = [...genelists.filter((obj) => obj.name !== item.name)];
     //draft[headingKey].items = items.filter(i => i); //remove empty slots
     setGeneLists(items);
@@ -128,7 +126,6 @@ const GenelistCompareSettings = ({
   };
 
   useEffect(() => {
-    console.log("genelists changed", genelists);
     genelistcompareSettingsChanged({
       settingName: GenelistCompareSettingsTypes.GENELISTS,
       newValue: genelists,
@@ -140,7 +137,13 @@ const GenelistCompareSettings = ({
       // Check if a genelist with the same name already exists
       const exists = genelists.some((list) => list.name === genelist.name);
       if (exists) {
-        alert("A genelist with the same name already exists.");
+        toast({
+          message: {
+            type: "Warning",
+            icon: true,
+            content: `A gene list named "${genelist.name}" is already in the comparison`,
+          },
+        });
         return false; // Exit the function to prevent adding the duplicate
       }
 

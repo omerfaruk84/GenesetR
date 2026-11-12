@@ -733,7 +733,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           feature: {
             mark: { show: true },
             restore: { show: true },
-            saveAsImage: { show: true },
+            saveAsImage: { show: true, name: "genesetr_pathway_network", pixelRatio: 2 },
             dataZoom: {},
           },
         },
@@ -919,7 +919,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           color: '#e65100',
           marginBottom: '8px'
         }}>
-          ⚠️ Network too large ({pathFinderGraph.nodes.length} nodes). Showing top {pathfinderSettings.maxNodes || 1000} nodes by neighbour count to prevent performance issues.
+          The network has {pathFinderGraph.nodes.length} genes. Only the {pathfinderSettings.maxNodes || 1000} genes with the most links are shown.
         </div>
       )}
       
@@ -930,8 +930,63 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           <>
             {pathfinderSettings.layout === "none" &&
             options.series[0].data?.length > DAGRE_MAX_NODES
-              ? "Dagre layout can not be applied due to the size of the network. Using circular layout instead."
+              ? "The hierarchical layout cannot be applied to a network of this size; a circular layout is shown instead."
               : ""}
+            <div
+              aria-label="Network legend"
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "6px 18px",
+                alignItems: "center",
+                padding: "6px 10px",
+                fontSize: "12px",
+                color: "#424242",
+                background: "#fafafa",
+                border: "1px solid #e0e0e0",
+                borderRadius: "6px",
+                marginBottom: "6px",
+              }}
+            >
+              {[
+                ["rgb(255, 1, 1)", "solid", "Perturbation raises expression"],
+                ["rgb(25, 206, 17)", "solid", "Perturbation lowers expression"],
+                ["rgb(25, 25, 250)", "dotted", "Correlation"],
+                ["rgb(123, 123, 123)", "dashed", "Protein interaction"],
+              ].map(([color, lineType, text]) => (
+                <span key={text} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "26px",
+                      borderTop: `3px ${lineType} ${color}`,
+                    }}
+                  />
+                  {text}
+                </span>
+              ))}
+              {[
+                ["red", "Hub (more than 6 links)"],
+                ["orange", "Other gene"],
+              ].map(([color, text]) => (
+                <span key={text} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "11px",
+                      height: "11px",
+                      borderRadius: "50%",
+                      background: color,
+                      border: "1px solid black",
+                    }}
+                  />
+                  {text}
+                </span>
+              ))}
+              <span style={{ color: "#757575" }}>
+                Fainter nodes and links have weaker effects
+              </span>
+            </div>
             <div className={styles.mainView}>
               <ReactEChartsCore
                 echarts={echarts}

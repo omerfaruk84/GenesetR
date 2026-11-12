@@ -210,9 +210,7 @@ const PrecomputedDrSettings = ({
     const loadAvailableResults = async () => {
       setLoadingResults(true);
       try {
-        console.log("Loading available results on mount...");
         const results = await listPrecomputedDR();
-        console.log("Loaded results:", results.length);
         setAvailableResults(results || []);
         if (results && results.length > 0) {
           setSelectedResultIndex(0);
@@ -310,16 +308,7 @@ const PrecomputedDrSettings = ({
 
     setComputing(true);
     try {
-      // Debug: Log current settings before creating payload
-      console.log("[FRONTEND] Precomputed DR Settings before compute:", {
-        useBatchCorrection: precomputedDrSettings.useBatchCorrection,
-        concatenationMode: precomputedDrSettings.concatenationMode,
-        batchCorrectionTheta: precomputedDrSettings.batchCorrectionTheta,
-        batchCorrectionMaxIter: precomputedDrSettings.batchCorrectionMaxIter,
-      });
-      
       const useBatchCorrectionValue = precomputedDrSettings.useBatchCorrection === true && precomputedDrSettings.concatenationMode === "samples";
-      console.log("[FRONTEND] Computed use_batch_correction value:", useBatchCorrectionValue);
       
       const payload = {
         cell_lines: precomputedDrSettings.selectedCellLines,

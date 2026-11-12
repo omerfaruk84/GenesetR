@@ -1695,13 +1695,13 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
             yAxisIndex: "none",
           },
           restore: {},
-          saveAsImage: {},
+          saveAsImage: { name: "genesetr_gene_signature", pixelRatio: 2 },
         },
       },
 
       series: [
         {
-          name: "Series 2",
+          name: "Score distribution",
           type: "line",
           roam: true,
           symbol: "none",

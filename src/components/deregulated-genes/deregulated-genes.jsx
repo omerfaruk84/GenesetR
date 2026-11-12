@@ -210,6 +210,19 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
       return null;
     }
 
+    // Symmetric colour scale that follows the data (a fixed -5..5 range
+    // washed out datasets with small z-scores and saturated large ones).
+    let maxAbs = 0;
+    heatmapData.matrix.forEach((row) => {
+      (row || []).forEach((value) => {
+        const magnitude = Math.abs(Number(value));
+        if (Number.isFinite(magnitude) && magnitude > maxAbs) maxAbs = magnitude;
+      });
+    });
+    const scaleLimit = Math.min(Math.max(Math.ceil(maxAbs), 1), 10);
+    const manyColumns = heatmapData.perturbations.length > 40;
+    const manyRows = heatmapData.genes.length > 40;
+
     const option = {
       tooltip: {
         position: 'top',
@@ -230,7 +243,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         type: 'category',
         data: heatmapData.perturbations,
         axisLabel: {
-          interval: 0,
+          interval: manyColumns ? 'auto' : 0,
           rotate: 45,
           fontSize: 10
         }
@@ -243,8 +256,9 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         }
       },
       visualMap: {
-        min: -5,
-        max: 5,
+        min: -scaleLimit,
+        max: scaleLimit,
+        text: ['Up', 'Down'],
         calculable: true,
         orient: 'horizontal',
         left: 'center',
@@ -253,6 +267,17 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
           color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
         }
       },
+      toolbox: {
+        right: 10,
+        top: 10,
+        feature: {
+          saveAsImage: { name: 'genesetr_deregulated_genes_heatmap', pixelRatio: 2 },
+        },
+      },
+      dataZoom: [
+        ...(manyColumns ? [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 14, bottom: 4 }] : []),
+        ...(manyRows ? [{ type: 'inside', yAxisIndex: 0 }, { type: 'slider', yAxisIndex: 0, width: 14, right: 8 }] : []),
+      ],
       series: [{
         name: 'Z-Score',
         type: 'heatmap',

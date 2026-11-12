@@ -523,8 +523,8 @@ const GeneRegulationEnhancedPage = ({
               color: "#721c24",
               marginBottom: "8px"
             }}>
-              ⚠️ <strong>Data Issue:</strong> Raw data received but no valid graph generated. 
-              Check console for detailed debugging information. This often happens when only self-loops are present.
+              <strong>No network to show.</strong> The analysis finished, but no links between different genes
+              passed the current thresholds. Try a lower cutoff or a longer gene list.
             </div>
           )}
 

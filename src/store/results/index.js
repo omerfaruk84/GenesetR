@@ -86,8 +86,13 @@ const MAX_GENE_SIGNATURE_CACHE_ENTRIES = 25;
 const parseResultPayload = ({ result, module }) => {
   try {
     if (typeof result === "string") {
-      const sanitizedResult = sanitizeInvalidJsonNumbers(result);
-      return JSON.parse(sanitizedResult);
+      try {
+        return JSON.parse(result);
+      } catch (parseError) {
+        // Only payloads with NaN/Infinity need the (slow, memory hungry)
+        // character-by-character rewrite; valid JSON is parsed directly.
+        return JSON.parse(sanitizeInvalidJsonNumbers(result));
+      }
     }
 
     if (typeof result === "object" && result !== null) {
@@ -148,13 +153,6 @@ export const calculationResults = createSlice({
         return;
       }
       const parsedResult = parseResultPayload({ result, module });
-      
-      console.log(`Results store - Setting ${module} result:`, {
-        resultType: typeof result,
-        parsedType: typeof parsedResult,
-        hasResult: !!parsedResult,
-        resultKeys: parsedResult ? Object.keys(parsedResult) : []
-      });
       
       state[module].result = parsedResult;
       state[module].running = false;
@@ -356,7 +354,6 @@ const runGeneSignatureMultiSelection = () => async (dispatch, getState) => {
 };
 
 const runCalculation = (module) => async (dispatch, getState) => {
-  console.log("Running");
   const { settings } = getState();
   const {
     core,

@@ -1,4 +1,4 @@
-import { Field, Select } from "@oliasoft-open-source/react-ui-library";
+import { Field, Select, toast } from "@oliasoft-open-source/react-ui-library";
 import React, {
   useEffect,
   useState,
@@ -279,7 +279,14 @@ const DatasetSelector = forwardRef(
         }
       } catch (error) {
         console.error('Failed to delete dataset:', error);
-        alert('Failed to delete dataset: ' + error.message);
+        toast({
+          message: {
+            type: "Error",
+            icon: true,
+            content: "The dataset could not be deleted",
+            details: error?.message || "Please try again.",
+          },
+        });
       }
     }, [
       sessionId,
@@ -557,6 +564,47 @@ const DatasetSelector = forwardRef(
           <div style={{ padding: "20px", textAlign: "center" }}>
             Loading datasets...
           </div>
+        </div>
+      );
+    }
+
+    // The dataset list could not be loaded: say so and offer a retry instead
+    // of showing an empty list that looks like "no datasets exist".
+    if (coreSettings?.datasetsError && datasetList.length === 0) {
+      return (
+        <div
+          role="alert"
+          style={{
+            border: "1px solid #f0b4b4",
+            borderRadius: "8px",
+            background: "#fff5f5",
+            padding: "16px",
+            textAlign: "center",
+            fontSize: "13px",
+            color: "#7a1f1f",
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: "6px" }}>
+            The dataset list could not be loaded
+          </div>
+          <div style={{ marginBottom: "12px", color: "#555" }}>
+            The server did not answer. Check your connection and try again.
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchDatasetsFromBackend(sessionId)}
+            style={{
+              padding: "6px 16px",
+              border: "1px solid #1976d2",
+              borderRadius: "4px",
+              background: "#1976d2",
+              color: "#fff",
+              cursor: "pointer",
+              fontSize: "13px",
+            }}
+          >
+            Retry
+          </button>
         </div>
       );
     }
