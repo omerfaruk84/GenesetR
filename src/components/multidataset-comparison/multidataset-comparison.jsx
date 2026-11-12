@@ -24,6 +24,7 @@ import {
 import { GeneSetEnrichmentTable } from "../enrichment";
 import { withErrorBoundary } from "../error-boundary";
 import styles from "./multidataset-comparison.module.scss";
+import { ToolbarButton } from "../ui";
 
 // Enrichment gene lists of the comparison table. Always derived from the
 // "average" score column, never from the order the rows are displayed in.
@@ -932,32 +933,8 @@ const MultiDatasetComparison = ({ data }) => {
             {showRanks && (
               <Flex alignItems="center" gap="8px">
                 <Text size="small">Rank order:</Text>
-                <button
+                <ToolbarButton
                   onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8f9fa',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      backgroundColor: '#e9ecef',
-                      borderColor: '#adb5bd'
-                    }
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#e9ecef';
-                    e.target.style.borderColor = '#adb5bd';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#f8f9fa';
-                    e.target.style.borderColor = '#ccc';
-                  }}
                   title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
                 >
                   {rankOrder === 'asc' ? (
@@ -971,46 +948,21 @@ const MultiDatasetComparison = ({ data }) => {
                       <span>High → Low</span>
                     </>
                   )}
-                </button>
+                </ToolbarButton>
               </Flex>
             )}
           </Flex>
 
           {/* Download button */}
           <Flex alignItems="center" gap="8px">
-            <button
+            <ToolbarButton size="sm"
               onClick={downloadTableData}
               disabled={!tableData.data || tableData.data.length === 0}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: '#f8f9fa',
-                cursor: tableData.data && tableData.data.length > 0 ? 'pointer' : 'not-allowed',
-                fontSize: '12px',
-                transition: 'all 0.2s ease',
-                opacity: tableData.data && tableData.data.length > 0 ? 1 : 0.6
-              }}
-              onMouseEnter={(e) => {
-                if (tableData.data && tableData.data.length > 0) {
-                  e.target.style.backgroundColor = '#e9ecef';
-                  e.target.style.borderColor = '#adb5bd';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (tableData.data && tableData.data.length > 0) {
-                  e.target.style.backgroundColor = '#f8f9fa';
-                  e.target.style.borderColor = '#ccc';
-                }
-              }}
               title="Download table data as CSV"
             >
               <FaDownload style={{ color: '#28a745', fontSize: '12px' }} />
               <span>CSV</span>
-            </button>
+            </ToolbarButton>
           </Flex>
         </Flex>
 

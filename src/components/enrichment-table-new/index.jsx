@@ -11,12 +11,29 @@ import React from "react";
 import GenelistAdd from "../genelist-add";
 import { withErrorBoundary } from "../error-boundary";
 import { flattenColumns } from "../../utils/geneListUtils";
+import { EmptyState } from "../ui";
+import { formatNumber } from "../../utils/formatNumber";
 
-const csvConfig = mkConfig({
-  fieldSeparator: "\t",
-  decimalSeparator: ".",
-  useKeysAsHeaders: true,
-});
+// File name for exports: genesetr_<name>_<yyyy-mm-dd>.csv
+const csvConfigFor = (exportName) =>
+  mkConfig({
+    fieldSeparator: "\t",
+    decimalSeparator: ".",
+    useKeysAsHeaders: true,
+    filename: `genesetr_${String(exportName || "table")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "table"}_${new Date().toISOString().slice(0, 10)}`,
+  });
+
+// Numbers without a column-specific renderer get one consistent format.
+const DEFAULT_COLUMN = {
+  Cell: ({ cell }) => {
+    const value = cell.getValue();
+    return typeof value === "number" ? formatNumber(value) : value ?? "";
+  },
+};
 
 // Accessor keys / headers that hold gene symbols in the result tables.
 // "gene", "Gene", "Gene 1", "Gene Symbol From", "From", "To", "Perturbation", ...
@@ -87,7 +104,9 @@ const EnrichmentTable = ({
   initialColumnFilters,
   onColumnFiltersChange,
   geneAccessors,
+  exportName,
 }) => {
+  const csvConfig = csvConfigFor(exportName);
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [sorting, setSorting] = useState([]);
@@ -146,6 +165,19 @@ const EnrichmentTable = ({
   const table = useMaterialReactTable({
     columns,
     data,
+    defaultColumn: DEFAULT_COLUMN,
+    renderEmptyRowsFallback: () =>
+      Array.isArray(data) && data.length > 0 ? (
+        <EmptyState
+          title="No rows match the current filters"
+          hint="Clear the search box or the column filters to see all rows again."
+        />
+      ) : (
+        <EmptyState
+          title="No results to show"
+          hint="The analysis returned no rows for the current settings."
+        />
+      ),
     enableRowSelection: true,
     enableStickyHeader: true,
     //enableColumnResizing: true,

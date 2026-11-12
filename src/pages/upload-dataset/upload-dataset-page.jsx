@@ -37,6 +37,7 @@ const moduleDescription = {
   requirements: [
     "File format: CSV or TSV",
     "Maximum file size: 100 MB",
+    "Up to 5 uploaded datasets per browser session; each is deleted after 48 hours",
     "Data format: Genes (rows) × Perturbations (columns) or transposed",
     "Data type: Raw counts or Z-scored (select appropriate option)",
     "Gene names: Standard gene symbols (HUGO recommended)"

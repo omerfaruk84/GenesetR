@@ -42,8 +42,15 @@ import { createGeneTooltipFormatter, buildGeneScoreTooltip } from "../../utils/g
 import { formulaSymbolSet, toggleGeneInFormula } from "../../utils/geneFormula";
 import { buildTopBottomGeneLists, splitGenesByScore } from "../../utils/geneListUtils";
 import { withErrorBoundary } from "../error-boundary";
+import { ToolbarButton, ChartLegend } from "../ui";
 
 const isDevEnv = process.env.NODE_ENV !== "production";
+
+// Dataset of the last automatic single-dataset run. This lives outside the
+// component on purpose: the result view is unmounted while a calculation runs
+// and mounted again when the result arrives, so a ref would be reset each time
+// and every finished run would immediately start the same calculation again.
+let lastAutoRunDatasetId = null;
 // Development-only logging (the result objects are large).
 const debugLog = (...args) => {
   if (isDevEnv) {
@@ -183,7 +190,6 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
   
   const [selectedView, setSelectedView] = useState(getInitialSelectedView);
   const [signatureDirty, setSignatureDirty] = useState(false);
-  const lastAutoRunKeyRef = useRef(null);
   const lastMultiAutoRunKeyRef = useRef(null);
   
   // Save selectedView to sessionStorage whenever it changes
@@ -459,9 +465,15 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     if (!datasetId) return;
 
     // Only auto-run when dataset changes, not when signature text changes
-    if (lastAutoRunKeyRef.current === datasetId) return;
+    if (lastAutoRunDatasetId === datasetId) return;
 
-    lastAutoRunKeyRef.current = datasetId;
+    // The view is only shown once a result exists, so the first time it appears
+    // that result already belongs to the current dataset: remember the dataset
+    // and do not calculate it a second time.
+    const isFirstAppearance = lastAutoRunDatasetId === null;
+    lastAutoRunDatasetId = datasetId;
+    if (isFirstAppearance) return;
+
     dispatch(runCalculation(ROUTES.GENESIGNATURE));
   }, [coreSettings.cellLine?.id, hasMultiDatasetSelection, coreSettings.targetGeneList, dispatch]);
 
@@ -1942,28 +1954,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                 {showRanks && (
                   <Flex alignItems="center" gap="8px">
                     <Text size="small">Rank order:</Text>
-                    <button
+                    <ToolbarButton
                       onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        border: '1px solid #ccc',
-                        borderRadius: '6px',
-                        backgroundColor: '#f8f9fa',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#e9ecef';
-                        e.target.style.borderColor = '#adb5bd';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#f8f9fa';
-                        e.target.style.borderColor = '#ccc';
-                      }}
                       title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
                     >
                       {rankOrder === 'asc' ? (
@@ -1977,7 +1969,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                           <span>High → Low</span>
                         </>
                       )}
-                    </button>
+                    </ToolbarButton>
                   </Flex>
                 )}
               </Flex>
@@ -2109,28 +2101,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                 {showRanks && (
                   <Flex alignItems="center" gap="8px">
                     <Text size="small">Rank order:</Text>
-                    <button
+                    <ToolbarButton
                       onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        border: '1px solid #ccc',
-                        borderRadius: '6px',
-                        backgroundColor: '#f8f9fa',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#e9ecef';
-                        e.target.style.borderColor = '#adb5bd';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#f8f9fa';
-                        e.target.style.borderColor = '#ccc';
-                      }}
                       title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
                     >
                       {rankOrder === 'asc' ? (
@@ -2144,7 +2116,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                           <span>High → Low</span>
                         </>
                       )}
-                    </button>
+                    </ToolbarButton>
                   </Flex>
                 )}
               </Flex>
@@ -2257,6 +2229,17 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
       {selectedView === 0 && !hasMultiDatasetSelection && (
         <>
+          <ChartLegend
+            label="Signature score legend"
+            items={[
+              { label: "Score above 2", color: "rgba(39, 245, 55, 0.7)" },
+              { label: "Score below -2", color: "rgba(245, 55, 39, 0.7)" },
+              { label: "Highlighted perturbation", color: "rgba(39, 96, 245, 0.7)" },
+              { label: "Non-targeting control", color: "rgba(216, 245, 39, 0.8)" },
+              { label: "Other perturbations", color: "rgba(200, 200, 200, 0.6)" },
+            ]}
+            note="Each point is one perturbation; larger points have stronger scores"
+          />
           <div style={{ 
             height: "350px", 
             width: "100%", 

@@ -8,6 +8,7 @@ import ForceGraph3D from "react-force-graph-3d";
 import { getGeneInfo } from "../../utils/geneFunctionUtils";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { ErrorBoundary } from "../error-boundary";
+import { ChartLegend } from "../ui";
 
 // ---- Optional libraries (try to load, but keep app running if missing) ----
 let CytoscapeComponent; // react-cytoscapejs
@@ -340,7 +341,21 @@ export default function NetworkGraphAlternatives({
 
   return (
     <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
-      <Header renderer={renderer} setRenderer={setRenderer} />
+      <div>
+        <Header renderer={renderer} setRenderer={setRenderer} />
+        <ChartLegend
+          label="Network legend"
+          items={[
+            { label: "Upstream positive regulator", color: CATEGORY_COLORS[0] },
+            { label: "Upstream negative regulator", color: CATEGORY_COLORS[1] },
+            { label: "Downstream, positively regulated", color: CATEGORY_COLORS[2] },
+            { label: "Downstream, negatively regulated", color: CATEGORY_COLORS[3] },
+            { label: "Gene of interest / other", color: CATEGORY_COLORS.default },
+            { label: "Expression effect", color: EDGE_STYLES.Exp.color, line: "solid" },
+            { label: "Correlation", color: EDGE_STYLES.Corr.color, line: "dashed" },
+          ]}
+        />
+      </div>
       <div style={{ height }}>
         {/* A failing renderer must not blank the page: the user can pick another one. */}
         <ErrorBoundary label={`${renderer} network view`} resetKeys={[renderer, graph]}>

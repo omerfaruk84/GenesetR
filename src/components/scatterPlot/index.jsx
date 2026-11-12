@@ -35,6 +35,7 @@ import {
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import $, { param } from "jquery";
 import { string } from "prop-types";
+import { ToolbarButton } from "../ui";
 // import text from './sample.json';
 
 echarts.use([
@@ -943,37 +944,17 @@ const ScatterPlot = ({
               maxWidth: "300px"
             }}
           />
-          <button
+          <ToolbarButton variant="primary"
             onClick={handleSearchGene}
-            style={{
-              padding: "6px 16px",
-              backgroundColor: "#1976d2",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "500"
-            }}
           >
             Search & Zoom
-          </button>
+          </ToolbarButton>
           {focus && (
-            <button
+            <ToolbarButton
               onClick={() => setFocus(null)}
-              style={{
-                padding: "6px 16px",
-                backgroundColor: "#ffffff",
-                color: "#1976d2",
-                border: "1px solid #1976d2",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "500"
-              }}
             >
               Reset view
-            </button>
+            </ToolbarButton>
           )}
         </div>
         <Row spacing={0} width="100%" height="80vh">

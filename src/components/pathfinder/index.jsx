@@ -22,6 +22,7 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { withErrorBoundary } from "../error-boundary";
+import { ChartLegend } from "../ui";
 
 // Networks above this size are drawn with the circular layout; dagre is only
 // computed for networks it will actually be used for.
@@ -932,61 +933,18 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             options.series[0].data?.length > DAGRE_MAX_NODES
               ? "The hierarchical layout cannot be applied to a network of this size; a circular layout is shown instead."
               : ""}
-            <div
-              aria-label="Network legend"
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "6px 18px",
-                alignItems: "center",
-                padding: "6px 10px",
-                fontSize: "12px",
-                color: "#424242",
-                background: "#fafafa",
-                border: "1px solid #e0e0e0",
-                borderRadius: "6px",
-                marginBottom: "6px",
-              }}
-            >
-              {[
-                ["rgb(255, 1, 1)", "solid", "Perturbation raises expression"],
-                ["rgb(25, 206, 17)", "solid", "Perturbation lowers expression"],
-                ["rgb(25, 25, 250)", "dotted", "Correlation"],
-                ["rgb(123, 123, 123)", "dashed", "Protein interaction"],
-              ].map(([color, lineType, text]) => (
-                <span key={text} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "26px",
-                      borderTop: `3px ${lineType} ${color}`,
-                    }}
-                  />
-                  {text}
-                </span>
-              ))}
-              {[
-                ["red", "Hub (more than 6 links)"],
-                ["orange", "Other gene"],
-              ].map(([color, text]) => (
-                <span key={text} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "11px",
-                      height: "11px",
-                      borderRadius: "50%",
-                      background: color,
-                      border: "1px solid black",
-                    }}
-                  />
-                  {text}
-                </span>
-              ))}
-              <span style={{ color: "#757575" }}>
-                Fainter nodes and links have weaker effects
-              </span>
-            </div>
+            <ChartLegend
+              label="Network legend"
+              items={[
+                { label: "Perturbation raises expression", color: "rgb(255, 1, 1)", line: "solid" },
+                { label: "Perturbation lowers expression", color: "rgb(25, 206, 17)", line: "solid" },
+                { label: "Correlation", color: "rgb(25, 25, 250)", line: "dotted" },
+                { label: "Protein interaction", color: "rgb(123, 123, 123)", line: "dashed" },
+                { label: "Hub (more than 6 links)", color: "red" },
+                { label: "Other gene", color: "orange" },
+              ]}
+              note="Fainter nodes and links have weaker effects"
+            />
             <div className={styles.mainView}>
               <ReactEChartsCore
                 echarts={echarts}

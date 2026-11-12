@@ -28,6 +28,7 @@ import { saveAs } from "file-saver";
 import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
+import ui from "../ui/ui.module.scss";
 
 // Optional InCHlib methods. The two bundled library versions (1.2.0 canvas and
 // 2.0 WebGL) implement different subsets, so every control that depends on one
@@ -1047,22 +1048,22 @@ const keyedData = useMemo(() => {
                 <button
                   type="button"
                   onClick={exportHeatmapAsPng}
-                  className={styles.zoomButton}
+                  className={ui.button}
                   disabled={isExporting}
                   title="Download the heatmap as a PNG image"
                 >
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
-                  {isExporting ? "EXPORTING…" : "EXPORT PNG"}
+                  {isExporting ? "Exporting…" : "Export PNG"}
                 </button>
                 <button
                   type="button"
                   onClick={exportHeatmapAsJpeg}
-                  className={styles.zoomButton}
+                  className={ui.button}
                   disabled={isExporting}
                   title="Download the heatmap as a JPEG image"
                 >
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
-                  EXPORT JPEG
+                  Export JPEG
                 </button>
               </div>
               {(capabilities.resetCamera || capabilities.fitToScreen) && (
@@ -1070,19 +1071,19 @@ const keyedData = useMemo(() => {
                   {capabilities.resetCamera && (
                     <button
                       onClick={handleResetZoom}
-                      className={styles.zoomButton}
+                      className={ui.button}
                       aria-label="Reset Zoom"
                     >
-                      RESET ZOOM
+                      Reset zoom
                     </button>
                   )}
                   {capabilities.fitToScreen && (
                     <button
                       onClick={handleManualFitToScreen}
-                      className={styles.zoomButton}
+                      className={ui.button}
                       aria-label="Fit to Screen"
                     >
-                      FIT TO SCREEN
+                      Fit to screen
                     </button>
                   )}
                 </div>
