@@ -1043,6 +1043,28 @@ const keyedData = useMemo(() => {
                 visibility: selectedView === 0 && !loading ? "visible" : "hidden",
               }}
             >
+              <div className={styles.zoomControls}>
+                <button
+                  type="button"
+                  onClick={exportHeatmapAsPng}
+                  className={styles.zoomButton}
+                  disabled={isExporting}
+                  title="Download the heatmap as a PNG image"
+                >
+                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  {isExporting ? "EXPORTING…" : "EXPORT PNG"}
+                </button>
+                <button
+                  type="button"
+                  onClick={exportHeatmapAsJpeg}
+                  className={styles.zoomButton}
+                  disabled={isExporting}
+                  title="Download the heatmap as a JPEG image"
+                >
+                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  EXPORT JPEG
+                </button>
+              </div>
               {(capabilities.resetCamera || capabilities.fitToScreen) && (
                 <div className={styles.zoomControls}>
                   {capabilities.resetCamera && (
@@ -1132,10 +1154,21 @@ const keyedData = useMemo(() => {
               <div id="loadingform">
                 {loading && (
                   <div id="loading">
-                    <img
-                      src="https://www.openscreen.cz/software/inchlib/static/img/loading.gif"
-                      alt="Loading"
+                    {/* Local spinner (was an image hot-linked from a third-party site) */}
+                    <div
+                      role="status"
+                      aria-label="Drawing heatmap"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        margin: "24px auto",
+                        borderRadius: "50%",
+                        border: "4px solid rgba(166, 54, 72, 0.18)",
+                        borderTopColor: "#a63648",
+                        animation: "genesetr-spin 0.9s linear infinite",
+                      }}
                     />
+                    <style>{"@keyframes genesetr-spin { to { transform: rotate(360deg); } }"}</style>
                   </div>
                 )}
               </div>

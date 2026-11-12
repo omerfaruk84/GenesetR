@@ -691,6 +691,31 @@ const GeneSetEnrichmentTable = ({
       grid: {
         right: "15%",
       },
+      // Hovering a bubble shows what it is (the chart used to have no tooltip)
+      tooltip: {
+        trigger: "item",
+        confine: true,
+        formatter: (params) => {
+          const d = params?.data || {};
+          const esc = (v) =>
+            String(v ?? "").replace(/[&<>"']/g, (ch) =>
+              ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
+            );
+          const num = (v, digits = 2) =>
+            typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : esc(v);
+          const rows = [
+            ["Library", d["Dataset"]],
+            ["-log10 adj. p", num(d["Adjusted log p-value"])],
+            ["Z-score", num(d["Z-score"])],
+            ["Combined score", num(d["Combined score"], 1)],
+          ].filter(([, v]) => v !== undefined && v !== null && v !== "");
+          return (
+            `<div style="max-width:320px;white-space:normal"><b>${esc(d["Term name"])}</b><br/>` +
+            rows.map(([k, v]) => `${k}: ${typeof v === "string" ? v : esc(v)}`).join("<br/>") +
+            "</div>"
+          );
+        },
+      },
       /* legend: {
               right: 10,
               data: ['1990', '2015']
@@ -700,7 +725,7 @@ const GeneSetEnrichmentTable = ({
         feature: {
           dataZoom: {},
           mark: { show: true },
-          saveAsImage: { show: true, pixelRatio: 3 },
+          saveAsImage: { show: true, pixelRatio: 3, name: "genesetr_enrichment" },
         },
       },
       visualMap: [

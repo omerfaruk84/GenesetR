@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { toast } from "@oliasoft-open-source/react-ui-library";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import {
   Spacer,
@@ -209,7 +210,9 @@ const MultiDatasetComparison = ({ data }) => {
   // Function to download table data as CSV
   const downloadTableData = () => {
     if (!tableData.data || tableData.data.length === 0) {
-      alert('No data to download');
+      toast({
+        message: { type: "Info", icon: true, content: "There is no data to download yet" },
+      });
       return;
     }
 

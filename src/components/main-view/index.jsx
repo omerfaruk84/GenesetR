@@ -1,5 +1,6 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
+import { ErrorBoundary } from "../error-boundary";
 import { ROUTES } from "../../common/routes";
 import { CorrelationPage } from "../../pages/correlation/correlation-page";
 import { CorrelationPageWebGL } from "../../pages/correlation/correlation-page-webgl";
@@ -23,13 +24,27 @@ import { GenelistCompare } from "../genelist-compare";
 import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
 import UploadDatasetPage from "../../pages/upload-dataset/upload-dataset-page";
 
+// A rendering error in one page must not blank the whole application: the
+// page area shows an error box with "Try again", the navigation keeps working,
+// and moving to another page resets the boundary.
+const PageBoundary = ({ children }) => {
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary label="This page" resetKeys={[pathname]}>
+      {children}
+    </ErrorBoundary>
+  );
+};
+
 const SideBarLayout = () => (
   <div className={styles.contentWrapper}>
     <Spacer />
     <div className={styles.flexContainer}>
       <SideBar />
       <div className={styles.routeContent}>
-        <Outlet />
+        <PageBoundary>
+          <Outlet />
+        </PageBoundary>
       </div>
     </div>
   </div>
@@ -45,12 +60,14 @@ const MainView = () => {
             path={ROUTES.HOME}
             element={
               <div className={styles.homeContentWrapper}>
-                <MainPage />
+                <PageBoundary>
+                  <MainPage />
+                </PageBoundary>
               </div>
             }
           />
-          <Route path={ROUTES.ABOUTUS} element={<AboutPage />} />
-          <Route path={ROUTES.UPLOAD_DATASET} element={<UploadDatasetPage />} />
+          <Route path={ROUTES.ABOUTUS} element={<PageBoundary><AboutPage /></PageBoundary>} />
+          <Route path={ROUTES.UPLOAD_DATASET} element={<PageBoundary><UploadDatasetPage /></PageBoundary>} />
           <Route element={<SideBarLayout />}>
             <Route path={ROUTES.DR} element={<DimReductionPage />} />
             <Route

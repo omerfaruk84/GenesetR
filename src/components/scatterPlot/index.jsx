@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "@oliasoft-open-source/react-ui-library";
 import { connect } from "react-redux";
 import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import { safeJsonParse } from "../../utils/jsonUtils";
@@ -70,6 +71,11 @@ const ScatterPlot = ({
   // Gene found by "Search & Zoom": { gene, index, x: [min,max], y, z }
   const [focus, setFocus] = useState(null);
   const chartInstanceRef = useRef(null);
+  // Axis titles follow the method that produced the embedding
+  const axisPrefix =
+    { pca: "PC", umap: "UMAP", tsne: "t-SNE", mde: "MDE" }[
+      String(coreSettings?.currentModule || "").toLowerCase()
+    ] || "Component";
   const highlightTimeoutRef = useRef(null);
 
   // A search result belongs to one dataset/result only.
@@ -519,7 +525,7 @@ const ScatterPlot = ({
             fontSize: "15",
             color: "black",
           },
-          name: "Component 1",
+          name: `${axisPrefix} 1`,
           nameGap: 25,
           min: xRange.min,
           max: xRange.max,
@@ -534,7 +540,7 @@ const ScatterPlot = ({
           },
           nameRotate: 90,
           scale: true,
-          name: "Component 2",
+          name: `${axisPrefix} 2`,
           nameLocation: "center",
           nameGap: 50,
           nameTextStyle: {
@@ -644,7 +650,7 @@ const ScatterPlot = ({
             fontSize: "15",
             color: "black",
           },
-          name: "Component 1",
+          name: `${axisPrefix} 1`,
           nameGap: 25,
           min: xRange.min,
           max: xRange.max,
@@ -657,7 +663,7 @@ const ScatterPlot = ({
             color: "black",
           },
           scale: true,
-          name: "Component 2",
+          name: `${axisPrefix} 2`,
 
           nameTextStyle: {
             fontWeight: "bold",
@@ -676,7 +682,7 @@ const ScatterPlot = ({
             color: "black",
           },
           scale: true,
-          name: "Component 3",
+          name: `${axisPrefix} 3`,
 
           nameTextStyle: {
             fontWeight: "bold",
@@ -821,7 +827,14 @@ const ScatterPlot = ({
     );
 
     if (geneIndex === -1) {
-      alert(`Gene "${searchGene}" not found in the dataset.`);
+      toast({
+        message: {
+          type: "Warning",
+          icon: true,
+          content: `"${searchGene}" was not found in this plot`,
+          details: "Check the spelling, or whether the gene was part of the submitted list.",
+        },
+      });
       return;
     }
 
