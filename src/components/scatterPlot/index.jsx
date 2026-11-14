@@ -36,6 +36,7 @@ import ReactEChartsCore from "echarts-for-react/lib/core";
 import $, { param } from "jquery";
 import { string } from "prop-types";
 import { ToolbarButton } from "../ui";
+import { PlotHelp } from "../plot-help";
 // import text from './sample.json';
 
 echarts.use([
@@ -944,6 +945,7 @@ const ScatterPlot = ({
               maxWidth: "300px"
             }}
           />
+          <PlotHelp kind="embedding" />
           <ToolbarButton variant="primary"
             onClick={handleSearchGene}
           >

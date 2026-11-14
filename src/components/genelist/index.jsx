@@ -33,6 +33,7 @@ import { fetchHugoGenes, updateGeneLists } from "../../store/api";
 import { runCalculation } from "../../store/results/index";
 import { ROUTES } from "../../common/routes";
 import { SendToMenu } from "../send-to";
+import { ExampleMenu } from "../example-menu";
 
 /*
 let isLoaded = false;
@@ -486,27 +487,8 @@ const Genelist = ({
       });
   };
 
-  return (
-    <>
-      <div className={styles.mainView}>
-        <Card
-          heading={
-            <div style={{ width: "100%" }}>
-              <Flex alignItems="center" justifyContent="space-between">
-                <Heading>{listTitle}</Heading>
-                {!isGeneSignature && numberOfGenesEntered > 0 && (
-                  <SendToMenu
-                    genes={() => currentGenes}
-                    label="Send to"
-                    style={{ height: 24, padding: "0 8px", fontSize: 12 }}
-                  />
-                )}
-                {exampleVisible && (
-                  <Button
-                    label="Example"
-                    small
-                    colored="success"
-                    onClick={async () => {
+  // Random genes of the selected dataset (the former "Example" button)
+  const loadRandomExample = async () => {
                       if (isGeneSignature)
                         genesChanged(
                           "HSPA5+DDIT3+EDEM1+PPP1R15A+HERPUD1+DNAJC3+DNAJB9+DNAJB11+MANF+HERPUD1+SDF2L1+HSP90B1+SELENOK+CDK2AP2+CALR-TUBB-SLC25A3-PTMA-PRDX1-PPIA-TUBB4B-HSPE1-CD59"
@@ -562,7 +544,28 @@ const Genelist = ({
                         }
                         genesChanged(genelist, { dedupe: true });
                       }
-                    }}
+                    };
+
+  return (
+    <>
+      <div className={styles.mainView} data-tour="genelist">
+        <Card
+          heading={
+            <div style={{ width: "100%" }}>
+              <Flex alignItems="center" justifyContent="space-between">
+                <Heading>{listTitle}</Heading>
+                {!isGeneSignature && numberOfGenesEntered > 0 && (
+                  <SendToMenu
+                    genes={() => currentGenes}
+                    label="Send to"
+                    style={{ height: 24, padding: "0 8px", fontSize: 12 }}
+                  />
+                )}
+                {exampleVisible && (
+                  <ExampleMenu
+                    kind={isGeneSignature ? "signature" : "list"}
+                    onPick={(text) => genesChanged(text, { dedupe: !isGeneSignature })}
+                    onRandom={isGeneSignature ? undefined : loadRandomExample}
                   />
                 )}
                 {closeButton && (

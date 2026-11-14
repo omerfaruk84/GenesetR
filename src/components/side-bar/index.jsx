@@ -165,10 +165,11 @@ const SideBar = ({
             <>
               <Spacer />
               <Flex justifyContent="center">
+               <div data-tour="run" style={{ width: "90%" }}>
                 <Button
                   label={isCalcRunning ? "Pending" : getButtonLabel()}
                   colored
-                  width="90%"
+                  width="100%"
                   disabled={isCalcRunning || isDisabled}
                   onClick={() => {
                     runCalculation(pathname);
@@ -178,6 +179,7 @@ const SideBar = ({
                     });
                   }}
                 />
+               </div>
               </Flex>
               {disabledReason && (
                 <div

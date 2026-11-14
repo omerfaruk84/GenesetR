@@ -28,6 +28,7 @@ import { GenePage } from "../../pages/gene/gene-page";
 import { DatasetsPage } from "../../pages/datasets/datasets-page";
 import { PermalinkPage } from "../../pages/permalink/permalink-page";
 import { UrlStateSync } from "../url-state-sync";
+import { Tour } from "../tour";
 
 // A rendering error in one page must not blank the whole application: the
 // page area shows an error box with "Try again", the navigation keeps working,
@@ -61,6 +62,7 @@ const MainView = () => {
     <Router>
       <div className={styles.mainView}>
         <TopBar />
+        <Tour />
         <Routes>
           <Route
             path={ROUTES.HOME}

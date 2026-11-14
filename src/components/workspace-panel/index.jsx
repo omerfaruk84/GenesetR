@@ -69,6 +69,7 @@ const WorkspacePanel = () => {
         className={styles.trigger}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
+        data-tour="workspace"
         title="Your saved gene lists"
       >
         <FaFolderOpen size={15} aria-hidden="true" />

@@ -624,7 +624,7 @@ const DatasetSelector = forwardRef(
     const hasOwnUploads = allBackendDatasets.some((x) => x.isUserUploaded === true);
 
     const filterBar = (
-      <div style={{ marginBottom: "6px" }}>
+      <div style={{ marginBottom: "6px" }} data-tour="datasets">
         <input
           type="search"
           value={filterText}

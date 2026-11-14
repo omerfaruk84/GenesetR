@@ -107,6 +107,7 @@ const ShareMenu = ({ pathname }) => {
         className={styles.trigger}
         aria-haspopup="menu"
         aria-expanded={!!anchor}
+        data-tour="share"
         disabled={busy}
         onClick={(event) => setAnchor(event.currentTarget)}
         title="Share or reproduce this analysis"

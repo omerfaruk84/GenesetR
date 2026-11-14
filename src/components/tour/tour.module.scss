@@ -1,0 +1,99 @@
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+}
+
+// The highlighted element stays visible through a hole in the dimming:
+// a transparent box with a very large shadow.
+.spotlight {
+  position: fixed;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(10, 14, 20, 0.6);
+  outline: 2px solid #ffb74d;
+  transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+  pointer-events: none;
+}
+
+.dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 20, 0.6);
+}
+
+.card {
+  position: fixed;
+  padding: 16px 18px 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2733;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+
+  h3 {
+    margin: 2px 0 6px;
+    font-size: 17px;
+    color: #1f2733;
+  }
+
+  p {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #333c48;
+  }
+}
+
+.progress {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a63648;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #5d6877;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.secondary,
+.primary {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary {
+  border: 1px solid #c4c9d0;
+  background: #fff;
+  color: #2b3440;
+}
+
+.primary {
+  border: 1px solid #a63648;
+  background: #a63648;
+  color: #fff;
+}

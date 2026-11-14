@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import V2ReleasePopup from "../../components/v2-release-popup";
 import { GeneSearch } from "../../components/gene-search";
 import { NAV_GROUPS } from "../../components/top-bar/navigation";
+import { startTour } from "../../components/tour";
 
 const MainPage = () => {
   return (
@@ -60,7 +61,12 @@ const MainPage = () => {
           </p>
 
           <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", margin: "6px 0 22px" }}>
-            <GeneSearch size="lg" placeholder="Explore a gene across all datasets, e.g. ATF4" />
+            <div data-tour="home-search" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+              <GeneSearch size="lg" placeholder="Explore a gene across all datasets, e.g. ATF4" />
+            </div>
+            <button type="button" className={styles.tourButton} onClick={startTour}>
+              New here? Take the 1-minute tour
+            </button>
           </div>
 
           <div className={styles.entryGrid}>

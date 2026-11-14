@@ -29,6 +29,7 @@ import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
 import ui from "../ui/ui.module.scss";
+import { PlotHelp } from "../plot-help";
 
 // Optional InCHlib methods. The two bundled library versions (1.2.0 canvas and
 // 2.0 WebGL) implement different subsets, so every control that depends on one
@@ -1085,6 +1086,7 @@ const keyedData = useMemo(() => {
               }}
             >
               <div className={styles.zoomControls}>
+                <PlotHelp kind={window.location.pathname.includes("correlation") ? "correlationHeatmap" : "expressionHeatmap"} />
                 <button
                   type="button"
                   onClick={exportHeatmapAsPng}

@@ -89,7 +89,7 @@ const TopBar = () => {
         <span className={styles.version}>{APP_VERSION}</span>
       </Link>
 
-      <nav className={styles.groups} aria-label="Main">
+      <nav className={styles.groups} aria-label="Main" data-tour="nav">
         {NAV_GROUPS.map((group) => {
           const open = openGroup === group.id;
           return (
