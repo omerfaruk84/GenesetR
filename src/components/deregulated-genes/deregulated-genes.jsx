@@ -25,6 +25,8 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
   const deregulatedSettings = useSelector((state) => state.settings?.deregulatedGenes);
   const [activeTab, setActiveTab] = useState("table");
   const [heatmapData, setHeatmapData] = useState(null);
+  // "ready" | "loading" | "error": what to say while there is no heatmap
+  const [heatmapStatus, setHeatmapStatus] = useState("ready");
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailData, setDetailData] = useState({ gene: null, entries: [] });
   const [tableDataset, setTableDataset] = useState(null);
@@ -153,6 +155,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
 
       // Do not keep showing another dataset's heatmap while loading
       setHeatmapData(null);
+      setHeatmapStatus("ready");
 
       // Try to fetch heatmap for selected dataset using existing metadata
       const meta =
@@ -178,6 +181,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         direction_mode: meta?.direction_mode || "downstream",
       };
 
+      setHeatmapStatus("loading");
       try {
         const response = await Axios.post(
           `${SERVER_ADDRESS}/getData`,
@@ -193,8 +197,12 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         if (cancelled) return;
         const parsed = typeof taskResult === "string" ? JSON.parse(taskResult) : taskResult;
         setHeatmapData(buildHeatmapOption(parsed?.heatmap_data));
+        setHeatmapStatus("ready");
       } catch (e) {
-        if (!cancelled) setHeatmapData(null);
+        if (!cancelled) {
+          setHeatmapData(null);
+          setHeatmapStatus("error");
+        }
       }
     };
 
@@ -482,6 +490,9 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
             {tableData.length > 0 ? (
               <>
                 <MaterialReactTable
+                  // A new table per dataset view: the default sort column differs
+                  // between "Multi" and a single dataset and only applies on mount.
+                  key={tableDataset}
                   columns={tableColumns}
                   data={tableData}
                   renderTopToolbarCustomActions={({ table }) => (
@@ -525,11 +536,19 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
             {heatmapData ? (
               <ReactECharts
                 option={heatmapData}
+                // A smaller heatmap must not inherit the sliders of the previous one
+                notMerge={true}
                 style={{ height: 'calc(100vh - 250px)', width: '100%' }}
                 opts={{ renderer: 'canvas' }}
               />
             ) : (
-              <div className={styles.noData}>No heatmap data available</div>
+              <div className={styles.noData} role="status">
+                {heatmapStatus === "loading"
+                  ? "Computing the heatmap for this dataset…"
+                  : heatmapStatus === "error"
+                  ? "The heatmap for this dataset could not be computed. Try again or pick another dataset."
+                  : "No heatmap data available"}
+              </div>
             )}
           </div>
         )}

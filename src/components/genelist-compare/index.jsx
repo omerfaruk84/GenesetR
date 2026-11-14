@@ -214,7 +214,7 @@ const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChang
 
     sets =
       genelistcompareSettings?.theme === "Colorful"
-        ? sets.map((s, i) => ({ ...s, color: colors[i] }))
+        ? sets.map((s, i) => ({ ...s, color: colors[i % colors.length] }))
         : sets;
 
     return {
@@ -440,7 +440,8 @@ const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChang
                         onClick={handleSelection}
                         combinations={combinations.filter((x) => {
                           return (
-                            x.elems.length > (genelistcompareSettings?.minsetmember || 0)
+                            // "minimum number of genes in an intersection": at least, not more than
+                            x.elems.length >= Math.max(1, Number(genelistcompareSettings?.minsetmember) || 1)
                           );
                         })}
                         width={Math.min(

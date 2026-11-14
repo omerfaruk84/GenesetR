@@ -253,7 +253,7 @@ const DimReductionPage = ({
           },
         },
         legend: {
-          data: ["Cummulative Variance Explained", "Variance Explained"],
+          data: ["Cumulative Variance Explained", "Variance Explained"],
         },
         xAxis: [
           {
@@ -276,12 +276,16 @@ const DimReductionPage = ({
 
             type: "value",
             min: 0,
-            max: explained_ratio[0],
+            // The axis ends on a whole tick above PC1. (It used to end exactly on
+            // PC1's value, which gave a last label like "37.42318034172058 %".)
+            // The step is never 0: a flat spectrum (PC1 < 2.5 %) would leave no ticks.
+            max:
+              Math.ceil(explained_ratio[0] / Math.max(1, Math.round(explained_ratio[0] / 5))) *
+              Math.max(1, Math.round(explained_ratio[0] / 5)),
             name: "Variance exp.",
-            // Never 0: a flat variance spectrum (PC1 < 2.5 %) would leave the axis without ticks
             interval: Math.max(1, Math.round(explained_ratio[0] / 5)),
             axisLabel: {
-              formatter: "{value}  %",
+              formatter: "{value} %",
             },
           },
           {
@@ -294,7 +298,7 @@ const DimReductionPage = ({
               fontSize: "14",
               verticalAlign: "center",
             },
-            name: "Cumm. var. exp.",
+            name: "Cum. var. exp.",
             type: "value",
             min: 0,
             max: 100,
@@ -310,13 +314,13 @@ const DimReductionPage = ({
             type: "bar",
             tooltip: {
               valueFormatter: function (value) {
-                return value.toFixed(2);
+                return value.toFixed(2) + " %";
               },
             },
             data: explained_ratio,
           },
           {
-            name: "Cummulative Variance Explained",
+            name: "Cumulative Variance Explained",
             type: "line",
             yAxisIndex: 1,
             tooltip: {

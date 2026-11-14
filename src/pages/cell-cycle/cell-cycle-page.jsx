@@ -16,17 +16,44 @@ import { useSelector } from "react-redux";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart } from "echarts/charts";
 import { CanvasRenderer } from "echarts/renderers";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  ToolboxComponent,
+} from "echarts/components";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import styles from "./cell-cycle-page.module.scss";
 import { TableExportButtons } from "../../components/export-buttons";
 import { PlotHelp } from "../../components/plot-help";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import {
   fetchCellCycleAggregateV2,
   fetchCellCycleComparisonV2,
 } from "../../store/api/v2";
 
-echarts.use([TooltipComponent, GridComponent, BarChart, LineChart, CanvasRenderer]);
+echarts.use([
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  ToolboxComponent,
+  BarChart,
+  LineChart,
+  CanvasRenderer,
+]);
+
+// The detail charts say which colour is which and can be exported like the others.
+const detailLegend = { top: 0, left: 0, itemWidth: 12, itemHeight: 8, textStyle: { fontSize: 11 } };
+const detailToolbox = (name) => ({
+  top: -4,
+  right: 0,
+  itemSize: 12,
+  feature: {
+    saveAsImage: { name: `genesetr_${name}`, pixelRatio: 2 },
+    mySvg: svgToolboxFeature(`genesetr-${name}`),
+    myPdf: pdfToolboxFeature(`genesetr-${name}`),
+  },
+});
 
 const CONTROL_LABEL = "Non-Targeting";
 const NO_DATA_FOR_GENE_MESSAGE = "No data available for this gene";
@@ -79,7 +106,9 @@ const buildPhaseCompositionOption = (compareData) => {
 
   return {
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v) => `${v}%` },
-    grid: { top: 8, left: 34, right: 10, bottom: 24, containLabel: true },
+    legend: detailLegend,
+    toolbox: detailToolbox("cell-cycle-phases"),
+    grid: { top: 28, left: 34, right: 10, bottom: 24, containLabel: true },
     xAxis: { type: "category", data: ["G1", "S", "G2M"], axisLabel: { fontSize: 11 } },
     yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%", fontSize: 11 } },
     series: [
@@ -113,7 +142,10 @@ const buildHalfViolinOption = (compareData, scoreKey) => {
 
   return {
     tooltip: { trigger: "axis", valueFormatter: (v) => Math.abs(v).toExponential(2) },
-    grid: { top: 8, left: 40, right: 10, bottom: 24, containLabel: true },
+    // Control is drawn below the axis, the perturbation above it.
+    legend: detailLegend,
+    toolbox: detailToolbox(`cell-cycle-${scoreKey}`),
+    grid: { top: 28, left: 40, right: 10, bottom: 24, containLabel: true },
     xAxis: { type: "value", axisLabel: { fontSize: 11 } },
     yAxis: {
       type: "value",
