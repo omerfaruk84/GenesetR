@@ -14,6 +14,16 @@ const FIXTURES = {
   corrCluster: fixture("corr_cluster"),
 };
 
+// Results of the backend's own task code for the requests the pages send for
+// their example runs (fixtures/task_<request>.json: { request, result }).
+// A page that posts one of these requests gets that result back.
+const TASK_FIXTURES = {};
+fs.readdirSync(path.join(__dirname, "..", "fixtures"))
+  .filter((name) => /^task_.*\.json$/.test(name))
+  .forEach((name) => {
+    TASK_FIXTURES[name.replace(/^task_|\.json$/g, "")] = fixture(name.replace(/\.json$/, ""));
+  });
+
 const API_HOSTS = /^(https?|wss?):\/\/(localhost:8443|127\.0\.0\.1:8443|genesetr\.uio\.no\/api)\//;
 
 const json = (route, body, status = 200) =>
@@ -33,6 +43,7 @@ const notFound = (route) => json(route, { error: { code: "NOT_FOUND", message: "
 const mockApi = async (page) => {
   const requests = [];
   const unmocked = [];
+  const taskRequests = []; // request types posted to /getData
 
   await page.route(/mygene\.info/, (route) =>
     json(route, {
@@ -76,8 +87,21 @@ const mockApi = async (page) => {
       return json(route, { error: { code: "NOT_FOUND", message: "Gene not found in any dataset", details: {} } }, 404);
     }
     if (pathname.startsWith("/health")) return json(route, { status: "healthy" });
-    // A correlation run: the task is created and is finished on the first poll.
-    if (request.method() === "POST" && pathname === "/getData") return json(route, { task_id: "corr-fixture" });
+    // An analysis run: the task is created and is finished on the first poll.
+    if (request.method() === "POST" && pathname === "/getData") {
+      let requestType = "";
+      try {
+        requestType = JSON.parse(JSON.parse(request.postData() || "{}").body || "{}").request || "";
+      } catch (error) {
+        requestType = "";
+      }
+      taskRequests.push(requestType);
+      return json(route, { task_id: TASK_FIXTURES[requestType] ? `task-${requestType}` : "corr-fixture" });
+    }
+    const taskMatch = pathname.match(/^\/tasks\/task-(.+)$/);
+    if (taskMatch && TASK_FIXTURES[taskMatch[1]]) {
+      return json(route, { status: "SUCCESS", task_result: TASK_FIXTURES[taskMatch[1]].result });
+    }
     if (pathname === "/tasks/corr-fixture") {
       return json(route, { status: "SUCCESS", task_result: JSON.stringify(FIXTURES.corrCluster) });
     }
@@ -86,7 +110,7 @@ const mockApi = async (page) => {
     return notFound(route);
   });
 
-  return { requests, unmocked, enrichr };
+  return { requests, unmocked, enrichr, taskRequests };
 };
 
 /**
@@ -102,4 +126,4 @@ const watchErrors = (page) => {
   };
 };
 
-module.exports = { mockApi, watchErrors, FIXTURES };
+module.exports = { mockApi, watchErrors, FIXTURES, TASK_FIXTURES };
