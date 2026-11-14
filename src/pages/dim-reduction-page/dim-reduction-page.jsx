@@ -1,4 +1,4 @@
-import { svgToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -249,6 +249,7 @@ const DimReductionPage = ({
             restore: { show: true },
             saveAsImage: { show: true },
             mySvg: svgToolboxFeature("genesetr-pca-variance"),
+            myPdf: pdfToolboxFeature("genesetr-pca-variance"),
           },
         },
         legend: {

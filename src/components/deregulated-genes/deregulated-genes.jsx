@@ -1,4 +1,4 @@
-import { svgToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import { TableExportButtons } from "../export-buttons";
 import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, Tab, Box, Typography, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
@@ -275,6 +275,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         feature: {
           saveAsImage: { name: 'genesetr_deregulated_genes_heatmap', pixelRatio: 2 },
           mySvg: svgToolboxFeature("genesetr-deregulated-genes"),
+          myPdf: pdfToolboxFeature("genesetr-deregulated-genes"),
         },
       },
       dataZoom: [

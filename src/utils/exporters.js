@@ -1,8 +1,10 @@
 /**
  * Exports shared by tables, charts and networks.
  *
- *  - tables:   CSV (with a UTF-8 mark so Excel opens it correctly) and TSV
- *  - charts:   SVG of any ECharts chart, as an extra toolbox button
+ *  - tables:   CSV (with a UTF-8 mark so Excel opens it correctly), TSV and
+ *              Excel (.xlsx)
+ *  - charts:   SVG (vector) and PDF (image at print resolution) of any
+ *              ECharts chart, as extra toolbox buttons
  *  - networks: GraphML and Cytoscape JSON of an ECharts graph series or of a
  *              plain { nodes, links } object
  */
@@ -10,6 +12,7 @@ import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import { saveAs } from "file-saver";
 import { toast } from "@oliasoft-open-source/react-ui-library";
+import { jpegToPdf, rowsToXlsx } from "./fileFormats";
 
 echarts.use([SVGRenderer]);
 
@@ -59,10 +62,28 @@ const exportColumns = (rows, columns) => {
   return keys.map((key) => ({ label: key, value: (row) => row?.[key] }));
 };
 
-/** Download rows as "csv" or "tsv". Returns false when there is nothing to export. */
+// Numbers written as text ("0.5", "1e-5") become numeric cells in Excel
+const xlsxValue = (value) => {
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  const text = cellText(value);
+  return /^-?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(text) && text.length < 16 ? Number(text) : text;
+};
+
+/** Download rows as "csv", "tsv" or "xlsx". Returns false when there is nothing to export. */
 export const downloadTable = (rows, { columns = null, filename = "genesetr-table", format = "csv" } = {}) => {
   if (!Array.isArray(rows) || rows.length === 0) return false;
   const cols = exportColumns(rows, columns);
+  if (format === "xlsx") {
+    const bytes = rowsToXlsx(
+      cols.map((column) => column.label),
+      rows.map((row) => cols.map((column) => xlsxValue(column.value(row))))
+    );
+    saveAs(
+      new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      `${filename}-${stamp()}.xlsx`
+    );
+    return true;
+  }
   const tsv = format === "tsv";
   const text = delimited(rows, cols, tsv ? "\t" : ",");
   const blob = new Blob([tsv ? text : `﻿${text}`], {
@@ -100,6 +121,45 @@ export const svgToolboxFeature = (name = "genesetr-chart") => ({
       saveAs(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), `${name}-${stamp()}.svg`);
     } catch (error) {
       notifyError("This chart could not be saved as SVG", "3D charts are only available as PNG. " + (error?.message || ""));
+    }
+  },
+});
+
+const dataUrlBytes = (dataUrl) => {
+  const binary = atob(String(dataUrl).split(",")[1] || "");
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+// CSS pixels are 1/96 inch, PDF points 1/72 inch
+const PX_TO_PT = 0.75;
+
+/**
+ * Save a JPEG (data URL or bytes) as a one-page PDF. `width` and `height` are
+ * the size of the picture on screen in CSS pixels; the image itself is
+ * usually larger, which gives the print resolution.
+ */
+export const saveJpegAsPdf = (jpeg, width, height, filename = "genesetr-chart") => {
+  const bytes = typeof jpeg === "string" ? dataUrlBytes(jpeg) : jpeg;
+  saveAs(new Blob([jpegToPdf(bytes, width * PX_TO_PT, height * PX_TO_PT)], { type: "application/pdf" }), `${filename}-${stamp()}.pdf`);
+};
+
+/**
+ * Extra ECharts toolbox button "Save as PDF": the chart as drawn, at three
+ * times the screen resolution, on a page of the size of the chart. Works for
+ * every chart type, including 3D; for editable vector graphics use the SVG.
+ */
+export const pdfToolboxFeature = (name = "genesetr-chart") => ({
+  show: true,
+  title: "Save as PDF",
+  icon: "path://M4 2h10l6 6v14H4z M14 2v6h6 M7 18v-5h1.6a1.5 1.5 0 0 1 0 3H7 M12 13v5h1a2.5 2.5 0 0 0 0-5z M17 18v-5h2.5 M17 15.5h2",
+  onclick: (ecModel, api) => {
+    try {
+      const url = api.getConnectedDataURL({ type: "jpeg", pixelRatio: 3, backgroundColor: "#ffffff", excludeComponents: ["toolbox"] });
+      saveJpegAsPdf(url, api.getWidth(), api.getHeight(), name);
+    } catch (error) {
+      notifyError("This chart could not be saved as PDF", error?.message || "");
     }
   },
 });

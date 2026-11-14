@@ -1,4 +1,4 @@
-import { svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
 import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import * as echarts from "echarts/core";
@@ -737,6 +737,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             restore: { show: true },
             saveAsImage: { show: true, name: "genesetr_pathway_network", pixelRatio: 2 },
             mySvg: svgToolboxFeature("genesetr-path-network"),
+            myPdf: pdfToolboxFeature("genesetr-path-network"),
             myGraphml: graphmlToolboxFeature("genesetr-path-network"),
             dataZoom: {},
           },

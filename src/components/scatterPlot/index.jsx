@@ -1,4 +1,4 @@
-import { svgToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { connect } from "react-redux";
@@ -563,6 +563,7 @@ const ScatterPlot = ({
             restore: { show: true },
             saveAsImage: { show: true, pixelRatio: 3 },
             mySvg: svgToolboxFeature("genesetr-embedding"),
+            myPdf: pdfToolboxFeature("genesetr-embedding"),
             dataZoom: {},
             brush: {
               type: ["rect", "polygon", "keep", "clear"],
@@ -772,6 +773,7 @@ const ScatterPlot = ({
             restore: { show: true },
             saveAsImage: { show: true },
             mySvg: svgToolboxFeature("genesetr-embedding"),
+            myPdf: pdfToolboxFeature("genesetr-embedding"),
             dataZoom: {},
             brush: {
               type: ["rect", "polygon", "keep", "clear"],

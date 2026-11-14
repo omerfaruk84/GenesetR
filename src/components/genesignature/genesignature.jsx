@@ -1,4 +1,4 @@
-import { svgToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Spacer,
@@ -1710,6 +1710,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           restore: {},
           saveAsImage: { name: "genesetr_gene_signature", pixelRatio: 2 },
           mySvg: svgToolboxFeature("genesetr-gene-signature"),
+          myPdf: pdfToolboxFeature("genesetr-gene-signature"),
         },
       },
 

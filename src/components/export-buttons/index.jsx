@@ -26,7 +26,7 @@ const nothing = () =>
 const wrapStyle = { display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" };
 
 /**
- * CSV and TSV download for a table.
+ * CSV, TSV and Excel download for a table.
  *   rows     array of row objects, or a function returning it (called on click,
  *            e.g. to export the rows as currently filtered and sorted)
  *   columns  optional column definitions ({ accessorKey | accessorFn, header })
@@ -43,6 +43,9 @@ export const TableExportButtons = ({ rows, columns, filename = "genesetr-table",
       </button>
       <button type="button" style={buttonStyle} onClick={() => run("tsv")} title="Tab separated; for R, Python and spreadsheets">
         <FaDownload size={11} aria-hidden="true" /> TSV
+      </button>
+      <button type="button" style={buttonStyle} onClick={() => run("xlsx")} title="Excel workbook; numbers stay numbers">
+        <FaDownload size={11} aria-hidden="true" /> Excel
       </button>
     </span>
   );

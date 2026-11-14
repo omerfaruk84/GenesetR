@@ -30,6 +30,7 @@ import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
 import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
+import { saveJpegAsPdf } from "../../utils/exporters";
 
 // Optional InCHlib methods. The two bundled library versions (1.2.0 canvas and
 // 2.0 WebGL) implement different subsets, so every control that depends on one
@@ -201,6 +202,13 @@ const HeatMap = ({
 
       const canvas = compositeStageToCanvas();
       const blob = await canvasToBlob(canvas);
+      if (extension === "pdf") {
+        // The page gets the size of the heatmap on screen; the image keeps
+        // the full resolution of the canvas.
+        const ratio = window.devicePixelRatio || 1;
+        saveJpegAsPdf(new Uint8Array(await blob.arrayBuffer()), canvas.width / ratio, canvas.height / ratio, "heatmap");
+        return;
+      }
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       saveAs(blob, `heatmap-${timestamp}.${extension}`);
     } catch (e) {
@@ -226,6 +234,14 @@ const HeatMap = ({
       mimeType: "image/jpeg",
       extension: "jpg",
       quality: 1,
+    });
+  }, [exportHeatmapImage]);
+
+  const exportHeatmapAsPdf = useCallback(() => {
+    return exportHeatmapImage({
+      mimeType: "image/jpeg",
+      extension: "pdf",
+      quality: 0.95,
     });
   }, [exportHeatmapImage]);
 
@@ -1108,6 +1124,16 @@ const keyedData = useMemo(() => {
                 >
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
                   Export JPEG
+                </button>
+                <button
+                  type="button"
+                  onClick={exportHeatmapAsPdf}
+                  className={ui.button}
+                  disabled={isExporting}
+                  title="Download the heatmap as a PDF page"
+                >
+                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  Export PDF
                 </button>
                 {capabilities.getClusters && clusterCount > 0 && (
                   <button

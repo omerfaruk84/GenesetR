@@ -1,4 +1,4 @@
-import { svgToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import {
   Table,
   Field,
@@ -729,6 +729,7 @@ const GeneSetEnrichmentTable = ({
           mark: { show: true },
           saveAsImage: { show: true, pixelRatio: 3, name: "genesetr_enrichment" },
           mySvg: svgToolboxFeature("genesetr-enrichment"),
+          myPdf: pdfToolboxFeature("genesetr-enrichment"),
         },
       },
       visualMap: [
@@ -913,6 +914,7 @@ const GeneSetEnrichmentTable = ({
           mark: { show: true },
           saveAsImage: { show: true, pixelRatio: 3 },
           mySvg: svgToolboxFeature("genesetr-enrichment"),
+          myPdf: pdfToolboxFeature("genesetr-enrichment"),
         },
       },
 

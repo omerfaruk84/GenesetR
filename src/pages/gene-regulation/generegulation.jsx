@@ -1,4 +1,4 @@
-import { svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
+import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
 import React, { useState } from "react";
 import {
   Table,
@@ -1092,6 +1092,7 @@ const GeneRegulation = ({
             restore: { show: true },
             saveAsImage: { show: true },
             mySvg: svgToolboxFeature("genesetr-gene-regulation"),
+            myPdf: pdfToolboxFeature("genesetr-gene-regulation"),
             myGraphml: graphmlToolboxFeature("genesetr-gene-regulation"),
             dataZoom: {},
           },
