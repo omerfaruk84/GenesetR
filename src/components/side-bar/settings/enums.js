@@ -88,6 +88,7 @@ const InchlibSettingsTypes = {
   COLOR_RANGE_AUTO: "color_range_auto",
   ROW_SCALING: "row_scaling",
   SQUARE_CELLS: "square_cells",
+  HEATMAP_VIEW: "heatmap_view",
   COLOR_PERCENTILE_MIN: "color_percentile_min", 
   COLOR_PERCENTILE_MAX: "color_percentile_max", 
   MAX_COLUMN_WIDTH: "max_column_width",

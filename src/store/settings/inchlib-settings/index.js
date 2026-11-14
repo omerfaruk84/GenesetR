@@ -19,6 +19,9 @@ const initialState = {
   row_scaling: false,
   // one cell size for both axes
   square_cells: false,
+  // zoom, position and cut lines of the cluster heatmap (kept for shared
+  // links; only applied to the matrix it was taken from)
+  heatmap_view: null,
   color_percentile_min: -1, 
   color_percentile_max: 1,  
   max_column_width: 100,

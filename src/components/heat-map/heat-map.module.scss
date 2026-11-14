@@ -249,3 +249,29 @@
     outline: 1px solid #d7191c;
   }
 }
+
+.clusterInputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px;
+  font-size: 13px;
+  white-space: nowrap;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  input {
+    width: 52px;
+    height: 28px;
+    padding: 0 4px;
+    border: 1px solid var(--border-color, #c4c9d0);
+    border-radius: 4px;
+    background: var(--surface-color, #fff);
+    color: inherit;
+    font: inherit;
+  }
+}

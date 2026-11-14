@@ -456,4 +456,58 @@ test("find a gene: the view jumps to it; the minimap shows and moves the view", 
   expect(await errors()).toEqual([]);
 });
 
+test("a label opens the gene page; cluster counts can be typed", async ({ page, context }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+
+  // Labels are clickable once they are drawn (cells of 8 px or more).
+  await withHeatmap(page, (hm) => hm.focusGene("PSMA1"));
+  const label = await withHeatmap(page, (hm) => {
+    const rect = hm._root.getBoundingClientRect();
+    const view = hm._viewRect();
+    const row = hm._marks.rows[0];
+    return { x: rect.left + view.x + view.w + 20, y: rect.top + view.y + (row + 0.5) * hm._cam.ch - hm._cam.sy };
+  });
+  const [genePage] = await Promise.all([context.waitForEvent("page"), page.mouse.click(label.x, label.y)]);
+  expect(genePage.url()).toContain("/gene?symbol=PSMA1");
+  await genePage.close();
+
+  // Typing a number of clusters cuts the dendrogram.
+  await page.getByTestId("cluster-count-rows").fill("5");
+  await expect.poll(() => withHeatmap(page, (hm) => hm.getClusters().rows.length)).toBe(5);
+  await expect(page.getByRole("button", { name: "Export clusters" })).toBeVisible();
+  await page.getByTestId("cluster-count-rows").fill("1");
+  await expect.poll(() => withHeatmap(page, (hm) => hm.getClusters().rows.length)).toBe(0);
+  expect(await errors()).toEqual([]);
+});
+
+test("zoom, position and cuts come back when the same result is drawn again", async ({ page }) => {
+  await openHeatmap(page);
+  await withHeatmap(page, (hm) => {
+    hm.setClusterCount("column", 3);
+    hm._zoomBy(3, 300, 200);
+    hm._cam.sx += 80;
+    hm._clampCamera();
+    hm._renderNow();
+  });
+  // The view is stored with a delay; by then the toolbar (which gained the
+  // cluster buttons) has settled too.
+  await page.waitForTimeout(900);
+  const saved = await withHeatmap(page, (hm) => hm.getViewState());
+  expect(saved.zoomX).toBeGreaterThan(2);
+
+  // Run the same analysis again: a new heatmap instance is created.
+  await withHeatmap(page, (hm) => {
+    hm._root.setAttribute("data-old", "1");
+  });
+  await page.locator('[data-tour="run"] button').first().click();
+  await expect(page.locator("[data-cluster-heatmap]:not([data-old]) canvas").first()).toBeVisible();
+  await expect
+    .poll(() => withHeatmap(page, (hm) => hm.getViewState()))
+    .toMatchObject({ zoomX: saved.zoomX, zoomY: saved.zoomY, colCut: saved.colCut, rowCut: null });
+  const restored = await withHeatmap(page, (hm) => hm.getViewState());
+  expect(restored.centerX).toBeCloseTo(saved.centerX, 2);
+  expect(await withHeatmap(page, (hm) => hm.getClusters().columns.length)).toBe(3);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

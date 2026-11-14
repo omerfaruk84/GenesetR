@@ -22,7 +22,7 @@ import EnrichmentTable from "../enrichment-table-new/index.jsx";
 import { connect, useDispatch } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { LoadingPage } from "../loading-page";
-import { throttle } from "lodash";
+import { throttle, debounce } from "lodash";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { saveAs } from "file-saver";
@@ -31,6 +31,7 @@ import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
 import { SendToMenu } from "../send-to";
 import { setHeatmapRangeInfo } from "../cluster-heatmap/rangeInfo";
+import { genePagePath } from "../../utils/geneLinks";
 import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
@@ -198,7 +199,22 @@ const HeatMap = ({
 
   const [isExporting, setIsExporting] = useState(false);
   // Number of clusters defined by the dendrogram cut lines (0 when there is no cut).
-  const [clusterCount, setClusterCount] = useState(0);
+  const [clusterCounts, setClusterCounts] = useState({ rows: 0, columns: 0 });
+  const clusterCount = clusterCounts.rows + clusterCounts.columns;
+  // Leaves of each dendrogram: the upper limit of the "clusters" inputs.
+  const [treeSizes, setTreeSizes] = useState({ rows: 0, columns: 0 });
+
+  // The view (zoom, position, cuts) is stored with the display settings so
+  // that a shared link reopens it; debounced, since it changes on every frame
+  // of a drag.
+  const storeView = useMemo(
+    () =>
+      debounce((view) => {
+        dispatch(inchlibSettingsChanged({ settingName: InchlibSettingsTypes.HEATMAP_VIEW, newValue: view }));
+      }, 500),
+    [dispatch]
+  );
+  useEffect(() => () => storeView.cancel(), [storeView]);
   // "Find gene" box above the heatmap
   const [geneQuery, setGeneQuery] = useState("");
   const [geneOptions, setGeneOptions] = useState([]);
@@ -1069,7 +1085,14 @@ const keyedData = useMemo(() => {
     };
 
     // Only the texture-based renderer has cut lines; the others ignore this.
-    setClusterCount(0);
+    setClusterCounts({ rows: 0, columns: 0 });
+    // A click on a label opens the gene page in a new tab (the heatmap stays).
+    inchlib.events.label_onclick = function ({ label }) {
+      window.open(genePagePath(label), "_blank", "noopener");
+    };
+    inchlib.events.view_onchange = function (view) {
+      storeView(view);
+    };
     inchlib.events.range_onchange = function (info) {
       setHeatmapRangeInfo(info);
     };
@@ -1086,9 +1109,10 @@ const keyedData = useMemo(() => {
         // A summary describes the previous clusters.
         summaryRunRef.current += 1;
         setSummary(null);
-        setClusterCount(
-          (clusters?.rows?.length || 0) + (clusters?.columns?.length || 0)
-        );
+        setClusterCounts({
+          rows: clusters?.rows?.length || 0,
+          columns: clusters?.columns?.length || 0,
+        });
       }
     };
 
@@ -1112,6 +1136,7 @@ const keyedData = useMemo(() => {
     inchlib.draw();
     if (inchlib.getLabels) {
       const labels = inchlib.getLabels();
+      setTreeSizes({ rows: labels.rows.length, columns: labels.columns.length });
       setGeneOptions(
         Array.from(
           new Set([...labels.rows, ...labels.columns].map((label) => String(label).split(/[_ ]/)[0]))
@@ -1192,6 +1217,10 @@ const keyedData = useMemo(() => {
       }
     }
     
+    // A view saved for this very matrix (a shared link, or the same genes run
+    // again) is restored; for any other result it is ignored.
+    inchlib.setViewState?.(inchlibSettings.heatmap_view);
+
     if (isMountedRef.current && currentInstanceId === instanceIdRef.current) {
       setLoading(false);
       // Use requestAnimationFrame for smoother rendering
@@ -1442,6 +1471,40 @@ const keyedData = useMemo(() => {
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
                   Export PDF
                 </button>
+                {capabilities.getClusters && (
+                  <span
+                    className={styles.clusterInputs}
+                    title="Cut a dendrogram into this many clusters (1 = no cut). Dragging its dashed line does the same."
+                  >
+                    Clusters
+                    <label>
+                      rows
+                      <input
+                        type="number"
+                        min={1}
+                        max={Math.max(treeSizes.rows, 1)}
+                        value={clusterCounts.rows || 1}
+                        data-testid="cluster-count-rows"
+                        onChange={(event) =>
+                          inchlibInstance.current?.setClusterCount?.("row", Number(event.target.value))
+                        }
+                      />
+                    </label>
+                    <label>
+                      columns
+                      <input
+                        type="number"
+                        min={1}
+                        max={Math.max(treeSizes.columns, 1)}
+                        value={clusterCounts.columns || 1}
+                        data-testid="cluster-count-columns"
+                        onChange={(event) =>
+                          inchlibInstance.current?.setClusterCount?.("column", Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  </span>
+                )}
                 {capabilities.getClusters && clusterCount > 0 && (
                   <button
                     type="button"

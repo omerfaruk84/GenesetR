@@ -383,6 +383,10 @@ class ClusterHeatmap {
       range_onchange: noop,
       // Called when the user sets the range on the legend: { min, max, auto }.
       range_onuserchange: noop,
+      // Called with { axis, label, objects } when a row or column label is clicked.
+      label_onclick: noop,
+      // Called with getViewState() when the zoom, the position or a cut changes.
+      view_onchange: noop,
       // Called with getClusters() when a cut line is released or cleared.
       clusters_onchange: noop,
     };
@@ -798,6 +802,60 @@ class ClusterHeatmap {
     this._requestRender();
   }
 
+  /** Identifies the matrix a saved view belongs to. */
+  _signature() {
+    const rows = this._rowLabels || [];
+    const cols = this._colLabels || [];
+    return `${rows.length}x${cols.length}:${rows[0]}:${rows[rows.length - 1]}:${cols[0]}`;
+  }
+
+  /**
+   * The view as numbers that survive a resize: zoom relative to "everything
+   * in view", the centre as a fraction of the matrix, and the cut heights.
+   */
+  getViewState() {
+    const cam = this._cam;
+    const box = this._layoutBox;
+    if (!cam || !box) return null;
+    const view = this._viewRect();
+    const round = (value) => Math.round(value * 1e4) / 1e4;
+    return {
+      signature: this._signature(),
+      zoomX: round(cam.cw / box.fitCw),
+      zoomY: round(cam.ch / box.fitCh),
+      centerX: round((cam.sx + view.w / 2) / (this._nCols * cam.cw)),
+      centerY: round((cam.sy + view.h / 2) / (this._nRows * cam.ch)),
+      rowCut: this._cut.row === null ? null : round(this._cut.row),
+      colCut: this._cut.col === null ? null : round(this._cut.col),
+    };
+  }
+
+  /** Restores a view from getViewState(); ignored when it belongs to another matrix. */
+  setViewState(state) {
+    const cam = this._cam;
+    const box = this._layoutBox;
+    if (!state || !cam || !box || state.signature !== this._signature()) return false;
+    if ((state.rowCut ?? null) !== this._cut.row) this._setCut("row", state.rowCut ?? null, true);
+    if ((state.colCut ?? null) !== this._cut.col) this._setCut("col", state.colCut ?? null, true);
+    // Kept until the user moves the view: the layout may still settle (the
+    // page around the heatmap changes size), and the view is relative to it.
+    this._restoredView = state;
+    this._applyCamera(state);
+    return true;
+  }
+
+  _applyCamera(state) {
+    const cam = this._cam;
+    const box = this._layoutBox;
+    cam.cw = box.fitCw * (Number(state.zoomX) || 1);
+    cam.ch = box.fitCh * (Number(state.zoomY) || 1);
+    this._clampCamera();
+    cam.sx = (Number(state.centerX) || 0) * this._nCols * cam.cw - box.availW / 2;
+    cam.sy = (Number(state.centerY) || 0) * this._nRows * cam.ch - box.availH / 2;
+    this._clampCamera();
+    this._requestRender();
+  }
+
   /** Row and column labels in display order. */
   getLabels() {
     return { rows: (this._rowLabels || []).slice(), columns: (this._colLabels || []).slice() };
@@ -829,6 +887,7 @@ class ClusterHeatmap {
       if (!found.rows.length && !found.cols.length) found = search((name) => name.startsWith(wanted));
     }
     this._marks = found;
+    if (wanted) this._restoredView = null;
     const cam = this._cam;
     const box = this._layoutBox;
     if (cam && box && (found.rows.length || found.cols.length)) {
@@ -968,6 +1027,7 @@ class ClusterHeatmap {
   }
 
   resetCamera() {
+    this._restoredView = null;
     if (!this._layoutBox) return;
     const { fitCw, fitCh } = this._layoutBox;
     this._cam = { cw: fitCw, ch: fitCh, sx: 0, sy: 0 };
@@ -1120,7 +1180,7 @@ class ClusterHeatmap {
       } else if (kind && this._cut[kind] !== null) {
         this._selected = { row: -1, col: -1 }; // undo the selection made by the first click
         this._setCut(kind, null, true);
-      } else if (region.name !== "none" && region.name !== "minimap") this.resetCamera();
+      } else if (["heatmap", "rowTree", "colTree"].includes(region.name)) this.resetCamera();
     });
     this._listen(root, "wheel", (e) => this._onWheel(e), { passive: false });
 
@@ -1227,6 +1287,7 @@ class ClusterHeatmap {
 
     if (resetCamera || !this._cam || wasFit) this._cam = { cw: fitCw, ch: fitCh, sx: 0, sy: 0 };
     this._clampCamera();
+    if (this._restoredView && !resetCamera) this._applyCamera(this._restoredView);
     this._requestRender();
   }
 
@@ -1276,6 +1337,13 @@ class ClusterHeatmap {
     this._drawOverlay();
     this._dataDirty = false;
     this._lutDirty = false;
+    // Tell the host when the view changed (it stores it for shared links).
+    const state = this.getViewState();
+    const key = JSON.stringify(state);
+    if (key !== this._viewKey) {
+      this._viewKey = key;
+      this.events.view_onchange?.(state);
+    }
   }
 
   _initGl() {
@@ -2075,6 +2143,16 @@ class ClusterHeatmap {
     if (inX && inY) return { name: "heatmap", x, y };
     if (box.dendW && inY && x >= box.dendX && x < view.x) return { name: "rowTree", x, y };
     if (box.colDendH && inX && y >= box.colDendY && y < view.y) return { name: "colTree", x, y };
+    // Labels (only where they are drawn): a click opens the gene.
+    const cam = this._cam;
+    if (this.settings.draw_row_ids && cam.ch >= 8 && inY && x >= view.x + view.w + 6 && x <= view.x + view.w + box.rowLabelW) {
+      const index = Math.floor((y - view.y + cam.sy) / cam.ch);
+      if (index >= 0 && index < this._nRows) return { name: "rowLabel", x, y, index };
+    }
+    if (this.settings.heatmap_header && cam.cw >= 8 && inX && y >= view.y + view.h + 6 && y <= view.y + view.h + box.colLabelH) {
+      const index = Math.floor((x - view.x + cam.sx) / cam.cw);
+      if (index >= 0 && index < this._nCols) return { name: "colLabel", x, y, index };
+    }
     const minimap = this._minimapRect();
     if (minimap && x >= minimap.x && x <= minimap.x + minimap.w && y >= minimap.y && y <= minimap.y + minimap.h) {
       return { name: "minimap", x, y };
@@ -2118,6 +2196,7 @@ class ClusterHeatmap {
       }
     }
     if (e.button !== 0) return;
+    this._restoredView = null;
     this._root.focus?.({ preventScroll: true });
     const region = this._regionAt(e);
     if (region.name === "minimap") this._panToMinimap(region.x, region.y);
@@ -2217,6 +2296,7 @@ class ClusterHeatmap {
 
     let cursor = "default";
     if (region.name === "legend" && this._legendHandleAt(region.x, region.y)) cursor = "ew-resize";
+    else if (region.name === "rowLabel" || region.name === "colLabel") cursor = "pointer";
     else if (handle) cursor = handle === "row" ? "col-resize" : "row-resize";
     else if (cell) cursor = "crosshair";
     else if (rowNode >= 0 || colNode >= 0) cursor = "pointer";
@@ -2282,6 +2362,7 @@ class ClusterHeatmap {
   _onKeyDown(e) {
     const cam = this._cam;
     if (!cam || e.ctrlKey || e.metaKey || e.altKey) return;
+    this._restoredView = null;
     const view = this._viewRect();
     const step = e.shiftKey ? 240 : 48;
     switch (e.key) {
@@ -2364,6 +2445,15 @@ class ClusterHeatmap {
       } else {
         this.events.empty_space_onclick?.(e);
       }
+    } else if (region.name === "rowLabel") {
+      this.events.label_onclick?.({
+        axis: "row",
+        label: this._rowLabels[region.index],
+        objects: this._rowObjects[region.index].slice(),
+      });
+    } else if (region.name === "colLabel") {
+      const label = this._colLabels[region.index];
+      this.events.label_onclick?.({ axis: "column", label, objects: [label] });
     } else if (region.name !== "legend" && region.name !== "minimap") {
       this.events.empty_space_onclick?.(e);
     }
@@ -2381,7 +2471,8 @@ class ClusterHeatmap {
 
   _onWheel(e) {
     const region = this._regionAt(e);
-    if (region.name === "none" || region.name === "legend" || region.name === "minimap") return;
+    if (["none", "legend", "minimap", "rowLabel", "colLabel"].includes(region.name)) return;
+    this._restoredView = null;
     const cam = this._cam;
     const view = this._viewRect();
     const box = this._layoutBox;
