@@ -1,3 +1,4 @@
+import { PlotHelp } from "../../components/plot-help";
 import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
 import React, { useState } from "react";
 import {
@@ -1270,6 +1271,7 @@ const GeneRegulation = ({
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
+      <PlotHelp kind="regulationNetwork" />
      
       {keyedData && keyedData.length > 1 && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />

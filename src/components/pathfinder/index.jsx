@@ -1,3 +1,4 @@
+import { PlotHelp } from "../plot-help";
 import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
 import React, { useEffect, useState, useMemo } from "react";
 import { connect } from "react-redux";
@@ -909,6 +910,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         onSelected={(key) => setSelectedView(key)}
         value={selectedView}
       />
+      <PlotHelp kind="pathNetwork" />
 
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />

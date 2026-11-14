@@ -30,6 +30,43 @@ export const PLOT_HELP = {
       "Select a cluster to see its genes, run enrichment, or send it to another module.",
     ],
   },
+  pathNetwork: {
+    title: "How to read this network",
+    points: [
+      "Nodes are your genes. An arrow from A to B means that knocking down A changes the expression of B.",
+      "A green arrow means B goes down when A is knocked down, so A normally activates B; the other colour marks the opposite effect. Wider arrows are stronger effects.",
+      "Larger nodes have more partners in the network. Paler nodes were knocked down less efficiently, so their outgoing arrows are less reliable.",
+      "Genes with many outgoing arrows are candidate regulators of the list; the Link Table holds the numbers behind every arrow.",
+    ],
+  },
+  regulationNetwork: {
+    title: "How to read this network",
+    points: [
+      "The network is built around your gene of interest (GOI).",
+      "Upstream regulators (UPR, UNR) are perturbations that change the GOI: knocking down a positive regulator lowers it, knocking down a negative regulator raises it.",
+      "Downstream genes (DPR, DNR) change when the GOI itself is knocked down.",
+      "Links between the groups are kept when they are consistent, for example a positive regulator that also lowers the positively regulated downstream genes.",
+      "Raise the z-score thresholds or the minimum number of connections when the network is too dense.",
+    ],
+  },
+  expressionAnalyzer: {
+    title: "How to read these results",
+    points: [
+      "“Perturbation effects” lists genes that change when your gene is knocked down: its downstream targets.",
+      "“Perturbed by” lists perturbations that change the expression of your gene: its upstream regulators.",
+      "Values are z-scores against control cells. Positive means higher expression after the perturbation, negative means lower.",
+      "The correlation views list perturbations, or genes, whose profile across the dataset resembles that of your gene.",
+    ],
+  },
+  cellCycle: {
+    title: "How to read this table",
+    points: [
+      "Each row is a perturbed gene. The values are the change in the share of cells in G1, S and G2/M compared with control cells, in percentage points.",
+      "A large positive value in one phase means cells pile up there, for example +G1 for an arrest before DNA replication.",
+      "The three changes of a gene add up to about zero, because the shares always sum to 100%.",
+      "Click a gene to compare its phase distribution with the control in each cell line.",
+    ],
+  },
   signature: {
     title: "How to read this plot",
     points: [

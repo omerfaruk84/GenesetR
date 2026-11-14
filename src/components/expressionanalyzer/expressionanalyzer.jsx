@@ -1,3 +1,4 @@
+import { PlotHelp } from "../plot-help";
 import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
@@ -1593,6 +1594,7 @@ const ExpressionAnalyzer = ({
               onSelected={(key) => setSelectedView(key)}
               value={selectedView}
             />
+      <PlotHelp kind="expressionAnalyzer" />
             {blacklistLoading && (
               <div style={{ 
                 padding: '12px', 

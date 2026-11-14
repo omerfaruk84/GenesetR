@@ -20,6 +20,7 @@ import { GridComponent, TooltipComponent } from "echarts/components";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import styles from "./cell-cycle-page.module.scss";
 import { TableExportButtons } from "../../components/export-buttons";
+import { PlotHelp } from "../../components/plot-help";
 import {
   fetchCellCycleAggregateV2,
   fetchCellCycleComparisonV2,
@@ -414,11 +415,14 @@ const CellCyclePage = () => {
             columns={tableColumns}
             data={tableData}
             renderTopToolbarCustomActions={({ table }) => (
-              <TableExportButtons
-                filename="genesetr-cell-cycle"
-                columns={tableColumns}
-                rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
-              />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <TableExportButtons
+                  filename="genesetr-cell-cycle"
+                  columns={tableColumns}
+                  rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
+                />
+                <PlotHelp kind="cellCycle" />
+              </span>
             )}
             enableSorting
             enablePagination 

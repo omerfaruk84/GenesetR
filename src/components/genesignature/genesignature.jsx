@@ -1,3 +1,4 @@
+import { PlotHelp } from "../plot-help";
 import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
@@ -1839,6 +1840,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         onSelected={handleTabSelection}
         value={selectedView}
       />
+      <PlotHelp kind="signature" />
       {signatureDirty && (
         <div style={{
           marginTop: '8px',
