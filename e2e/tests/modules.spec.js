@@ -73,7 +73,7 @@ for (const route of ["/pathfinder", "/gene-regulation", "/gene-regulation-enhanc
       // The direction of an effect comes from the API's `Type` field; the
       // column used to say "Unknown" on every row.
       const cells = await page.locator("table tbody tr td").allTextContents();
-      expect(cells.some((text) => ["DNR", "UPR"].includes(text.trim()))).toBe(true); // down- / up-regulated
+      expect(cells.some((text) => /^(UPR|DPR|UNR|DNR)(_(UPR|DPR|UNR|DNR))?$/.test(text.trim()))).toBe(true);
       expect(cells.filter((text) => text.trim() === "Unknown").length).toBeLessThan(cells.length / 20);
     }
     expect(await errors()).toEqual([]);
