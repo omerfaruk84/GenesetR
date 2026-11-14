@@ -1,0 +1,13 @@
+{
+  "name": "genesetr-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser smoke tests for the GeneSetR frontend (API mocked with fixtures)",
+  "scripts": {
+    "test": "playwright test",
+    "serve": "node serve-build.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0"
+  }
+}

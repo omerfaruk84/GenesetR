@@ -1,0 +1,77 @@
+{
+ "items": [
+  {
+   "id": "K562gwps",
+   "name": "K562 Whole Genome",
+   "description": "K562 whole genome perturbation screen dataset",
+   "is_whole_genome": true,
+   "cell_line": "K562",
+   "perturbation_type": "CRISPRi",
+   "perturbation_count": 11258,
+   "gene_count": 8248,
+   "available_methods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ],
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null
+  },
+  {
+   "id": "HCT116gwps",
+   "name": "HCT116 Whole Genome",
+   "description": "HCT116 whole genome perturbation screen dataset",
+   "is_whole_genome": true,
+   "cell_line": "HCT116",
+   "perturbation_type": "CRISPRi",
+   "perturbation_count": 18190,
+   "gene_count": 11330,
+   "available_methods": [
+    "pearson",
+    "spearman"
+   ],
+   "citation": "Huang et al. 2025, X-Atlas/Orion, bioRxiv 10.1101/2025.06.11.659105",
+   "license": "CC BY-NC-SA 4.0"
+  },
+  {
+   "id": "K562essential",
+   "name": "K562 Essential",
+   "description": "K562 essential genes dataset",
+   "is_whole_genome": false,
+   "cell_line": "K562",
+   "perturbation_type": "CRISPRi",
+   "perturbation_count": 2285,
+   "gene_count": 8563,
+   "available_methods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ],
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null
+  },
+  {
+   "id": "RPE1essential",
+   "name": "RPE1 Essential",
+   "description": "RPE1 essential genes dataset",
+   "is_whole_genome": false,
+   "cell_line": "RPE1",
+   "perturbation_type": "CRISPRi",
+   "perturbation_count": 2679,
+   "gene_count": 8749,
+   "available_methods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ],
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null
+  }
+ ],
+ "total": 22,
+ "page": 1,
+ "page_size": 50,
+ "total_pages": 1,
+ "has_next": false,
+ "has_previous": false
+}

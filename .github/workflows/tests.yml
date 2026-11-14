@@ -1,0 +1,67 @@
+name: Frontend tests
+
+on:
+  push:
+    branches: [main, master, "claude/**", "feature/**", "fix/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Used only if the "canvas" package has no ready-made binary for this platform
+      - name: System libraries for canvas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Unit tests
+        run: npx react-scripts test --watchAll=false
+        env:
+          CI: "true"
+
+      # CI=false: the existing lint warnings must not fail the build
+      - name: Production build
+        run: npx react-scripts build
+        env:
+          CI: "false"
+          GENERATE_SOURCEMAP: "false"
+
+      - name: Install the smoke test tools
+        working-directory: e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      # The API is mocked with fixtures (e2e/fixtures); only the build is served
+      - name: Browser smoke tests
+        working-directory: e2e
+        run: npx playwright test
+        env:
+          CI: "true"
+
+      - name: Keep the smoke test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

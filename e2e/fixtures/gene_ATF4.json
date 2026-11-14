@@ -1,0 +1,892 @@
+{
+ "symbol": "ATF4",
+ "found": true,
+ "strong_effect_z": 2.0,
+ "datasets_searched": 20,
+ "perturbed_in": [
+  "K562gwps",
+  "K562gwpsnew",
+  "HCT116gwps",
+  "HEK293gwps",
+  "K562essential"
+ ],
+ "measured_in": [
+  "K562gwps",
+  "K562gwpsnew",
+  "HCT116gwps",
+  "HEK293gwps",
+  "K562essential"
+ ],
+ "datasets": [
+  {
+   "dataset": "K562gwps",
+   "name": "K562 Whole Genome",
+   "cell_line": "K562",
+   "perturbation_type": "CRISPRi",
+   "perturbed": true,
+   "measured": true,
+   "as_perturbation": {
+    "guides": [
+     "ATF4"
+    ],
+    "self_z": -0.899,
+    "genes_measured": 8247,
+    "strong_up": 6,
+    "strong_down": 0,
+    "top_up": [
+     {
+      "gene": "FBXO42",
+      "z": 125.022
+     },
+     {
+      "gene": "EML2",
+      "z": 125.022
+     },
+     {
+      "gene": "CWF19L1",
+      "z": 125.022
+     },
+     {
+      "gene": "MRAP2",
+      "z": 125.022
+     },
+     {
+      "gene": "COMMD10",
+      "z": 125.022
+     }
+    ],
+    "top_down": [
+     {
+      "gene": "YARS1",
+      "z": -0.525
+     },
+     {
+      "gene": "MT-ATP6",
+      "z": -0.47
+     },
+     {
+      "gene": "PHGDH",
+      "z": -0.45
+     },
+     {
+      "gene": "RPL28",
+      "z": -0.439
+     },
+     {
+      "gene": "GARS1",
+      "z": -0.432
+     }
+    ]
+   },
+   "neighbours": {
+    "method": "pearson",
+    "most_similar": [
+     {
+      "perturbation": "DDIT4",
+      "r": 0.29
+     },
+     {
+      "perturbation": "RPL37",
+      "r": 0.28
+     },
+     {
+      "perturbation": "TRIB3",
+      "r": 0.28
+     },
+     {
+      "perturbation": "PHGDH",
+      "r": 0.28
+     },
+     {
+      "perturbation": "EIF1",
+      "r": 0.28
+     }
+    ],
+    "most_opposite": [
+     {
+      "perturbation": "UQCR11",
+      "r": -0.18
+     },
+     {
+      "perturbation": "PRDX2",
+      "r": -0.18
+     },
+     {
+      "perturbation": "NENF",
+      "r": -0.16
+     },
+     {
+      "perturbation": "APLP2",
+      "r": -0.16
+     },
+     {
+      "perturbation": "SLC7A8",
+      "r": -0.14
+     }
+    ]
+   },
+   "as_target": {
+    "perturbations": 10673,
+    "strong_up": 0,
+    "strong_down": 0,
+    "top_increase": [
+     {
+      "perturbation": "SARS1",
+      "z": 1.599
+     },
+     {
+      "perturbation": "SMG7",
+      "z": 1.275
+     },
+     {
+      "perturbation": "UPF1",
+      "z": 1.205
+     },
+     {
+      "perturbation": "DNAJC17",
+      "z": 1.144
+     },
+     {
+      "perturbation": "SMG5",
+      "z": 1.143
+     }
+    ],
+    "top_decrease": [
+     {
+      "perturbation": "FECH",
+      "z": -0.687
+     },
+     {
+      "perturbation": "NUP155",
+      "z": -0.677
+     },
+     {
+      "perturbation": "NPAT",
+      "z": -0.675
+     },
+     {
+      "perturbation": "LAMB1",
+      "z": -0.648
+     },
+     {
+      "perturbation": "PHF19",
+      "z": -0.64
+     }
+    ]
+   }
+  },
+  {
+   "dataset": "K562gwpsnew",
+   "name": "K562 Whole Genome new",
+   "cell_line": "K562",
+   "perturbation_type": "CRISPRi",
+   "perturbed": true,
+   "measured": true,
+   "as_perturbation": {
+    "guides": [
+     "ATF4"
+    ],
+    "self_z": -7.422,
+    "genes_measured": 8235,
+    "strong_up": 14,
+    "strong_down": 1716,
+    "top_up": [
+     {
+      "gene": "RPLP0",
+      "z": 3.856
+     },
+     {
+      "gene": "HINT1",
+      "z": 3.564
+     },
+     {
+      "gene": "COX5B",
+      "z": 3.118
+     },
+     {
+      "gene": "TPT1",
+      "z": 2.952
+     },
+     {
+      "gene": "GSTP1",
+      "z": 2.889
+     }
+    ],
+    "top_down": [
+     {
+      "gene": "PHGDH",
+      "z": -5.091
+     },
+     {
+      "gene": "PSAT1",
+      "z": -4.691
+     },
+     {
+      "gene": "YARS1",
+      "z": -4.614
+     },
+     {
+      "gene": "WARS1",
+      "z": -4.265
+     },
+     {
+      "gene": "EMC2",
+      "z": -4.22
+     }
+    ]
+   },
+   "neighbours": {
+    "method": "pearson",
+    "most_similar": [
+     {
+      "perturbation": "RPL3",
+      "r": 0.48
+     },
+     {
+      "perturbation": "GTF3C6",
+      "r": 0.43
+     },
+     {
+      "perturbation": "RSL1D1",
+      "r": 0.42
+     },
+     {
+      "perturbation": "ABCF1",
+      "r": 0.42
+     },
+     {
+      "perturbation": "SIMC1",
+      "r": 0.41
+     }
+    ],
+    "most_opposite": [
+     {
+      "perturbation": "DROSHA",
+      "r": -0.07
+     },
+     {
+      "perturbation": "DICER1",
+      "r": -0.05
+     },
+     {
+      "perturbation": "INTS2",
+      "r": -0.04
+     },
+     {
+      "perturbation": "NEDD8",
+      "r": -0.04
+     },
+     {
+      "perturbation": "NEDD8-MDP1",
+      "r": -0.03
+     }
+    ]
+   },
+   "as_target": {
+    "perturbations": 9848,
+    "strong_up": 53,
+    "strong_down": 1581,
+    "top_increase": [
+     {
+      "perturbation": "UPF2",
+      "z": 9.711
+     },
+     {
+      "perturbation": "DENR",
+      "z": 8.762
+     },
+     {
+      "perturbation": "UPF1",
+      "z": 8.318
+     },
+     {
+      "perturbation": "RTRAF",
+      "z": 6.419
+     },
+     {
+      "perturbation": "SMG5",
+      "z": 5.866
+     }
+    ],
+    "top_decrease": [
+     {
+      "perturbation": "EIF4E",
+      "z": -6.357
+     },
+     {
+      "perturbation": "CPSF3",
+      "z": -6.21
+     },
+     {
+      "perturbation": "METTL14",
+      "z": -6.155
+     },
+     {
+      "perturbation": "DPH2",
+      "z": -5.789
+     },
+     {
+      "perturbation": "TTC4",
+      "z": -5.742
+     }
+    ]
+   }
+  },
+  {
+   "dataset": "HCT116gwps",
+   "name": "HCT116 Whole Genome",
+   "cell_line": "HCT116",
+   "perturbation_type": null,
+   "perturbed": true,
+   "measured": true,
+   "as_perturbation": {
+    "guides": [
+     "ATF4"
+    ],
+    "self_z": -1.453,
+    "genes_measured": 12244,
+    "strong_up": 0,
+    "strong_down": 0,
+    "top_up": [
+     {
+      "gene": "ZBED5",
+      "z": 0.289
+     },
+     {
+      "gene": "BRD9",
+      "z": 0.276
+     },
+     {
+      "gene": "CSRNP1",
+      "z": 0.276
+     },
+     {
+      "gene": "KPNA5",
+      "z": 0.245
+     },
+     {
+      "gene": "CTCF",
+      "z": 0.245
+     }
+    ],
+    "top_down": [
+     {
+      "gene": "TARS1",
+      "z": -0.677
+     },
+     {
+      "gene": "PHGDH",
+      "z": -0.626
+     },
+     {
+      "gene": "EIF2S2",
+      "z": -0.556
+     },
+     {
+      "gene": "SLC3A2",
+      "z": -0.54
+     },
+     {
+      "gene": "PSAT1",
+      "z": -0.529
+     }
+    ]
+   },
+   "neighbours": {
+    "method": "pearson",
+    "most_similar": [
+     {
+      "perturbation": "DIMT1",
+      "r": 0.17
+     },
+     {
+      "perturbation": "UTP3",
+      "r": 0.16
+     },
+     {
+      "perturbation": "DHX33",
+      "r": 0.16
+     },
+     {
+      "perturbation": "KRI1",
+      "r": 0.16
+     },
+     {
+      "perturbation": "EPHB3",
+      "r": 0.16
+     }
+    ],
+    "most_opposite": [
+     {
+      "perturbation": "YME1L1",
+      "r": -0.16
+     },
+     {
+      "perturbation": "ZBTB8OS",
+      "r": -0.12
+     },
+     {
+      "perturbation": "RNASEH1",
+      "r": -0.12
+     },
+     {
+      "perturbation": "ELP5",
+      "r": -0.12
+     },
+     {
+      "perturbation": "TRERF1",
+      "r": -0.12
+     }
+    ]
+   },
+   "as_target": {
+    "perturbations": 18190,
+    "strong_up": 0,
+    "strong_down": 2,
+    "top_increase": [
+     {
+      "perturbation": "CRABP1",
+      "z": 1.691
+     },
+     {
+      "perturbation": "SLF2",
+      "z": 1.609
+     },
+     {
+      "perturbation": "PAM16",
+      "z": 1.088
+     },
+     {
+      "perturbation": "RPL11",
+      "z": 1.031
+     },
+     {
+      "perturbation": "ACAA2",
+      "z": 1.026
+     }
+    ],
+    "top_decrease": [
+     {
+      "perturbation": "CDK1",
+      "z": -2.529
+     },
+     {
+      "perturbation": "RPA3",
+      "z": -2.298
+     },
+     {
+      "perturbation": "TMC3",
+      "z": -1.647
+     },
+     {
+      "perturbation": "SLC52A2",
+      "z": -1.494
+     },
+     {
+      "perturbation": "BIRC5",
+      "z": -1.473
+     }
+    ]
+   }
+  },
+  {
+   "dataset": "HEK293gwps",
+   "name": "HEK293 Whole Genome",
+   "cell_line": "HEK293",
+   "perturbation_type": null,
+   "perturbed": true,
+   "measured": true,
+   "as_perturbation": {
+    "guides": [
+     "ATF4"
+    ],
+    "self_z": -10.993,
+    "genes_measured": 13421,
+    "strong_up": 2,
+    "strong_down": 3280,
+    "top_up": [
+     {
+      "gene": "GRPEL1",
+      "z": 2.167
+     },
+     {
+      "gene": "PRMT6",
+      "z": 2.022
+     },
+     {
+      "gene": "ORC6",
+      "z": 1.878
+     },
+     {
+      "gene": "ANXA2",
+      "z": 1.858
+     },
+     {
+      "gene": "MRPS15",
+      "z": 1.799
+     }
+    ],
+    "top_down": [
+     {
+      "gene": "YARS1",
+      "z": -6.34
+     },
+     {
+      "gene": "GARS1",
+      "z": -5.095
+     },
+     {
+      "gene": "TCEANC2",
+      "z": -5.092
+     },
+     {
+      "gene": "PHGDH",
+      "z": -4.968
+     },
+     {
+      "gene": "CARS1",
+      "z": -4.685
+     }
+    ]
+   },
+   "neighbours": {
+    "method": "pearson",
+    "most_similar": [
+     {
+      "perturbation": "EME2",
+      "r": 0.42
+     },
+     {
+      "perturbation": "OR2AP1",
+      "r": 0.42
+     },
+     {
+      "perturbation": "NCR1",
+      "r": 0.42
+     },
+     {
+      "perturbation": "MTRF1L",
+      "r": 0.42
+     },
+     {
+      "perturbation": "ACOXL",
+      "r": 0.42
+     }
+    ],
+    "most_opposite": [
+     {
+      "perturbation": "ITGB1",
+      "r": -0.21
+     },
+     {
+      "perturbation": "SF3B5",
+      "r": -0.19
+     },
+     {
+      "perturbation": "RPL38",
+      "r": -0.19
+     },
+     {
+      "perturbation": "ZNF671",
+      "r": -0.18
+     },
+     {
+      "perturbation": "LHX6_2",
+      "r": -0.17
+     }
+    ]
+   },
+   "as_target": {
+    "perturbations": 20906,
+    "strong_up": 175,
+    "strong_down": 2197,
+    "top_increase": [
+     {
+      "perturbation": "UPF1",
+      "z": 12.078
+     },
+     {
+      "perturbation": "UPF2",
+      "z": 10.201
+     },
+     {
+      "perturbation": "HSPE1",
+      "z": 8.658
+     },
+     {
+      "perturbation": "FAM210A",
+      "z": 7.382
+     },
+     {
+      "perturbation": "EIF3D",
+      "z": 6.86
+     }
+    ],
+    "top_decrease": [
+     {
+      "perturbation": "CNOT3",
+      "z": -4.937
+     },
+     {
+      "perturbation": "ITPKB",
+      "z": -4.839
+     },
+     {
+      "perturbation": "SASS6",
+      "z": -4.768
+     },
+     {
+      "perturbation": "ADNP2",
+      "z": -4.746
+     },
+     {
+      "perturbation": "ZNF236",
+      "z": -4.585
+     }
+    ]
+   }
+  },
+  {
+   "dataset": "K562essential",
+   "name": "K562 Essential",
+   "cell_line": "K562",
+   "perturbation_type": "CRISPRi",
+   "perturbed": true,
+   "measured": true,
+   "as_perturbation": {
+    "guides": [
+     "ATF4"
+    ],
+    "self_z": -1.013,
+    "genes_measured": 8562,
+    "strong_up": 0,
+    "strong_down": 0,
+    "top_up": [
+     {
+      "gene": "SNHG5",
+      "z": 1.469
+     },
+     {
+      "gene": "GSTP1",
+      "z": 1.274
+     },
+     {
+      "gene": "APOE",
+      "z": 1.004
+     },
+     {
+      "gene": "GAS5",
+      "z": 0.885
+     },
+     {
+      "gene": "RPS18",
+      "z": 0.84
+     }
+    ],
+    "top_down": [
+     {
+      "gene": "YARS1",
+      "z": -0.708
+     },
+     {
+      "gene": "OAZ1",
+      "z": -0.626
+     },
+     {
+      "gene": "EPRS1",
+      "z": -0.605
+     },
+     {
+      "gene": "MT-ND4L",
+      "z": -0.587
+     },
+     {
+      "gene": "ACTG1",
+      "z": -0.538
+     }
+    ]
+   },
+   "neighbours": {
+    "method": "pearson",
+    "most_similar": [
+     {
+      "perturbation": "EIF3H",
+      "r": 0.24
+     },
+     {
+      "perturbation": "EIF3M",
+      "r": 0.23
+     },
+     {
+      "perturbation": "LSG1",
+      "r": 0.23
+     },
+     {
+      "perturbation": "EIF4G2",
+      "r": 0.22
+     },
+     {
+      "perturbation": "CCDC86",
+      "r": 0.22
+     }
+    ],
+    "most_opposite": [
+     {
+      "perturbation": "NCBP2",
+      "r": -0.18
+     },
+     {
+      "perturbation": "PPRC1",
+      "r": -0.18
+     },
+     {
+      "perturbation": "CMTR1",
+      "r": -0.17
+     },
+     {
+      "perturbation": "METAP2",
+      "r": -0.15
+     },
+     {
+      "perturbation": "RNMT",
+      "r": -0.15
+     }
+    ]
+   },
+   "as_target": {
+    "perturbations": 2176,
+    "strong_up": 0,
+    "strong_down": 0,
+    "top_increase": [
+     {
+      "perturbation": "UPF1",
+      "z": 1.658
+     },
+     {
+      "perturbation": "GBF1",
+      "z": 1.416
+     },
+     {
+      "perturbation": "THG1L",
+      "z": 1.392
+     },
+     {
+      "perturbation": "SMG5",
+      "z": 1.372
+     },
+     {
+      "perturbation": "AQR",
+      "z": 1.36
+     }
+    ],
+    "top_decrease": [
+     {
+      "perturbation": "SUPT5H",
+      "z": -0.695
+     },
+     {
+      "perturbation": "MED9",
+      "z": -0.67
+     },
+     {
+      "perturbation": "MED18",
+      "z": -0.645
+     },
+     {
+      "perturbation": "TAF10",
+      "z": -0.615
+     },
+     {
+      "perturbation": "SUPT6H",
+      "z": -0.58
+     }
+    ]
+   }
+  }
+ ],
+ "conservation": {
+  "datasets": [
+   "K562gwps",
+   "K562gwpsnew",
+   "HCT116gwps",
+   "HEK293gwps",
+   "K562essential"
+  ],
+  "pearson": [
+   [
+    1.0,
+    0.673,
+    0.102,
+    0.032,
+    0.196
+   ],
+   [
+    0.673,
+    1.0,
+    0.059,
+    0.198,
+    0.18
+   ],
+   [
+    0.102,
+    0.059,
+    1.0,
+    -0.011,
+    0.083
+   ],
+   [
+    0.032,
+    0.198,
+    -0.011,
+    1.0,
+    0.042
+   ],
+   [
+    0.196,
+    0.18,
+    0.083,
+    0.042,
+    1.0
+   ]
+  ],
+  "shared_genes": [
+   [
+    8247,
+    8080,
+    7841,
+    7845,
+    8201
+   ],
+   [
+    8080,
+    8233,
+    7757,
+    7830,
+    8035
+   ],
+   [
+    7841,
+    7757,
+    12244,
+    11135,
+    8107
+   ],
+   [
+    7845,
+    7830,
+    11135,
+    13421,
+    8108
+   ],
+   [
+    8201,
+    8035,
+    8107,
+    8108,
+    8562
+   ]
+  ],
+  "min_shared_genes": 200,
+  "z_clip": 3.0
+ }
+}

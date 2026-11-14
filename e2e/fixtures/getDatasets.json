@@ -1,0 +1,102 @@
+{
+ "datasets": [
+  {
+   "droppable": true,
+   "id": "K562gwps",
+   "name": "K562 Whole Genome",
+   "parent": 0,
+   "active": true,
+   "isWholeGenome": true,
+   "resultShape": "11258 8248",
+   "perturbationCount": 11258,
+   "geneCount": 8248,
+   "isMixscape": false,
+   "description": "K562 whole genome perturbation screen dataset",
+   "cellLine": "K562",
+   "perturbationType": "CRISPRi",
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null,
+   "sourceUrl": null,
+   "zScale": 0.1012,
+   "processing": "Published z-normalised pseudobulk (Replogle et al.); pearson_pert recomputed 2026-11-14.",
+   "availableMethods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ]
+  },
+  {
+   "droppable": true,
+   "id": "HCT116gwps",
+   "name": "HCT116 Whole Genome",
+   "details": "Main",
+   "parent": 0,
+   "isWholeGenome": true,
+   "isMixscape": false,
+   "resultShape": "18190 11330",
+   "perturbationCount": 18190,
+   "geneCount": 11330,
+   "description": "HCT116 whole genome perturbation screen dataset",
+   "cellLine": "HCT116",
+   "perturbationType": "CRISPRi",
+   "citation": "Huang et al. 2025, X-Atlas/Orion, bioRxiv 10.1101/2025.06.11.659105",
+   "license": "CC BY-NC-SA 4.0",
+   "sourceUrl": "https://doi.org/10.25452/figshare.plus.29190726",
+   "zScale": 0.0843,
+   "processing": "Mean z per cell from the 2025 pipeline (v14); pooled control column and unnamed genes removed, correlations recomputed 2026-11-14 (phase0_fix.py).",
+   "availableMethods": [
+    "pearson",
+    "spearman"
+   ]
+  },
+  {
+   "droppable": true,
+   "id": "K562essential",
+   "name": "K562 Essential",
+   "details": "Main",
+   "parent": 0,
+   "isWholeGenome": false,
+   "isMixscape": false,
+   "resultShape": "2285 8563",
+   "perturbationCount": 2285,
+   "geneCount": 8563,
+   "description": "K562 essential genes dataset",
+   "cellLine": "K562",
+   "perturbationType": "CRISPRi",
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null,
+   "sourceUrl": null,
+   "zScale": 0.132,
+   "processing": "Published z-normalised pseudobulk (Replogle et al.).",
+   "availableMethods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ]
+  },
+  {
+   "droppable": true,
+   "id": "RPE1essential",
+   "name": "RPE1 Essential",
+   "parent": 0,
+   "isWholeGenome": false,
+   "isMixscape": false,
+   "resultShape": "2679 8749",
+   "perturbationCount": 2679,
+   "geneCount": 8749,
+   "description": "RPE1 essential genes dataset",
+   "cellLine": "RPE1",
+   "perturbationType": "CRISPRi",
+   "citation": "Replogle et al. 2022, Cell 185:2559 (doi:10.1016/j.cell.2022.05.013)",
+   "license": null,
+   "sourceUrl": null,
+   "zScale": 0.2403,
+   "processing": "Published z-normalised pseudobulk (Replogle et al.); row label INTS15_3 repaired 2026-11-14.",
+   "availableMethods": [
+    "pearson",
+    "spearman",
+    "kendall"
+   ]
+  }
+ ]
+}

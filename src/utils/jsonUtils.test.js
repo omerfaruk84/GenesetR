@@ -1,6 +1,8 @@
 /**
- * Simple test file for JSON utility functions
- * This can be run in the browser console to test the functions
+ * @jest-environment node
+ *
+ * Tests for the JSON utility functions. They also run from the browser
+ * console (window.testJsonUtils()).
  */
 
 import { safeJsonParse, isValidJson } from './jsonUtils';
@@ -154,3 +156,18 @@ export const runTests = () => {
 if (typeof window !== 'undefined') {
   window.testJsonUtils = runTests;
 } 
+
+if (typeof test === 'function') {
+  test('JSON utilities parse, reject and validate as expected', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      Object.entries(runTests()).forEach(([name, passed]) => expect([name, passed]).toEqual([name, true]));
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+      warn.mockRestore();
+    }
+  });
+}

@@ -1,0 +1,65 @@
+{
+ "query": "ATF",
+ "results": [
+  {
+   "symbol": "ATF1",
+   "perturbed_in": 6,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF2",
+   "perturbed_in": 5,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF3",
+   "perturbed_in": 4,
+   "measured_in": 17
+  },
+  {
+   "symbol": "ATF4",
+   "perturbed_in": 10,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF4P4",
+   "perturbed_in": 0,
+   "measured_in": 1
+  },
+  {
+   "symbol": "ATF5",
+   "perturbed_in": 7,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF6",
+   "perturbed_in": 5,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF6B",
+   "perturbed_in": 6,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF7",
+   "perturbed_in": 4,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF7IP",
+   "perturbed_in": 4,
+   "measured_in": 20
+  },
+  {
+   "symbol": "ATF7IP2",
+   "perturbed_in": 4,
+   "measured_in": 18
+  },
+  {
+   "symbol": "AATF",
+   "perturbed_in": 10,
+   "measured_in": 20
+  }
+ ]
+}

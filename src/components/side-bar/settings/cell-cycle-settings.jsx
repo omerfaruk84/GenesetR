@@ -9,6 +9,7 @@ import { CellCycleSettingsTypes } from "./enums";
 const CellCycleSettings = ({ cellCycleSettings, cellCycleSettingsChanged }) => {
   const [availableCellLines, setAvailableCellLines] = useState([]);
   const [filterText, setFilterText] = useState("");
+  const [loadError, setLoadError] = useState(null);
 
   const selectedCellLines = cellCycleSettings?.selectedCellLines || [];
   const minCellLines = cellCycleSettings?.minCellLines ?? 1;
@@ -29,7 +30,10 @@ const CellCycleSettings = ({ cellCycleSettings, cellCycleSettingsChanged }) => {
       }
     };
 
-    load();
+    // Without the list the page still works with the cell lines already selected
+    load().catch((error) => {
+      if (!cancelled) setLoadError(error?.message || "The cell lines could not be loaded");
+    });
     return () => {
       cancelled = true;
     };
@@ -91,7 +95,12 @@ const CellCycleSettings = ({ cellCycleSettings, cellCycleSettingsChanged }) => {
               />
             </div>
           ))}
-          {visibleCellLines.length === 0 && (
+          {loadError && (
+            <div role="alert" style={{ fontSize: 12, color: "#a63648", padding: "6px 0" }}>
+              The list of cell lines could not be loaded: {loadError}
+            </div>
+          )}
+          {!loadError && visibleCellLines.length === 0 && (
             <div style={{ fontSize: 12, color: "#666", padding: "6px 0" }}>No matches</div>
           )}
         </div>
