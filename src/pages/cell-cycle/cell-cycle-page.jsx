@@ -19,6 +19,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { GridComponent, TooltipComponent } from "echarts/components";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import styles from "./cell-cycle-page.module.scss";
+import { TableExportButtons } from "../../components/export-buttons";
 import {
   fetchCellCycleAggregateV2,
   fetchCellCycleComparisonV2,
@@ -412,6 +413,13 @@ const CellCyclePage = () => {
           <MaterialReactTable
             columns={tableColumns}
             data={tableData}
+            renderTopToolbarCustomActions={({ table }) => (
+              <TableExportButtons
+                filename="genesetr-cell-cycle"
+                columns={tableColumns}
+                rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
+              />
+            )}
             enableSorting
             enablePagination 
             positionGlobalFilter="left"           

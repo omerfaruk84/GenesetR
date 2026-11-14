@@ -1,3 +1,4 @@
+import { svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -247,6 +248,7 @@ const DimReductionPage = ({
             magicType: { show: true, type: ["line", "bar"] },
             restore: { show: true },
             saveAsImage: { show: true },
+            mySvg: svgToolboxFeature("genesetr-pca-variance"),
           },
         },
         legend: {

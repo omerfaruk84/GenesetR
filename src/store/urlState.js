@@ -54,9 +54,16 @@ const CORE_PARAMS = {
 const LIST_PARAMS = new Set(["genes", "targets"]);
 
 // Pages on which a core setting is used (all others ignore it)
+const LIST_PAGES = [
+  ROUTES.CORRELATION, ROUTES.CORRELATION_WEBGL, ROUTES.CORRELATION_FAST, ROUTES.DR,
+  ROUTES.HEATMAP, ROUTES.PATHFINDER, ROUTES.DEREGULATED_GENES,
+];
 const CORE_USED_ON = {
   currentModule: [ROUTES.DR],
   graphType: [ROUTES.DR],
+  peturbationList: LIST_PAGES,
+  targetGeneList: [...LIST_PAGES, ROUTES.GENESIGNATURE],
+  dataType: [ROUTES.CORRELATION, ROUTES.CORRELATION_WEBGL, ROUTES.CORRELATION_FAST, ROUTES.DR, ROUTES.EXPRESSIONANALYZER],
 };
 
 export const hasUrlState = (pathname) => Object.prototype.hasOwnProperty.call(ROUTE_SLICES, pathname);

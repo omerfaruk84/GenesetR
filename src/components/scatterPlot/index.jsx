@@ -1,3 +1,4 @@
+import { svgToolboxFeature } from "../../utils/exporters";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { connect } from "react-redux";
@@ -561,6 +562,7 @@ const ScatterPlot = ({
             dataView: { show: true, readOnly: false },
             restore: { show: true },
             saveAsImage: { show: true, pixelRatio: 3 },
+            mySvg: svgToolboxFeature("genesetr-embedding"),
             dataZoom: {},
             brush: {
               type: ["rect", "polygon", "keep", "clear"],
@@ -769,6 +771,7 @@ const ScatterPlot = ({
             dataView: { show: true, readOnly: false },
             restore: { show: true },
             saveAsImage: { show: true },
+            mySvg: svgToolboxFeature("genesetr-embedding"),
             dataZoom: {},
             brush: {
               type: ["rect", "polygon", "keep", "clear"],

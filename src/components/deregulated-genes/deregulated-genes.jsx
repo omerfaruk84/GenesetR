@@ -1,3 +1,5 @@
+import { svgToolboxFeature } from "../../utils/exporters";
+import { TableExportButtons } from "../export-buttons";
 import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, Tab, Box, Typography, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
 import Axios from "axios";
@@ -272,6 +274,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         top: 10,
         feature: {
           saveAsImage: { name: 'genesetr_deregulated_genes_heatmap', pixelRatio: 2 },
+          mySvg: svgToolboxFeature("genesetr-deregulated-genes"),
         },
       },
       dataZoom: [
@@ -480,6 +483,13 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
                 <MaterialReactTable
                   columns={tableColumns}
                   data={tableData}
+                  renderTopToolbarCustomActions={({ table }) => (
+                    <TableExportButtons
+                      filename="genesetr-deregulated-genes"
+                      columns={tableColumns}
+                      rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
+                    />
+                  )}
                   enableSorting
                   enablePagination
                   initialState={{

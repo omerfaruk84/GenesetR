@@ -1,3 +1,4 @@
+import { svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { safeJsonParse } from "../../utils/jsonUtils";
@@ -900,6 +901,7 @@ const ExpressionAnalyzer = ({
           },
           restore: {},
           saveAsImage: {},
+          mySvg: svgToolboxFeature("genesetr-expression"),
         },
       },
       grid: [

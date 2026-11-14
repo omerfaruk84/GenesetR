@@ -9,6 +9,7 @@ import { getGeneInfo } from "../../utils/geneFunctionUtils";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { ErrorBoundary } from "../error-boundary";
 import { ChartLegend } from "../ui";
+import { NetworkExportButtons } from "../export-buttons";
 
 // ---- Optional libraries (try to load, but keep app running if missing) ----
 let CytoscapeComponent; // react-cytoscapejs
@@ -343,6 +344,11 @@ export default function NetworkGraphAlternatives({
     <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
       <div>
         <Header renderer={renderer} setRenderer={setRenderer} />
+        <NetworkExportButtons
+          network={() => ({ nodes: filteredNodes, edges: filteredEdges })}
+          filename="genesetr-gene-regulation"
+          style={{ margin: "6px 0" }}
+        />
         <ChartLegend
           label="Network legend"
           items={[

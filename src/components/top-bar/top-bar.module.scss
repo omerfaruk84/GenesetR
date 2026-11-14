@@ -173,13 +173,13 @@
 
 // The gene search goes first when space runs out, then the groups collapse
 // into the menu.
-@media (max-width: 1320px) {
+@media (max-width: 1560px) {
   .search {
     display: none;
   }
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1100px) {
   .groups {
     display: none;
   }

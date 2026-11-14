@@ -1,3 +1,4 @@
+import { svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
 import React, { useState } from "react";
 import {
   Table,
@@ -1090,6 +1091,8 @@ const GeneRegulation = ({
             mark: { show: true },
             restore: { show: true },
             saveAsImage: { show: true },
+            mySvg: svgToolboxFeature("genesetr-gene-regulation"),
+            myGraphml: graphmlToolboxFeature("genesetr-gene-regulation"),
             dataZoom: {},
           },
         },
