@@ -49,7 +49,34 @@ const COLOR_SCALES = {
   RdLrBu: { start: [215, 25, 28], middle: [254, 229, 217], end: [44, 123, 182] },
   RdBkGr: { start: [215, 25, 28], middle: [0, 0, 0], end: [35, 139, 69] },
   RdLrGr: { start: [215, 25, 28], middle: [254, 229, 217], end: [35, 139, 69] },
+  // Colour-blind-safe: purple-white-green (diverging) and three perceptually
+  // uniform sequential scales given as evenly spaced stops.
+  PRGn: { start: [118, 42, 131], middle: [247, 247, 247], end: [27, 120, 55] },
+  Viridis: {
+    stops: [
+      [68, 1, 84], [72, 40, 120], [62, 74, 137], [49, 104, 142], [38, 130, 142],
+      [31, 158, 137], [53, 183, 121], [109, 205, 89], [180, 222, 44], [253, 231, 37],
+    ],
+  },
+  Cividis: {
+    stops: [
+      [0, 32, 77], [0, 48, 111], [55, 69, 108], [87, 91, 109], [115, 113, 115],
+      [144, 137, 116], [174, 162, 110], [207, 189, 95], [240, 217, 69], [255, 234, 70],
+    ],
+  },
+  Magma: {
+    stops: [
+      [0, 0, 4], [28, 16, 68], [79, 18, 123], [129, 37, 129], [181, 54, 122],
+      [229, 80, 100], [251, 135, 97], [254, 194, 135], [252, 253, 191],
+    ],
+  },
 };
+
+// Scales with a neutral middle colour: zero is put on the middle when the
+// data has both signs.
+const DIVERGING = new Set([
+  "BuWhRd", "RdLrBu", "RdBkGr", "RdLrGr", "RdYlBu", "RdYlGn", "PiYG2", "PRGn2", "PRGn",
+]);
 
 const DEFAULT_SCALE = "BuWhRd";
 const MISSING = 3.0e38; // texel value for a missing cell
@@ -279,7 +306,13 @@ function buildLut(scaleName) {
     let from = scale.start;
     let to = scale.end;
     let f = t;
-    if (scale.middle) {
+    if (scale.stops) {
+      const position = t * (scale.stops.length - 1);
+      const index = Math.min(Math.floor(position), scale.stops.length - 2);
+      from = scale.stops[index];
+      to = scale.stops[index + 1];
+      f = position - index;
+    } else if (scale.middle) {
       if (t < 0.5) {
         to = scale.middle;
         f = t * 2;
@@ -326,6 +359,8 @@ class ClusterHeatmap {
       column_dendrogram_node_onclick: noop,
       empty_space_onclick: noop,
       heatmap_onmouseout: noop,
+      // Called with getRangeInfo() whenever the colour range or the data changes.
+      range_onchange: noop,
       // Called with getClusters() when a cut line is released or cleared.
       clusters_onchange: noop,
     };
@@ -416,7 +451,7 @@ class ClusterHeatmap {
     }
     this._colTree = colTree;
 
-    this._computeRange();
+    this._rangeMode = "auto";
     this._buildValues();
     this._selected = { row: -1, col: -1 };
     this._cut = { row: null, col: null };
@@ -429,31 +464,83 @@ class ClusterHeatmap {
     this._labelMetrics = null;
   }
 
-  _computeRange() {
-    const nodes = this.data.nodes;
-    const total = this._nRows * this._nCols;
-    const step = Math.max(1, Math.floor(total / 200000)); // sample for the median
+  /** Extremes and a sorted sample of the displayed values. */
+  _computeStats() {
+    const values = this._values;
+    const step = Math.max(1, Math.floor(values.length / 200000));
     const sample = [];
     let min = Infinity;
     let max = -Infinity;
-    let k = 0;
-    for (let r = 0; r < this._nRows; r++) {
-      const features = nodes[this._rowLeafIds[r]]?.features || [];
-      for (let c = 0; c < this._nCols; c++, k++) {
-        const v = features[c];
-        if (typeof v !== "number" || !Number.isFinite(v)) continue;
-        if (v < min) min = v;
-        if (v > max) max = v;
-        if (k % step === 0) sample.push(v);
-      }
+    for (let i = 0; i < values.length; i++) {
+      const v = values[i];
+      if (v > 1e38) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+      if (i % step === 0) sample.push(v);
     }
-    if (!sample.length) {
-      this._dataRange = { min: 0, mid: 0.5, max: 1 };
-    } else {
-      const sorted = Float64Array.from(sample).sort();
-      this._dataRange = { min, mid: sorted[Math.floor((sorted.length - 1) / 2)], max };
+    this._stats = sample.length
+      ? { min, max, sorted: Float64Array.from(sample).sort() }
+      : { min: 0, max: 1, sorted: Float64Array.from([0, 1]) };
+  }
+
+  /**
+   * The automatic colour range: 2nd to 98th percentile, so a few extreme
+   * cells (the diagonal of a correlation matrix) do not flatten the rest.
+   * With a diverging scale and data of both signs it is centred on zero.
+   */
+  _autoRange() {
+    const { sorted, min: dataMin, max: dataMax } = this._stats;
+    const quantile = (q) => sorted[Math.round(q * (sorted.length - 1))];
+    let min = quantile(0.02);
+    let max = quantile(0.98);
+    if (!(min < max)) {
+      min = dataMin;
+      max = dataMax;
     }
-    this._range = { ...this._dataRange };
+    if (!(min < max)) max = min + 1;
+    const scale = this.settings.heatmap_colors;
+    if (DIVERGING.has(scale) && min < 0 && max > 0) {
+      const extent = Math.max(-min, max);
+      return { min: -extent, mid: 0, max: extent };
+    }
+    if (COLOR_SCALES[scale]?.middle) return { min, mid: clamp(quantile(0.5), min, max), max };
+    return { min, mid: (min + max) / 2, max };
+  }
+
+  _applyAutoRange() {
+    if (this._rangeMode === "auto") this._range = this._autoRange();
+    this._lutDirty = true;
+    this.events.range_onchange?.(this.getRangeInfo());
+  }
+
+  /** Data extremes, the automatic range and the range in use. */
+  getRangeInfo() {
+    const auto = this._autoRange();
+    return {
+      dataMin: this._stats.min,
+      dataMax: this._stats.max,
+      autoMin: auto.min,
+      autoMax: auto.max,
+      min: this._range.min,
+      max: this._range.max,
+      mode: this._rangeMode,
+    };
+  }
+
+  /** Back to the automatic colour range (see _autoRange). */
+  setAutoRange() {
+    this._rangeMode = "auto";
+    this._applyAutoRange();
+    this._requestRender();
+  }
+
+  /** Shows each row as z-scores of its own values (true) or the values as given. */
+  setRowScaling(enabled) {
+    if (!!this.settings.row_scaling === !!enabled) return;
+    this.settings.row_scaling = !!enabled;
+    if (!this.data) return;
+    this._buildValues();
+    this._requestRender();
   }
 
   _columnOrder() {
@@ -486,10 +573,36 @@ class ClusterHeatmap {
         values[offset + p] = typeof v === "number" && Number.isFinite(v) ? v : MISSING;
       }
     }
+    this._rawValues = null;
+    if (this.settings.row_scaling) {
+      // Row z-scores; the values as given are kept for the tooltip.
+      this._rawValues = values.slice();
+      for (let r = 0; r < nRows; r++) {
+        const offset = r * nCols;
+        let count = 0;
+        let sum = 0;
+        let squares = 0;
+        for (let p = 0; p < nCols; p++) {
+          const v = values[offset + p];
+          if (v > 1e38) continue;
+          count += 1;
+          sum += v;
+          squares += v * v;
+        }
+        const mean = count ? sum / count : 0;
+        const sd = count > 1 ? Math.sqrt(Math.max(0, (squares - count * mean * mean) / (count - 1))) : 0;
+        for (let p = 0; p < nCols; p++) {
+          const v = values[offset + p];
+          if (v <= 1e38) values[offset + p] = sd > 0 ? (v - mean) / sd : 0;
+        }
+      }
+    }
     this._values = values;
     this._colLabels = order ? order.map((i) => this._featureNames[i]) : this._featureNames;
     this._labelMetrics = null;
     this._dataDirty = true;
+    this._computeStats();
+    this._applyAutoRange();
   }
 
   /* ------------------------------------------------------------ settings */
@@ -501,6 +614,7 @@ class ClusterHeatmap {
   updateCellColors(scaleName) {
     this.settings.heatmap_colors = COLOR_SCALES[scaleName] ? scaleName : DEFAULT_SCALE;
     this._lut = buildLut(this.settings.heatmap_colors);
+    if (this._stats) this._applyAutoRange(); // the automatic range depends on the scale
     this._lutDirty = true;
     this._requestRender();
   }
@@ -510,8 +624,10 @@ class ClusterHeatmap {
     const min = Number(minValue);
     const max = Number(maxValue);
     if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return;
+    this._rangeMode = "manual";
     this._range = { min, mid: (min + max) / 2, max };
     this._lutDirty = true;
+    if (this._stats) this.events.range_onchange?.(this.getRangeInfo());
     this._requestRender();
   }
 
@@ -1384,9 +1500,10 @@ class ClusterHeatmap {
     ctx.fillText(minLabel, PAD, y + 6);
     const barX = PAD + ctx.measureText(minLabel).width + 6;
     const gradient = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    gradient.addColorStop(0, rgb(scale.start));
-    if (scale.middle) gradient.addColorStop(0.5, rgb(scale.middle));
-    gradient.addColorStop(1, rgb(scale.end));
+    for (let stop = 0; stop <= 16; stop++) {
+      const index = Math.round((stop / 16) * (LUT_SIZE - 1)) * 4;
+      gradient.addColorStop(stop / 16, rgb([this._lut[index], this._lut[index + 1], this._lut[index + 2]]));
+    }
     ctx.fillStyle = gradient;
     ctx.fillRect(barX, y, barW, 12);
     ctx.strokeStyle = "rgba(0,0,0,0.25)";
@@ -1710,9 +1827,12 @@ class ClusterHeatmap {
         this.events.row_onmouseover?.(this._rowObjects[cell.row], e);
       }
       const value = this._values[cell.row * this._nCols + cell.col];
+      const raw = this._rawValues ? this._rawValues[cell.row * this._nCols + cell.col] : value;
+      const shown = value > 1e38 ? "n/a" : formatValue(raw);
       this._tooltip.textContent =
         `Row: ${this._rowLabels[cell.row]}\nColumn: ${this._colLabels[cell.col]}\n` +
-        `Value: ${value > 1e38 ? "n/a" : formatValue(value)}`;
+        `Value: ${shown}` +
+        (this._rawValues && value <= 1e38 ? `\nRow z-score: ${formatValue(value)}` : "");
       this._requestRender();
     }
     const tip = this._tooltip;

@@ -12,6 +12,11 @@ const initialState = {
   draw_row_ids: true,
   show_row_dendrogram: true, 
   show_column_dendrogram: true,  
+  // true: the heatmap picks the colour range from the data (2nd-98th
+  // percentile, centred on zero for diverging scales); false: the two values below
+  color_range_auto: true,
+  // show each row as z-scores of its own values
+  row_scaling: false,
   color_percentile_min: -1, 
   color_percentile_max: 1,  
   max_column_width: 100,

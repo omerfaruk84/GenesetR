@@ -10,6 +10,7 @@ import { inchlibSettingsChanged } from "../../../store/settings/inchlib-settings
 import { InchlibSettingsTypes } from "./enums";
 import ColorGradientSelector from "./color-gradient-selector";
 import MultiRangeSlider from "multi-range-slider-react";
+import { sliderBounds, useHeatmapRangeInfo } from "../../cluster-heatmap/rangeInfo";
 
 // utils/colorScaleUtils.js
 export function rgbString({ r, g, b }) {
@@ -41,6 +42,28 @@ export function get3StopGradient(colorScale) {
 }
 
 const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
+  // Range of the heatmap on screen (cluster heatmap only); without it the
+  // slider keeps the -1..1 of a correlation matrix.
+  const rangeInfo = useHeatmapRangeInfo();
+  const bounds = rangeInfo
+    ? sliderBounds(rangeInfo.dataMin, rangeInfo.dataMax)
+    : { min: -1, max: 1, step: 0.1, digits: 1 };
+  const autoRange = inchlibSettings.color_range_auto !== false;
+  const onStep = (value) =>
+    Number(
+      Math.min(bounds.max, Math.max(bounds.min, Math.round(value / bounds.step) * bounds.step)).toFixed(
+        bounds.digits
+      )
+    );
+  const shownMin = onStep(
+    autoRange && rangeInfo ? rangeInfo.autoMin : Number(inchlibSettings.color_percentile_min ?? bounds.min)
+  );
+  const shownMax = onStep(
+    autoRange && rangeInfo ? rangeInfo.autoMax : Number(inchlibSettings.color_percentile_max ?? bounds.max)
+  );
+  const sliderLabels = [0, 0.25, 0.5, 0.75, 1].map((t) =>
+    String(Number((bounds.min + t * (bounds.max - bounds.min)).toFixed(Math.max(bounds.digits, 1))))
+  );
   useEffect(() => {
     // Safety check in case color_scale is missing or invalid
     if (
@@ -92,32 +115,42 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
           }
         />
 
+        <CheckBox
+          onChange={({ target: { checked } }) =>
+            inchlibSettingsChanged({
+              settingName: InchlibSettingsTypes.COLOR_RANGE_AUTO,
+              newValue: checked,
+            })
+          }
+          checked={autoRange}
+          label="Automatic range"
+          helpText="2nd to 98th percentile of the values, centred on zero for diverging colour scales. Move the slider to set the range yourself."
+        />
         <MultiRangeSlider
-          min={-1}
-          labels={[
-            "-1",
-            "-0.8",
-            "-0.6,",
-            "-0.4",
-            "-0.2",
-            "0",
-            "0.2",
-            "0.4",
-            "0.6",
-            "0.8",
-            "1",
-          ]}
+          // The slider keeps its own state; a new range of values needs a new slider.
+          key={`${bounds.min}:${bounds.max}:${bounds.step}`}
+          min={bounds.min}
+          max={bounds.max}
+          step={bounds.step}
+          labels={sliderLabels}
           style={{
             width: "100%",
             border: "none",
             boxShadow: "none",
           }}
-          max={1}
-          step={0.1}
-          minValue={-0.8}
-          maxValue={0.8}
+          minValue={shownMin}
+          maxValue={shownMax}
           subSteps={1}
           onInput={(e) => {
+            // The slider also reports the values it was given; only a real
+            // move switches to a manual range.
+            const tolerance = bounds.step / 2;
+            if (
+              Math.abs(e.minValue - shownMin) < tolerance &&
+              Math.abs(e.maxValue - shownMax) < tolerance
+            ) {
+              return;
+            }
             inchlibSettingsChanged({
               settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MIN,
               newValue: e.minValue,
@@ -125,6 +158,10 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
             inchlibSettingsChanged({
               settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MAX,
               newValue: e.maxValue,
+            });
+            inchlibSettingsChanged({
+              settingName: InchlibSettingsTypes.COLOR_RANGE_AUTO,
+              newValue: false,
             });
           }}
         />
@@ -141,6 +178,17 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
             }
             checked={inchlibSettings?.show_cell_values}
             label="Cell Values"
+          />
+
+          <CheckBox
+            onChange={({ target: { checked } }) =>
+              inchlibSettingsChanged({
+                settingName: InchlibSettingsTypes.ROW_SCALING,
+                newValue: checked,
+              })
+            }
+            checked={!!inchlibSettings?.row_scaling}
+            label="Row z-scores"
           />
 
           <CheckBox

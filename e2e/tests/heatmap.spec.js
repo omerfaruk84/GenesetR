@@ -172,4 +172,45 @@ test("every cluster of a cut can be enriched at once", async ({ page }) => {
   expect(await errors()).toEqual([]);
 });
 
+test("colour range: automatic by default, manual from the sidebar, row z-scores", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+
+  // Diverging scale + correlations of both signs: centred on zero, and the
+  // diagonal (1.0) does not set the range.
+  const auto = await withHeatmap(page, (hm) => ({ ...hm._range, mode: hm._rangeMode, dataMax: hm._stats.max }));
+  expect(auto.mode).toBe("auto");
+  expect(auto.mid).toBe(0);
+  expect(auto.min).toBeCloseTo(-auto.max, 10);
+  expect(auto.max).toBeLessThan(auto.dataMax);
+
+  // A sequential scale uses the percentile range as it is.
+  const viridis = await withHeatmap(page, (hm) => {
+    hm.updateCellColors("Viridis");
+    return { first: Array.from(hm._lut.slice(0, 3)), min: hm._range.min, max: hm._range.max };
+  });
+  expect(viridis.first).toEqual([68, 1, 84]);
+  expect(viridis.min).toBeLessThan(0);
+  expect(viridis.max).not.toBeCloseTo(-viridis.min, 6);
+  await withHeatmap(page, (hm) => hm.updateCellColors("BuWhRd"));
+
+  // Switching the automatic range off applies the stored manual range (-1..1).
+  await page.getByText("Automatic range", { exact: true }).click();
+  await expect.poll(() => withHeatmap(page, (hm) => hm._rangeMode)).toBe("manual");
+  expect(await withHeatmap(page, (hm) => [hm._range.min, hm._range.max])).toEqual([-1, 1]);
+  await page.getByText("Automatic range", { exact: true }).click();
+  await expect.poll(() => withHeatmap(page, (hm) => hm._rangeMode)).toBe("auto");
+
+  // Row z-scores: every row is centred, the tooltip keeps the original value.
+  await page.getByText("Row z-scores", { exact: true }).click();
+  await expect.poll(() => withHeatmap(page, (hm) => !!hm._rawValues)).toBe(true);
+  const rowMean = await withHeatmap(page, (hm) => {
+    let sum = 0;
+    for (let c = 0; c < hm._nCols; c++) sum += hm._values[5 * hm._nCols + c];
+    return sum / hm._nCols;
+  });
+  expect(Math.abs(rowMean)).toBeLessThan(1e-4);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

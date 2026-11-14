@@ -30,6 +30,7 @@ import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
 import { SendToMenu } from "../send-to";
+import { setHeatmapRangeInfo } from "../cluster-heatmap/rangeInfo";
 import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
@@ -823,8 +824,12 @@ const keyedData = useMemo(() => {
   }, [inchlibSettings.max_dendrogram_width]);
 
   useEffect(() => {
-    if (inchlibInstance.current && instanceIdRef.current) {
-      inchlibInstance.current.updateCellColorsPercentile?.({
+    const inchlib = inchlibInstance.current;
+    if (!inchlib || !instanceIdRef.current) return;
+    if (inchlib.setAutoRange && inchlibSettings.color_range_auto !== false) {
+      inchlib.setAutoRange();
+    } else {
+      inchlib.updateCellColorsPercentile?.({
         minValue: inchlibSettings.color_percentile_min,
         maxValue: inchlibSettings.color_percentile_max,
       });
@@ -833,7 +838,17 @@ const keyedData = useMemo(() => {
     inchlibSettings.color_percentile_min,
     inchlibSettings.color_percentile_max,
     inchlibSettings.color_scale?.color,
+    inchlibSettings.color_range_auto,
   ]);
+
+  useEffect(() => {
+    if (inchlibInstance.current && instanceIdRef.current) {
+      inchlibInstance.current.setRowScaling?.(asBool(inchlibSettings.row_scaling));
+    }
+  }, [inchlibSettings.row_scaling, asBool]);
+
+  // The settings panel sizes its range slider from the heatmap on screen.
+  useEffect(() => () => setHeatmapRangeInfo(null), []);
 
   useEffect(() => {
     if (inchlibInstance.current && instanceIdRef.current) {
@@ -1030,6 +1045,9 @@ const keyedData = useMemo(() => {
 
     // Only the texture-based renderer has cut lines; the others ignore this.
     setClusterCount(0);
+    inchlib.events.range_onchange = function (info) {
+      setHeatmapRangeInfo(info);
+    };
     inchlib.events.clusters_onchange = function (clusters) {
       if (isMountedRef.current) {
         // A summary describes the previous clusters.
@@ -1059,6 +1077,26 @@ const keyedData = useMemo(() => {
       heatmap_header: true,
     });
     inchlib.draw();
+    if (inchlib.setAutoRange) {
+      // The cluster heatmap starts from the display settings in the sidebar
+      // (the InCHlib builds only follow them once they change).
+      inchlib.setRowScaling(asBool(inchlibSettings.row_scaling));
+      if (inchlibSettings.color_range_auto === false) {
+        inchlib.updateCellColorsPercentile({
+          minValue: inchlibSettings.color_percentile_min,
+          maxValue: inchlibSettings.color_percentile_max,
+        });
+      }
+      inchlib.setRowIdsVisibility(asBool(inchlibSettings.draw_row_ids ?? true));
+      inchlib.setColumnIdsVisibility(asBool(inchlibSettings.show_column_names ?? true));
+      inchlib.setCellValueVisibility(asBool(inchlibSettings.show_cell_values));
+      inchlib.setDendrogramVisibility(asBool(inchlibSettings.show_row_dendrogram ?? true));
+      inchlib.setColumnDendrogramVisibility(asBool(inchlibSettings.show_column_dendrogram ?? true));
+      const lineWidth = Number(inchlibSettings.dendrogram_line_width);
+      if (Number.isFinite(lineWidth)) inchlib.updateDendrogramLineWidth(lineWidth);
+    } else {
+      setHeatmapRangeInfo(null);
+    }
     if (heatmapRef.current && inchlib.settings?.height) {
       heatmapRef.current.style.height = `${inchlib.settings.height}px`;
       heatmapRef.current.style.minHeight = "0px";

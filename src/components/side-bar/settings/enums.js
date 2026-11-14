@@ -85,6 +85,8 @@ const InchlibSettingsTypes = {
   SHOW_COLUMN_NAMES: "show_column_names",
   SHOW_ROW_DENDROGRAM: "show_row_dendrogram",
   SHOW_COLUMN_DENDROGRAM: "show_column_dendrogram",
+  COLOR_RANGE_AUTO: "color_range_auto",
+  ROW_SCALING: "row_scaling",
   COLOR_PERCENTILE_MIN: "color_percentile_min", 
   COLOR_PERCENTILE_MAX: "color_percentile_max", 
   MAX_COLUMN_WIDTH: "max_column_width",

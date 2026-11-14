@@ -6,6 +6,28 @@ const colorGradients = {
     middle: { r: 255, g: 255, b: 255 },
     end: { r: 215, g: 25, b: 28 },
   },
+  // Colour-blind-safe scales (the cluster heatmap draws the last three with
+  // all their stops; this preview shows first, middle and last)
+  PRGn: {
+    start: { r: 118, g: 42, b: 131 },
+    middle: { r: 247, g: 247, b: 247 },
+    end: { r: 27, g: 120, b: 55 },
+  },
+  Viridis: {
+    start: { r: 68, g: 1, b: 84 },
+    middle: { r: 38, g: 130, b: 142 },
+    end: { r: 253, g: 231, b: 37 },
+  },
+  Cividis: {
+    start: { r: 0, g: 32, b: 77 },
+    middle: { r: 124, g: 123, b: 120 },
+    end: { r: 255, g: 234, b: 70 },
+  },
+  Magma: {
+    start: { r: 0, g: 0, b: 4 },
+    middle: { r: 181, g: 54, b: 122 },
+    end: { r: 252, g: 253, b: 191 },
+  },
   YlGn: { start: { r: 255, g: 255, b: 204 }, end: { r: 35, g: 132, b: 67 } },
   GnBu: { start: { r: 240, g: 249, b: 232 }, end: { r: 43, g: 140, b: 190 } },
   BuGn: { start: { r: 237, g: 248, b: 251 }, end: { r: 35, g: 139, b: 69 } },
