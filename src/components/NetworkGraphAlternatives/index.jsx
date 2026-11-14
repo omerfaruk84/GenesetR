@@ -1326,6 +1326,10 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, m
         height={height}
         cooldownTicks={layout === "force" ? 100 : 0}
         nodeRelSize={1}
+        // The library's hit area and arrow offset follow nodeVal (area), not the
+        // custom drawing below; without it only a ~2 px centre reacted and the
+        // arrowheads were hidden under the node.
+        nodeVal={(node) => nodeSize(getNode(node.id) || {}, deg, settings, maxDegree) ** 2}
         enableNodeDrag={true}
         onNodeDrag={handleNodeDrag}
         onNodeDragEnd={handleNodeDragEnd}

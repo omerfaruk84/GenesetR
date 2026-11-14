@@ -58,4 +58,26 @@ for (const { route, request } of MODULES) {
   });
 }
 
+for (const route of ["/pathfinder", "/gene-regulation", "/gene-regulation-enhanced"]) {
+  test(`${route}: the link table lists the edges, with gene links and export`, async ({ page }) => {
+    const errors = watchErrors(page);
+    await runExample(page, route);
+    await expect(page.locator("canvas").first()).toBeVisible();
+    await page.getByText("Link Table", { exact: true }).first().click();
+    const rows = page.locator("table tbody tr");
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.count()).toBeGreaterThan(1);
+    await expect(page.locator('table a[href*="/gene?symbol="]').first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "CSV" }).first()).toBeVisible();
+    if (route === "/gene-regulation-enhanced") {
+      // The direction of an effect comes from the API's `Type` field; the
+      // column used to say "Unknown" on every row.
+      const cells = await page.locator("table tbody tr td").allTextContents();
+      expect(cells.some((text) => ["DNR", "UPR"].includes(text.trim()))).toBe(true); // down- / up-regulated
+      expect(cells.filter((text) => text.trim() === "Unknown").length).toBeLessThan(cells.length / 20);
+    }
+    expect(await errors()).toEqual([]);
+  });
+}
+
 module.exports = { runExample };

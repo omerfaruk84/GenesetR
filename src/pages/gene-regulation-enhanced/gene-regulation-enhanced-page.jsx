@@ -327,7 +327,8 @@ const GeneRegulationEnhancedPage = ({
     // Transform edges into table rows
     const tableInfo = edges.map((edge) => ({
       "Regulation Type": edge.Type2 || edge.type || "Exp",
-      "Direction": edge.type || "Unknown",
+      // The API sends the direction as `Type` ("up_down", ...)
+      "Direction": edge.Type || edge.type || "Unknown",
       "Gene Symbol From": edge.source,
       "Gene Symbol To": edge.target,
       "Score": typeof edge.value === 'number' ? Number(edge.value.toFixed(2)) : edge.value,

@@ -71,7 +71,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
   //Import json file. Used in {options}.
 
   const [options, setOptions] = useState({});
-  const [keyedData, setkeyedData] = useState([{}]);
+  const [keyedData, setkeyedData] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
   const columns = useMemo(
     () => [
@@ -689,7 +689,8 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           "Regulation Type": tableEdge.type,
           From: tableEdge.source,
           To: tableEdge.target,
-          Score: tableEdge.value,
+          // Protein interactions have no score (their value of 1 only sets the line width)
+          Score: tableEdge.type === "Int" ? null : tableEdge.value,
           "Source NC": nodeCounts[tableEdge.source],
           "Target NC": nodeCounts[tableEdge.target],
           "Total NC":
@@ -805,6 +806,10 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           },
         ],
       });
+    } else if (pathFinderGraph && Array.isArray(pathFinderGraph.nodes)) {
+      // A result without nodes: do not leave the previous network on screen.
+      setOptions({});
+      setkeyedData([]);
     }
   }, [pathFinderGraph, pathfinderSettings, blacklistData]);
 

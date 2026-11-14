@@ -193,7 +193,7 @@ const GeneRegulation = ({
 
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
-  const [keyedData, setkeyedData] = useState([{}]);
+  const [keyedData, setkeyedData] = useState([]);
   const [genelists, setGeneLists] = useState([]);
 
   useEffect(() => {
@@ -243,23 +243,6 @@ const GeneRegulation = ({
               ? "dashed"
               : "solid",
           //curveness: edge.id.includes("+cor+")? 0.3: (edge.id.includes("+int+")  ? 0.5:0.4),
-        },
-        tooltip: {
-          formatter: edge.id.includes("+cor+")
-            ? "Corr. R: " +
-              edge.value +
-              "<br />" +
-              edge.id.replace("+cor+", " ~ ") +
-              "<br />" +
-              edge.Type.replace("_", " to ")
-            : edge.id.includes("+int+")
-              ? "Protein-Protein Intereation: "
-              : "Effect: " +
-                edge.value +
-                "<br />" +
-                edge.id.replace("+exp+", " → ") +
-                "<br />" +
-                edge.Type.replace("_", " to "),
         },
       }));
 
@@ -942,7 +925,7 @@ const GeneRegulation = ({
 
       if (geneRegulationCoreSettings.layout === "none") {
         // Create a new directed graph
-        var g = new dagre.graphlib.Graph();
+        var g = new dagre.graphlib.Graph({ multigraph: true });
         // Set an object for the graph label
         g.setGraph({
           //height:100,
@@ -969,7 +952,8 @@ const GeneRegulation = ({
           //edge["weight"]  = nodeCounts[edge.target] + nodeCounts[edge.source]
           //if(edge.type2 === "Corr") continue;
 
-          g.setEdge(edge.source, edge.target, edge);
+          // Named, so parallel edges are kept apart
+          g.setEdge(edge.source, edge.target, edge, String(edge.id ?? i));
         }
         dagre.layout(g);
 
@@ -997,9 +981,9 @@ const GeneRegulation = ({
               if (!edge) return '';
               
               if (edge.id && edge.id.includes("+cor+")) {
-                const value = edge.value !== undefined ? edge.value.toFixed(3) : 'N/A';
+                const value = Number.isFinite(Number(edge.value)) ? Number(edge.value).toFixed(3) : 'N/A';
                 const id = edge.id ? edge.id.replace("+cor+", " ~ ") : '';
-                const type = edge.type ? edge.type.replace("_", " to ") : '';
+                const type = String(edge.Type || edge.type || '').replace("_", " to ");
                 return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Correlation</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>R:</strong> ${value}</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
@@ -1009,9 +993,9 @@ const GeneRegulation = ({
                 return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Protein Interaction</div>
                 <div style="line-height: 1.4; font-size: 12px;"><strong>Proteins:</strong> ${id}</div>`;
               } else {
-                const value = edge.value !== undefined ? edge.value.toFixed(3) : 'N/A';
+                const value = Number.isFinite(Number(edge.value)) ? Number(edge.value).toFixed(3) : 'N/A';
                 const id = edge.id ? edge.id.replace("+exp+", " → ") : '';
-                const type = edge.type ? edge.type.replace("_", " to ") : '';
+                const type = String(edge.Type || edge.type || '').replace("_", " to ");
                 return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Expression Effect</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Effect:</strong> ${value}</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
@@ -1165,6 +1149,15 @@ const GeneRegulation = ({
           },
         ],
       });
+    } else if (
+      geneRegulationGraph &&
+      Array.isArray(geneRegulationGraph.nodes) &&
+      geneRegulationGraph.nodes.length === 0
+    ) {
+      // A result without nodes: do not leave the previous network on screen.
+      setOptions({});
+      setkeyedData([]);
+      setGeneLists([]);
     }
   }, [geneRegulationGraph, geneRegulationCoreSettings, blacklistData, blacklistLoading]);
 
@@ -1273,7 +1266,7 @@ const GeneRegulation = ({
       />
       <PlotHelp kind="regulationNetwork" />
      
-      {keyedData && keyedData.length > 1 && selectedView === 1 && (
+      {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
       )}
       {selectedView === 0 && (
