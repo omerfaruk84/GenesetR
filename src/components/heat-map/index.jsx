@@ -1048,6 +1048,14 @@ const keyedData = useMemo(() => {
     inchlib.events.range_onchange = function (info) {
       setHeatmapRangeInfo(info);
     };
+    // The range set on the heatmap's legend is stored like the sidebar's slider.
+    inchlib.events.range_onuserchange = function ({ min, max, auto }) {
+      if (!auto) {
+        dispatch(inchlibSettingsChanged({ settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MIN, newValue: min }));
+        dispatch(inchlibSettingsChanged({ settingName: InchlibSettingsTypes.COLOR_PERCENTILE_MAX, newValue: max }));
+      }
+      dispatch(inchlibSettingsChanged({ settingName: InchlibSettingsTypes.COLOR_RANGE_AUTO, newValue: !!auto }));
+    };
     inchlib.events.clusters_onchange = function (clusters) {
       if (isMountedRef.current) {
         // A summary describes the previous clusters.

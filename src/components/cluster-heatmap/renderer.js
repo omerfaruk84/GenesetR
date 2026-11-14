@@ -83,7 +83,7 @@ const MISSING = 3.0e38; // texel value for a missing cell
 const MISSING_RGB = [232, 232, 232];
 const LUT_SIZE = 256;
 const PAD = 8;
-const LEGEND_H = 26;
+const LEGEND_H = 34; // value histogram above the colour bar
 const GAP = 6;
 const MAX_CELL = 64;
 const HIT_PX = 6;
@@ -117,8 +117,28 @@ void main() {
   vec2 p = vec2(gl_FragCoord.x - uOrigin.x, uOrigin.y - gl_FragCoord.y);
   vec2 c = (p + uOffset) / uCell;
   if (c.x < 0.0 || c.y < 0.0 || c.x >= uCount.x || c.y >= uCount.y) discard;
-  float v = texelFetch(uData, ivec2(c), 0).r;
-  if (v > 1.0e38) { outColor = vec4(uMissing, 1.0); return; }
+  // Zoomed out, several cells share one pixel: average up to 4 x 4 of them
+  // (missing cells left out) instead of showing whichever one is hit.
+  vec2 perPixel = 1.0 / uCell;
+  int nx = int(clamp(ceil(perPixel.x), 1.0, 4.0));
+  int ny = int(clamp(ceil(perPixel.y), 1.0, 4.0));
+  float sum = 0.0;
+  float count = 0.0;
+  for (int j = 0; j < 4; j++) {
+    if (j >= ny) break;
+    for (int i = 0; i < 4; i++) {
+      if (i >= nx) break;
+      vec2 offset = (vec2(float(i), float(j)) + 0.5) / vec2(float(nx), float(ny)) - 0.5;
+      vec2 s = (p + offset + uOffset) / uCell;
+      if (s.x < 0.0 || s.y < 0.0 || s.x >= uCount.x || s.y >= uCount.y) continue;
+      float value = texelFetch(uData, ivec2(s), 0).r;
+      if (value > 1.0e38) continue;
+      sum += value;
+      count += 1.0;
+    }
+  }
+  if (count < 0.5) { outColor = vec4(uMissing, 1.0); return; }
+  float v = sum / count;
   float t;
   if (uHasMiddle > 0.5) {
     t = v < uRange.y
@@ -361,6 +381,8 @@ class ClusterHeatmap {
       heatmap_onmouseout: noop,
       // Called with getRangeInfo() whenever the colour range or the data changes.
       range_onchange: noop,
+      // Called when the user sets the range on the legend: { min, max, auto }.
+      range_onuserchange: noop,
       // Called with getClusters() when a cut line is released or cleared.
       clusters_onchange: noop,
     };
@@ -478,6 +500,7 @@ class ClusterHeatmap {
       if (v > max) max = v;
       if (i % step === 0) sample.push(v);
     }
+    this._histogram = null;
     this._stats = sample.length
       ? { min, max, sorted: Float64Array.from(sample).sort() }
       : { min: 0, max: 1, sorted: Float64Array.from([0, 1]) };
@@ -614,7 +637,11 @@ class ClusterHeatmap {
   updateCellColors(scaleName) {
     this.settings.heatmap_colors = COLOR_SCALES[scaleName] ? scaleName : DEFAULT_SCALE;
     this._lut = buildLut(this.settings.heatmap_colors);
-    if (this._stats) this._applyAutoRange(); // the automatic range depends on the scale
+    if (this._stats && this._rangeMode === "manual") {
+      this._setManualRange(this._range.min, this._range.max); // the middle depends on the scale
+    } else if (this._stats) {
+      this._applyAutoRange(); // so does the automatic range
+    }
     this._lutDirty = true;
     this._requestRender();
   }
@@ -624,8 +651,14 @@ class ClusterHeatmap {
     const min = Number(minValue);
     const max = Number(maxValue);
     if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return;
+    this._setManualRange(min, max);
+  }
+
+  _setManualRange(min, max) {
     this._rangeMode = "manual";
-    this._range = { min, mid: (min + max) / 2, max };
+    // A diverging scale keeps its neutral colour on zero.
+    const zeroCentred = DIVERGING.has(this.settings.heatmap_colors) && min < 0 && max > 0;
+    this._range = { min, mid: zeroCentred ? 0 : (min + max) / 2, max };
     this._lutDirty = true;
     if (this._stats) this.events.range_onchange?.(this.getRangeInfo());
     this._requestRender();
@@ -957,7 +990,11 @@ class ClusterHeatmap {
       const region = this._regionAt(e);
       const kind = region.name === "rowTree" ? "row" : region.name === "colTree" ? "col" : null;
       // Double-click on a cut dendrogram removes the cut; elsewhere it fits the view.
-      if (kind && this._cut[kind] !== null) {
+      if (region.name === "legend") {
+        // Double-click on the legend goes back to the automatic range.
+        this.setAutoRange();
+        this.events.range_onuserchange?.({ min: this._range.min, max: this._range.max, auto: true });
+      } else if (kind && this._cut[kind] !== null) {
         this._selected = { row: -1, col: -1 }; // undo the selection made by the first click
         this._setCut(kind, null, true);
       } else if (region.name !== "none") this.resetCamera();
@@ -1257,7 +1294,8 @@ class ClusterHeatmap {
       this._image = image;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
+    // Zoomed out, let the browser blend the cells that share a pixel.
+    ctx.imageSmoothingEnabled = cam.cw * dpr < 1 || cam.ch * dpr < 1;
     ctx.drawImage(
       this._image,
       cam.sx / cam.cw, cam.sy / cam.ch, view.w / cam.cw, view.h / cam.ch,
@@ -1487,32 +1525,101 @@ class ClusterHeatmap {
     }
   }
 
-  _drawLegend(ctx, box) {
-    const scale = COLOR_SCALES[this.settings.heatmap_colors] || COLOR_SCALES[DEFAULT_SCALE];
-    const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
-    const y = PAD + 2;
-    const barW = Math.min(160, Math.max(60, box.width - 2 * PAD - 110));
-    ctx.font = `11px ${this.settings.font}`;
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#333";
-    ctx.textAlign = "left";
-    const minLabel = formatValue(this._range.min);
-    ctx.fillText(minLabel, PAD, y + 6);
-    const barX = PAD + ctx.measureText(minLabel).width + 6;
-    const gradient = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    for (let stop = 0; stop <= 16; stop++) {
-      const index = Math.round((stop / 16) * (LUT_SIZE - 1)) * 4;
-      gradient.addColorStop(stop / 16, rgb([this._lut[index], this._lut[index + 1], this._lut[index + 2]]));
+  /**
+   * Geometry of the legend: an axis over the data's extent (symmetric around
+   * zero when it has both signs) with the colour range marked on it.
+   */
+  _legendFrame() {
+    const box = this._layoutBox;
+    const range = this._range;
+    let lo = Math.min(this._stats.min, range.min);
+    let hi = Math.max(this._stats.max, range.max);
+    if (lo < 0 && hi > 0) {
+      hi = Math.max(-lo, hi);
+      lo = -hi;
     }
+    if (!(lo < hi)) hi = lo + 1;
+    const x0 = PAD;
+    const w = clamp(box.width - 2 * PAD - 160, 80, 220);
+    return {
+      x0, w, lo, hi,
+      top: PAD, histH: 12, barY: PAD + 13, barH: 10,
+      toX: (value) => x0 + ((value - lo) / (hi - lo)) * w,
+      toValue: (x) => lo + (clamp(x - x0, 0, w) / w) * (hi - lo),
+    };
+  }
+
+  /** "min" / "max" when (x, y) is on that end of the legend's colour range. */
+  _legendHandleAt(x, y) {
+    if (!this._stats || !this._layoutBox) return null;
+    const frame = this._legendFrame();
+    if (y < frame.top - 2 || y > frame.barY + frame.barH + 6) return null;
+    const toMin = Math.abs(x - frame.toX(this._range.min));
+    const toMax = Math.abs(x - frame.toX(this._range.max));
+    if (Math.min(toMin, toMax) > 6) return null;
+    return toMin <= toMax ? "min" : "max";
+  }
+
+  _drawLegend(ctx, box) {
+    const frame = this._legendFrame();
+    const range = this._range;
+    const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+    const xMin = frame.toX(range.min);
+    const xMax = frame.toX(range.max);
+
+    // Histogram of the values (square-root heights, so the tails stay visible).
+    const BINS = 44;
+    const key = `${frame.lo}:${frame.hi}`;
+    if (!this._histogram || this._histogram.key !== key) {
+      const counts = new Float64Array(BINS);
+      const sorted = this._stats.sorted;
+      for (let i = 0; i < sorted.length; i++) {
+        const bin = Math.floor(((sorted[i] - frame.lo) / (frame.hi - frame.lo)) * BINS);
+        counts[clamp(bin, 0, BINS - 1)] += 1;
+      }
+      this._histogram = { key, counts, peak: Math.max(1, ...counts) };
+    }
+    ctx.fillStyle = "#aab2bd";
+    const binW = frame.w / BINS;
+    for (let i = 0; i < BINS; i++) {
+      const h = frame.histH * Math.sqrt(this._histogram.counts[i] / this._histogram.peak);
+      if (h > 0) ctx.fillRect(frame.x0 + i * binW, frame.top + frame.histH - h, Math.max(binW - 0.5, 0.5), h);
+    }
+
+    // Colour bar: flat below and above the range, the scale in between.
+    const gradient = ctx.createLinearGradient(xMin, 0, Math.max(xMax, xMin + 0.01), 0);
+    for (let stop = 0; stop <= 24; stop++) {
+      const value = range.min + (stop / 24) * (range.max - range.min);
+      gradient.addColorStop(stop / 24, rgb(this._colorOf(value)));
+    }
+    ctx.fillStyle = rgb(this._colorOf(range.min));
+    ctx.fillRect(frame.x0, frame.barY, Math.max(xMin - frame.x0, 0), frame.barH);
+    ctx.fillStyle = rgb(this._colorOf(range.max));
+    ctx.fillRect(xMax, frame.barY, Math.max(frame.x0 + frame.w - xMax, 0), frame.barH);
     ctx.fillStyle = gradient;
-    ctx.fillRect(barX, y, barW, 12);
+    ctx.fillRect(xMin, frame.barY, Math.max(xMax - xMin, 0), frame.barH);
     ctx.strokeStyle = "rgba(0,0,0,0.25)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(barX + 0.5, y + 0.5, barW - 1, 11);
+    ctx.strokeRect(frame.x0 + 0.5, frame.barY + 0.5, frame.w - 1, frame.barH - 1);
+
+    // The two ends of the range, draggable.
+    if (!this._exporting) {
+      ctx.fillStyle = "#111";
+      [xMin, xMax].forEach((x) => {
+        ctx.fillRect(Math.round(x) - 1, frame.top, 2, frame.histH + frame.barH + 1);
+        ctx.fillRect(Math.round(x) - 3, frame.barY + frame.barH, 6, 4);
+      });
+    }
+
+    ctx.font = `11px ${this.settings.font}`;
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
     ctx.fillStyle = "#333";
-    const maxLabel = formatValue(this._range.max);
-    ctx.fillText(maxLabel, barX + barW + 6, y + 6);
-    let used = barX + barW + 6 + ctx.measureText(maxLabel).width;
+    const y = frame.barY + frame.barH / 2;
+    const rangeLabel =
+      `${formatValue(range.min)} to ${formatValue(range.max)}` + (this._rangeMode === "auto" ? "  (auto)" : "");
+    ctx.fillText(rangeLabel, frame.x0 + frame.w + 10, y);
+    let used = frame.x0 + frame.w + 10 + ctx.measureText(rangeLabel).width;
 
     const counts = [];
     if (this._clusters.row) counts.push(`${this._clusters.row.list.length} row clusters`);
@@ -1520,7 +1627,7 @@ class ClusterHeatmap {
     if (counts.length) {
       ctx.font = `bold 11px ${this.settings.font}`;
       const text = counts.join("  ·  ");
-      ctx.fillText(text, used + 18, y + 6);
+      ctx.fillText(text, used + 18, y);
       used += 18 + ctx.measureText(text).width;
       ctx.font = `11px ${this.settings.font}`;
     }
@@ -1531,6 +1638,7 @@ class ClusterHeatmap {
         "drag: pan",
         "double-click: fit",
         "drag a dashed dendrogram line: cut into clusters",
+        "drag the legend's ends: colour range",
       ];
       // Drop hints from the end until the line fits beside the legend.
       const separator = "   ·   ";
@@ -1539,7 +1647,7 @@ class ClusterHeatmap {
       }
       ctx.fillStyle = "#888";
       ctx.textAlign = "right";
-      ctx.fillText(hints.join(separator), box.width - PAD, y + 6);
+      ctx.fillText(hints.join(separator), box.width - PAD, y);
     }
   }
 
@@ -1730,6 +1838,15 @@ class ClusterHeatmap {
     if (inX && inY) return { name: "heatmap", x, y };
     if (box.dendW && inY && x >= box.dendX && x < view.x) return { name: "rowTree", x, y };
     if (box.colDendH && inX && y >= box.colDendY && y < view.y) return { name: "colTree", x, y };
+    if (this._stats) {
+      const legend = this._legendFrame();
+      if (
+        x >= legend.x0 - 8 && x <= legend.x0 + legend.w + 8 &&
+        y >= legend.top - 2 && y <= legend.barY + legend.barH + 6
+      ) {
+        return { name: "legend", x, y };
+      }
+    }
     return { name: "none", x, y };
   }
 
@@ -1748,6 +1865,9 @@ class ClusterHeatmap {
     this._drag = {
       region: region.name,
       cut: this._cutHandleAt(region),
+      // Dragging an end of the legend's colour range; the axis is fixed for the drag.
+      legend: region.name === "legend" ? this._legendHandleAt(region.x, region.y) : null,
+      legendFrame: region.name === "legend" ? this._legendFrame() : null,
       startX: e.clientX,
       startY: e.clientY,
       lastX: e.clientX,
@@ -1760,6 +1880,16 @@ class ClusterHeatmap {
 
   _onPointerMove(e) {
     const drag = this._drag;
+    if (drag && drag.legend) {
+      const frame = drag.legendFrame;
+      const value = frame.toValue(this._point(e).x);
+      const gap = (frame.hi - frame.lo) * 0.02;
+      const min = drag.legend === "min" ? Math.min(value, this._range.max - gap) : this._range.min;
+      const max = drag.legend === "max" ? Math.max(value, this._range.min + gap) : this._range.max;
+      drag.moved = true;
+      this._setManualRange(min, max);
+      return;
+    }
     if (drag && drag.cut) {
       const { x, y } = this._point(e);
       const height = this._treeFrame(drag.cut).height(x, y);
@@ -1799,7 +1929,8 @@ class ClusterHeatmap {
     else if (region.name === "colTree") colNode = this._nodeAt("col", region);
 
     let cursor = "default";
-    if (handle) cursor = handle === "row" ? "col-resize" : "row-resize";
+    if (region.name === "legend" && this._legendHandleAt(region.x, region.y)) cursor = "ew-resize";
+    else if (handle) cursor = handle === "row" ? "col-resize" : "row-resize";
     else if (cell) cursor = "crosshair";
     else if (rowNode >= 0 || colNode >= 0) cursor = "pointer";
     this._root.style.cursor = cursor;
@@ -1849,6 +1980,12 @@ class ClusterHeatmap {
     this._drag = null;
     if (!drag) return;
     this._root.releasePointerCapture?.(drag.pointerId);
+    if (drag.legend) {
+      if (drag.moved) {
+        this.events.range_onuserchange?.({ min: this._range.min, max: this._range.max, auto: false });
+      }
+      return;
+    }
     if (drag.cut) {
       if (drag.moved) this.events.clusters_onchange?.(this.getClusters());
       this._updateHover(e);
@@ -1876,7 +2013,7 @@ class ClusterHeatmap {
       } else {
         this.events.empty_space_onclick?.(e);
       }
-    } else {
+    } else if (region.name !== "legend") {
       this.events.empty_space_onclick?.(e);
     }
     this._updateHover(e);
@@ -1893,7 +2030,7 @@ class ClusterHeatmap {
 
   _onWheel(e) {
     const region = this._regionAt(e);
-    if (region.name === "none") return;
+    if (region.name === "none" || region.name === "legend") return;
     const cam = this._cam;
     const view = this._viewRect();
     const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;

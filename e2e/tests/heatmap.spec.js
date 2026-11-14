@@ -60,6 +60,10 @@ const treeNodePoint = (page, axis, minLeaves, maxLeaves = Infinity) =>
     [axis, minLeaves, maxLeaves === Infinity ? 1e9 : maxLeaves]
   );
 
+/** A sidebar checkbox by its label (the UI library renders input + text in a div). */
+const sidebarCheckbox = (page, label) =>
+  page.locator('div:has(> input[type="checkbox"])').filter({ hasText: label }).last().locator("input");
+
 test("correlation result is drawn by the cluster heatmap", async ({ page }) => {
   const errors = watchErrors(page);
   const api = await openHeatmap(page);
@@ -211,6 +215,77 @@ test("colour range: automatic by default, manual from the sidebar, row z-scores"
   });
   expect(Math.abs(rowMean)).toBeLessThan(1e-4);
   expect(await errors()).toEqual([]);
+});
+
+test("the legend's ends set the colour range; double-click restores the automatic one", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  const start = await withHeatmap(page, (hm) => {
+    const frame = hm._legendFrame();
+    const rect = hm._root.getBoundingClientRect();
+    return {
+      x: rect.left + frame.toX(hm._range.max),
+      y: rect.top + frame.barY + 4,
+      to: rect.left + frame.toX(0.3),
+      max: hm._range.max,
+    };
+  });
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move((start.x + start.to) / 2, start.y, { steps: 3 });
+  await page.mouse.move(start.to, start.y, { steps: 3 });
+  await page.mouse.up();
+
+  const manual = await withHeatmap(page, (hm) => ({ ...hm._range, mode: hm._rangeMode }));
+  expect(manual.mode).toBe("manual");
+  expect(manual.max).toBeCloseTo(0.3, 1);
+  expect(manual.max).toBeLessThan(start.max);
+  expect(manual.mid).toBe(0); // the diverging scale keeps white on zero
+  // The sidebar follows: its "Automatic range" box is now unticked.
+  await expect(sidebarCheckbox(page, "Automatic range")).not.toBeChecked();
+
+  await page.mouse.dblclick(start.to - 20, start.y);
+  await expect.poll(() => withHeatmap(page, (hm) => hm._rangeMode)).toBe("auto");
+  await expect(sidebarCheckbox(page, "Automatic range")).toBeChecked();
+  expect(await errors()).toEqual([]);
+});
+
+test("zoomed out, cells that share a pixel are averaged", async ({ page }) => {
+  await openHeatmap(page);
+  // A 1200 x 1200 checkerboard of -1 / +1 in a 400 px wide box: every pixel
+  // covers several cells whose mean is near zero, so it must come out pale,
+  // not as the saturated colour of one cell.
+  const pixel = await withHeatmap(page, (hm) => {
+    const size = 1200;
+    const nodes = {};
+    for (let i = 0; i < size; i++) {
+      const features = new Array(size);
+      for (let j = 0; j < size; j++) features[j] = (i + j) % 2 ? 1 : -1;
+      nodes[i] = { count: 1, distance: 0, objects: [`G${i}`], features };
+    }
+    const box = document.createElement("div");
+    box.id = "average-test";
+    box.style.cssText = "position:fixed;left:0;top:0;width:400px;z-index:99999;background:#fff";
+    document.body.appendChild(box);
+    const test = new hm.constructor({ target: "average-test" });
+    test.read_data({ data: { nodes, feature_names: Array.from({ length: size }, (_, j) => `P${j}`) } });
+    test.draw();
+    const canvas = test.stage.getContent().getElementsByTagName("canvas")[0];
+    const copy = document.createElement("canvas");
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const ctx = copy.getContext("2d");
+    ctx.drawImage(canvas, 0, 0);
+    const view = test._viewRect();
+    const data = ctx.getImageData(Math.round(view.x + view.w / 2), Math.round(view.y + view.h / 2), 1, 1).data;
+    const result = { rgb: [data[0], data[1], data[2]], cell: test._cam.cw, mode: test._mode };
+    test.cleanup();
+    box.remove();
+    return result;
+  });
+  expect(pixel.mode).toBe("gl");
+  expect(pixel.cell).toBeLessThan(0.5);
+  expect(Math.min(...pixel.rgb)).toBeGreaterThan(150);
 });
 
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };
