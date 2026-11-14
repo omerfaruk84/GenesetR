@@ -7,6 +7,7 @@ import { fetchGeneInfo, fetchGeneSummary, resolveGeneAlias } from "../../store/a
 import { baseSymbol, geneLinks, genePagePath } from "../../utils/geneLinks";
 import { sendGenesTo } from "../../utils/sendTo";
 import { SendToMenu } from "../../components/send-to";
+import { GeneDrugs } from "./gene-drugs";
 import styles from "./gene-page.module.scss";
 
 const EXAMPLES = ["ATF4", "MED12", "HSPA5", "TP53", "MYC", "EIF2AK4"];
@@ -332,6 +333,8 @@ const GenePage = () => {
             </section>
 
             <Conservation conservation={summary.conservation} names={names} />
+
+            <GeneDrugs symbol={summary.symbol} datasetNames={names} />
 
             {current && (
               <section className={styles.section}>

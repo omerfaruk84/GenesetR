@@ -1,0 +1,19 @@
+{
+ "query": "bortezomib",
+ "results": [
+  {
+   "id": "BORTEZOMIB",
+   "name": "Bortezomib",
+   "targets": [
+    "PSMB5"
+   ],
+   "moaBroad": "inhibitor/antagonist",
+   "moaFine": "Proteasome inhibitor",
+   "approved": true,
+   "clinicalTrials": true,
+   "pubchemCid": "387447",
+   "smiles": "B(C(CC(C)C)NC(=O)C(CC1=CC=CC=C1)NC(=O)C2=NC=CN=C2)(O)O",
+   "match": "name"
+  }
+ ]
+}

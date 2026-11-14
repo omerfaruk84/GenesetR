@@ -209,6 +209,7 @@ const SettingsSelector = ({ pathname }) => {
             showdataTypeOptions={false}
             showgraphTypeOptions={false}
             wholeGenomeOnly={true}
+            geneticOnly={true}
           />
         ),
       },
@@ -255,6 +256,7 @@ const SettingsSelector = ({ pathname }) => {
             showdataTypeOptions={false}
             showgraphTypeOptions={false}
             wholeGenomeOnly={true}
+            geneticOnly={true}
           />
         ),
       },
@@ -312,6 +314,7 @@ const SettingsSelector = ({ pathname }) => {
             showPerturbationList={false}
             isGeneSignature={false}
             showGeneList={false}
+            geneticOnly={true}
           />
         ),
       },

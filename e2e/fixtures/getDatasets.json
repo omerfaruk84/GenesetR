@@ -97,6 +97,98 @@
     "spearman",
     "kendall"
    ]
+  },
+  {
+   "droppable": true,
+   "isWholeGenome": false,
+   "isMixscape": false,
+   "perturbationKind": "drug",
+   "collection": "Tahoe-100M",
+   "perturbationType": "Small molecule",
+   "citation": "Zhang et al. 2025, Tahoe-100M, bioRxiv (doi:10.1101/2025.02.20.639398)",
+   "license": "CC0 1.0",
+   "sourceUrl": "https://huggingface.co/datasets/tahoebio/Tahoe-100M",
+   "doses": [
+    0.05,
+    0.5,
+    5.0
+   ],
+   "doseUnit": "µM",
+   "id": "TahoeDrugs",
+   "name": "Tahoe-100M drugs (all cell lines)",
+   "parent": 0,
+   "drugTable": "drug",
+   "cellLine": "47 cancer cell lines",
+   "resultShape": "379 11476",
+   "perturbationCount": 379,
+   "geneCount": 11476,
+   "zScale": 1.4015,
+   "description": "379 small molecules; one profile per drug, combined over 47 cancer cell lines and three doses",
+   "details": "Main",
+   "availableMethods": [
+    "pearson",
+    "spearman"
+   ]
+  },
+  {
+   "droppable": true,
+   "isWholeGenome": false,
+   "isMixscape": false,
+   "perturbationKind": "drug",
+   "collection": "Tahoe-100M",
+   "perturbationType": "Small molecule",
+   "citation": "Zhang et al. 2025, Tahoe-100M, bioRxiv (doi:10.1101/2025.02.20.639398)",
+   "license": "CC0 1.0",
+   "sourceUrl": "https://huggingface.co/datasets/tahoebio/Tahoe-100M",
+   "doses": [
+    0.05,
+    0.5,
+    5.0
+   ],
+   "doseUnit": "µM",
+   "id": "TahoeAll",
+   "name": "Tahoe-100M drugs by dose (all cell lines)",
+   "parent": "TahoeDrugs",
+   "drugTable": "dose",
+   "cellLine": "47 cancer cell lines",
+   "resultShape": "1135 11476",
+   "perturbationCount": 1135,
+   "geneCount": 11476,
+   "zScale": 1.3624,
+   "description": "379 small molecules at 0.05, 0.5 and 5 µM; one profile per drug and dose, combined over 47 cancer cell lines",
+   "availableMethods": [
+    "pearson",
+    "spearman"
+   ]
+  },
+  {
+   "droppable": true,
+   "isWholeGenome": false,
+   "isMixscape": false,
+   "perturbationKind": "drug",
+   "collection": "Tahoe-100M",
+   "perturbationType": "Small molecule",
+   "citation": "Zhang et al. 2025, Tahoe-100M, bioRxiv (doi:10.1101/2025.02.20.639398)",
+   "license": "CC0 1.0",
+   "sourceUrl": "https://huggingface.co/datasets/tahoebio/Tahoe-100M",
+   "doses": [
+    0.05,
+    0.5,
+    5.0
+   ],
+   "doseUnit": "µM",
+   "id": "TahoeA549",
+   "name": "Tahoe-100M A549 (Lung)",
+   "parent": "TahoeDrugs",
+   "drugTable": "line",
+   "cellLine": "A549",
+   "organ": "Lung",
+   "resultShape": "1132 11968",
+   "perturbationCount": 1132,
+   "geneCount": 11968,
+   "zScale": 1.1567,
+   "description": "Small molecules at three doses in A549 (lung)",
+   "availableMethods": []
   }
  ]
 }

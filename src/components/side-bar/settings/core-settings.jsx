@@ -15,6 +15,7 @@ import { useLocation } from "react-router-dom";
 import { Genelist } from "../../genelist/index";
 import { DatasetSelector } from "../../dataset-selector";
 import { ROUTES } from "../../../common/routes";
+import { isDrugDataset, perturbationTitle } from "../../../utils/perturbationKind";
 
 const CoreSettings = ({
   coreSettings,
@@ -35,12 +36,14 @@ const CoreSettings = ({
   perturbationListTitle = "Perturbations",
   source = "",
   wholeGenomeOnly = false,
+  geneticOnly = false,
 }) => {
   const childRef = React.useRef();
 
+  const isDrug = isDrugDataset(coreSettings?.cellLine);
   const dataTypeOptions = [
     {
-      label: "Perturbation",
+      label: isDrug ? "Drug" : "Perturbation",
       value: "pert",
     },
     {
@@ -98,6 +101,21 @@ const CoreSettings = ({
     helpText1 = helpText1.replace("targets", "genes");
     helpText1 = helpText1.replace("genes", "targets");
     helpText2 = helpText2.replaceAll("detected genes", "perturbations");
+  }
+
+  // Drug datasets: the perturbations are drugs (the measured genes stay genes)
+  if (isDrug) {
+    const drugsTitle = perturbationTitle(coreSettings.cellLine);
+    if (perturbationListTitle === "Perturbations") {
+      perturbationListTitle = drugsTitle;
+      helpText1 =
+        helpText1.replace("the target genes", "drugs").replace("targets", "drugs") +
+        " Use the search box above the list to find a drug by name, target or mechanism.";
+    }
+    if (geneListTitle === "Perturbations") {
+      geneListTitle = drugsTitle;
+      helpText2 = helpText2.replaceAll("perturbations", "drugs");
+    }
   }
 
   var location = useLocation().pathname;
@@ -158,6 +176,7 @@ const CoreSettings = ({
         <DatasetSelector
           ref={childRef}
           wholeGenomeOnly={wholeGenomeOnly}
+          geneticOnly={geneticOnly}
         />{" "}
         <Spacer height={5} />
       </div>

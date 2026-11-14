@@ -1,0 +1,43 @@
+// Additions to the gene search box styles (components/gene-search)
+
+.option {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.meta {
+  white-space: normal;
+}
+
+.match {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--gs-muted);
+}
+
+.empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--gs-muted);
+}
+
+// Sidebar size
+.small {
+  input {
+    height: 28px;
+    padding: 0 6px;
+    font-size: 12.5px;
+  }
+
+  svg {
+    margin-left: 8px;
+  }
+
+  button {
+    height: 22px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}

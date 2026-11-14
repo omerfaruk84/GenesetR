@@ -1,0 +1,1151 @@
+{
+ "symbol": "ATF4",
+ "available": true,
+ "dataset": "TahoeDrugs",
+ "targeting": [],
+ "expression": {
+  "measured": true,
+  "up": [
+   {
+    "drug": "HARRINGTONINE",
+    "z": 74.14,
+    "log2fc": 0.957
+   },
+   {
+    "drug": "HOMOHARRINGTONINE",
+    "z": 70.75,
+    "log2fc": 0.79
+   },
+   {
+    "drug": "NERATINIB-MALEATE",
+    "z": 29.72,
+    "log2fc": 0.362
+   },
+   {
+    "drug": "5-AZACYTIDINE",
+    "z": 23.19,
+    "log2fc": 0.295
+   },
+   {
+    "drug": "GSK1059615",
+    "z": 21.72,
+    "log2fc": 0.353
+   }
+  ],
+  "down": [
+   {
+    "drug": "PANOBINOSTAT",
+    "z": -53.13,
+    "log2fc": -0.611
+   },
+   {
+    "drug": "BELINOSTAT",
+    "z": -35.77,
+    "log2fc": -0.479
+   },
+   {
+    "drug": "IDARUBICIN-HYDROCHLORIDE",
+    "z": -35.42,
+    "log2fc": -0.462
+   },
+   {
+    "drug": "DINACICLIB",
+    "z": -27.07,
+    "log2fc": -0.766
+   },
+   {
+    "drug": "TAK-901",
+    "z": -19.0,
+    "log2fc": -0.389
+   }
+  ]
+ },
+ "connectivity": [
+  {
+   "dataset": "K562gwps",
+   "mimic": [
+    {
+     "drug": "AMSACRINE",
+     "r": 0.09
+    },
+    {
+     "drug": "TOPOTECAN-HYDROCHLORIDE",
+     "r": 0.08
+    },
+    {
+     "drug": "RIBOCICLIB",
+     "r": 0.079
+    },
+    {
+     "drug": "CYTARABINE-HYDROCHLORIDE",
+     "r": 0.072
+    },
+    {
+     "drug": "ELIMUSERTIB-HYDROCHLORIDE",
+     "r": 0.065
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.118
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.113
+    },
+    {
+     "drug": "NICLOSAMIDE-OLAMINE",
+     "r": -0.087
+    },
+    {
+     "drug": "L-THYROXINE-SODIUM-SALT-PENTAHYDRATE",
+     "r": -0.081
+    },
+    {
+     "drug": "5-AZACYTIDINE",
+     "r": -0.079
+    }
+   ]
+  },
+  {
+   "dataset": "K562gwpsnew",
+   "mimic": [
+    {
+     "drug": "AMSACRINE",
+     "r": 0.089
+    },
+    {
+     "drug": "CYTARABINE-HYDROCHLORIDE",
+     "r": 0.075
+    },
+    {
+     "drug": "TOPOTECAN-HYDROCHLORIDE",
+     "r": 0.074
+    },
+    {
+     "drug": "ELIMUSERTIB-HYDROCHLORIDE",
+     "r": 0.071
+    },
+    {
+     "drug": "RIBOCICLIB",
+     "r": 0.071
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.099
+    },
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.088
+    },
+    {
+     "drug": "L-THYROXINE-SODIUM-SALT-PENTAHYDRATE",
+     "r": -0.078
+    },
+    {
+     "drug": "NICLOSAMIDE-OLAMINE",
+     "r": -0.07
+    },
+    {
+     "drug": "CYCLOSPORIN-A",
+     "r": -0.068
+    }
+   ]
+  },
+  {
+   "dataset": "HCT116gwps",
+   "mimic": [
+    {
+     "drug": "HOMOHARRINGTONINE",
+     "r": 0.079
+    },
+    {
+     "drug": "HARRINGTONINE",
+     "r": 0.076
+    },
+    {
+     "drug": "ARBUTIN",
+     "r": 0.075
+    },
+    {
+     "drug": "TUCIDINOSTAT",
+     "r": 0.063
+    },
+    {
+     "drug": "DIGITOXIN",
+     "r": 0.059
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.152
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.102
+    },
+    {
+     "drug": "BELUMOSUDIL-MESYLATE",
+     "r": -0.098
+    },
+    {
+     "drug": "5-AZACYTIDINE",
+     "r": -0.097
+    },
+    {
+     "drug": "NERATINIB-MALEATE",
+     "r": -0.091
+    }
+   ]
+  },
+  {
+   "dataset": "HEK293gwps",
+   "mimic": [
+    {
+     "drug": "SELINEXOR",
+     "r": 0.051
+    },
+    {
+     "drug": "AMSACRINE",
+     "r": 0.05
+    },
+    {
+     "drug": "RIBOCICLIB",
+     "r": 0.05
+    },
+    {
+     "drug": "ARBUTIN",
+     "r": 0.049
+    },
+    {
+     "drug": "CAPTOPRIL",
+     "r": 0.049
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ENCORAFENIB",
+     "r": -0.092
+    },
+    {
+     "drug": "NERATINIB-MALEATE",
+     "r": -0.084
+    },
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.077
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.066
+    },
+    {
+     "drug": "NERATINIB",
+     "r": -0.064
+    }
+   ]
+  },
+  {
+   "dataset": "K562essential",
+   "mimic": [
+    {
+     "drug": "LEVOBUPIVACAINE-HYDROCHLORIDE",
+     "r": 0.088
+    },
+    {
+     "drug": "TEMSIROLIMUS",
+     "r": 0.088
+    },
+    {
+     "drug": "BIMIRALISIB",
+     "r": 0.084
+    },
+    {
+     "drug": "OMEPRAZOLE",
+     "r": 0.079
+    },
+    {
+     "drug": "AMSACRINE",
+     "r": 0.074
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "DABRAFENIB",
+     "r": -0.111
+    },
+    {
+     "drug": "TUCATINIB",
+     "r": -0.096
+    },
+    {
+     "drug": "L-THYROXINE-SODIUM-SALT-PENTAHYDRATE",
+     "r": -0.085
+    },
+    {
+     "drug": "MEBENDAZOLE",
+     "r": -0.081
+    },
+    {
+     "drug": "ENCORAFENIB",
+     "r": -0.08
+    }
+   ]
+  },
+  {
+   "dataset": "SC00003",
+   "mimic": [
+    {
+     "drug": "LEVOBUPIVACAINE-HYDROCHLORIDE",
+     "r": 0.091
+    },
+    {
+     "drug": "BIMIRALISIB",
+     "r": 0.088
+    },
+    {
+     "drug": "TEMSIROLIMUS",
+     "r": 0.087
+    },
+    {
+     "drug": "OMEPRAZOLE",
+     "r": 0.081
+    },
+    {
+     "drug": "AMSACRINE",
+     "r": 0.08
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "DABRAFENIB",
+     "r": -0.113
+    },
+    {
+     "drug": "TUCATINIB",
+     "r": -0.098
+    },
+    {
+     "drug": "L-THYROXINE-SODIUM-SALT-PENTAHYDRATE",
+     "r": -0.088
+    },
+    {
+     "drug": "NICLOSAMIDE-OLAMINE",
+     "r": -0.081
+    },
+    {
+     "drug": "AURANOFIN",
+     "r": -0.08
+    }
+   ]
+  },
+  {
+   "dataset": "RPE1essential",
+   "mimic": [
+    {
+     "drug": "PALBOCICLIB",
+     "r": 0.101
+    },
+    {
+     "drug": "AZD-8055",
+     "r": 0.056
+    },
+    {
+     "drug": "4EGI-1",
+     "r": 0.053
+    },
+    {
+     "drug": "TETRACYCLINE-HYDROCHLORIDE",
+     "r": 0.053
+    },
+    {
+     "drug": "DTP3",
+     "r": 0.052
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "C-KIT-IN-1",
+     "r": -0.091
+    },
+    {
+     "drug": "RALTITREXED",
+     "r": -0.082
+    },
+    {
+     "drug": "DARINAPARSIN",
+     "r": -0.078
+    },
+    {
+     "drug": "NERATINIB",
+     "r": -0.07
+    },
+    {
+     "drug": "VENETOCLAX",
+     "r": -0.07
+    }
+   ]
+  },
+  {
+   "dataset": "SC00004",
+   "mimic": [
+    {
+     "drug": "PALBOCICLIB",
+     "r": 0.111
+    },
+    {
+     "drug": "AZD-8055",
+     "r": 0.055
+    },
+    {
+     "drug": "TETRACYCLINE-HYDROCHLORIDE",
+     "r": 0.055
+    },
+    {
+     "drug": "4EGI-1",
+     "r": 0.053
+    },
+    {
+     "drug": "DTP3",
+     "r": 0.051
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "C-KIT-IN-1",
+     "r": -0.093
+    },
+    {
+     "drug": "DARINAPARSIN",
+     "r": -0.081
+    },
+    {
+     "drug": "RALTITREXED",
+     "r": -0.08
+    },
+    {
+     "drug": "VENETOCLAX",
+     "r": -0.072
+    },
+    {
+     "drug": "NERATINIB",
+     "r": -0.066
+    }
+   ]
+  },
+  {
+   "dataset": "JurkatEssential",
+   "mimic": [
+    {
+     "drug": "TEMSIROLIMUS",
+     "r": 0.165
+    },
+    {
+     "drug": "RAPAMYCIN",
+     "r": 0.145
+    },
+    {
+     "drug": "SAPANISERTIB",
+     "r": 0.128
+    },
+    {
+     "drug": "AZD1390",
+     "r": 0.122
+    },
+    {
+     "drug": "ULK-101",
+     "r": 0.118
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "TUCATINIB",
+     "r": -0.131
+    },
+    {
+     "drug": "RALTITREXED",
+     "r": -0.13
+    },
+    {
+     "drug": "ALLOPURINOL",
+     "r": -0.129
+    },
+    {
+     "drug": "SACUBITRIL-VALSARTAN",
+     "r": -0.126
+    },
+    {
+     "drug": "TRIFLURIDINE",
+     "r": -0.117
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TRest",
+   "mimic": [
+    {
+     "drug": "PALBOCICLIB",
+     "r": 0.166
+    },
+    {
+     "drug": "TEMSIROLIMUS",
+     "r": 0.141
+    },
+    {
+     "drug": "RAPAMYCIN",
+     "r": 0.123
+    },
+    {
+     "drug": "SELINEXOR",
+     "r": 0.119
+    },
+    {
+     "drug": "4EGI-1",
+     "r": 0.118
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "RALTITREXED",
+     "r": -0.141
+    },
+    {
+     "drug": "OXALIPLATIN",
+     "r": -0.132
+    },
+    {
+     "drug": "LB-100",
+     "r": -0.121
+    },
+    {
+     "drug": "DARINAPARSIN",
+     "r": -0.119
+    },
+    {
+     "drug": "RELUGOLIX",
+     "r": -0.109
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TStim8hr",
+   "mimic": [
+    {
+     "drug": "HARRINGTONINE",
+     "r": 0.19
+    },
+    {
+     "drug": "HOMOHARRINGTONINE",
+     "r": 0.179
+    },
+    {
+     "drug": "4EGI-1",
+     "r": 0.167
+    },
+    {
+     "drug": "TAK-901",
+     "r": 0.15
+    },
+    {
+     "drug": "BAY1125976",
+     "r": 0.149
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "S-ADENOSYL-L-METHIONINE-DISULFATE-TOSYLATE",
+     "r": -0.175
+    },
+    {
+     "drug": "RALTITREXED",
+     "r": -0.169
+    },
+    {
+     "drug": "PIMITESPIB",
+     "r": -0.156
+    },
+    {
+     "drug": "DARINAPARSIN",
+     "r": -0.14
+    },
+    {
+     "drug": "TRIFLURIDINE",
+     "r": -0.136
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TStim48hr",
+   "mimic": [
+    {
+     "drug": "SELINEXOR",
+     "r": 0.107
+    },
+    {
+     "drug": "ARBUTIN",
+     "r": 0.101
+    },
+    {
+     "drug": "4EGI-1",
+     "r": 0.085
+    },
+    {
+     "drug": "IXAZOMIB",
+     "r": 0.082
+    },
+    {
+     "drug": "FILGOTINIB",
+     "r": 0.077
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.141
+    },
+    {
+     "drug": "NERATINIB-MALEATE",
+     "r": -0.13
+    },
+    {
+     "drug": "CHLORHEXIDINE-DIACETATE",
+     "r": -0.127
+    },
+    {
+     "drug": "CYCLOSPORIN-A",
+     "r": -0.119
+    },
+    {
+     "drug": "NERATINIB",
+     "r": -0.114
+    }
+   ]
+  },
+  {
+   "dataset": "H1hESC",
+   "mimic": [
+    {
+     "drug": "ARBUTIN",
+     "r": 0.197
+    },
+    {
+     "drug": "SELINEXOR",
+     "r": 0.115
+    },
+    {
+     "drug": "RIBOCICLIB",
+     "r": 0.114
+    },
+    {
+     "drug": "MITOXANTRONE-DIHYDROCHLORIDE",
+     "r": 0.11
+    },
+    {
+     "drug": "DINACICLIB",
+     "r": 0.093
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.288
+    },
+    {
+     "drug": "NERATINIB-MALEATE",
+     "r": -0.253
+    },
+    {
+     "drug": "NERATINIB",
+     "r": -0.223
+    },
+    {
+     "drug": "ENCORAFENIB",
+     "r": -0.2
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.189
+    }
+   ]
+  },
+  {
+   "dataset": "K562vip",
+   "mimic": [
+    {
+     "drug": "EX229",
+     "r": 0.069
+    },
+    {
+     "drug": "TAK-733",
+     "r": 0.068
+    },
+    {
+     "drug": "ABEMACICLIB",
+     "r": 0.061
+    },
+    {
+     "drug": "ERK5-IN-2",
+     "r": 0.059
+    },
+    {
+     "drug": "TEMUTERKIB",
+     "r": 0.054
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.093
+    },
+    {
+     "drug": "LIGUSTRAZINE",
+     "r": -0.079
+    },
+    {
+     "drug": "CHLORHEXIDINE-DIACETATE",
+     "r": -0.077
+    },
+    {
+     "drug": "ENCORAFENIB",
+     "r": -0.068
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.066
+    }
+   ]
+  },
+  {
+   "dataset": "SC00015",
+   "mimic": [
+    {
+     "drug": "ARBUTIN",
+     "r": 0.171
+    },
+    {
+     "drug": "DINACICLIB",
+     "r": 0.134
+    },
+    {
+     "drug": "ETC-206",
+     "r": 0.123
+    },
+    {
+     "drug": "RITONAVIR",
+     "r": 0.115
+    },
+    {
+     "drug": "RIBOCICLIB",
+     "r": 0.103
+    }
+   ],
+   "reverse": [
+    {
+     "drug": "ARTESUNATE",
+     "r": -0.275
+    },
+    {
+     "drug": "DIHYDROARTEMISININ",
+     "r": -0.167
+    },
+    {
+     "drug": "NERATINIB-MALEATE",
+     "r": -0.162
+    },
+    {
+     "drug": "CHLORHEXIDINE-DIACETATE",
+     "r": -0.159
+    },
+    {
+     "drug": "5-AZACYTIDINE",
+     "r": -0.152
+    }
+   ]
+  }
+ ],
+ "names": {
+  "TALC": "Talc",
+  "BORTEZOMIB": "Bortezomib",
+  "IXAZOMIB": "Ixazomib",
+  "IXAZOMIB-CITRATE": "Ixazomib citrate",
+  "LACTATE-CALCIUM": "Lactate (calcium)",
+  "BISOPROLOL-HEMIFUMARATE": "Bisoprolol (hemifumarate)",
+  "FUMARIC-ACID": "Fumaric acid",
+  "HYDROXYUREA": "Hydroxyurea",
+  "L-EFLORNITHINE-MONOHYDROCHLORIDE": "L-Eflornithine (monohydrochloride)",
+  "CYSTEAMINE-HYDROCHLORIDE": "Cysteamine (hydrochloride)",
+  "DARINAPARSIN": "Darinaparsin",
+  "ENTECAVIR-MONOHYDRATE": "Entecavir (monohydrate)",
+  "ALLANTOIN": "Allantoin",
+  "5-FLUOROURACIL": "5-Fluorouracil",
+  "L-THYROXINE-SODIUM-SALT-PENTAHYDRATE": "L-Thyroxine (sodium salt pentahydrate)",
+  "GALLIC-ACID": "Gallic acid",
+  "GALLIC-ACID-HYDRATE": "Gallic acid (hydrate)",
+  "ERK5-IN-2": "ERK5-IN-2",
+  "VILANTEROL": "Vilanterol",
+  "NICLOSAMIDE-OLAMINE": "Niclosamide (olamine)",
+  "NOREPINEPHRINE-HYDROCHLORIDE": "Norepinephrine (hydrochloride)",
+  "TRICLOSAN": "Triclosan",
+  "MITOXANTRONE-DIHYDROCHLORIDE": "Mitoxantrone (dihydrochloride)",
+  "PENTAMIDINE-ISETHIONATE": "Pentamidine (isethionate)",
+  "FOLIC-ACID": "Folic acid",
+  "BALSALAZIDE-SODIUM-HYDRATE": "Balsalazide (sodium hydrate)",
+  "RESVERATROL": "Resveratrol",
+  "PF-06260933": "PF-06260933",
+  "DAIDZIN": "Daidzin",
+  "PEMETREXED": "Pemetrexed",
+  "ECONAZOLE": "Econazole",
+  "XRK3F2": "XRK3F2",
+  "ARBUTIN": "Arbutin",
+  "TUCIDINOSTAT": "Tucidinostat",
+  "PEXIDARTINIB-HYDROCHLORIDE": "Pexidartinib (hydrochloride)",
+  "SODIUM-SALICYLATE": "Sodium Salicylate",
+  "SALICYLIC-ACID": "Salicylic acid",
+  "ATALUREN": "Ataluren",
+  "4EGI-1": "4EGI-1",
+  "CLOTRIMAZOLE": "Clotrimazole",
+  "PHENYTOIN-SODIUM": "Phenytoin (sodium)",
+  "SBI-0640756": "SBI-0640756",
+  "OXAPROZIN": "Oxaprozin",
+  "BAICALIN": "Baicalin",
+  "BELINOSTAT": "Belinostat",
+  "CARBAMAZEPINE": "Carbamazepine",
+  "HI-TOPK-032": "HI-TOPK-032",
+  "8-HYDROXYQUINOLINE": "8-Hydroxyquinoline",
+  "RILUZOLE-HYDROCHLORIDE": "Riluzole hydrochloride",
+  "MINODRONIC-ACID": "Minodronic acid",
+  "GSK1059615": "GSK1059615",
+  "GEMCITABINE": "Gemcitabine",
+  "CYTARABINE": "Cytarabine",
+  "CYTARABINE-HYDROCHLORIDE": "Cytarabine (hydrochloride)",
+  "URIDINE": "Uridine",
+  "SELINEXOR": "Selinexor",
+  "FUROSEMIDE": "Furosemide",
+  "ADENOSINE": "Adenosine",
+  "5-AZACYTIDINE": "5-Azacytidine",
+  "CLOFARABINE": "Clofarabine",
+  "ADENINE": "Adenine",
+  "ALLOPURINOL": "Allopurinol",
+  "TRIFLURIDINE": "Trifluridine",
+  "BRIVUDINE": "Brivudine",
+  "IDOXURIDINE": "Idoxuridine",
+  "DECITABINE": "Decitabine",
+  "LENALIDOMIDE-HEMIHYDRATE": "Lenalidomide (hemihydrate)",
+  "DT-061": "DT-061",
+  "BAY1125976": "BAY1125976",
+  "LAROTRECTINIB": "Larotrectinib",
+  "LAROTRECTINIB-SULFATE": "Larotrectinib sulfate",
+  "OLAPARIB": "olaparib",
+  "FILGOTINIB": "Filgotinib",
+  "ULK-101": "ULK-101",
+  "OXALIPLATIN": "Oxaliplatin",
+  "CILOSTAZOL": "Cilostazol",
+  "LY2090314": "LY2090314",
+  "COBIMETINIB": "Cobimetinib",
+  "ASCIMINIB": "Asciminib",
+  "CAPIVASERTIB": "Capivasertib",
+  "PENFLURIDOL": "Penfluridol",
+  "LONAFARNIB": "Lonafarnib",
+  "PIMOZIDE": "Pimozide",
+  "CLONIDINE-HYDROCHLORIDE": "Clonidine (hydrochloride)",
+  "BRIMONIDINE": "Brimonidine",
+  "AT7519": "AT7519",
+  "HYDROXYFASUDIL": "Hydroxyfasudil",
+  "BI-78D3": "BI-78D3",
+  "ETC-206": "ETC-206",
+  "LJI308": "LJI308",
+  "BIMIRALISIB": "Bimiralisib",
+  "BENTAMAPIMOD": "Bentamapimod",
+  "LIPOIC-ACID": "Lipoic acid",
+  "PERETINOIN": "Peretinoin",
+  "IQ-1": "IQ 1",
+  "ACETOHEXAMIDE": "Acetohexamide",
+  "PENTOXIFYLLINE": "Pentoxifylline",
+  "DTP3": "DTP3",
+  "ACETAZOLAMIDE": "Acetazolamide",
+  "PASIREOTIDE-ACETATE": "Pasireotide (acetate)",
+  "CHLORHEXIDINE-DIACETATE": "Chlorhexidine (diacetate)",
+  "ASPIRIN": "Aspirin",
+  "ABIRATERONE-ACETATE": "Abiraterone acetate",
+  "SIVELESTAT-SODIUM-TETRAHYDRATE": "Sivelestat (sodium tetrahydrate)",
+  "ATAZANAVIR-SULFATE": "Atazanavir (sulfate)",
+  "TERFENADINE": "Terfenadine",
+  "BOSENTAN-HYDRATE": "Bosentan (hydrate)",
+  "DABRAFENIB": "Dabrafenib",
+  "RALIMETINIB-DIMESYLATE": "Ralimetinib dimesylate",
+  "SAQUINAVIR": "Saquinavir",
+  "PENTAGASTRIN": "Pentagastrin",
+  "ANASTROZOLE": "Anastrozole",
+  "HARRINGTONINE": "Harringtonine",
+  "HOMOHARRINGTONINE": "Homoharringtonine",
+  "FLUTAMIDE": "Flutamide",
+  "THYMOPENTIN": "Thymopentin",
+  "ALISKIREN": "Aliskiren",
+  "VERAPAMIL": "Verapamil",
+  "R-VERAPAMIL-HYDROCHLORIDE": "(R)-Verapamil (hydrochloride)",
+  "RITONAVIR": "Ritonavir",
+  "GOSERELIN-ACETATE": "Goserelin (acetate)",
+  "BESTATIN": "Bestatin",
+  "BESTATIN-HYDROCHLORIDE": "Bestatin (hydrochloride)",
+  "IMIQUIMOD-MALEATE": "Imiquimod (maleate)",
+  "IMIQUIMOD-HYDROCHLORIDE": "Imiquimod (hydrochloride)",
+  "ENCORAFENIB": "Encorafenib",
+  "AZD1390": "AZD1390",
+  "SAPANISERTIB": "Sapanisertib",
+  "TORKINIB": "Torkinib",
+  "BELUMOSUDIL": "Belumosudil",
+  "BELUMOSUDIL-MESYLATE": "Belumosudil (mesylate)",
+  "ESMOLOL-HYDROCHLORIDE": "Esmolol (hydrochloride)",
+  "ERDAFITINIB": "Erdafitinib",
+  "MALOTILATE": "Malotilate",
+  "FENOFIBRATE": "Fenofibrate",
+  "MK-8353": "MK-8353",
+  "CRIZOTINIB": "crizotinib",
+  "S-CRIZOTINIB": "(S)-Crizotinib",
+  "CRIZOTINIB-HYDROCHLORIDE": "Crizotinib (hydrochloride)",
+  "APREPITANT": "Aprepitant",
+  "CINACALCET": "Cinacalcet",
+  "NAPROXEN": "Naproxen",
+  "ZILEUTON": "Zileuton",
+  "VORICONAZOLE": "Voriconazole",
+  "CARBIDOPA-MONOHYDRATE": "Carbidopa (monohydrate)",
+  "SILODOSIN": "Silodosin",
+  "DAROLUTAMIDE": "Darolutamide",
+  "BENPROPERINE-PHOSPHATE": "Benproperine (phosphate)",
+  "BICALUTAMIDE": "Bicalutamide",
+  "CAPTOPRIL": "Captopril",
+  "TIRABRUTINIB": "Tirabrutinib",
+  "TIRABRUTINIB-HYDROCHLORIDE": "Tirabrutinib (hydrochloride)",
+  "MIFEPRISTONE": "Mifepristone",
+  "FOSTAMATINIB-DISODIUM-HEXAHYDRATE": "Fostamatinib (disodium hexahydrate)",
+  "TEMUTERKIB": "Temuterkib",
+  "TETRACYCLINE-HYDROCHLORIDE": "Tetracycline (hydrochloride)",
+  "GLYCYRRHIZIC-ACID": "Glycyrrhizic acid",
+  "DIAMMONIUM-GLYCYRRHIZINATE": "Diammonium Glycyrrhizinate",
+  "VENETOCLAX": "venetoclax",
+  "DELAMANID": "Delamanid",
+  "DEXMEDETOMIDINE": "Dexmedetomidine",
+  "RANOLAZINE": "Ranolazine",
+  "LOPINAVIR": "Lopinavir",
+  "VALDECOXIB": "Valdecoxib",
+  "CLOXACILLIN-SODIUM": "Cloxacillin (sodium)",
+  "ELAGOLIX-SODIUM": "Elagolix sodium",
+  "PALBOCICLIB": "palbociclib",
+  "RETINOIC-ACID": "Retinoic acid",
+  "PH-797804": "PH-797804",
+  "PONATINIB": "Ponatinib",
+  "RADOTINIB": "Radotinib",
+  "NVP-BHG712": "NVP-BHG712",
+  "CANAGLIFLOZIN": "Canagliflozin",
+  "MK-3903": "MK-3903",
+  "EX229": "EX229",
+  "FLUMATINIB-MESYLATE": "Flumatinib (mesylate)",
+  "TUCATINIB": "Tucatinib",
+  "TRIMETREXATE": "Trimetrexate",
+  "APTO-253": "APTO-253",
+  "VITAMIN-K4": "Vitamin K4",
+  "PANOBINOSTAT": "Panobinostat",
+  "RIMONABANT": "Rimonabant",
+  "RIMONABANT-HYDROCHLORIDE": "Rimonabant (Hydrochloride)",
+  "LIGUSTRAZINE": "Ligustrazine",
+  "SULFISOXAZOLE": "Sulfisoxazole",
+  "ALPELISIB": "Alpelisib",
+  "TRAMETINIB": "Trametinib",
+  "NEVIRAPINE": "Nevirapine",
+  "TOMIVOSERTIB": "Tomivosertib",
+  "PACLITAXEL": "Paclitaxel",
+  "DOCETAXEL": "Docetaxel",
+  "DOCETAXEL-TRIHYDRATE": "Docetaxel (Trihydrate)",
+  "ROXADUSTAT": "Roxadustat",
+  "THYMOL": "Thymol",
+  "GEMFIBROZIL": "Gemfibrozil",
+  "VORTIOXETINE": "Vortioxetine",
+  "OTS514": "OTS514",
+  "PRALSETINIB": "Pralsetinib",
+  "MENADIONE": "Menadione",
+  "CICLOPIROX": "Ciclopirox",
+  "METHYLTHIOURACIL": "Methylthiouracil",
+  "TOLCAPONE": "Tolcapone",
+  "TOLMETIN": "Tolmetin",
+  "CELECOXIB": "Celecoxib",
+  "S-ADENOSYL-L-METHIONINE-DISULFATE-TOSYLATE": "S-Adenosyl-L-methionine (disulfate tosylate)",
+  "LAPATINIB-DITOSYLATE": "Lapatinib ditosylate",
+  "LY-2584702-TOSYLATE-SALT": "LY-2584702 (tosylate salt)",
+  "EDOXABAN-TOSYLATE-MONOHYDRATE": "Edoxaban (tosylate monohydrate)",
+  "LUMATEPERONE-TOSYLATE": "Lumateperone (tosylate)",
+  "MOZAVAPTAN": "Mozavaptan",
+  "BEXAROTENE": "Bexarotene",
+  "SULFATINIB": "Sulfatinib",
+  "OLANZAPINE": "Olanzapine",
+  "AZD-7648": "AZD-7648",
+  "MEGESTROL": "Megestrol",
+  "OMEPRAZOLE-SODIUM": "Omeprazole (sodium)",
+  "OMEPRAZOLE": "Omeprazole",
+  "FEDRATINIB-HYDROCHLORIDE-HYDRATE": "Fedratinib (hydrochloride hydrate)",
+  "MELOXICAM": "Meloxicam",
+  "PYRIDOXINE": "Pyridoxine",
+  "PYRIDOXINE-HYDROCHLORIDE": "Pyridoxine (hydrochloride)",
+  "ORNIDAZOLE": "Ornidazole",
+  "RALTITREXED": "Raltitrexed",
+  "BI-3406": "BI-3406",
+  "TRIAMCINOLONE": "Triamcinolone",
+  "DROSPIRENONE": "Drospirenone",
+  "EPLERENONE": "Eplerenone",
+  "QUINESTROL": "Quinestrol",
+  "ESTRONE-SULFATE-POTASSIUM": "Estrone sulfate (potassium)",
+  "FINASTERIDE": "Finasteride",
+  "FULVESTRANT": "Fulvestrant",
+  "MONOCROTALINE": "Monocrotaline",
+  "OUABAIN-OCTAHYDRATE": "Ouabain (Octahydrate)",
+  "RUTIN-TRIHYDRATE": "Rutin (trihydrate)",
+  "HESPERIDIN": "Hesperidin",
+  "DIGITOXIN": "Digitoxin",
+  "DOXORUBICIN-HYDROCHLORIDE": "Doxorubicin (hydrochloride)",
+  "EPIRUBICIN-HYDROCHLORIDE": "Epirubicin (hydrochloride)",
+  "IDARUBICIN-HYDROCHLORIDE": "Idarubicin (hydrochloride)",
+  "PLICAMYCIN": "Plicamycin",
+  "RIFAXIMIN": "Rifaximin",
+  "DOXYCYCLINE-MONOHYDRATE": "Doxycycline (monohydrate)",
+  "FUSIDIC-ACID": "Fusidic acid",
+  "IPATASERTIB": "Ipatasertib",
+  "MEDROXYPROGESTERONE-ACETATE": "Medroxyprogesterone acetate",
+  "METHYLPREDNISOLONE-SUCCINATE": "Methylprednisolone succinate",
+  "DEXAMETHASONE": "Dexamethasone",
+  "DIHYDROARTEMISININ": "Dihydroartemisinin",
+  "ARTESUNATE": "Artesunate",
+  "ARTEMETHER": "Artemether",
+  "RAPAMYCIN": "Rapamycin",
+  "TEMSIROLIMUS": "Temsirolimus",
+  "EVEROLIMUS": "Everolimus",
+  "TOFACITINIB": "Tofacitinib",
+  "TOFACITINIB-CITRATE": "Tofacitinib (citrate)",
+  "SONIDEGIB": "Sonidegib",
+  "AZD-8055": "AZD-8055",
+  "ELIMUSERTIB-HYDROCHLORIDE": "Elimusertib hydrochloride",
+  "CLOBETASOL-PROPIONATE": "Clobetasol propionate",
+  "BETAMETHASONE-DIPROPIONATE": "Betamethasone dipropionate",
+  "POSACONAZOLE": "Posaconazole",
+  "PRAVASTATIN-SODIUM": "Pravastatin (sodium)",
+  "IVERMECTIN": "Ivermectin",
+  "TOPOTECAN-HYDROCHLORIDE": "Topotecan (hydrochloride)",
+  "VINBLASTINE-SULFATE": "Vinblastine (sulfate)",
+  "VINCRISTINE": "vincristine",
+  "INDACATEROL-MALEATE": "Indacaterol (maleate)",
+  "PIMITESPIB": "Pimitespib",
+  "IRINOTECAN": "Irinotecan",
+  "IRINOTECAN-HYDROCHLORIDE": "Irinotecan (hydrochloride)",
+  "DINACICLIB": "Dinaciclib",
+  "PIOGLITAZONE": "Pioglitazone",
+  "VOLASERTIB": "Volasertib",
+  "CYCLOSPORIN-A": "Cyclosporin A",
+  "ERYTHROMYCIN": "Erythromycin",
+  "AZITHROMYCIN-HYDRATE": "Azithromycin (hydrate)",
+  "PERINDOPRIL-ERBUMINE": "Perindopril (erbumine)",
+  "SILDENAFIL": "Sildenafil",
+  "BUDESONIDE": "Budesonide",
+  "HEXYLRESORCINOL": "Hexylresorcinol",
+  "OLEIC-ACID": "Oleic acid",
+  "FINGOLIMOD-HYDROCHLORIDE": "Fingolimod (hydrochloride)",
+  "DAPTOMYCIN": "Daptomycin",
+  "ORLISTAT": "Orlistat",
+  "LEVOBUPIVACAINE-HYDROCHLORIDE": "Levobupivacaine (hydrochloride)",
+  "PROGLUMIDE": "Proglumide",
+  "ROPIVACAINE-HYDROCHLORIDE-MONOHYDRATE": "Ropivacaine (hydrochloride monohydrate)",
+  "MACITENTAN": "Macitentan",
+  "VEMURAFENIB": "Vemurafenib",
+  "LIDOCAINE-HYDROCHLORIDE": "Lidocaine (hydrochloride)",
+  "SUNITINIB": "Sunitinib",
+  "PROCAINAMIDE-HYDROCHLORIDE": "Procainamide (hydrochloride)",
+  "LUCANTHONE": "Lucanthone",
+  "RMC-6236": "RMC-6236",
+  "PEMIGATINIB": "Pemigatinib",
+  "INFIGRATINIB": "Infigratinib",
+  "NG25": "NG25",
+  "ABEMACICLIB": "Abemaciclib",
+  "BIMATOPROST": "Bimatoprost",
+  "DORZOLAMIDE-HYDROCHLORIDE": "Dorzolamide (hydrochloride)",
+  "TAZAROTENE": "Tazarotene",
+  "NERATINIB": "Neratinib",
+  "NERATINIB-MALEATE": "Neratinib (maleate)",
+  "DAPAGLIFLOZIN": "Dapagliflozin",
+  "DAPAGLIFLOZIN-2S-1-2-PROPANEDIOL-HYDRATE": "Dapagliflozin ((2S)-1,2-propanediol, hydrate)",
+  "AURANOFIN": "Auranofin",
+  "TAK-901": "TAK-901",
+  "LOPERAMIDE-HYDROCHLORIDE": "Loperamide (hydrochloride)",
+  "RIBOCICLIB": "Ribociclib",
+  "ALTRETAMINE": "Altretamine",
+  "DEMECLOCYCLINE": "Demeclocycline",
+  "AFATINIB": "Afatinib",
+  "RELUGOLIX": "Relugolix",
+  "CITALOPRAM-HYDROBROMIDE": "Citalopram (hydrobromide)",
+  "ALMONERTINIB-HYDROCHLORIDE": "Almonertinib (hydrochloride)",
+  "ALMONERTINIB-MESYLATE": "Almonertinib (mesylate)",
+  "DIPHENHYDRAMINE": "Diphenhydramine",
+  "ML264": "ML264",
+  "METHOTREXATE": "Methotrexate",
+  "IVABRADINE-HYDROCHLORIDE": "Ivabradine (hydrochloride)",
+  "ROSIGLITAZONE": "Rosiglitazone",
+  "PIROXICAM": "Piroxicam",
+  "C-KIT-IN-1": "c-Kit-IN-1",
+  "CP21R7": "CP21R7",
+  "9-ING-41": "9-ING-41",
+  "BINIMETINIB": "Binimetinib",
+  "TAK-733": "TAK-733",
+  "BENDAMUSTINE": "Bendamustine",
+  "BENZTROPINE-MESYLATE": "Benztropine (mesylate)",
+  "TADALAFIL": "Tadalafil",
+  "VANDETANIB": "Vandetanib",
+  "GLASDEGIB": "Glasdegib",
+  "ISOCORYDINE": "Isocorydine",
+  "BERBAMINE": "Berbamine",
+  "BERBAMINE-DIHYDROCHLORIDE": "Berbamine (dihydrochloride)",
+  "CEPHARANTHINE": "Cepharanthine",
+  "SINOMENINE": "Sinomenine",
+  "ADAGRASIB": "Adagrasib",
+  "LB-100": "LB-100",
+  "ENTRECTINIB": "Entrectinib",
+  "AZD2858": "AZD2858",
+  "CAPMATINIB": "Capmatinib",
+  "APALUTAMIDE": "Apalutamide",
+  "REGORAFENIB": "Regorafenib",
+  "PHENYLEPHRINE-HYDROCHLORIDE": "Phenylephrine (hydrochloride)",
+  "RUCAPARIB-PHOSPHATE": "Rucaparib (phosphate)",
+  "CLOPIDOGREL": "Clopidogrel",
+  "DIMETHYL-FUMARATE": "Dimethyl fumarate",
+  "METHYL-AMINOLEVULINATE-HYDROCHLORIDE": "Methyl aminolevulinate (hydrochloride)",
+  "MEBENDAZOLE": "Mebendazole",
+  "TRANILAST": "Tranilast",
+  "GEFITINIB": "Gefitinib",
+  "SIMOTINIB": "Simotinib",
+  "BERGENIN": "Bergenin",
+  "FERULIC-ACID": "Ferulic acid",
+  "AMSACRINE": "Amsacrine",
+  "PALMATINE-CHLORIDE": "Palmatine (chloride)",
+  "BERBERINE-CHLORIDE-HYDRATE": "Berberine (chloride hydrate)",
+  "FUTIBATINIB": "Futibatinib",
+  "TUBULIN-INHIBITOR-6": "Tubulin inhibitor 6",
+  "ANETHOLE-TRITHIONE": "Anethole trithione",
+  "CABOZANTINIB-S-MALATE": "Cabozantinib (S-malate)",
+  "FLUVOXAMINE": "Fluvoxamine",
+  "FLUVOXAMINE-MALEATE": "Fluvoxamine (maleate)",
+  "ERLOTINIB": "Erlotinib",
+  "BELZUTIFAN": "Belzutifan",
+  "VISMODEGIB": "Vismodegib",
+  "NIMESULIDE": "Nimesulide",
+  "NAFAMOSTAT-MESYLATE": "Nafamostat (mesylate)",
+  "BUSULFAN": "Busulfan",
+  "18BETA-GLYCYRRHETINIC-ACID": "18β-Glycyrrhetinic acid",
+  "TRAMETINIB-DMSO-TF-SOLVATE": "Trametinib (DMSO_TF solvate)",
+  "SACUBITRIL-VALSARTAN": "Sacubitril/Valsartan",
+  "PITAVASTATIN-CALCIUM": "Pitavastatin (Calcium)",
+  "VERTEPORFIN": "Verteporfin",
+  "QUINIDINE-15-DIHYDROQUINIDINE": "Quinidine (15% dihydroquinidine)",
+  "CANAGLIFLOZIN-HEMIHYDRATE": "Canagliflozin (hemihydrate)",
+  "OSIMERTINIB-MESYLATE": "Osimertinib (mesylate)",
+  "GAMMA-ORYZANOL": "γ-Oryzanol"
+ }
+}

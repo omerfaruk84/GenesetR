@@ -29,7 +29,16 @@ export const useWorkspaceVersion = () => useSyncExternalStore(subscribe, () => v
 
 const readNames = async () => new Set([...((await get("geneListNames")) || [])]);
 
-const countGenes = (genes) => toGeneArray(String(genes || "").replace(/[+-]/g, " ")).length;
+/**
+ * Number of entries of a saved list. A hyphen only separates entries in a
+ * signature formula ("A+B-C"); in a plain list it is part of a gene symbol
+ * (HLA-A) or of a drug id (5-FLUOROURACIL, BORTEZOMIB-0.5UM).
+ */
+export const countListEntries = (genes) => {
+  const text = String(genes || "");
+  return toGeneArray(text.replace(text.includes("+") ? /[+-]/g : /\+/g, " ")).length;
+};
+const countGenes = countListEntries;
 
 /** All saved lists, newest first: [{ id, name, genes, description, timestamp, count }]. */
 export const listGeneLists = async () => {

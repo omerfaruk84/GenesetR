@@ -17,6 +17,7 @@ export const NAV_GROUPS = [
     question: "What does my gene do, and what controls it?",
     items: [
       { name: "Gene page", to: ROUTES.GENE, about: "Everything about one gene across all datasets" },
+      { name: "Explore a drug", to: ROUTES.DRUG, about: "One drug in 47 cell lines: response by dose, genes it changes, similar drugs and knock-downs" },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Network of regulators and targets of a gene" },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Regulation network combined over several datasets" },
       { name: TabNames.EXPRESSIONANALYZER, to: ROUTES.EXPRESSIONANALYZER, about: "What changes a gene's expression, and what it changes" },
@@ -52,6 +53,7 @@ export const NAV_GROUPS = [
     question: "How are these genes connected?",
     items: [
       { name: TabNames.PATHFINDER, to: ROUTES.PATHFINDER, about: "Regulatory paths that connect the genes of a list" },
+      { name: "Drug and gene connectivity", to: ROUTES.DRUG, about: "Knock-downs whose profile mimics or reverses a drug", secondary: true },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Upstream and downstream network of one gene", secondary: true },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Network with evidence from several datasets", secondary: true },
     ],

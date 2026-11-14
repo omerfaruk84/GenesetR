@@ -4,30 +4,38 @@ import { geneRegulationCoreSettingsChanged } from "../store/settings/gene-regula
 import { expressionanalyzerSettingsChanged } from "../store/settings/expression-analyzer-settings";
 import { multidatasetComparisonSettingsChanged } from "../store/settings/multidataset-comparison-settings";
 import { baseSymbol, genePagePath } from "./geneLinks";
+import { drugPagePath } from "./perturbationKind";
 
 /**
  * Modules a gene or a gene list can be sent to.
  *   kind "list":   the genes become the perturbation list of the sidebar
  *   kind "target": the genes become the second (gene / signature) list
  *   kind "gene":   the module works on a single gene (the first one is used)
+ *   kind "drug":   the drug page (the first drug is used); only for drug lists
  * `min` is the smallest list the module accepts.
+ * `geneOnly` targets work on genes: they are not offered for a list of drugs.
  */
 export const SEND_TARGETS = [
   { id: "correlation", label: "Correlation", route: ROUTES.CORRELATION, kind: "list", min: 2 },
   { id: "dr", label: "DR & Clustering", route: ROUTES.DR, kind: "list", min: 10 },
   { id: "heatmap", label: "Heatmap", route: ROUTES.HEATMAP, kind: "list", min: 3 },
-  { id: "pathfinder", label: "Path Explorer", route: ROUTES.PATHFINDER, kind: "list", min: 2 },
+  { id: "pathfinder", label: "Path Explorer", route: ROUTES.PATHFINDER, kind: "list", min: 2, geneOnly: true },
   { id: "deregulated", label: "Deregulated Genes", route: ROUTES.DEREGULATED_GENES, kind: "list", min: 1 },
-  { id: "genesignature", label: "Gene Signature", route: ROUTES.GENESIGNATURE, kind: "target", min: 1 },
-  { id: "geneRegulation", label: "Gene Regulation", route: ROUTES.GENE_REGULATION, kind: "gene", min: 1 },
-  { id: "expressionAnalyzer", label: "Expression Analyzer", route: ROUTES.EXPRESSIONANALYZER, kind: "gene", min: 1 },
-  { id: "multidataset", label: "Multi-Dataset Comparison", route: ROUTES.MULTIDATASET_COMPARISON, kind: "gene", min: 1 },
-  { id: "genePage", label: "Gene page", route: ROUTES.GENE, kind: "gene", min: 1 },
+  { id: "genesignature", label: "Gene Signature", route: ROUTES.GENESIGNATURE, kind: "target", min: 1, geneOnly: true },
+  { id: "geneRegulation", label: "Gene Regulation", route: ROUTES.GENE_REGULATION, kind: "gene", min: 1, geneOnly: true },
+  { id: "expressionAnalyzer", label: "Expression Analyzer", route: ROUTES.EXPRESSIONANALYZER, kind: "gene", min: 1, geneOnly: true },
+  { id: "multidataset", label: "Multi-Dataset Comparison", route: ROUTES.MULTIDATASET_COMPARISON, kind: "gene", min: 1, geneOnly: true },
+  { id: "genePage", label: "Gene page", route: ROUTES.GENE, kind: "gene", min: 1, geneOnly: true },
+  { id: "drugPage", label: "Drug page", route: ROUTES.DRUG, kind: "drug", min: 1, drugOnly: true },
 ];
+
+/** Targets a list can be sent to; `drugs` says the list holds drugs, not genes. */
+export const sendTargetsFor = ({ drugs = false } = {}) =>
+  SEND_TARGETS.filter((target) => (drugs ? !target.geneOnly : !target.drugOnly));
 
 export const sendTarget = (id) => SEND_TARGETS.find((target) => target.id === id);
 
-/** Clean list of unique symbols from an array or free text. */
+/** Clean list of unique symbols (or drug ids: hyphens are kept) from an array or free text. */
 export const toGeneArray = (genes) => {
   const list = Array.isArray(genes) ? genes : String(genes || "").split(/[\s,;]+/);
   const seen = new Set();
@@ -46,6 +54,7 @@ export const toGeneArray = (genes) => {
  * Thunk: load `genes` into the settings of a module and return the address to
  * navigate to. Usage: `navigate(dispatch(sendGenesTo("correlation", genes)))`.
  * `datasetId` (optional) also switches the selected dataset.
+ * The list may hold drug ids (for a drug dataset); they are passed on as they are.
  */
 export const sendGenesTo = (targetId, genes, { datasetId } = {}) => (dispatch, getState) => {
   const target = sendTarget(targetId);
@@ -70,6 +79,8 @@ export const sendGenesTo = (targetId, genes, { datasetId } = {}) => (dispatch, g
       });
     }
   }
+
+  if (target.id === "drugPage") return drugPagePath(list[0]);
 
   const first = baseSymbol(list[0]);
   switch (target.id) {

@@ -21,7 +21,7 @@ const aboutStyle = { display: "block", color: "#5d6877", fontSize: 11.5, whiteSp
  * "Example" button of a gene list box: curated gene sets (or signature
  * formulas) that give an interpretable result.
  *
- *   kind      "list" | "signature"
+ *   kind      "list" | "signature" | "drugs" (no curated sets, only the random sample)
  *   onPick    called with the text to put in the box
  *   onRandom  optional: load random genes of the selected dataset instead
  */
@@ -29,9 +29,11 @@ const ExampleMenu = ({ kind = "list", onPick, onRandom }) => {
   const [anchor, setAnchor] = useState(null);
   const close = () => setAnchor(null);
   const examples =
-    kind === "signature"
-      ? EXAMPLE_SIGNATURES.map((e) => ({ ...e, text: e.formula }))
-      : EXAMPLE_GENE_SETS.map((e) => ({ ...e, text: e.genes.join("\n") }));
+    kind === "drugs"
+      ? []
+      : kind === "signature"
+        ? EXAMPLE_SIGNATURES.map((e) => ({ ...e, text: e.formula }))
+        : EXAMPLE_GENE_SETS.map((e) => ({ ...e, text: e.genes.join("\n") }));
 
   return (
     <>
@@ -62,7 +64,7 @@ const ExampleMenu = ({ kind = "list", onPick, onRandom }) => {
             </span>
           </MenuItem>
         ))}
-        {onRandom && <Divider />}
+        {onRandom && examples.length > 0 && <Divider />}
         {onRandom && (
           <MenuItem
             dense
@@ -72,7 +74,7 @@ const ExampleMenu = ({ kind = "list", onPick, onRandom }) => {
             }}
           >
             <span>
-              <strong>Random genes</strong>
+              <strong>{kind === "drugs" ? "Random drugs" : "Random genes"}</strong>
               <span style={aboutStyle}>A random sample from the selected dataset</span>
             </span>
           </MenuItem>

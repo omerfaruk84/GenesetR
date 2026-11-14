@@ -1,0 +1,133 @@
+// The drug page shares the layout of the gene page (pages/gene); these are
+// the parts only it has.
+
+.badge,
+.badgeMuted {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge {
+  background: var(--gs-accent);
+  color: #fff;
+}
+
+.badgeMuted {
+  border: 1px solid var(--gs-border-strong);
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+}
+
+.id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--gs-muted);
+}
+
+.heatBlocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 6px 28px;
+  align-items: start;
+}
+
+.heat {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: transparent;
+
+  // The UI library gives table cells a light background and striping; this table
+  // sits on the page surface in both themes and colours only the dose cells.
+  tr,
+  th,
+  td {
+    background: transparent;
+  }
+
+  th,
+  td {
+    padding: 1px 6px;
+    height: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--gs-text);
+  }
+
+  thead th {
+    padding-bottom: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    color: var(--gs-muted);
+    border-bottom: 1px solid var(--gs-border);
+  }
+
+  // the dose columns
+  thead th:nth-child(n + 3) {
+    text-align: right;
+  }
+
+  tbody th {
+    font-weight: 500;
+    text-align: left;
+  }
+}
+
+.organ {
+  color: var(--gs-muted) !important;
+  width: 96px;
+}
+
+.cell {
+  position: relative;
+  width: 54px;
+  border: 1px solid var(--gs-bg);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.groupStart th,
+.groupStart td {
+  border-top: 6px solid var(--gs-bg);
+}
+
+// Marker of a treatment with few cells left
+.fewCells {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gs-text);
+}
+
+.smallTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    padding: 2px 4px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    color: var(--gs-muted);
+    border-bottom: 1px solid var(--gs-border);
+  }
+
+  td {
+    padding: 2px 4px;
+    color: var(--gs-text);
+  }
+}
+
+.mechanism {
+  color: var(--gs-muted) !important;
+  font-size: 12px;
+}

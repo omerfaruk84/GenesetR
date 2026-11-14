@@ -92,6 +92,70 @@ describe("urlState", () => {
     expect(takeSnapshot(settings, ROUTES.HEATMAP, { full: true }).core.peturbationList).toBe(genes);
   });
 
+  describe("drug datasets", () => {
+    const drugDataset = { id: "TahoeAll", name: "Tahoe-100M, all doses", perturbationKind: "drug", drugTable: "dose" };
+    const drugs = "5-FLUOROURACIL\nR-VERAPAMIL-HYDROCHLORIDE-0.5UM\nBORTEZOMIB-0.05UM";
+    const drugStore = () => {
+      const store = makeStore();
+      store.dispatch({
+        type: "core/coreSettingsChanged",
+        payload: { settingName: "datasetList", newValue: [{ id: "K562gwps", name: "K562 Whole Genome" }, drugDataset] },
+      });
+      return store;
+    };
+    const set = (store, settingName, newValue) =>
+      store.dispatch({ type: "core/coreSettingsChanged", payload: { settingName, newValue } });
+
+    test("drug ids in the first list keep their hyphens", () => {
+      const first = drugStore();
+      set(first, "cellLine", drugDataset);
+      set(first, "peturbationList", drugs);
+      const query = snapshotToQuery(takeSnapshot(first.getState().settings, ROUTES.CORRELATION));
+      expect(new URLSearchParams(query).get("genes")).toBe(
+        "5-FLUOROURACIL,R-VERAPAMIL-HYDROCHLORIDE-0.5UM,BORTEZOMIB-0.05UM"
+      );
+
+      const second = drugStore();
+      second.dispatch(applySnapshot(queryToSnapshot(`?${query}`, ROUTES.CORRELATION)));
+      const { core } = second.getState().settings;
+      expect(core.cellLine.id).toBe("TahoeAll");
+      expect(core.peturbationList).toBe(drugs);
+    });
+
+    test("a drug list in the second list is not read as a signature formula", () => {
+      const first = drugStore();
+      set(first, "cellLine", drugDataset);
+      set(first, "dataType", "genes");
+      set(first, "targetGeneList", drugs);
+      const query = snapshotToQuery(takeSnapshot(first.getState().settings, ROUTES.CORRELATION));
+      const params = new URLSearchParams(query);
+      expect(params.get("targets")).toBe("5-FLUOROURACIL,R-VERAPAMIL-HYDROCHLORIDE-0.5UM,BORTEZOMIB-0.05UM");
+      expect(params.get("tk")).toBe("drug");
+
+      const second = drugStore();
+      second.dispatch(applySnapshot(queryToSnapshot(`?${query}`, ROUTES.CORRELATION)));
+      expect(second.getState().settings.core.targetGeneList).toBe(drugs);
+      // and the address written from the restored settings is the same one
+      expect(snapshotToQuery(takeSnapshot(second.getState().settings, ROUTES.CORRELATION))).toBe(query);
+    });
+
+    test("a signature formula on a drug dataset still keeps its signs", () => {
+      const store = drugStore();
+      set(store, "cellLine", drugDataset);
+      set(store, "targetGeneList", "ATF4+DDIT3-XBP1");
+      const query = snapshotToQuery(takeSnapshot(store.getState().settings, ROUTES.GENESIGNATURE));
+      expect(new URLSearchParams(query).get("targets")).toBe("ATF4+DDIT3-XBP1");
+      expect(new URLSearchParams(query).has("tk")).toBe(false);
+    });
+
+    test("genetic datasets are unchanged: a hyphenated second list stays as it was", () => {
+      const store = makeStore();
+      set(store, "targetGeneList", "HLA-A\nMT-CO1");
+      const query = snapshotToQuery(takeSnapshot(store.getState().settings, ROUTES.HEATMAP));
+      expect(new URLSearchParams(query).has("tk")).toBe(false);
+    });
+  });
+
   test("key order does not make equal settings look different", () => {
     const store = makeStore();
     const scale = store.getState().settings.inchlib.color_scale;

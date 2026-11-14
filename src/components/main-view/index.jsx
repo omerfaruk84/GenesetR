@@ -23,6 +23,7 @@ import { GenelistCompare } from "../genelist-compare";
 import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
 import UploadDatasetPage from "../../pages/upload-dataset/upload-dataset-page";
 import { GenePage } from "../../pages/gene/gene-page";
+import { DrugPage } from "../../pages/drug/drug-page";
 import { DatasetsPage } from "../../pages/datasets/datasets-page";
 import { ProjectSignaturePage } from "../../pages/project-signature/project-signature-page";
 import { PermalinkPage } from "../../pages/permalink/permalink-page";
@@ -77,6 +78,7 @@ const MainView = () => {
           />
           <Route path={ROUTES.ABOUTUS} element={<PageBoundary><AboutPage /></PageBoundary>} />
           <Route path={ROUTES.GENE} element={<PageBoundary><GenePage /></PageBoundary>} />
+          <Route path={ROUTES.DRUG} element={<PageBoundary><DrugPage /></PageBoundary>} />
           <Route path={ROUTES.PERMALINK} element={<PageBoundary><PermalinkPage /></PageBoundary>} />
           <Route path={ROUTES.PROJECT_SIGNATURE} element={<PageBoundary><ProjectSignaturePage /></PageBoundary>} />
           <Route path={ROUTES.DATASETS} element={<PageBoundary><DatasetsPage /></PageBoundary>} />

@@ -31,7 +31,7 @@ import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
 import { SendToMenu } from "../send-to";
 import { setHeatmapRangeInfo } from "../cluster-heatmap/rangeInfo";
-import { genePagePath } from "../../utils/geneLinks";
+import { describeLine, entityPagePath, isDrugList, useDrugLabelsVersion } from "../../utils/drugLabels";
 import { listGeneLists, useWorkspaceVersion } from "../../utils/workspace";
 import { toGeneArray } from "../../utils/sendTo";
 import ui from "../ui/ui.module.scss";
@@ -571,6 +571,15 @@ const HeatMap = ({
     }
   }, [isMultiDataset, datasets]);
 
+  // Re-render when the label table of a drug dataset arrives
+  const drugLabelsVersion = useDrugLabelsVersion();
+  // The selected cluster holds drugs of a drug dataset (not genes)
+  const selectionIsDrugs = useMemo(
+    () => isDrugList(selectedGenes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedGenes, drugLabelsVersion]
+  );
+
   const genesets = useMemo(() => {
     return selectedGenes.length > 0
       ? { "Selected Genes": selectedGenes.join(", ") }
@@ -618,6 +627,8 @@ const HeatMap = ({
     ].forEach(([axis, list]) => {
       (list || []).forEach(({ cluster, items }) => {
         const genes = Array.from(new Set(items.map(baseSymbol).filter(Boolean)));
+        // Gene-set enrichment is for genes: clusters of drugs are left out
+        if (isDrugList(genes)) return;
         const fits = genes.length >= SUMMARY_MIN_GENES && genes.length <= SUMMARY_MAX_GENES;
         rows.push({ axis, cluster, size: genes.length, genes, status: fits ? "pending" : "skipped" });
       });
@@ -1038,6 +1049,8 @@ const keyedData = useMemo(() => {
     });
 
     inchlibInstance.current = inchlib;
+    // Labels of a drug dataset are ids: the tooltip adds name, dose, mechanism and targets
+    inchlib.setLabelDescriber?.(describeLine);
 
     setGeneQuery("");
     setGeneMissing(false);
@@ -1098,9 +1111,10 @@ const keyedData = useMemo(() => {
 
     // Only the texture-based renderer has cut lines; the others ignore this.
     setClusterCounts({ rows: 0, columns: 0 });
-    // A click on a label opens the gene page in a new tab (the heatmap stays).
+    // A click on a label opens the gene page (the drug page for a drug of a
+    // drug dataset) in a new tab; the heatmap stays.
     inchlib.events.label_onclick = function ({ label }) {
-      window.open(genePagePath(label), "_blank", "noopener");
+      window.open(entityPagePath(label), "_blank", "noopener");
     };
     inchlib.events.view_onchange = function (view) {
       storeView(view);
@@ -1805,7 +1819,8 @@ const keyedData = useMemo(() => {
                 <div className={styles.enrichmentTableContainer}>
                   <div className={styles.panelHeader}>
                     <strong>
-                      {selectedAxis === "column" ? "Column" : "Row"} cluster · {selectedGenes.length} gene
+                      {selectedAxis === "column" ? "Column" : "Row"} cluster · {selectedGenes.length}{" "}
+                      {selectionIsDrugs ? "drug" : "gene"}
                       {selectedGenes.length === 1 ? "" : "s"}
                     </strong>
                     <span className={styles.panelActions}>

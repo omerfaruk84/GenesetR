@@ -1,0 +1,42 @@
+{
+ "tables": [
+  {
+   "dataset": "TahoeDrugs",
+   "name": "Tahoe-100M drugs (all cell lines)",
+   "table": "drug",
+   "cellLine": "47 cancer cell lines",
+   "organ": null,
+   "drivers": [],
+   "treatments": 379,
+   "genes": 11476
+  },
+  {
+   "dataset": "TahoeAll",
+   "name": "Tahoe-100M drugs by dose (all cell lines)",
+   "table": "dose",
+   "cellLine": "47 cancer cell lines",
+   "organ": null,
+   "drivers": [],
+   "treatments": 1135,
+   "genes": 11476
+  },
+  {
+   "dataset": "TahoeA549",
+   "name": "Tahoe-100M A549 (Lung)",
+   "table": "line",
+   "cellLine": "A549",
+   "organ": "Lung",
+   "drivers": [
+    "CDKN2A",
+    "CDKN2B",
+    "KRAS",
+    "SMARCA4",
+    "STK11",
+    "ZFHX3"
+   ],
+   "treatments": 1132,
+   "genes": 11968
+  }
+ ],
+ "drugs": 379
+}

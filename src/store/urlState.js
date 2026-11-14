@@ -16,6 +16,7 @@
  */
 import { ROUTES } from "../common/routes";
 import { settingsReducer } from "./settings";
+import { isDrugDataset } from "../utils/perturbationKind";
 
 export const SNAPSHOT_VERSION = 1;
 
@@ -92,6 +93,12 @@ export const takeSnapshot = (settings, pathname, { full = false } = {}) => {
   const core = settings?.core || {};
   const snapshot = { v: SNAPSHOT_VERSION, core: {}, slices: {} };
   if (core.cellLine?.id && core.cellLine.isDrResult !== true) snapshot.core.ds = core.cellLine.id;
+  // In a drug dataset the second list can hold drugs (analysis by measured
+  // gene): their hyphens must not be read as the operators of a signature
+  // formula. Only the Gene Signature page puts a formula there.
+  if (isDrugDataset(core.cellLine) && pathname !== ROUTES.GENESIGNATURE) {
+    snapshot.core.drugTargets = true;
+  }
   coreKeysFor(pathname).forEach((key) => {
     if (full || !sameValue(core[key], DEFAULTS.core[key])) snapshot.core[key] = core[key];
   });
@@ -112,6 +119,18 @@ const listToParam = (value) =>
 
 const encode = (value) => (typeof value === "string" ? value : JSON.stringify(value));
 
+/**
+ * True when the second list ("targets") holds a signature formula ("A+B-C")
+ * rather than a plain list. `drugList` says the list belongs to a drug
+ * dataset, whose labels hold hyphens ("R-VERAPAMIL-HYDROCHLORIDE-0.5UM"):
+ * such a list is never a formula.
+ */
+export const isSignatureFormula = (text, { drugList = false } = {}) =>
+  !drugList && /[+-]/.test(String(text || ""));
+
+/** True when the "targets" list of these core settings holds drug labels. */
+const targetsHoldDrugs = (core) => core?.drugTargets === true;
+
 /** Query string (without "?") for a snapshot. */
 export const snapshotToQuery = (snapshot) => {
   const build = (withLists) => {
@@ -122,7 +141,8 @@ export const snapshotToQuery = (snapshot) => {
       if (core[key] === undefined) return;
       if (LIST_PARAMS.has(param)) {
         // A signature formula ("A+B-C") is kept as it is; plain lists get commas
-        const text = /[+-]/.test(String(core[key])) && param === "targets" ? String(core[key]) : listToParam(core[key]);
+        const formula = param === "targets" && isSignatureFormula(core[key], { drugList: targetsHoldDrugs(core) });
+        const text = formula ? String(core[key]) : listToParam(core[key]);
         if (withLists) params.set(param, text);
       } else {
         params.set(param, encode(core[key]));
@@ -132,6 +152,7 @@ export const snapshotToQuery = (snapshot) => {
       if (ADDRESS_SKIP_SLICES.has(slice)) return;
       Object.entries(values).forEach(([key, value]) => params.set(`${slice}.${key}`, encode(value)));
     });
+    if (targetsHoldDrugs(core) && withLists && params.has("targets")) params.set("tk", "drug");
     return params.toString();
   };
   const query = build(true);
@@ -156,11 +177,14 @@ export const queryToSnapshot = (search, pathname) => {
     snapshot.core.ds = params.get("ds");
     found = true;
   }
+  // tk=drug: the "targets" list holds drug labels (see takeSnapshot)
+  const drugList = params.get("tk") === "drug";
+  if (drugList) snapshot.core.drugTargets = true;
   Object.entries(CORE_PARAMS).forEach(([key, param]) => {
     if (!params.has(param)) return;
     const text = params.get(param);
     if (LIST_PARAMS.has(param)) {
-      const isFormula = param === "targets" && /[+-]/.test(text);
+      const isFormula = param === "targets" && isSignatureFormula(text, { drugList });
       snapshot.core[key] = isFormula ? text : text.split(",").filter(Boolean).join("\n");
     } else {
       snapshot.core[key] = decode(text, DEFAULTS.core[key]);

@@ -1,0 +1,1709 @@
+{
+ "drug": {
+  "id": "BORTEZOMIB",
+  "name": "Bortezomib",
+  "targets": [
+   "PSMB5"
+  ],
+  "moaBroad": "inhibitor/antagonist",
+  "moaFine": "Proteasome inhibitor",
+  "approved": true,
+  "clinicalTrials": true,
+  "pubchemCid": "387447",
+  "smiles": "B(C(CC(C)C)NC(=O)C(CC1=CC=CC=C1)NC(=O)C2=NC=CN=C2)(O)O"
+ },
+ "dataset": "TahoeDrugs",
+ "screened": true,
+ "genes": {
+  "up": [
+   {
+    "gene": "HSP90AA1",
+    "z": 391.77,
+    "log2fc": 2.322
+   },
+   {
+    "gene": "HSPH1",
+    "z": 230.63,
+    "log2fc": 2.784
+   },
+   {
+    "gene": "UBC",
+    "z": 217.58,
+    "log2fc": 2.333
+   },
+   {
+    "gene": "HSPA8",
+    "z": 209.79,
+    "log2fc": 2.392
+   },
+   {
+    "gene": "HSP90AB1",
+    "z": 209.35,
+    "log2fc": 1.559
+   }
+  ],
+  "down": [
+   {
+    "gene": "ACTB",
+    "z": -46.55,
+    "log2fc": -0.735
+   },
+   {
+    "gene": "MT2A",
+    "z": -39.17,
+    "log2fc": -0.361
+   },
+   {
+    "gene": "PLEC",
+    "z": -38.98,
+    "log2fc": -1.213
+   },
+   {
+    "gene": "TMSB10",
+    "z": -37.97,
+    "log2fc": -0.374
+   },
+   {
+    "gene": "HIVEP2",
+    "z": -37.63,
+    "log2fc": -0.559
+   }
+  ]
+ },
+ "strength": {
+  "profileSd": 10.311,
+  "genesAbsZOver3": 5779,
+  "genesMeasured": 11476
+ },
+ "similar": [
+  {
+   "drug": "IXAZOMIB-CITRATE",
+   "name": "Ixazomib citrate",
+   "moaFine": "Proteasome inhibitor",
+   "targets": [
+    "PSMB1",
+    "PSMB2",
+    "PSMB5"
+   ],
+   "r": 0.864
+  },
+  {
+   "drug": "AURANOFIN",
+   "name": "Auranofin",
+   "moaFine": "unclear",
+   "targets": [
+    "TXNRD1",
+    "TXNRD2"
+   ],
+   "r": 0.499
+  },
+  {
+   "drug": "INFIGRATINIB",
+   "name": "Infigratinib",
+   "moaFine": "Other TK inhibitor",
+   "targets": [
+    "FGFR1",
+    "FGFR2",
+    "FGFR3",
+    "FGFR4"
+   ],
+   "r": 0.373
+  },
+  {
+   "drug": "HYDROXYFASUDIL",
+   "name": "Hydroxyfasudil",
+   "moaFine": "unclear",
+   "targets": [
+    "ROCK1",
+    "ROCK2",
+    "PRKACA"
+   ],
+   "r": 0.255
+  },
+  {
+   "drug": "NG25",
+   "name": "NG25",
+   "moaFine": "Other MAPK inhibitor",
+   "targets": [
+    "MAP4K2",
+    "MAP3K7",
+    "LYN",
+    "ABL1",
+    "ABL2",
+    "FER",
+    "SRC",
+    "EPHA2",
+    "EPHB2",
+    "EPHB4",
+    "ZAK",
+    "ZKSCAN1",
+    "RAF1"
+   ],
+   "r": 0.209
+  }
+ ],
+ "response": {
+  "doses": [
+   "0.05",
+   "0.5",
+   "5"
+  ],
+  "unit": "µM",
+  "lines": [
+   {
+    "dataset": "TahoeA172",
+    "cellLine": "A-172",
+    "organ": "CNS/Brain",
+    "byDose": {
+     "0.05": 4.58,
+     "0.5": 3.5,
+     "5": 3.0
+    },
+    "cellsByDose": {
+     "0.05": 0.67,
+     "0.5": 1.18,
+     "5": 0.19
+    }
+   },
+   {
+    "dataset": "TahoeA427",
+    "cellLine": "A-427",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 3.03,
+     "0.5": 1.92,
+     "5": 1.77
+    },
+    "cellsByDose": {
+     "0.05": 0.61,
+     "0.5": 0.71,
+     "5": 0.08
+    }
+   },
+   {
+    "dataset": "TahoeA498",
+    "cellLine": "A498",
+    "organ": "Kidney",
+    "byDose": {
+     "0.05": 4.38,
+     "0.5": 3.25,
+     "5": 2.3
+    },
+    "cellsByDose": {
+     "0.05": 0.28,
+     "0.5": 0.71,
+     "5": 0.07
+    }
+   },
+   {
+    "dataset": "TahoeA549",
+    "cellLine": "A549",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 3.8,
+     "0.5": 2.62,
+     "5": 2.39
+    },
+    "cellsByDose": {
+     "0.05": 0.57,
+     "0.5": 1.2,
+     "5": 0.16
+    }
+   },
+   {
+    "dataset": "TahoeAN3CA",
+    "cellLine": "AN3 CA",
+    "organ": "Uterus",
+    "byDose": {
+     "0.05": 1.78,
+     "0.5": 1.44,
+     "5": null
+    },
+    "cellsByDose": {
+     "0.05": 0.36,
+     "0.5": 0.81,
+     "5": null
+    }
+   },
+   {
+    "dataset": "TahoeAsPC1",
+    "cellLine": "AsPC-1",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 4.09,
+     "0.5": 2.65,
+     "5": 2.46
+    },
+    "cellsByDose": {
+     "0.05": 1.01,
+     "0.5": 1.69,
+     "5": 0.34
+    }
+   },
+   {
+    "dataset": "TahoeBT474",
+    "cellLine": "BT-474",
+    "organ": "Breast",
+    "byDose": {
+     "0.05": 3.41,
+     "0.5": 2.26,
+     "5": 2.12
+    },
+    "cellsByDose": {
+     "0.05": 0.79,
+     "0.5": 1.28,
+     "5": 0.35
+    }
+   },
+   {
+    "dataset": "TahoeC32",
+    "cellLine": "C32",
+    "organ": "Skin",
+    "byDose": {
+     "0.05": 3.61,
+     "0.5": 2.84,
+     "5": 2.09
+    },
+    "cellsByDose": {
+     "0.05": 0.54,
+     "0.5": 1.25,
+     "5": 0.15
+    }
+   },
+   {
+    "dataset": "TahoeC33A",
+    "cellLine": "C-33 A",
+    "organ": "Cervix",
+    "byDose": {
+     "0.05": 2.0,
+     "0.5": 1.88,
+     "5": 1.88
+    },
+    "cellsByDose": {
+     "0.05": 0.63,
+     "0.5": 1.34,
+     "5": 0.17
+    }
+   },
+   {
+    "dataset": "TahoeCFPAC1",
+    "cellLine": "CFPAC-1",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 3.37,
+     "0.5": 2.82,
+     "5": 2.95
+    },
+    "cellsByDose": {
+     "0.05": 0.4,
+     "0.5": 0.97,
+     "5": 0.17
+    }
+   },
+   {
+    "dataset": "TahoeCHP212",
+    "cellLine": "CHP-212",
+    "organ": "Peripheral Nervous System",
+    "byDose": {
+     "0.05": 1.97,
+     "0.5": 1.42,
+     "5": null
+    },
+    "cellsByDose": {
+     "0.05": 0.31,
+     "0.5": 0.75,
+     "5": null
+    }
+   },
+   {
+    "dataset": "TahoeCOLO205",
+    "cellLine": "COLO 205",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 4.07,
+     "0.5": 2.65,
+     "5": 1.72
+    },
+    "cellsByDose": {
+     "0.05": 0.94,
+     "0.5": 1.46,
+     "5": 0.28
+    }
+   },
+   {
+    "dataset": "TahoeH4",
+    "cellLine": "H4",
+    "organ": "CNS/Brain",
+    "byDose": {
+     "0.05": 3.29,
+     "0.5": 1.93,
+     "5": null
+    },
+    "cellsByDose": {
+     "0.05": 0.45,
+     "0.5": 0.62,
+     "5": null
+    }
+   },
+   {
+    "dataset": "TahoeHCT15",
+    "cellLine": "HCT15",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 2.69,
+     "0.5": 2.07,
+     "5": 1.68
+    },
+    "cellsByDose": {
+     "0.05": 0.9,
+     "0.5": 1.33,
+     "5": 0.17
+    }
+   },
+   {
+    "dataset": "TahoeHEC1A",
+    "cellLine": "HEC-1-A",
+    "organ": "Uterus",
+    "byDose": {
+     "0.05": 4.96,
+     "0.5": 2.81,
+     "5": 3.39
+    },
+    "cellsByDose": {
+     "0.05": 0.86,
+     "0.5": 1.72,
+     "5": 0.32
+    }
+   },
+   {
+    "dataset": "TahoeHOP62",
+    "cellLine": "HOP62",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 4.12,
+     "0.5": 3.54,
+     "5": 2.49
+    },
+    "cellsByDose": {
+     "0.05": 0.52,
+     "0.5": 0.96,
+     "5": 0.12
+    }
+   },
+   {
+    "dataset": "TahoeHS578T",
+    "cellLine": "HS-578T",
+    "organ": "Breast",
+    "byDose": {
+     "0.05": 3.65,
+     "0.5": 2.79,
+     "5": 2.2
+    },
+    "cellsByDose": {
+     "0.05": 0.42,
+     "0.5": 0.71,
+     "5": 0.08
+    }
+   },
+   {
+    "dataset": "TahoeHT29",
+    "cellLine": "HT-29",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 5.17,
+     "0.5": 3.03,
+     "5": 2.72
+    },
+    "cellsByDose": {
+     "0.05": 0.71,
+     "0.5": 1.15,
+     "5": 0.25
+    }
+   },
+   {
+    "dataset": "TahoeHepG2C3A",
+    "cellLine": "HepG2/C3A",
+    "organ": "Liver",
+    "byDose": {
+     "0.05": 3.05,
+     "0.5": 1.97,
+     "5": 1.72
+    },
+    "cellsByDose": {
+     "0.05": 0.73,
+     "0.5": 1.7,
+     "5": 0.16
+    }
+   },
+   {
+    "dataset": "TahoeHs766T",
+    "cellLine": "Hs 766T",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 2.32,
+     "0.5": 2.1,
+     "5": 1.67
+    },
+    "cellsByDose": {
+     "0.05": 0.35,
+     "0.5": 0.57,
+     "5": 0.09
+    }
+   },
+   {
+    "dataset": "TahoeJ82",
+    "cellLine": "J82",
+    "organ": "Bladder/Urinary Tract",
+    "byDose": {
+     "0.05": 3.11,
+     "0.5": 2.62,
+     "5": 2.28
+    },
+    "cellsByDose": {
+     "0.05": 0.39,
+     "0.5": 0.84,
+     "5": 0.08
+    }
+   },
+   {
+    "dataset": "TahoeKATOIII",
+    "cellLine": "KATO III",
+    "organ": "Esophagus/Stomach",
+    "byDose": {
+     "0.05": 4.5,
+     "0.5": 2.84,
+     "5": 2.73
+    },
+    "cellsByDose": {
+     "0.05": 0.62,
+     "0.5": 1.13,
+     "5": 0.25
+    }
+   },
+   {
+    "dataset": "TahoeLOXIMVI",
+    "cellLine": "LOX-IMVI",
+    "organ": "Skin",
+    "byDose": {
+     "0.05": 3.88,
+     "0.5": 3.11,
+     "5": 2.35
+    },
+    "cellsByDose": {
+     "0.05": 0.58,
+     "0.5": 0.93,
+     "5": 0.17
+    }
+   },
+   {
+    "dataset": "TahoeLS180",
+    "cellLine": "LS 180",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 4.45,
+     "0.5": 2.66,
+     "5": 2.48
+    },
+    "cellsByDose": {
+     "0.05": 0.78,
+     "0.5": 1.3,
+     "5": 0.23
+    }
+   },
+   {
+    "dataset": "TahoeLoVo",
+    "cellLine": "LoVo",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 4.53,
+     "0.5": 2.72,
+     "5": 2.83
+    },
+    "cellsByDose": {
+     "0.05": 0.88,
+     "0.5": 1.52,
+     "5": 0.23
+    }
+   },
+   {
+    "dataset": "TahoeMIAPaCa2",
+    "cellLine": "MIA PaCa-2",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 2.85,
+     "0.5": 2.61,
+     "5": 2.11
+    },
+    "cellsByDose": {
+     "0.05": 0.38,
+     "0.5": 0.62,
+     "5": 0.13
+    }
+   },
+   {
+    "dataset": "TahoeNCIH1573",
+    "cellLine": "NCI-H1573",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 3.88,
+     "0.5": 2.77,
+     "5": 2.3
+    },
+    "cellsByDose": {
+     "0.05": 0.78,
+     "0.5": 1.23,
+     "5": 0.12
+    }
+   },
+   {
+    "dataset": "TahoeNCIH1792",
+    "cellLine": "NCI-H1792",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 2.86,
+     "0.5": 2.11,
+     "5": 1.5
+    },
+    "cellsByDose": {
+     "0.05": 0.48,
+     "0.5": 0.84,
+     "5": 0.04
+    }
+   },
+   {
+    "dataset": "TahoeNCIH2030",
+    "cellLine": "NCI-H2030",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 3.8,
+     "0.5": 2.08,
+     "5": 2.08
+    },
+    "cellsByDose": {
+     "0.05": 0.68,
+     "0.5": 1.41,
+     "5": 0.19
+    }
+   },
+   {
+    "dataset": "TahoeNCIH2347",
+    "cellLine": "NCI-H2347",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 4.64,
+     "0.5": 3.62,
+     "5": 3.38
+    },
+    "cellsByDose": {
+     "0.05": 0.84,
+     "0.5": 1.34,
+     "5": 0.24
+    }
+   },
+   {
+    "dataset": "TahoeNCIH23",
+    "cellLine": "NCI-H23",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 2.8,
+     "0.5": 2.11,
+     "5": 1.89
+    },
+    "cellsByDose": {
+     "0.05": 0.57,
+     "0.5": 1.13,
+     "5": 0.13
+    }
+   },
+   {
+    "dataset": "TahoeNCIH460",
+    "cellLine": "NCI-H460",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 4.16,
+     "0.5": 2.61,
+     "5": 1.96
+    },
+    "cellsByDose": {
+     "0.05": 0.59,
+     "0.5": 0.99,
+     "5": 0.11
+    }
+   },
+   {
+    "dataset": "TahoeNCIH661",
+    "cellLine": "NCI-H661",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": null,
+     "0.5": 1.89,
+     "5": null
+    },
+    "cellsByDose": {
+     "0.05": null,
+     "0.5": 0.78,
+     "5": null
+    }
+   },
+   {
+    "dataset": "TahoePANC1",
+    "cellLine": "PANC-1",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 4.0,
+     "0.5": 3.04,
+     "5": 2.16
+    },
+    "cellsByDose": {
+     "0.05": 0.29,
+     "0.5": 0.74,
+     "5": 0.08
+    }
+   },
+   {
+    "dataset": "TahoePanc0327",
+    "cellLine": "Panc 03.27",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 3.32,
+     "0.5": 2.8,
+     "5": 2.4
+    },
+    "cellsByDose": {
+     "0.05": 0.67,
+     "0.5": 1.02,
+     "5": 0.12
+    }
+   },
+   {
+    "dataset": "TahoeRKO",
+    "cellLine": "RKO",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 3.23,
+     "0.5": 2.14,
+     "5": 2.07
+    },
+    "cellsByDose": {
+     "0.05": 0.69,
+     "0.5": 1.12,
+     "5": 0.19
+    }
+   },
+   {
+    "dataset": "TahoeRPMI7951",
+    "cellLine": "RPMI-7951",
+    "organ": "Skin",
+    "byDose": {
+     "0.05": 2.55,
+     "0.5": 2.08,
+     "5": 1.6
+    },
+    "cellsByDose": {
+     "0.05": 0.47,
+     "0.5": 1.02,
+     "5": 0.05
+    }
+   },
+   {
+    "dataset": "TahoeSHP77",
+    "cellLine": "SHP-77",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 2.05,
+     "0.5": 1.5,
+     "5": 1.51
+    },
+    "cellsByDose": {
+     "0.05": 0.37,
+     "0.5": 0.62,
+     "5": 0.07
+    }
+   },
+   {
+    "dataset": "TahoeSKMEL2",
+    "cellLine": "SK-MEL-2",
+    "organ": "Skin",
+    "byDose": {
+     "0.05": 2.36,
+     "0.5": 1.96,
+     "5": 1.75
+    },
+    "cellsByDose": {
+     "0.05": 0.23,
+     "0.5": 0.69,
+     "5": 0.06
+    }
+   },
+   {
+    "dataset": "TahoeSNU1",
+    "cellLine": "SNU-1",
+    "organ": "Esophagus/Stomach",
+    "byDose": {
+     "0.05": 2.21,
+     "0.5": 1.7,
+     "5": 1.59
+    },
+    "cellsByDose": {
+     "0.05": 0.54,
+     "0.5": 0.83,
+     "5": 0.1
+    }
+   },
+   {
+    "dataset": "TahoeSNU423",
+    "cellLine": "SNU-423",
+    "organ": "Liver",
+    "byDose": {
+     "0.05": 3.12,
+     "0.5": 2.83,
+     "5": 2.41
+    },
+    "cellsByDose": {
+     "0.05": 0.4,
+     "0.5": 0.98,
+     "5": 0.14
+    }
+   },
+   {
+    "dataset": "TahoeSW1271",
+    "cellLine": "SW 1271",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 1.97,
+     "0.5": 2.13,
+     "5": null
+    },
+    "cellsByDose": {
+     "0.05": 0.54,
+     "0.5": 1.43,
+     "5": null
+    }
+   },
+   {
+    "dataset": "TahoeSW1417",
+    "cellLine": "SW1417",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 4.08,
+     "0.5": 2.67,
+     "5": 2.78
+    },
+    "cellsByDose": {
+     "0.05": 0.73,
+     "0.5": 1.17,
+     "5": 0.27
+    }
+   },
+   {
+    "dataset": "TahoeSW480",
+    "cellLine": "SW480",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 5.06,
+     "0.5": 3.26,
+     "5": 2.69
+    },
+    "cellsByDose": {
+     "0.05": 0.55,
+     "0.5": 1.06,
+     "5": 0.17
+    }
+   },
+   {
+    "dataset": "TahoeSW48",
+    "cellLine": "SW48",
+    "organ": "Bowel",
+    "byDose": {
+     "0.05": 2.94,
+     "0.5": 1.97,
+     "5": 1.52
+    },
+    "cellsByDose": {
+     "0.05": 0.67,
+     "0.5": 1.42,
+     "5": 0.1
+    }
+   },
+   {
+    "dataset": "TahoeSW900",
+    "cellLine": "SW 900",
+    "organ": "Lung",
+    "byDose": {
+     "0.05": 2.89,
+     "0.5": 2.15,
+     "5": 1.89
+    },
+    "cellsByDose": {
+     "0.05": 0.5,
+     "0.5": 1.01,
+     "5": 0.13
+    }
+   },
+   {
+    "dataset": "TahoehTERTHPNE",
+    "cellLine": "hTERT-HPNE",
+    "organ": "Pancreas",
+    "byDose": {
+     "0.05": 3.41,
+     "0.5": 2.47,
+     "5": 1.76
+    },
+    "cellsByDose": {
+     "0.05": 0.8,
+     "0.5": 1.44,
+     "5": 0.16
+    }
+   }
+  ],
+  "note": "byDose: spread of the calibrated profile (an inert treatment is about 1; it grows with the number of cells). cellsByDose: treated cells relative to a typical treatment of that cell line and dose (well below 1 suggests the dose is cytotoxic or cytostatic there)."
+ },
+ "knockdowns": [
+  {
+   "dataset": "K562gwps",
+   "mimic": [
+    {
+     "perturbation": "PSMG3_2",
+     "r": 0.317
+    },
+    {
+     "perturbation": "PSMD11",
+     "r": 0.169
+    },
+    {
+     "perturbation": "PSMD6",
+     "r": 0.168
+    },
+    {
+     "perturbation": "PSMC2",
+     "r": 0.164
+    },
+    {
+     "perturbation": "HIKESHI",
+     "r": 0.16
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "EEF1G",
+     "r": -0.152
+    },
+    {
+     "perturbation": "PTPN1",
+     "r": -0.151
+    },
+    {
+     "perturbation": "MON1A",
+     "r": -0.141
+    },
+    {
+     "perturbation": "PRDM8",
+     "r": -0.135
+    },
+    {
+     "perturbation": "WDR44",
+     "r": -0.13
+    }
+   ]
+  },
+  {
+   "dataset": "K562gwpsnew",
+   "mimic": [
+    {
+     "perturbation": "PSMG3",
+     "r": 0.289
+    },
+    {
+     "perturbation": "PSMD6",
+     "r": 0.176
+    },
+    {
+     "perturbation": "PSMD11",
+     "r": 0.168
+    },
+    {
+     "perturbation": "PSMB7",
+     "r": 0.161
+    },
+    {
+     "perturbation": "PSMC2",
+     "r": 0.159
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "PTPN1",
+     "r": -0.145
+    },
+    {
+     "perturbation": "EEF1G",
+     "r": -0.142
+    },
+    {
+     "perturbation": "MON1A",
+     "r": -0.138
+    },
+    {
+     "perturbation": "KDM1A",
+     "r": -0.134
+    },
+    {
+     "perturbation": "GSK3B",
+     "r": -0.132
+    }
+   ]
+  },
+  {
+   "dataset": "HCT116gwps",
+   "mimic": [
+    {
+     "perturbation": "PSMD6",
+     "r": 0.255
+    },
+    {
+     "perturbation": "PSMC3",
+     "r": 0.249
+    },
+    {
+     "perturbation": "POMP",
+     "r": 0.231
+    },
+    {
+     "perturbation": "PSMA6",
+     "r": 0.23
+    },
+    {
+     "perturbation": "PSMD2",
+     "r": 0.228
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "DHDDS",
+     "r": -0.132
+    },
+    {
+     "perturbation": "MED19",
+     "r": -0.131
+    },
+    {
+     "perturbation": "MED23",
+     "r": -0.128
+    },
+    {
+     "perturbation": "BET1",
+     "r": -0.123
+    },
+    {
+     "perturbation": "EEF1G",
+     "r": -0.115
+    }
+   ]
+  },
+  {
+   "dataset": "HEK293gwps",
+   "mimic": [
+    {
+     "perturbation": "RIMS3",
+     "r": 0.138
+    },
+    {
+     "perturbation": "E4F1",
+     "r": 0.119
+    },
+    {
+     "perturbation": "OFD1",
+     "r": 0.108
+    },
+    {
+     "perturbation": "NKAP",
+     "r": 0.105
+    },
+    {
+     "perturbation": "SEL1L2",
+     "r": 0.105
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "ZBTB8OS",
+     "r": -0.131
+    },
+    {
+     "perturbation": "POLR3A",
+     "r": -0.124
+    },
+    {
+     "perturbation": "SLC27A4",
+     "r": -0.12
+    },
+    {
+     "perturbation": "TAF6L",
+     "r": -0.116
+    },
+    {
+     "perturbation": "HYOU1",
+     "r": -0.115
+    }
+   ]
+  },
+  {
+   "dataset": "K562essential",
+   "mimic": [
+    {
+     "perturbation": "PSMA3",
+     "r": 0.285
+    },
+    {
+     "perturbation": "PSMA4",
+     "r": 0.24
+    },
+    {
+     "perturbation": "PSMB5",
+     "r": 0.23
+    },
+    {
+     "perturbation": "PSMD1",
+     "r": 0.224
+    },
+    {
+     "perturbation": "PSMB6_2",
+     "r": 0.206
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "EEF1G",
+     "r": -0.161
+    },
+    {
+     "perturbation": "MED12",
+     "r": -0.146
+    },
+    {
+     "perturbation": "MED19",
+     "r": -0.146
+    },
+    {
+     "perturbation": "GATA1",
+     "r": -0.144
+    },
+    {
+     "perturbation": "MED10",
+     "r": -0.143
+    }
+   ]
+  },
+  {
+   "dataset": "SC00003",
+   "mimic": [
+    {
+     "perturbation": "PSMA3",
+     "r": 0.278
+    },
+    {
+     "perturbation": "PSMA4",
+     "r": 0.24
+    },
+    {
+     "perturbation": "PSMD1",
+     "r": 0.235
+    },
+    {
+     "perturbation": "PSMB5",
+     "r": 0.232
+    },
+    {
+     "perturbation": "PSMB6",
+     "r": 0.221
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "EEF1G",
+     "r": -0.162
+    },
+    {
+     "perturbation": "MED19",
+     "r": -0.148
+    },
+    {
+     "perturbation": "MED12",
+     "r": -0.147
+    },
+    {
+     "perturbation": "MED10",
+     "r": -0.146
+    },
+    {
+     "perturbation": "GATA1",
+     "r": -0.142
+    }
+   ]
+  },
+  {
+   "dataset": "RPE1essential",
+   "mimic": [
+    {
+     "perturbation": "PSMB5",
+     "r": 0.336
+    },
+    {
+     "perturbation": "PSMC5",
+     "r": 0.33
+    },
+    {
+     "perturbation": "PSMB3",
+     "r": 0.328
+    },
+    {
+     "perturbation": "PSMA3",
+     "r": 0.326
+    },
+    {
+     "perturbation": "PSMC1",
+     "r": 0.324
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "MYC",
+     "r": -0.125
+    },
+    {
+     "perturbation": "MAX",
+     "r": -0.115
+    },
+    {
+     "perturbation": "ELOB",
+     "r": -0.11
+    },
+    {
+     "perturbation": "TPT1",
+     "r": -0.096
+    },
+    {
+     "perturbation": "TMEM258",
+     "r": -0.094
+    }
+   ]
+  },
+  {
+   "dataset": "SC00004",
+   "mimic": [
+    {
+     "perturbation": "PSMA3",
+     "r": 0.333
+    },
+    {
+     "perturbation": "PSMC2",
+     "r": 0.331
+    },
+    {
+     "perturbation": "PSMB3",
+     "r": 0.33
+    },
+    {
+     "perturbation": "PSMA6",
+     "r": 0.325
+    },
+    {
+     "perturbation": "PSMC3",
+     "r": 0.324
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "MYC",
+     "r": -0.124
+    },
+    {
+     "perturbation": "MAX",
+     "r": -0.115
+    },
+    {
+     "perturbation": "ELOB",
+     "r": -0.11
+    },
+    {
+     "perturbation": "TPT1",
+     "r": -0.096
+    },
+    {
+     "perturbation": "TMEM258",
+     "r": -0.093
+    }
+   ]
+  },
+  {
+   "dataset": "JurkatEssential",
+   "mimic": [
+    {
+     "perturbation": "CCDC130",
+     "r": 0.289
+    },
+    {
+     "perturbation": "PSMG3",
+     "r": 0.27
+    },
+    {
+     "perturbation": "PSMB5",
+     "r": 0.262
+    },
+    {
+     "perturbation": "PSMD13",
+     "r": 0.206
+    },
+    {
+     "perturbation": "PSMB7",
+     "r": 0.193
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "TOP1",
+     "r": -0.167
+    },
+    {
+     "perturbation": "SLBP",
+     "r": -0.165
+    },
+    {
+     "perturbation": "CHAF1B",
+     "r": -0.152
+    },
+    {
+     "perturbation": "CALR",
+     "r": -0.145
+    },
+    {
+     "perturbation": "ARHGAP6",
+     "r": -0.144
+    }
+   ]
+  },
+  {
+   "dataset": "HepG2Essential",
+   "mimic": [
+    {
+     "perturbation": "PSMA3",
+     "r": 0.257
+    },
+    {
+     "perturbation": "PSMB5",
+     "r": 0.248
+    },
+    {
+     "perturbation": "PSMB3",
+     "r": 0.244
+    },
+    {
+     "perturbation": "PSMA4",
+     "r": 0.238
+    },
+    {
+     "perturbation": "PSMC1",
+     "r": 0.237
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "MAX",
+     "r": -0.112
+    },
+    {
+     "perturbation": "MYC",
+     "r": -0.109
+    },
+    {
+     "perturbation": "ELOB",
+     "r": -0.091
+    },
+    {
+     "perturbation": "EEF2",
+     "r": -0.087
+    },
+    {
+     "perturbation": "ADAM10",
+     "r": -0.085
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TRest",
+   "mimic": [
+    {
+     "perturbation": "SS18L1",
+     "r": 0.164
+    },
+    {
+     "perturbation": "CAND1",
+     "r": 0.152
+    },
+    {
+     "perturbation": "TEAD2",
+     "r": 0.122
+    },
+    {
+     "perturbation": "UBE4A",
+     "r": 0.122
+    },
+    {
+     "perturbation": "RAB24",
+     "r": 0.121
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "VHL",
+     "r": -0.126
+    },
+    {
+     "perturbation": "USP3",
+     "r": -0.117
+    },
+    {
+     "perturbation": "PLAUR",
+     "r": -0.111
+    },
+    {
+     "perturbation": "ABHD17A",
+     "r": -0.108
+    },
+    {
+     "perturbation": "RABEP1",
+     "r": -0.107
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TStim8hr",
+   "mimic": [
+    {
+     "perturbation": "SS18L1",
+     "r": 0.164
+    },
+    {
+     "perturbation": "SMG1",
+     "r": 0.155
+    },
+    {
+     "perturbation": "HSP90AB1",
+     "r": 0.147
+    },
+    {
+     "perturbation": "UPF2",
+     "r": 0.143
+    },
+    {
+     "perturbation": "BHLHE40",
+     "r": 0.136
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "ARPC4-TTLL3",
+     "r": -0.157
+    },
+    {
+     "perturbation": "DOLPP1",
+     "r": -0.154
+    },
+    {
+     "perturbation": "FAM220A",
+     "r": -0.144
+    },
+    {
+     "perturbation": "KAT6A",
+     "r": -0.14
+    },
+    {
+     "perturbation": "TAF13",
+     "r": -0.138
+    }
+   ]
+  },
+  {
+   "dataset": "CD4TStim48hr",
+   "mimic": [
+    {
+     "perturbation": "CEP76",
+     "r": 0.168
+    },
+    {
+     "perturbation": "C1RL",
+     "r": 0.151
+    },
+    {
+     "perturbation": "UBE2V2",
+     "r": 0.15
+    },
+    {
+     "perturbation": "IGF2",
+     "r": 0.148
+    },
+    {
+     "perturbation": "FKBP2",
+     "r": 0.144
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "GRK6",
+     "r": -0.154
+    },
+    {
+     "perturbation": "PTMA",
+     "r": -0.145
+    },
+    {
+     "perturbation": "DCN",
+     "r": -0.143
+    },
+    {
+     "perturbation": "PF4",
+     "r": -0.14
+    },
+    {
+     "perturbation": "NR4A3",
+     "r": -0.139
+    }
+   ]
+  },
+  {
+   "dataset": "H1hESC",
+   "mimic": [
+    {
+     "perturbation": "CD276",
+     "r": 0.108
+    },
+    {
+     "perturbation": "STRAP",
+     "r": 0.091
+    },
+    {
+     "perturbation": "HDAC3",
+     "r": 0.068
+    },
+    {
+     "perturbation": "PSMG1",
+     "r": 0.055
+    },
+    {
+     "perturbation": "DHCR24",
+     "r": 0.054
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "SMAGP",
+     "r": -0.116
+    },
+    {
+     "perturbation": "OSTC",
+     "r": -0.111
+    },
+    {
+     "perturbation": "EHMT2",
+     "r": -0.108
+    },
+    {
+     "perturbation": "KDM1A",
+     "r": -0.103
+    },
+    {
+     "perturbation": "EHMT1",
+     "r": -0.102
+    }
+   ]
+  },
+  {
+   "dataset": "K562vip",
+   "mimic": [
+    {
+     "perturbation": "SMG5",
+     "r": 0.083
+    },
+    {
+     "perturbation": "FBXW9",
+     "r": 0.081
+    },
+    {
+     "perturbation": "UPF2",
+     "r": 0.08
+    },
+    {
+     "perturbation": "UVSSA",
+     "r": 0.08
+    },
+    {
+     "perturbation": "TMEM79",
+     "r": 0.079
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "HYOU1",
+     "r": -0.116
+    },
+    {
+     "perturbation": "TRNT1",
+     "r": -0.111
+    },
+    {
+     "perturbation": "TAF6L",
+     "r": -0.097
+    },
+    {
+     "perturbation": "ATP5J2",
+     "r": -0.093
+    },
+    {
+     "perturbation": "CPXM1",
+     "r": -0.089
+    }
+   ]
+  },
+  {
+   "dataset": "SC00015",
+   "mimic": [
+    {
+     "perturbation": "NAE1",
+     "r": 0.195
+    },
+    {
+     "perturbation": "KEAP1",
+     "r": 0.17
+    },
+    {
+     "perturbation": "UPF1",
+     "r": 0.113
+    },
+    {
+     "perturbation": "STAT2",
+     "r": 0.104
+    },
+    {
+     "perturbation": "STAT1",
+     "r": 0.095
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "EXOC2",
+     "r": -0.112
+    },
+    {
+     "perturbation": "PPIA",
+     "r": -0.074
+    },
+    {
+     "perturbation": "PRKCI",
+     "r": -0.074
+    },
+    {
+     "perturbation": "BRD4",
+     "r": -0.073
+    },
+    {
+     "perturbation": "ISG15",
+     "r": -0.07
+    }
+   ]
+  },
+  {
+   "dataset": "sc00017",
+   "mimic": [
+    {
+     "perturbation": "EIF4G1",
+     "r": 0.037
+    },
+    {
+     "perturbation": "NDUFA9",
+     "r": 0.036
+    },
+    {
+     "perturbation": "SOD2",
+     "r": 0.031
+    },
+    {
+     "perturbation": "COG4",
+     "r": 0.029
+    },
+    {
+     "perturbation": "NDUFV1",
+     "r": 0.027
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "DNAJC6",
+     "r": -0.038
+    },
+    {
+     "perturbation": "FRMD4A",
+     "r": -0.029
+    },
+    {
+     "perturbation": "HSPA9",
+     "r": -0.029
+    },
+    {
+     "perturbation": "TARDBP",
+     "r": -0.027
+    },
+    {
+     "perturbation": "YARS1",
+     "r": -0.024
+    }
+   ]
+  },
+  {
+   "dataset": "SC00037",
+   "mimic": [
+    {
+     "perturbation": "UPF1",
+     "r": 0.141
+    },
+    {
+     "perturbation": "UPF2",
+     "r": 0.079
+    },
+    {
+     "perturbation": "NOP2",
+     "r": 0.071
+    },
+    {
+     "perturbation": "DHX15",
+     "r": 0.063
+    },
+    {
+     "perturbation": "SMG7",
+     "r": 0.063
+    }
+   ],
+   "reverse": [
+    {
+     "perturbation": "EEF1G",
+     "r": -0.094
+    },
+    {
+     "perturbation": "DROSHA",
+     "r": -0.067
+    },
+    {
+     "perturbation": "KMT2A",
+     "r": -0.052
+    },
+    {
+     "perturbation": "TAF12",
+     "r": -0.045
+    },
+    {
+     "perturbation": "GTF2A1",
+     "r": -0.041
+    }
+   ]
+  }
+ ]
+}

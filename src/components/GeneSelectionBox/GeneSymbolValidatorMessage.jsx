@@ -14,6 +14,24 @@ import {
 import classNames from "classnames";
 
 const RenderSuggestion = function (props) {
+  // Drug datasets: entries that are not treatments of the selected dataset
+  if (props.genes.length > 0 && props.type === "Not among drugs") {
+    const missing = props.genes[0].hugoGeneSymbol;
+    const title =
+      missing.length +
+      (missing.length === 1 ? " entry is" : " entries are") +
+      " not in this dataset. Click to remove " +
+      (missing.length === 1 ? "it" : "them") +
+      ". \n" +
+      missing.toString();
+    return (
+      <div className={styles.warningBubble} title={title} onClick={() => props.replaceGene(missing, "")}>
+        <FaTimesCircle className={styles.icon} />
+        <span className={styles.noChoiceLabel}>{`Not in this dataset (${missing.length})`}</span>
+      </div>
+    );
+  }
+
   if (
     props.genes.length > 0 &&
     props.type &&
@@ -115,7 +133,7 @@ const GeneSymbolValidatorMessageChild = (props) => {
     return (
       <div className={styles.GeneSymbolValidator}>
         <span className={styles.pendingMessage}>
-          Unable to validate gene symbols.
+          {props.drugMode ? "Unable to check the drugs." : "Unable to validate gene symbols."}
         </span>
       </div>
     );
@@ -153,7 +171,7 @@ const GeneSymbolValidatorMessageChild = (props) => {
     <div className={classNames(styles.GeneSymbolValidator)}>
       <div className={styles.validBubble} title="You can now submit the list.">
         <FaCheckCircle className={styles.icon} name="check-circle" />
-        <span>&nbsp;All gene symbols are valid.</span>
+        <span>&nbsp;{props.drugMode ? "All drugs are in this dataset." : "All gene symbols are valid."}</span>
       </div>
     </div>
   );

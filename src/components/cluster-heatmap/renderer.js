@@ -2645,6 +2645,25 @@ class ClusterHeatmap {
     }
   }
 
+  /**
+   * Sets a function label -> text that is added to the label in the cell
+   * tooltip (e.g. the name and mechanism of a drug id). Pass null to clear.
+   */
+  setLabelDescriber(describe) {
+    this._describeLabel = typeof describe === "function" ? describe : null;
+  }
+
+  _labelWithNote(label) {
+    if (!this._describeLabel) return label;
+    let note = "";
+    try {
+      note = this._describeLabel(label) || "";
+    } catch (e) {
+      note = "";
+    }
+    return note ? `${label} (${note})` : label;
+  }
+
   _showTooltip(text, region) {
     const tip = this._tooltip;
     const box = this._layoutBox;
@@ -2676,7 +2695,7 @@ class ClusterHeatmap {
       const raw = this._rawValues ? this._rawValues[cell.row * this._nCols + cell.col] : value;
       const shown = value > 1e38 ? "n/a" : formatValue(raw);
       this._tooltip.textContent =
-        `Row: ${this._rowLabels[cell.row]}\nColumn: ${this._colLabels[cell.col]}\n` +
+        `Row: ${this._labelWithNote(this._rowLabels[cell.row])}\nColumn: ${this._labelWithNote(this._colLabels[cell.col])}\n` +
         `Value: ${shown}` +
         (this._rawValues && value <= 1e38 ? `\nRow z-score: ${formatValue(value)}` : "");
       this._requestRender();

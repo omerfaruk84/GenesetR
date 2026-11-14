@@ -15,7 +15,7 @@ import { EmptyState } from "../ui";
 import { formatNumber } from "../../utils/formatNumber";
 import { downloadTable } from "../../utils/exporters";
 import { TableExportButtons } from "../export-buttons";
-import { genePagePath } from "../../utils/geneLinks";
+import { describe as describeDrug, entityPagePath, useDrugLabelsVersion } from "../../utils/drugLabels";
 
 // File name for exports: genesetr_<name> (the date and extension are added on download)
 const exportFilename = (exportName) =>
@@ -88,7 +88,9 @@ const isLinkableGene = (value) =>
 
 /**
  * Columns whose values are gene symbols open the gene page (in a new tab, so
- * the result stays). Columns with their own Cell renderer are left alone.
+ * the result stays). A value that is a drug of a drug dataset in use opens
+ * the drug page instead and shows the drug's name, dose, mechanism and
+ * targets on hover. Columns with their own Cell renderer are left alone.
  */
 const withGeneLinks = (columns, geneKeys) =>
   (columns || []).map((column) => {
@@ -101,12 +103,22 @@ const withGeneLinks = (columns, geneKeys) =>
       Cell: ({ cell }) => {
         const value = cell.getValue();
         if (!isLinkableGene(value)) return value ?? "";
+        const drug = describeDrug(value);
+        const drugTitle = drug
+          ? [
+              `Open the drug page of ${drug.display}`,
+              drug.moaFine || drug.moaBroad,
+              drug.targets.length > 0 ? `targets ${drug.targets.join(", ")}` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : "";
         return (
           <Link
-            to={genePagePath(value)}
+            to={entityPagePath(value)}
             target="_blank"
             rel="noopener"
-            title={`Open the gene page of ${value}`}
+            title={drug ? drugTitle : `Open the gene page of ${value}`}
             style={{ color: "inherit", textDecorationStyle: "dotted" }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -195,9 +207,12 @@ const EnrichmentTable = ({
   const geneKeys = resolveGeneAccessors(geneAccessors, columns, data);
   const canCreateGenelist = geneKeys.length > 0;
   const geneKeyList = geneKeys.join("\u0000");
+  // Links are rebuilt when the label table of a drug dataset arrives
+  const drugLabelsVersion = useDrugLabelsVersion();
   const linkedColumns = useMemo(
     () => withGeneLinks(columns, geneKeyList ? geneKeyList.split("\u0000") : []),
-    [columns, geneKeyList]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columns, geneKeyList, drugLabelsVersion]
   );
   // Leaf columns, in display order, for the exports.
   const exportColumns = useMemo(() => flattenColumns(columns), [columns]);

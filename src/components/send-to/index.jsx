@@ -5,8 +5,9 @@ import { Divider, Menu, MenuItem } from "@mui/material";
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { FaShare } from "react-icons/fa";
 import { copyText } from "../../utils/apiSnippets";
-import { SEND_TARGETS, sendGenesTo, toGeneArray } from "../../utils/sendTo";
+import { sendGenesTo, sendTargetsFor, toGeneArray } from "../../utils/sendTo";
 import { saveGeneList } from "../../utils/workspace";
+import { isDrugList } from "../../utils/drugLabels";
 
 const notify = (type, content, details) => toast({ message: { type, icon: true, content, details }, autoClose: 2500 });
 
@@ -36,12 +37,17 @@ const triggerStyle = {
  *   datasetId  optional dataset to switch to in the target module
  *   label      button text
  *   exclude    target ids to leave out (e.g. the module the list is shown in)
+ *   drugs      the list holds drugs of a drug dataset; without it the list is
+ *              recognised from the drug labels of the datasets in use.
+ *              Modules that work on genes are not offered for a drug list.
  */
-const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], style, className, defaultName = "" }) => {
+const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], style, className, defaultName = "", drugs }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState(null);
   const [list, setList] = useState([]);
+  const [drugList, setDrugList] = useState(false);
+  const noun = drugList ? "drug" : "gene";
 
   const open = (event) => {
     const value = typeof genes === "function" ? genes() : genes;
@@ -51,6 +57,7 @@ const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], styl
       return;
     }
     setList(resolved);
+    setDrugList(drugs === undefined ? isDrugList(resolved, datasetId) : drugs === true);
     setAnchor(event.currentTarget);
   };
   const close = () => setAnchor(null);
@@ -63,11 +70,11 @@ const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], styl
 
   const save = async () => {
     close();
-    const name = window.prompt(`Name for this list of ${list.length} genes:`, defaultName);
+    const name = window.prompt(`Name for this list of ${list.length} ${noun}s:`, defaultName);
     if (name === null) return;
     try {
       await saveGeneList(name, list);
-      notify("Success", "Saved to your gene lists", `"${name.trim()}" is now available in every gene list box and in the workspace.`);
+      notify("Success", "Saved to your lists", `"${name.trim()}" is now available in every list box and in the workspace.`);
     } catch (error) {
       notify("Error", "The list was not saved", error.message);
     }
@@ -76,10 +83,10 @@ const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], styl
   const copy = async () => {
     close();
     const ok = await copyText(list.join("\n"));
-    notify(ok ? "Success" : "Error", ok ? `${list.length} genes copied` : "The genes could not be copied");
+    notify(ok ? "Success" : "Error", ok ? `${list.length} ${noun}s copied` : "The list could not be copied");
   };
 
-  const targets = SEND_TARGETS.filter((target) => !exclude.includes(target.id));
+  const targets = sendTargetsFor({ drugs: drugList }).filter((target) => !exclude.includes(target.id));
 
   return (
     <>
@@ -90,17 +97,19 @@ const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], styl
         aria-haspopup="menu"
         aria-expanded={!!anchor}
         onClick={open}
-        title="Open these genes in another module, save or copy them"
+        title="Open this list in another module, save or copy it"
       >
         <FaShare size={11} aria-hidden="true" /> {label}
       </button>
       <Menu anchorEl={anchor} open={!!anchor} onClose={close}>
         <MenuItem disabled dense>
-          {list.length} gene{list.length === 1 ? "" : "s"}
+          {list.length} {noun}
+          {list.length === 1 ? "" : "s"}
+          {drugList && " · modules for genes are not offered"}
         </MenuItem>
         {targets.map((target) => {
           const tooFew = list.length < target.min;
-          const single = target.kind === "gene";
+          const single = target.kind === "gene" || target.kind === "drug";
           return (
             <MenuItem key={target.id} dense disabled={tooFew} onClick={() => send(target)}>
               {target.label}
@@ -111,10 +120,10 @@ const SendToMenu = ({ genes, datasetId, label = "Send to…", exclude = [], styl
         })}
         <Divider />
         <MenuItem dense onClick={save}>
-          Save to my gene lists…
+          {drugList ? "Save to my lists…" : "Save to my gene lists…"}
         </MenuItem>
         <MenuItem dense onClick={copy}>
-          Copy genes
+          {drugList ? "Copy drugs" : "Copy genes"}
         </MenuItem>
       </Menu>
     </>

@@ -7,6 +7,8 @@ import { runSignatureProjection } from "../../store/api";
 import { parseDeText } from "../../utils/deTable";
 import { EXAMPLE_SIGNATURES } from "../../utils/examples";
 import { baseSymbol, genePagePath } from "../../utils/geneLinks";
+import { describe as describeDrug, loadDrugLabels, useDrugLabelsVersion } from "../../utils/drugLabels";
+import { drugPagePath, isDrugDataset } from "../../utils/perturbationKind";
 import styles from "./project-signature-page.module.scss";
 
 const METHODS = [
@@ -30,28 +32,53 @@ const csvCell = (value) => {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
-const GeneLink = ({ label }) => (
-  <Link className={styles.geneLink} to={genePagePath(label)}>
-    {label}
-  </Link>
-);
+// A match from a drug dataset shows the drug's name and opens the drug page
+const GeneLink = ({ label, drug }) =>
+  drug ? (
+    <Link
+      className={styles.geneLink}
+      to={drugPagePath(label)}
+      title={[drug.moaFine || drug.moaBroad, drug.targets.length > 0 ? `targets ${drug.targets.join(", ")}` : ""]
+        .filter(Boolean)
+        .join(" · ") || undefined}
+    >
+      {drug.display}
+    </Link>
+  ) : (
+    <Link className={styles.geneLink} to={genePagePath(label)}>
+      {label}
+    </Link>
+  );
 
-/** Ranked table of perturbations with their score. */
-const ScoreTable = ({ title, hint, rows, scoreKey, showZ, showDatasets }) => (
+/**
+ * Ranked table of perturbations with their score.
+ * `drugOf(label)` returns the drug a label stands for (matches from drug
+ * datasets), or null for a gene.
+ */
+const ScoreTable = ({ title, hint, rows, scoreKey, showZ, showDatasets, drugOf = () => null, datasetId }) => {
+  const drugs = rows.map((row) => drugOf(row.perturbation));
+  const allDrugs = rows.length > 0 && drugs.every(Boolean);
+  return (
   <div className={styles.tableCard}>
     <div className={styles.tableHead}>
       <div>
         <h3>{title}</h3>
         <div className={styles.muted}>{hint}</div>
       </div>
-      <SendToMenu genes={rows.map((row) => baseSymbol(row.perturbation))} label="Send to…" defaultName={title} />
+      <SendToMenu
+        genes={rows.map((row, index) => (drugs[index] ? row.perturbation : baseSymbol(row.perturbation)))}
+        label="Send to…"
+        defaultName={title}
+        drugs={allDrugs}
+        datasetId={allDrugs ? datasetId : undefined}
+      />
     </div>
     <div className={styles.tableScroll}>
       <table className={styles.table}>
         <thead>
           <tr>
             <th>#</th>
-            <th>Perturbation</th>
+            <th>{allDrugs ? "Drug" : "Perturbation"}</th>
             <th className={styles.num}>Score</th>
             {showZ && <th className={styles.num} title="How unusual the score is among all perturbations of the dataset (robust z)">z</th>}
             {showDatasets && <th className={styles.num}>Datasets</th>}
@@ -62,7 +89,7 @@ const ScoreTable = ({ title, hint, rows, scoreKey, showZ, showDatasets }) => (
             <tr key={row.perturbation}>
               <td className={styles.rank}>{index + 1}</td>
               <td>
-                <GeneLink label={row.perturbation} />
+                <GeneLink label={row.perturbation} drug={drugs[index]} />
               </td>
               <td className={styles.num}>
                 <span className={styles.value} style={{ background: scoreColor(row[scoreKey]) }}>
@@ -77,7 +104,8 @@ const ScoreTable = ({ title, hint, rows, scoreKey, showZ, showDatasets }) => (
       </table>
     </div>
   </div>
-);
+  );
+};
 
 const ProjectSignaturePage = () => {
   const datasetList = useSelector((state) => state.settings?.core?.datasetList) || [];
@@ -95,6 +123,8 @@ const ProjectSignaturePage = () => {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [tab, setTab] = useState("combined");
+  // The drug collection has one table per cell line: listed only on request
+  const [showLineTables, setShowLineTables] = useState(false);
   const fileInput = useRef(null);
 
   // Default selection: the genome-wide datasets
@@ -122,6 +152,28 @@ const ProjectSignaturePage = () => {
   const canRun = !!parsed.signature && parsed.signature.length >= 10 && chosen.length > 0 && state !== "running";
 
   const names = useMemo(() => Object.fromEntries(datasets.map((d) => [d.id, d.name || d.id])), [datasets]);
+
+  const isLineTable = (d) => isDrugDataset(d) && d.drugTable === "line";
+  const lineTableCount = datasets.filter(isLineTable).length;
+  const offeredDatasets = datasets.filter((d) => showLineTables || !isLineTable(d) || chosen.includes(d.id));
+
+  // Matches from drug datasets are drug ids: their names come from the label tables
+  const drugDatasetIds = useMemo(() => new Set(datasets.filter(isDrugDataset).map((d) => d.id)), [datasets]);
+  const resultDrugIds = useMemo(
+    () => (result?.datasets || []).map((d) => d.dataset).filter((id) => drugDatasetIds.has(id)),
+    [result, drugDatasetIds]
+  );
+  useEffect(() => {
+    resultDrugIds.forEach((id) => loadDrugLabels(id));
+  }, [resultDrugIds]);
+  useDrugLabelsVersion();
+  const drugIn = (ids) => (label) => {
+    for (const id of ids) {
+      const drug = describeDrug(label, id);
+      if (drug) return drug;
+    }
+    return null;
+  };
 
   const loadFile = async (event) => {
     const file = event.target.files?.[0];
@@ -260,7 +312,7 @@ const ProjectSignaturePage = () => {
 
             <h2>2. Datasets to compare with</h2>
             <div className={styles.datasetChips}>
-              {datasets.map((d) => (
+              {offeredDatasets.map((d) => (
                 <button
                   key={d.id}
                   type="button"
@@ -273,6 +325,11 @@ const ProjectSignaturePage = () => {
                 </button>
               ))}
               {datasets.length === 0 && <span className={styles.muted}>Loading datasets…</span>}
+              {lineTableCount > 0 && (
+                <button type="button" className={styles.chip} aria-expanded={showLineTables} onClick={() => setShowLineTables((v) => !v)}>
+                  {showLineTables ? "Hide" : "Show"} the {lineTableCount} cell-line tables of the drug screen
+                </button>
+              )}
             </div>
 
             <h2>3. Similarity measure</h2>
@@ -363,18 +420,19 @@ const ProjectSignaturePage = () => {
 
                 {tab === "combined" && result.combined && (
                   <div className={styles.pair}>
-                    <ScoreTable title="Mimic your signature" hint="Mean score over the datasets that perturb the gene" rows={result.combined.mimic} scoreKey="mean_score" showDatasets />
-                    <ScoreTable title="Reverse your signature" hint="Mean score over the datasets that perturb the gene" rows={result.combined.reverse} scoreKey="mean_score" showDatasets />
+                    <ScoreTable title="Mimic your signature" hint="Mean score over the datasets that perturb the gene" rows={result.combined.mimic} scoreKey="mean_score" showDatasets drugOf={drugIn(resultDrugIds)} />
+                    <ScoreTable title="Reverse your signature" hint="Mean score over the datasets that perturb the gene" rows={result.combined.reverse} scoreKey="mean_score" showDatasets drugOf={drugIn(resultDrugIds)} />
                   </div>
                 )}
                 {current && !current.error && (
                   <>
                     <div className={styles.muted}>
-                      {current.genes_used} of your genes are measured here; compared with {current.perturbations} perturbations.
+                      {current.genes_used} of your genes are measured here; compared with {current.perturbations}{" "}
+                      {drugDatasetIds.has(current.dataset) ? "drug treatments" : "perturbations"}.
                     </div>
                     <div className={styles.pair}>
-                      <ScoreTable title="Mimic your signature" hint={names[current.dataset] || current.dataset} rows={current.mimic} scoreKey="score" showZ />
-                      <ScoreTable title="Reverse your signature" hint={names[current.dataset] || current.dataset} rows={current.reverse} scoreKey="score" showZ />
+                      <ScoreTable title="Mimic your signature" hint={names[current.dataset] || current.dataset} rows={current.mimic} scoreKey="score" showZ drugOf={drugIn(drugDatasetIds.has(current.dataset) ? [current.dataset] : [])} datasetId={current.dataset} />
+                      <ScoreTable title="Reverse your signature" hint={names[current.dataset] || current.dataset} rows={current.reverse} scoreKey="score" showZ drugOf={drugIn(drugDatasetIds.has(current.dataset) ? [current.dataset] : [])} datasetId={current.dataset} />
                     </div>
                   </>
                 )}

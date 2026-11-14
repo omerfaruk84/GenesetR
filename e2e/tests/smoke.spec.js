@@ -31,7 +31,7 @@ const ANALYSIS_ROUTES = [
   "/genelists",
 ];
 
-const OTHER_ROUTES = ["/", "/datasets", "/project-signature", "/upload-dataset", "/about"];
+const OTHER_ROUTES = ["/", "/datasets", "/drug", "/project-signature", "/upload-dataset", "/about"];
 
 test("start page shows the five question groups", async ({ page }) => {
   await mockApi(page);
@@ -120,4 +120,93 @@ test("theme switch turns the dark theme on and off", async ({ page }) => {
   await expect(html).not.toHaveAttribute("data-gs-theme", before || "light-is-unset");
   const after = await html.getAttribute("data-gs-theme");
   expect(after === "dark" || before === "dark").toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// Drug datasets (Tahoe-100M): the perturbations are drugs, not genes
+// ---------------------------------------------------------------------------
+
+test("drug page shows a drug with its response, genes, similar drugs and knock-downs", async ({ page }) => {
+  const { unmocked } = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/drug?id=BORTEZOMIB");
+
+  await expect(page.getByRole("heading", { level: 1, name: "Bortezomib" })).toBeVisible();
+  await expect(page.getByText("Proteasome inhibitor").first()).toBeVisible();
+  // annotated target links to the gene page, PubChem to the compound
+  await expect(page.locator('a[href*="/gene?symbol=PSMB5"]').first()).toBeVisible();
+  await expect(page.locator('a[href="https://pubchem.ncbi.nlm.nih.gov/compound/387447"]')).toBeVisible();
+
+  // 47 cell lines by three doses
+  const response = page.getByTestId("drug-response");
+  await expect(response.locator("tbody tr")).toHaveCount(47);
+  await expect(response.getByText("0.05 µM").first()).toBeVisible();
+  // treatments that left few cells are marked
+  await expect(response.getByLabel("few cells").first()).toBeVisible();
+
+  await expect(page.getByRole("heading", { name: "Genes it changes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Similar drugs" })).toBeVisible();
+  // similar drugs link to their own drug pages
+  await expect(page.locator('a[href*="/drug?id=IXAZOMIB-CITRATE"]').first()).toBeVisible();
+  await expect(page.getByText("not a target call")).toBeVisible();
+
+  // every drug endpoint the page asks for has a fixture
+  expect(unmocked.filter((request) => request.includes("/drugs"))).toEqual([]);
+  expect(await errors()).toEqual([]);
+});
+
+test("drug page says so when the drug is unknown", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/drug?id=NOT-A-DRUG");
+  await expect(page.getByRole("alert")).toContainText("is not a drug of the screen");
+  expect(await errors()).toEqual([]);
+});
+
+test("dataset catalogue: the Chemical chip shows the drug screen, its cell lines as a list", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/datasets");
+  await expect(page.getByRole("heading", { level: 2, name: "K562 Whole Genome" })).toBeVisible();
+
+  await page.getByRole("button", { name: /^Chemical/ }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "K562 Whole Genome" })).toHaveCount(0);
+  const card = page.locator("article", { hasText: "TahoeDrugs" }).first();
+  await expect(card).toBeVisible();
+  await expect(card.locator("dt", { hasText: "Treatments" })).toBeVisible();
+  await expect(card.locator("dd", { hasText: "Small molecule" })).toBeVisible();
+  // the cell-line table is a row of the list in the card, not a card of its own
+  await expect(page.getByRole("heading", { level: 2, name: /A549/ })).toHaveCount(0);
+  await card.getByText(/cell-line table/).click();
+  await expect(card.getByTestId("line-tables").getByRole("rowheader", { name: "A549" })).toBeVisible();
+
+  await page.getByRole("button", { name: /^Genetic/ }).click();
+  await expect(page.locator("article", { hasText: "TahoeDrugs" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "K562 Whole Genome" })).toBeVisible();
+  expect(await errors()).toEqual([]);
+});
+
+test("gene page has a Drugs section that links to drug pages", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/gene?symbol=ATF4");
+  const drugs = page.getByTestId("gene-drugs");
+  await expect(drugs.getByRole("heading", { level: 2, name: "Drugs" })).toBeVisible();
+  await expect(drugs.locator('a[href*="/drug?id="]').first()).toBeVisible();
+  expect(await errors()).toEqual([]);
+});
+
+test("a drug dataset puts the sidebar in drug mode; gene-only modules switch away from it", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/dr?ds=TahoeDrugs&genes=BORTEZOMIB,5-FLUOROURACIL,TRAMETINIB");
+  // the first list holds drugs and offers the drug picker
+  await expect(page.getByTestId("drug-picker").first()).toBeVisible();
+  await expect(page.getByText("Drugs", { exact: true }).first()).toBeVisible();
+  await expect(page.locator("textarea").first()).toHaveValue(/5-FLUOROURACIL/);
+
+  // Gene Regulation works on gene perturbations only
+  await page.goto("/gene-regulation?ds=TahoeDrugs");
+  await expect(page.getByText(/This module needs gene perturbations/)).toBeVisible();
+  expect(await errors()).toEqual([]);
 });

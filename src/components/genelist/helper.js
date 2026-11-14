@@ -82,7 +82,7 @@ async function getAliasesForGeneList(genes) {
 }
 
 
-async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSignature){
+async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSignature, { drugMode = false } = {}){
   let notFound = [];
   let notExist = [];
   let notInPerturbSeq = [];
@@ -106,6 +106,19 @@ async function checkGenes(currentGenes, isPerturbationList, cellLine, isGeneSign
       
      
       notFound = genes.filter(gene => !perturbDict.has(gene));
+
+      // Treatments of a drug dataset are checked against the dataset only:
+      // drug ids are not gene symbols, so no HGNC or alias lookup.
+      if (drugMode) {
+        return {
+          validatingGenes: false,
+          isEmpty: currentGenes.length < 1,
+          suggestions:
+            notFound.length > 0
+              ? [{ type: "Not among drugs", alias: [], genes: [{ hugoGeneSymbol: notFound }] }]
+              : [],
+        };
+      }
       //found = genes.filter(gene => perturbDict.has(gene));
  
   

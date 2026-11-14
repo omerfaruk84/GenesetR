@@ -10,6 +10,12 @@ const FIXTURES = {
   datasetsV1: fixture("datasets_v1"),
   geneSearch: fixture("gene_search"),
   geneATF4: fixture("gene_ATF4"),
+  // Drug screen (Tahoe-100M): answers of the API's /api/v1/drugs endpoints
+  drugSearch: fixture("drug_search"),
+  drugLabels: fixture("drug_labels_TahoeDrugs"),
+  drugCollection: fixture("drug_collection"),
+  drugBortezomib: fixture("drug_BORTEZOMIB"),
+  drugsForATF4: fixture("drug_for_gene_ATF4"),
   // Output of the backend's clusterData() for 60 K562 perturbations
   corrCluster: fixture("corr_cluster"),
 };
@@ -85,6 +91,21 @@ const mockApi = async (page) => {
     if (/^\/api\/v1\/genes\/ATF4$/i.test(pathname)) return json(route, FIXTURES.geneATF4);
     if (/^\/api\/v1\/genes\//.test(pathname)) {
       return json(route, { error: { code: "NOT_FOUND", message: "Gene not found in any dataset", details: {} } }, 404);
+    }
+    if (pathname === "/api/v1/drugs") return json(route, FIXTURES.drugSearch);
+    if (pathname === "/api/v1/drugs/collection") return json(route, FIXTURES.drugCollection);
+    if (pathname === "/api/v1/drugs/labels") {
+      const dataset = url.searchParams.get("dataset") || "";
+      if (!/^Tahoe/.test(dataset)) {
+        return json(route, { error: { code: "VALIDATION_ERROR", message: "Not a drug dataset", details: {} } }, 400);
+      }
+      return json(route, { ...FIXTURES.drugLabels, dataset });
+    }
+    if (/^\/api\/v1\/drugs\/for-gene\/ATF4$/i.test(pathname)) return json(route, FIXTURES.drugsForATF4);
+    if (/^\/api\/v1\/drugs\/for-gene\//.test(pathname)) return json(route, { symbol: "", available: false });
+    if (/^\/api\/v1\/drugs\/BORTEZOMIB$/i.test(pathname)) return json(route, FIXTURES.drugBortezomib);
+    if (/^\/api\/v1\/drugs\//.test(pathname)) {
+      return json(route, { error: { code: "NOT_FOUND", message: "Drug not found", details: {} } }, 404);
     }
     if (pathname.startsWith("/health")) return json(route, { status: "healthy" });
     // An analysis run: the task is created and is finished on the first poll.

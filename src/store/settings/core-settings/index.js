@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { fetchDatasets } from "../../api";
+import { firstGeneticDataset } from "../../../utils/perturbationKind";
 const defaultGeneList = `TAF1C
   ACTR5
   UTP6
@@ -183,7 +184,8 @@ export const coreSettingsSlice = createSlice({
       state.datasetList = state.datasetList.filter(d => d.id !== datasetId);
       // If it was the selected dataset, switch to default
       if (state.cellLine.id === datasetId) {
-        const defaultDataset = state.datasetList.find(d => !d.isUserUploaded);
+        const defaultDataset =
+          firstGeneticDataset(state.datasetList) || state.datasetList.find(d => !d.isUserUploaded);
         if (defaultDataset) {
           state.cellLine = defaultDataset;
         }
@@ -207,7 +209,8 @@ export const coreSettingsSlice = createSlice({
         if (datasets.length > 0 && state.cellLine?.isDrResult !== true) {
           const currentExists = datasets.find(dataset => dataset.id === state.cellLine.id);
           if (!currentExists) {
-            state.cellLine = datasets[0];
+            // never land on a drug dataset by default
+            state.cellLine = firstGeneticDataset(datasets) || datasets[0];
           } else {
             // Update cellLine with latest data from backend
             state.cellLine = currentExists;

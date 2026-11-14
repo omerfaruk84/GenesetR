@@ -58,6 +58,7 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import { GeneSetEnrichmentSettingsTypes } from "../side-bar/settings/enums";
+import { hasActiveDrugDatasets, isDrugList, useDrugLabelsVersion } from "../../utils/drugLabels";
 
 echarts.use([
   TitleComponent,
@@ -1710,10 +1711,39 @@ const MainContainer = withErrorBoundary(ConnectedGeneSetEnrichmentTable, {
 });
 
 /** Enrichr libraries currently ticked in the library selector (names with spaces). */
+// Entries of every gene set, whatever form it has (text or array)
+const genesetEntries = (genesets) =>
+  Object.values(genesets || {}).flatMap((genes) =>
+    (Array.isArray(genes) ? genes : String(genes || "").split(/[\s,;]+/)).map((g) => String(g).trim()).filter(Boolean)
+  );
+
+/**
+ * Gene-set enrichment needs genes. Lists of perturbations of a drug dataset
+ * hold drugs: for those the table is replaced by a short note. (Lists of
+ * measured genes of a drug dataset are genes and are enriched as usual.)
+ */
+const DrugAwareEnrichmentTable = (props) => {
+  useDrugLabelsVersion();
+  const entries = hasActiveDrugDatasets() ? genesetEntries(props.genesets) : [];
+  if (entries.length > 0 && isDrugList(entries)) {
+    return (
+      <div
+        role="note"
+        data-testid="enrichment-not-for-drugs"
+        style={{ padding: "10px 12px", fontSize: 13, color: "var(--gs-muted, #5d6877)" }}
+      >
+        Gene-set enrichment is not offered for lists of drugs. Open a drug on its drug page to see its annotated
+        targets and the genes it changes.
+      </div>
+    );
+  }
+  return <MainContainer {...props} />;
+};
+
 const getSelectedLibraries = () => {
   const checked = (node) =>
     node.children ? node.children.flatMap(checked) : node.checked ? [node.label] : [];
   return Array.from(new Set(data.flatMap(checked)));
 };
 
-export { MainContainer as GeneSetEnrichmentTable, getSelectedLibraries };
+export { DrugAwareEnrichmentTable as GeneSetEnrichmentTable, getSelectedLibraries };

@@ -34,6 +34,8 @@ import { runCalculation } from "../../store/results/index";
 import { ROUTES } from "../../common/routes";
 import { SendToMenu } from "../send-to";
 import { ExampleMenu } from "../example-menu";
+import { DrugSearch } from "../drug-search";
+import { drugLabelsFor, hasDoseLabels, isDrugDataset } from "../../utils/perturbationKind";
 
 /*
 let isLoaded = false;
@@ -93,12 +95,15 @@ const normalizeListText = (value, { dedupe = false, fromSignature = false } = {}
   return lines.join("\n");
 };
 
-/** Bring a value that comes from outside (Redux, saved list) into the form of the current mode. */
-const toModeText = (value, isGeneSignature) => {
+/**
+ * Bring a value that comes from outside (Redux, saved list) into the form of the current mode.
+ * `keepHyphens`: the list holds drug ids ("5-FLUOROURACIL"), a hyphen is never an operator.
+ */
+const toModeText = (value, isGeneSignature, keepHyphens = false) => {
   const text = (value || "").toString();
   if (isGeneSignature) return normalizeSignatureText(text);
   // A "+" can only come from a gene signature: split its operators as well
-  return normalizeListText(text, { dedupe: true, fromSignature: text.includes("+") });
+  return normalizeListText(text, { dedupe: true, fromSignature: !keepHyphens && text.includes("+") });
 };
 
 const comparableText = (value) => (value || "").trim().replace(/\s+/g, "\n");
@@ -130,11 +135,18 @@ const Genelist = ({
     ? null
     : field || (isPerturbationList ? "peturbationList" : "targetGeneList");
 
+  // Drug mode: the list holds the treatments of a drug dataset. Its entries are
+  // drug ids (hyphens are part of them), checked against the dataset only.
+  const drugDataset = isDrugDataset(coreSettings?.cellLine) ? coreSettings.cellLine : null;
+  const drugMode = !!drugDataset && !!boundField && isPerturbationList && !isGeneSignature;
+  const drugModeRef = useRef(drugMode);
+  drugModeRef.current = drugMode;
+
   // Current text of the textarea. A bound list starts with the value Redux
   // already holds, so mounting the sidebar never wipes the user's lists.
   const [currentGenes, setGenes] = useState(() =>
     boundField && !genes
-      ? toModeText(coreSettings?.[boundField] || "", isGeneSignature)
+      ? toModeText(coreSettings?.[boundField] || "", isGeneSignature, drugMode)
       : ""
   );
   const [currentGeneLists, setGeneLists] = useState([]); //sets the current gene lists in select box
@@ -186,6 +198,17 @@ const Genelist = ({
 
   const replaceGene = useCallback(
     (oldSymbols, newSymbols) => {
+      if (drugModeRef.current) {
+        // Drug ids hold hyphens and dots: whole lines are removed, never parts of a word
+        const remove = new Set([].concat(oldSymbols || []).map((s) => String(s).toUpperCase()));
+        setGenes((current) =>
+          current
+            .split("\n")
+            .filter((line) => !remove.has(line.trim().toUpperCase()))
+            .join("\n")
+        );
+        return;
+      }
       setGenes((currentGene) => {
         let result = currentGene.toUpperCase();
         if (
@@ -307,9 +330,11 @@ const Genelist = ({
           genes,
           isPerturbationList,
           coreSettings?.cellLine.id,
-          isGeneSignature
+          isGeneSignature,
+          { drugMode }
         ).then((prop) => {
           prop["replaceGene"] = replaceGene;
+          prop["drugMode"] = drugMode;
           setProps(prop);
         });
     }, 1000),
@@ -319,6 +344,7 @@ const Genelist = ({
       coreSettings?.cellLine.id,
       isGeneSignature,
       replaceGene,
+      drugMode,
     ]
   );
 
@@ -331,7 +357,7 @@ const Genelist = ({
     if (reduxValue === lastSyncedRef.current) return;
     lastSyncedRef.current = reduxValue;
 
-    const incoming = toModeText(reduxValue, isGeneSignature);
+    const incoming = toModeText(reduxValue, isGeneSignature, drugModeRef.current);
     setGenes((prevGenes) =>
       comparableText(prevGenes) === comparableText(incoming) ? prevGenes : incoming
     );
@@ -357,7 +383,7 @@ const Genelist = ({
     } else if (isGeneSignature) {
       setGenes(normalizeSignatureText(currentText));
     } else {
-      setGenes(normalizeListText(currentText, { dedupe: true, fromSignature: true }));
+      setGenes(normalizeListText(currentText, { dedupe: true, fromSignature: !drugModeRef.current }));
     }
   }, [isGeneSignature]);
 
@@ -487,6 +513,14 @@ const Genelist = ({
       });
   };
 
+  // Drug picker: add a drug to the list. Dose and cell-line tables have one
+  // column per dose, so all doses of the drug are added there.
+  const addDrug = (drug) => {
+    const labels = drugLabelsFor(drug.id, drugDataset);
+    const current = (currentGenesRef.current || "").trim();
+    genesChanged(current ? `${current}\n${labels.join("\n")}` : labels.join("\n"), { dedupe: true });
+  };
+
   // Random genes of the selected dataset (the former "Example" button)
   const loadRandomExample = async () => {
                       if (isGeneSignature)
@@ -506,8 +540,9 @@ const Genelist = ({
                               type: "Warning",
                               icon: true,
                               heading: "Example",
-                              content:
-                                "The gene list of the selected dataset is not available yet. Please try again in a moment.",
+                              content: drugMode
+                                ? "The drug list of the selected dataset is not available yet. Please try again in a moment."
+                                : "The gene list of the selected dataset is not available yet. Please try again in a moment.",
                             },
                             autoClose: 3000,
                           });
@@ -517,7 +552,10 @@ const Genelist = ({
                         genes = [...genes];
 
                         var exampleGeneCount = 50;
-                        if (
+                        if (drugMode) {
+                          // a few dozen treatments give a readable map
+                          exampleGeneCount = Math.floor(Math.random() * 21) + 30;
+                        } else if (
                           pathname === ROUTES.CORRELATION ||
                           pathname === ROUTES.DR ||
                           pathname === ROUTES.HEATMAP
@@ -561,7 +599,7 @@ const Genelist = ({
                 )}
                 {exampleVisible && (
                   <ExampleMenu
-                    kind={isGeneSignature ? "signature" : "list"}
+                    kind={isGeneSignature ? "signature" : drugMode ? "drugs" : "list"}
                     onPick={(text) => genesChanged(text, { dedupe: !isGeneSignature })}
                     onRandom={isGeneSignature ? undefined : loadRandomExample}
                   />
@@ -634,6 +672,25 @@ const Genelist = ({
             </Row>
           )}
 
+          {drugMode && (
+            <Row spacing={0} width="100%">
+              <div className={styles.subItems} data-testid="drug-picker">
+                <DrugSearch
+                  size="sm"
+                  buttonLabel="Add"
+                  placeholder="Add a drug: name, target or mechanism"
+                  onSelect={addDrug}
+                />
+                <div style={{ marginTop: 3, fontSize: 11, color: "#666" }}>
+                  {hasDoseLabels(drugDataset)
+                    ? "Adding a drug adds its three doses (0.05, 0.5 and 5 µM)."
+                    : "Entries are drug ids, e.g. BORTEZOMIB."}
+                </div>
+                <Spacer height={4} />
+              </div>
+            </Row>
+          )}
+
           <Row spacing={0} width="100%" height="70%">
             <div className={styles.subItems}>
               <TextArea
@@ -663,9 +720,13 @@ const Genelist = ({
                 {numberOfGenesEntered +
                   (isGeneSignature
                     ? " genes in the signature"
-                    : isPerturbationList
-                      ? " perturbations"
-                      : " genes")}
+                    : drugMode
+                      ? hasDoseLabels(drugDataset)
+                        ? " treatments"
+                        : " drugs"
+                      : isPerturbationList
+                        ? " perturbations"
+                        : " genes")}
               </Text>
             </div>
           </Row>

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { connect } from "react-redux";
+import React, { useMemo, useState } from "react";
+import { connect, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import {
   Drawer,
@@ -14,6 +14,8 @@ import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "./settings/enums";
 import { ShareMenu } from "../share-menu";
+import { isDrugDataset } from "../../utils/perturbationKind";
+import { useActiveDrugDatasets } from "../../utils/drugLabels";
 const SideBar = ({
   runCalculation,
   calcResults,
@@ -35,6 +37,22 @@ const SideBar = ({
   const location = useLocation();
   const { pathname } = location;
   var isCalcRunning = false;
+
+  // Drug datasets in use (the selected one and the ticked ones): their label
+  // tables are kept loaded, so tooltips, tables and links can name the drugs.
+  const selectedIds = useSelector((state) =>
+    [
+      ...(state.settings?.correlation?.selectedDatasets || []),
+      ...(state.settings?.genesignature?.selectedDatasets || []),
+      ...(state.settings?.deregulatedGenes?.selectedDatasets || []),
+    ].join("\u0000")
+  );
+  const datasetsInUse = useMemo(() => {
+    const ids = new Set(selectedIds ? selectedIds.split("\u0000") : []);
+    return [coreSettings.cellLine, ...(coreSettings.datasetList || []).filter((d) => ids.has(d.id))];
+  }, [coreSettings.cellLine, coreSettings.datasetList, selectedIds]);
+  useActiveDrugDatasets(datasetsInUse);
+  const isDrug = isDrugDataset(coreSettings.cellLine);
 
   //We need this as we have multiple DR algorithms under DR tab
   if (pathname === ROUTES.DR) {
@@ -120,21 +138,25 @@ const SideBar = ({
 
   // Tell the user what is missing while the button is disabled
   let disabledReason = "";
+  // What the first list holds: drugs for a drug dataset analysed by perturbation
+  const listNoun = isDrug && coreSettings.dataType === "pert" ? "drugs" : "genes";
   if (isDisabled && !isCalcRunning) {
     if (isCorrelationRoute) {
       disabledReason = !hasSelectedDatasets
         ? "Select at least one dataset"
-        : "Enter at least 2 genes";
+        : `Enter at least 2 ${listNoun}`;
     } else if (pathname === ROUTES.DR) {
-      disabledReason = "Enter at least 10 genes";
+      disabledReason = `Enter at least 10 ${listNoun}`;
     } else if (pathname === ROUTES.HEATMAP) {
-      disabledReason = "Enter at least 3 genes in one of the lists";
+      disabledReason = isDrug
+        ? "Enter at least 3 drugs or 3 genes"
+        : "Enter at least 3 genes in one of the lists";
     } else if (pathname === ROUTES.PATHFINDER) {
       disabledReason = "Enter at least 2 genes";
     } else if (pathname === ROUTES.GENESIGNATURE) {
       disabledReason = "Enter a gene signature";
     } else if (pathname === ROUTES.DEREGULATED_GENES) {
-      disabledReason = "Enter at least one perturbation";
+      disabledReason = isDrug ? "Enter at least one drug" : "Enter at least one perturbation";
     } else if (
       pathname === ROUTES.MULTIDATASET_COMPARISON ||
       pathname === ROUTES.GENE_REGULATION

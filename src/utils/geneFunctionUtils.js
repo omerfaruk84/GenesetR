@@ -2,6 +2,7 @@
  * Utility functions for retrieving gene function information
  */
 import { escapeHtml } from "./escapeHtml";
+import { drugTooltipInfo } from "./drugLabels";
 
 /**
  * Cleans gene symbol by removing underscores and taking the first part
@@ -389,6 +390,11 @@ export const createGeneTooltipFormatter = (options = {}) => {
     const geneSymbol = parsed.geneSymbol;
     if (geneSymbol === undefined || geneSymbol === null || geneSymbol === "") return "";
     const symbol = String(geneSymbol);
+
+    // A label of a drug dataset is described from the drug table; it is never
+    // looked up as a gene.
+    const drug = drugTooltipInfo(symbol);
+    if (drug) return render(symbol, drug, parsed, "ready");
 
     // Check cache first
     if (useCache) {

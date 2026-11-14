@@ -34,11 +34,27 @@ import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
 import { updateGeneLists, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
 import { Text } from "@oliasoft-open-source/react-ui-library";
+import { datasetKindMeta, firstGeneticDataset, isDrugChildTable, isDrugDataset } from "../../utils/perturbationKind";
 
-const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
+// A dataset with more child tables than this starts collapsed (the drug
+// collection has one table per cell line); DR results stay expanded.
+const COLLAPSE_CHILDREN_ABOVE = 6;
+
+const hasDescendant = (item, id) =>
+  (item.children || []).some((child) => child.id === id || hasDescendant(child, id));
+
+const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset, expandAll = false }) => {
   const isActive = item.id === activeId;
   const hasChildren = item.children && item.children.length > 0;
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Large groups start closed unless a filter is typed or the active dataset is inside
+  const holdsActive = hasChildren && hasDescendant(item, activeId);
+  const [isExpanded, setIsExpanded] = useState(
+    () => expandAll || !hasChildren || item.children.length <= COLLAPSE_CHILDREN_ABOVE || holdsActive
+  );
+  // A table selected from elsewhere (a link, a new DR result) must be visible
+  useEffect(() => {
+    if (holdsActive) setIsExpanded(true);
+  }, [holdsActive]);
 
   return (
     <div style={{ marginLeft: level > 0 ? "12px" : "0", borderLeft: level > 0 ? "1px solid #eee" : "none" }}>
@@ -109,6 +125,11 @@ const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
             gap: "6px",
           }}>
             {item.name} {item.isDrResult === true ? "(DR Result)" : ""}
+            {hasChildren && !isExpanded && (
+              <span style={{ color: "#777", fontWeight: "normal", fontSize: "11px" }}>
+                +{item.children.length} tables
+              </span>
+            )}
             {item.isUserUploaded && (
               <FaUser
                 style={{
@@ -163,6 +184,7 @@ const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset }) => {
               level={level + 1}
               activeId={activeId}
               onDeleteDataset={onDeleteDataset}
+              expandAll={expandAll}
             />
           ))}
         </div>
@@ -189,6 +211,7 @@ const DatasetSelector = forwardRef(
     addDrResultDataset,
     fetchDatasetsFromBackend,
     wholeGenomeOnly = false,
+    geneticOnly = false,
   }, ref) => {
     const location = useLocation();
     const isCorrelationModule =
@@ -218,6 +241,9 @@ const DatasetSelector = forwardRef(
           isWholeGenome: meta?.isWholeGenome === true,
           isUserUploaded: meta?.isUserUploaded === true,
           isDrResult: meta?.isDrResult === true,
+          // genetic or chemical, and what the drug table holds
+          ...datasetKindMeta(meta),
+          ...(meta?.labelsFrom ? { labelsFrom: meta.labelsFrom } : {}),
         },
       });
     }, [coreSettingsChanged]);
@@ -238,6 +264,10 @@ const DatasetSelector = forwardRef(
     // Narrow the list by free text and by kind (genome-wide / focused / own uploads)
     const [filterText, setFilterText] = useState("");
     const [filterKind, setFilterKind] = useState("all");
+    // Shown when the page switched away from a drug dataset it cannot analyse
+    const [switchNote, setSwitchNote] = useState("");
+    // Drug collections whose dose and cell-line tables are listed (checkbox list)
+    const [openGroups, setOpenGroups] = useState(() => new Set());
 
     // Function to handle user dataset deletion
     const handleDeleteUserDataset = useCallback(async (datasetId, event) => {
@@ -277,8 +307,9 @@ const DatasetSelector = forwardRef(
         // If deleted dataset was selected, switch to first available dataset
         if (coreSettings.cellLine?.id === datasetId) {
           const remainingDatasets = datasetList.filter(d => d.id !== datasetId && !d.isUserUploaded);
-          if (remainingDatasets.length > 0) {
-            selectDataset(remainingDatasets[0]);
+          const next = firstGeneticDataset(remainingDatasets) || remainingDatasets[0];
+          if (next) {
+            selectDataset(next);
           }
         }
       } catch (error) {
@@ -412,15 +443,41 @@ const DatasetSelector = forwardRef(
 
       // For multi-select modules, we don't auto-select datasets - user must select manually
 
-      // Filter for whole genome datasets if wholeGenomeOnly is true (for non-correlation modules)
-      if (wholeGenomeOnly && !isCorrelationModule) {
-        const filteredDatasets = transformedDatasets.filter(dataset => dataset.isWholeGenome === true);
-        const hasActiveDataset = filteredDatasets.some(dataset => dataset.id === coreSettings.cellLine?.id);
+      // Filter for whole genome datasets if wholeGenomeOnly is true (for non-correlation modules).
+      // Drug datasets measure the whole transcriptome and stay, unless the
+      // module only makes sense for gene perturbations (geneticOnly).
+      const restrictToGenome = wholeGenomeOnly && !isCorrelationModule;
+      if (restrictToGenome || geneticOnly) {
+        const filteredDatasets = transformedDatasets.filter(
+          (dataset) =>
+            (!restrictToGenome || dataset.isWholeGenome === true || isDrugDataset(dataset)) &&
+            (!geneticOnly || !isDrugDataset(dataset))
+        );
+        const active = coreSettings.cellLine;
+        const hasActiveDataset = filteredDatasets.some(dataset => dataset.id === active?.id);
         if (!hasActiveDataset && filteredDatasets.length > 0) {
           // The active dataset is not offered on this page (it is not a whole
-          // genome dataset): switch to the first one that is, so requests never
-          // run on a dataset the list does not show.
-          selectDataset(filteredDatasets[0]);
+          // genome dataset, or it is a drug dataset): switch to the first one
+          // that is, so requests never run on a dataset the list does not show.
+          const fallback = firstGeneticDataset(filteredDatasets) || filteredDatasets[0];
+          selectDataset(fallback);
+          if (geneticOnly && isDrugDataset(active)) {
+            setSwitchNote(
+              `This module needs gene perturbations, so the dataset was switched from ${active.name || active.id} (drug treatments) to ${fallback.name || fallback.id}.`
+            );
+          }
+        }
+        if (geneticOnly && isPathFinderModule) {
+          // A ticked drug dataset must not stay selected behind the list
+          const ticked = pathfinderSettings?.selectedDatasets || [];
+          const drugIds = new Set(transformedDatasets.filter(isDrugDataset).map((dataset) => dataset.id));
+          if (ticked.some((id) => drugIds.has(id))) {
+            pathfinderSettingsChanged({
+              settingName: PathFinderSettingsTypes.SELECTED_DATASETS,
+              newValue: ticked.filter((id) => !drugIds.has(id)),
+            });
+            setSwitchNote("This module needs gene perturbations, so the drug datasets were removed from the selection.");
+          }
         }
         setDatasetList(filteredDatasets);
       } else {
@@ -428,7 +485,9 @@ const DatasetSelector = forwardRef(
       }
       setLoading(datasetsLoading && transformedDatasets.length === 0);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reduxDatasets, datasetsLoading, wholeGenomeOnly, transformDataset, isCorrelationModule]);
+      // The selected dataset is a dependency too: a dataset that arrives later
+      // (from the address, "Send to", a permalink) is checked like any other.
+    }, [reduxDatasets, datasetsLoading, wholeGenomeOnly, geneticOnly, transformDataset, isCorrelationModule, coreSettings.cellLine?.id]);
 
     useImperativeHandle(ref, () => ({
       // Adds a dimensionality-reduction result as a dataset (DR chaining). The
@@ -453,6 +512,16 @@ const DatasetSelector = forwardRef(
           isMixscape: parent?.isMixscape === true,
           dataType: dataType,
           isDrResult: true,
+          // A result of a drug dataset still holds drugs (labels, wording, links)
+          ...(isDrugDataset(parent)
+            ? {
+                perturbationKind: parent.perturbationKind,
+                collection: parent.collection,
+                drugTable: parent.drugTable,
+                doses: parent.doses,
+                labelsFrom: parent.labelsFrom || parent.id,
+              }
+            : {}),
         };
         addDrResultDataset(newItem);
         selectDataset(newItem);
@@ -541,6 +610,7 @@ const DatasetSelector = forwardRef(
       if (location.pathname !== ROUTES.DR && coreSettings.cellLine?.isDrResult === true) {
         const fallback =
           datasetList.find((d) => d.id === "K562gwps") ||
+          firstGeneticDataset(datasetList) ||
           datasetList.find((d) => d.isDrResult !== true && d.isUserUploaded !== true);
         if (fallback) {
           selectDataset(fallback);
@@ -620,6 +690,8 @@ const DatasetSelector = forwardRef(
       datasetMatches(x, { text: filterText, kind: filterKind })
     );
     const hasOwnUploads = allBackendDatasets.some((x) => x.isUserUploaded === true);
+    const hasDrugDatasets = allBackendDatasets.some(isDrugDataset);
+    const isFiltering = filterText.trim().length > 0;
 
     const filterBar = (
       <div style={{ marginBottom: "6px" }} data-tour="datasets">
@@ -627,7 +699,7 @@ const DatasetSelector = forwardRef(
           type="search"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
-          placeholder="Filter datasets (name, cell line, CRISPRi...)"
+          placeholder="Filter datasets (name, cell line, organ, CRISPRi...)"
           aria-label="Filter datasets"
           style={{
             width: "100%",
@@ -640,7 +712,11 @@ const DatasetSelector = forwardRef(
           }}
         />
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px", marginTop: "4px" }}>
-          {DATASET_KINDS.filter((kind) => kind.id !== "mine" || hasOwnUploads).map((kind) => (
+          {DATASET_KINDS.filter(
+            (kind) =>
+              (kind.id !== "mine" || hasOwnUploads) &&
+              ((kind.id !== "genetic" && kind.id !== "chemical") || hasDrugDatasets)
+          ).map((kind) => (
             <button
               key={kind.id}
               type="button"
@@ -667,11 +743,37 @@ const DatasetSelector = forwardRef(
             About the datasets
           </Link>
         </div>
+        {switchNote && (
+          <div
+            role="status"
+            style={{
+              marginTop: "6px",
+              padding: "6px 8px",
+              border: "1px solid #ffc107",
+              borderRadius: "4px",
+              background: "#fff3cd",
+              color: "#856404",
+              fontSize: "11px",
+              lineHeight: 1.35,
+            }}
+          >
+            {switchNote}
+          </div>
+        )}
       </div>
     );
     const filteredDatasets = location.pathname !== ROUTES.DR
       ? backendDatasets
       : [...backendDatasets, ...drResultItems];
+
+    // Main table of a drug collection -> number of its child tables in the list
+    const groupParents = new Map();
+    const listedIds = new Set(filteredDatasets.map((d) => d.id));
+    filteredDatasets.forEach((d) => {
+      if (isDrugChildTable(d) && listedIds.has(d.parent)) {
+        groupParents.set(d.parent, (groupParents.get(d.parent) || 0) + 1);
+      }
+    });
 
     // For multi-select modules with checkboxes, render custom checkbox list
     if (isMultiSelectMode) {
@@ -745,11 +847,21 @@ const DatasetSelector = forwardRef(
                   else if (isPathFinderModule) isSelected = pathfinderSettings?.selectedDatasets?.includes(dataset.id);
                   else if (isDeregulatedModule) isSelected = deregulatedGenesSettings?.selectedDatasets?.includes(dataset.id);
                   else if (isGeneSignatureModule) isSelected = genesignatureSettings?.selectedDatasets?.includes(dataset.id);
-                  
+
+                  // The dose and cell-line tables of a drug collection are
+                  // listed under its main table, closed until asked for (a
+                  // filter text or a ticked table shows them anyway).
+                  const isChild = isDrugChildTable(dataset) && groupParents.has(dataset.parent);
+                  if (isChild && !isSelected && !isFiltering && !openGroups.has(dataset.parent)) return null;
+                  const childCount = groupParents.get(dataset.id) || 0;
+                  const groupOpen = openGroups.has(dataset.id);
+
                   return (
+                    <React.Fragment key={dataset.id}>
                     <label
-                      key={dataset.id}
                       style={{
+                        marginLeft: isChild ? "14px" : 0,
+                        width: isChild ? "calc(100% - 14px)" : "100%",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
@@ -760,7 +872,6 @@ const DatasetSelector = forwardRef(
                         border: isSelected ? "1px solid #90caf9" : "1px solid transparent",
                         transition: "all 0.2s ease",
                         minHeight: "28px",
-                        width: "100%",
                         boxSizing: "border-box"
                       }}
                       onMouseEnter={(e) => {
@@ -839,6 +950,33 @@ const DatasetSelector = forwardRef(
                         </button>
                       )}
                     </label>
+                    {childCount > 0 && !isFiltering && (
+                      <button
+                        type="button"
+                        aria-expanded={groupOpen}
+                        onClick={() =>
+                          setOpenGroups((previous) => {
+                            const next = new Set(previous);
+                            if (next.has(dataset.id)) next.delete(dataset.id);
+                            else next.add(dataset.id);
+                            return next;
+                          })
+                        }
+                        style={{
+                          alignSelf: "flex-start",
+                          marginLeft: "30px",
+                          padding: 0,
+                          border: "none",
+                          background: "transparent",
+                          color: "#1565c0",
+                          fontSize: "11px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {groupOpen ? "Hide" : "Show"} {childCount} dose and cell-line tables
+                      </button>
+                    )}
+                    </React.Fragment>
                   );
                 })}
                 {selectedCount === 0 && (
@@ -1107,7 +1245,7 @@ const DatasetSelector = forwardRef(
                 cursor: "help",
                 marginLeft: "8px"
               }}
-              title="Select a dataset to analyze. Expand datasets to see and select previous DR results for chaining (e.g. run UMAP on PCA result)."
+              title="Select a dataset to analyze. Expand a dataset to see its tables (doses and cell lines of a drug collection) or previous DR results for chaining (e.g. run UMAP on PCA result)."
             >
               ?
             </div>
@@ -1125,10 +1263,11 @@ const DatasetSelector = forwardRef(
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               {treeRoots.map(root => (
                 <DatasetTreeItem
-                  key={root.id}
+                  key={isFiltering ? `${root.id}:filtered` : root.id}
                   item={root}
                   activeId={coreSettings.cellLine?.id}
                   onDeleteDataset={handleDeleteUserDataset}
+                  expandAll={isFiltering}
                 />
               ))}
             </div>

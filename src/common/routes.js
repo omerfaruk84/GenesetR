@@ -1,6 +1,7 @@
 const ROUTES = Object.freeze({
   HOME: "/",
   GENE: "/gene",
+  DRUG: "/drug",
   DATASETS: "/datasets",
   PROJECT_SIGNATURE: "/project-signature",
   PERMALINK: "/r",

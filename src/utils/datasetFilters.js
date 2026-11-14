@@ -4,8 +4,14 @@
  * (API/datasets.json) plus the user's own uploads.
  */
 
+import { isDrugDataset } from "./perturbationKind";
+
+// "genetic" and "chemical" say what was perturbed (genes or drugs); "genome"
+// and "focused" are the two scopes of the genetic screens.
 export const DATASET_KINDS = [
   { id: "all", label: "All" },
+  { id: "genetic", label: "Genetic" },
+  { id: "chemical", label: "Chemical" },
   { id: "genome", label: "Genome-wide" },
   { id: "focused", label: "Focused" },
   { id: "mine", label: "My uploads" },
@@ -13,7 +19,15 @@ export const DATASET_KINDS = [
 
 export const datasetKind = (dataset) => {
   if (dataset?.isUserUploaded) return "mine";
+  if (isDrugDataset(dataset)) return "chemical";
   return dataset?.isWholeGenome ? "genome" : "focused";
+};
+
+/** True when the dataset belongs under the chip `kind` of DATASET_KINDS. */
+export const datasetHasKind = (dataset, kind) => {
+  if (!kind || kind === "all") return true;
+  if (kind === "genetic") return !isDrugDataset(dataset);
+  return datasetKind(dataset) === kind;
 };
 
 /** Distinct non-empty values of `field` with their counts, most frequent first. */
@@ -34,7 +48,7 @@ export const facetValues = (datasets, field) => {
  */
 export const datasetMatches = (dataset, filters = {}) => {
   const { text, kind, cellLine, perturbationType } = filters;
-  if (kind && kind !== "all" && datasetKind(dataset) !== kind) return false;
+  if (!datasetHasKind(dataset, kind)) return false;
   if (cellLine && dataset?.cellLine !== cellLine) return false;
   if (perturbationType && dataset?.perturbationType !== perturbationType) return false;
   const words = String(text || "").toLowerCase().split(/\s+/).filter(Boolean);
@@ -46,6 +60,9 @@ export const datasetMatches = (dataset, filters = {}) => {
     dataset?.cellLine,
     dataset?.perturbationType,
     dataset?.citation,
+    dataset?.organ,
+    dataset?.collection,
+    isDrugDataset(dataset) ? "drug chemical" : "",
   ]
     .filter(Boolean)
     .join(" ")

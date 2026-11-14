@@ -1,0 +1,144 @@
+{
+ "dataset": "TahoeDrugs",
+ "labels": {
+  "AURANOFIN": {
+   "label": "AURANOFIN",
+   "drugId": "AURANOFIN",
+   "name": "Auranofin",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Auranofin",
+   "targets": [
+    "TXNRD1",
+    "TXNRD2"
+   ],
+   "moaFine": "unclear",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "BORTEZOMIB": {
+   "label": "BORTEZOMIB",
+   "drugId": "BORTEZOMIB",
+   "name": "Bortezomib",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Bortezomib",
+   "targets": [
+    "PSMB5"
+   ],
+   "moaFine": "Proteasome inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "HYDROXYFASUDIL": {
+   "label": "HYDROXYFASUDIL",
+   "drugId": "HYDROXYFASUDIL",
+   "name": "Hydroxyfasudil",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Hydroxyfasudil",
+   "targets": [
+    "ROCK1",
+    "ROCK2",
+    "PRKACA"
+   ],
+   "moaFine": "unclear",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "INFIGRATINIB": {
+   "label": "INFIGRATINIB",
+   "drugId": "INFIGRATINIB",
+   "name": "Infigratinib",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Infigratinib",
+   "targets": [
+    "FGFR1",
+    "FGFR2",
+    "FGFR3",
+    "FGFR4"
+   ],
+   "moaFine": "Other TK inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "IXAZOMIB-CITRATE": {
+   "label": "IXAZOMIB-CITRATE",
+   "drugId": "IXAZOMIB-CITRATE",
+   "name": "Ixazomib citrate",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Ixazomib citrate",
+   "targets": [
+    "PSMB1",
+    "PSMB2",
+    "PSMB5"
+   ],
+   "moaFine": "Proteasome inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "NG25": {
+   "label": "NG25",
+   "drugId": "NG25",
+   "name": "NG25",
+   "dose": null,
+   "doseUnit": null,
+   "display": "NG25",
+   "targets": [
+    "MAP4K2",
+    "MAP3K7",
+    "LYN",
+    "ABL1",
+    "ABL2",
+    "FER",
+    "SRC",
+    "EPHA2",
+    "EPHB2",
+    "EPHB4",
+    "ZAK",
+    "ZKSCAN1",
+    "RAF1"
+   ],
+   "moaFine": "Other MAPK inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "PANOBINOSTAT": {
+   "label": "PANOBINOSTAT",
+   "drugId": "PANOBINOSTAT",
+   "name": "Panobinostat",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Panobinostat",
+   "targets": [
+    "HDAC1",
+    "HDAC2",
+    "HDAC3",
+    "HDAC6",
+    "HDAC8",
+    "HDAC10",
+    "HDAC11"
+   ],
+   "moaFine": "HDAC inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  },
+  "TRAMETINIB": {
+   "label": "TRAMETINIB",
+   "drugId": "TRAMETINIB",
+   "name": "Trametinib",
+   "dose": null,
+   "doseUnit": null,
+   "display": "Trametinib",
+   "targets": [
+    "MAP2K1",
+    "MAP2K2"
+   ],
+   "moaFine": "MEK inhibitor",
+   "moaBroad": "inhibitor/antagonist",
+   "known": true
+  }
+ }
+}
