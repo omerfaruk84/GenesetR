@@ -11,8 +11,6 @@ const ModulePathNames = {
   [ROUTES.EXPRESSIONANALYZER]: "geneExpressionGraph",
   [ROUTES.PATHFINDER]: "pathFinderGraph",
   [ROUTES.CORRELATION]: "corrCluster",
-  [ROUTES.CORRELATION_WEBGL]: "corrCluster",
-  [ROUTES.CORRELATION_FAST]: "corrCluster",
   [ROUTES.HEATMAP]: "heatmapGraph",
   [ROUTES.GENESIGNATURE]: "genesignatureGraph",
   [ROUTES.MULTIDATASET_COMPARISON]: "multiDatasetComparison",

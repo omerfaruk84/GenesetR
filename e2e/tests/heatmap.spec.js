@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 /** Runs the correlation example and waits for the heatmap to be drawn. */
 const openHeatmap = async (page) => {
   const api = await mockApi(page);
-  await page.goto("/correlation-fast");
+  await page.goto("/correlation");
   await page.getByText("K562 Whole Genome", { exact: true }).first().click();
   await page.locator('[data-tour="example"]').first().click();
   await page.getByRole("menuitem").first().click();
@@ -597,6 +597,32 @@ test("export: the whole matrix as a 2x image and as SVG", async ({ page }) => {
   expect(png.suggestedFilename()).toMatch(/^heatmap-.*\.png$/);
   const [svgFile] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export SVG" }).click()]);
   expect(svgFile.suggestedFilename()).toMatch(/^heatmap-.*\.svg$/);
+  expect(await errors()).toEqual([]);
+});
+
+test("the addresses of the retired renderers lead to the correlation page", async ({ page }) => {
+  await mockApi(page);
+  for (const old of ["/correlation-fast", "/correlation-webgl"]) {
+    await page.goto(old);
+    await expect(page).toHaveURL(/\/correlation(\?|$)/);
+    await expect(page.locator('[data-tour="run"]').first()).toBeVisible();
+  }
+});
+
+test("the Heatmap page draws with the cluster heatmap too", async ({ page }) => {
+  const errors = watchErrors(page);
+  await mockApi(page);
+  await page.goto("/heatmap");
+  // Fill every list of the page from its example, then run.
+  const examples = page.locator('[data-tour="example"]');
+  const count = await examples.count();
+  for (let i = 0; i < count; i++) {
+    await examples.nth(i).click();
+    await page.getByRole("menuitem").first().click();
+  }
+  await page.locator('[data-tour="run"] button').first().click();
+  await expect(page.locator("[data-cluster-heatmap] canvas").first()).toBeVisible();
+  expect(await withHeatmap(page, (hm) => [hm._nRows, hm._nCols, hm._mode])).toEqual([60, 60, "gl"]);
   expect(await errors()).toEqual([]);
 });
 

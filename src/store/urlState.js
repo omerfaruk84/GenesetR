@@ -29,8 +29,6 @@ const DEFAULTS = settingsReducer(undefined, { type: "@@genesetr/defaults" });
 /** Slices each page reads its settings from (besides `core`). */
 const ROUTE_SLICES = {
   [ROUTES.CORRELATION]: ["correlation", "inchlib"],
-  [ROUTES.CORRELATION_WEBGL]: ["correlation", "inchlib"],
-  [ROUTES.CORRELATION_FAST]: ["correlation", "inchlib"],
   [ROUTES.DR]: ["pca", "mde", "umap", "tsne", "clustering", "scatterplot"],
   [ROUTES.HEATMAP]: ["heatMap", "inchlib"],
   [ROUTES.PATHFINDER]: ["pathfinder"],
@@ -55,7 +53,7 @@ const LIST_PARAMS = new Set(["genes", "targets"]);
 
 // Pages on which a core setting is used (all others ignore it)
 const LIST_PAGES = [
-  ROUTES.CORRELATION, ROUTES.CORRELATION_WEBGL, ROUTES.CORRELATION_FAST, ROUTES.DR,
+  ROUTES.CORRELATION, ROUTES.DR,
   ROUTES.HEATMAP, ROUTES.PATHFINDER, ROUTES.DEREGULATED_GENES,
 ];
 const CORE_USED_ON = {
@@ -63,7 +61,7 @@ const CORE_USED_ON = {
   graphType: [ROUTES.DR],
   peturbationList: LIST_PAGES,
   targetGeneList: [...LIST_PAGES, ROUTES.GENESIGNATURE],
-  dataType: [ROUTES.CORRELATION, ROUTES.CORRELATION_WEBGL, ROUTES.CORRELATION_FAST, ROUTES.DR, ROUTES.EXPRESSIONANALYZER],
+  dataType: [ROUTES.CORRELATION, ROUTES.DR, ROUTES.EXPRESSIONANALYZER],
 };
 
 export const hasUrlState = (pathname) => Object.prototype.hasOwnProperty.call(ROUTE_SLICES, pathname);

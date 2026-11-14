@@ -1,10 +1,8 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "../error-boundary";
 import { ROUTES } from "../../common/routes";
 import { CorrelationPage } from "../../pages/correlation/correlation-page";
-import { CorrelationPageWebGL } from "../../pages/correlation/correlation-page-webgl";
-import { CorrelationPageFast } from "../../pages/correlation/correlation-page-fast";
 import { TopBar } from "../top-bar";
 import styles from "./main-view.module.scss";
 import { NotFoundPage } from "../not-found-page";
@@ -89,14 +87,10 @@ const MainView = () => {
               path={ROUTES.CORRELATION}
               element={<CorrelationPage path={ROUTES.CORRELATION} />}
             />
-            <Route
-              path={ROUTES.CORRELATION_WEBGL}
-              element={<CorrelationPageWebGL path={ROUTES.CORRELATION_WEBGL} />}
-            />
-            <Route
-              path={ROUTES.CORRELATION_FAST}
-              element={<CorrelationPageFast path={ROUTES.CORRELATION_FAST} />}
-            />
+            {/* The two trial renderers had pages of their own; the correlation
+                page now uses the cluster heatmap, so their addresses lead there. */}
+            <Route path="/correlation-webgl" element={<Navigate to={ROUTES.CORRELATION} replace />} />
+            <Route path="/correlation-fast" element={<Navigate to={ROUTES.CORRELATION} replace />} />
             <Route
               path={ROUTES.PATHFINDER}
               element={<PathFinderPage path={ROUTES.PATHFINDER} />}

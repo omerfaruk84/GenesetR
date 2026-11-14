@@ -18,7 +18,6 @@ test.beforeEach(async ({ page }) => {
 
 const ANALYSIS_ROUTES = [
   "/correlation",
-  "/correlation-fast",
   "/dr",
   "/heatmap",
   "/pathfinder",

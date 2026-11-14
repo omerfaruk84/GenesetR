@@ -455,8 +455,6 @@ const runCalculation = (module) => async (dispatch, getState) => {
         const result = await runHeatMap(core, heatMap);
         return deliver({ result, module: ModulePathNames[module] });
       }
-      case ROUTES.CORRELATION_WEBGL:
-      case ROUTES.CORRELATION_FAST:
       case ROUTES.CORRELATION: {
         // Validate that at least one dataset is selected
         if (!correlation?.selectedDatasets || correlation.selectedDatasets.length === 0) {

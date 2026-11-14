@@ -2,8 +2,6 @@ const TabNames = {
   HOME: "Home",
   GENE: "Gene",
   CORRELATION: "Correlation",
-  CORRELATION_WEBGL: "Correlation (WebGL)",
-  CORRELATION_FAST: "Correlation (Fast)",
   PCA: "PCA",
   DR: "DR & Clustering",
   MDE: "MDE",

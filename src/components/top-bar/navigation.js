@@ -34,8 +34,6 @@ export const NAV_GROUPS = [
       { name: TabNames.GENESIGNATURE, to: ROUTES.GENESIGNATURE, about: "Perturbations that switch a gene signature on or off" },
       { name: TabNames.DEREGULATED_GENES, to: ROUTES.DEREGULATED_GENES, about: "Genes that a set of perturbations changes in common" },
       { name: TabNames.GENELISTCOMPARE, to: ROUTES.GENELISTCOMPARE, about: "Saved gene lists and their overlaps" },
-      { name: TabNames.CORRELATION_WEBGL, to: ROUTES.CORRELATION_WEBGL, about: "Correlation map, WebGL renderer for large lists", advanced: true },
-      { name: TabNames.CORRELATION_FAST, to: ROUTES.CORRELATION_FAST, about: "Correlation map, fast cluster renderer", advanced: true },
     ],
   },
   {

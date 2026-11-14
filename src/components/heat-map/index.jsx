@@ -5,7 +5,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import InCHlib from "../../store/extra/inchlib-1.2.0.js";
+import ClusterHeatmap from "../cluster-heatmap/renderer";
 import styles from "./heat-map.module.scss";
 import { GeneSetEnrichmentTable, getSelectedLibraries } from "../enrichment/index.jsx";
 import { performEnrichment } from "../enrichment/enrichrAPI";
@@ -38,9 +38,9 @@ import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
 
-// Optional InCHlib methods. The two bundled library versions (1.2.0 canvas and
-// 2.0 WebGL) implement different subsets, so every control that depends on one
-// of them is only offered when the loaded instance actually has it.
+// Optional renderer methods: a control is only offered when the instance has
+// the method behind it. (The component was written for InCHlib and keeps its
+// method names; the renderer is components/cluster-heatmap.)
 const INCHLIB_OPTIONAL_METHODS = [
   "resetCamera",
   "fitToScreen",
@@ -129,7 +129,6 @@ const HeatMap = ({
   datasetScores = null,
   datasets = null,
   isMultiDataset = false,
-  inchlibConstructor = null,
 }) => {
   const dispatch = useDispatch();
   const [selectedGenes, setSelectedGenes] = useState([]);
@@ -1024,54 +1023,20 @@ const keyedData = useMemo(() => {
       heatmapRef.current.id = containerId;
     }
     
-    // Create new InCHlib instance
-    const InchlibCtor = inchlibConstructor || InCHlib;
-    const isWebGL = Boolean(inchlibConstructor);
-    // `nodes` is an object keyed by node id; rows are its leaf nodes.
-    const nodeList = Object.values(graphData?.data?.nodes || {});
-    const rowCount = nodeList.reduce(
-      (count, node) => (node && node.count === 1 ? count + 1 : count),
-      0
-    );
-    const isLargeHeatmap = rowCount > 120;
-    const useLod = rowCount > 350;
-    const minRowHeight =
-      rowCount > 2000 ? 0.25 : rowCount > 750 ? 0.5 : 1;
+    // Create the renderer (it sizes itself to the container and the window)
     const maxHeatmapHeight = Math.max(
       heatmapRef.current?.clientHeight || 0,
       800
     );
-    const inchlib = new InchlibCtor({
+    const inchlib = new ClusterHeatmap({
       target: containerId,
-      metadata: false,
-      column_metadata: true,
-      heatmap_header: true,
-      column_dendrogram: true,
       max_height: maxHeatmapHeight,
-      dendrogram: true,
-      width: heatmapWidth,
       heatmap_colors: inchlibSettings.color_scale?.color ?? "BuWhRd",
-      metadata_colors: "Reds",
-      independent_columns: false,
-      draw_row_ids: isWebGL ? true : !isLargeHeatmap,
       heatmap_part_width: 0.95,
       max_column_width: 20,
       max_row_height: 20,
-      min_row_height: minRowHeight,
-      heatmap: false,
-      fixed_row_id_size: isWebGL ? 12 : isLargeHeatmap ? 0 : 14,
-      row_id_min_zoom: isLargeHeatmap ? 1.1 : 1,
-      column_header_min_zoom: isLargeHeatmap ? 1.0 : 1,
-      cell_value_min_zoom: isLargeHeatmap ? 1.3 : 1,
-      max_zoom_resolution: 4,
-      use_tiled_heatmap: true,
-      tile_rows: 64,
-      tile_cols: 64,
-      camera_min_scale: 0.1,
-      camera_max_scale: 8,
-      lod_enabled: isWebGL && useLod,
     });
-    
+
     inchlibInstance.current = inchlib;
 
     setGeneQuery("");
@@ -1292,7 +1257,6 @@ const keyedData = useMemo(() => {
     heatmapWidth,
     destroyInchlibInstance,
     handleFitToScreen,
-    inchlibConstructor,
   ]);
 
   // Resize observer

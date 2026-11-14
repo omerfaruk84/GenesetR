@@ -81,7 +81,6 @@ const CorrelationPage = ({
   coreSettings,
   dispatch,
   calcResults,
-  inchlibConstructor,
 }) => {
   const [filteredCorrResults, setFilteredCorrResults] = useState(null);
   const [trimStats, setTrimStats] = useState(null);
@@ -476,7 +475,6 @@ const CorrelationPage = ({
                 datasetScores={datasetScores}
                 datasets={datasets}
                 isMultiDataset={isMultiDataset}
-                inchlibConstructor={inchlibConstructor}
               />
             ) : (
               <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>

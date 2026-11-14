@@ -5,8 +5,6 @@ const ROUTES = Object.freeze({
   PROJECT_SIGNATURE: "/project-signature",
   PERMALINK: "/r",
   CORRELATION: "/correlation",
-  CORRELATION_WEBGL: "/correlation-webgl",
-  CORRELATION_FAST: "/correlation-fast",
   DR: "/dr",
   PCA: "/pca",
   MDE: "/mde",

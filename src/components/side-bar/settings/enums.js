@@ -10,7 +10,7 @@ const SettingsTypes = {
   BI_CLUSTERING_SETTINGS: "Clustering Settings",
   HEAT_MAP: "HeatMap Settings",
   HEAT_MAP_TARGET_GENE_LIST: "Target Gene List",
-  INCHLIB_SETTINGS: "Inchlib Settings",
+  INCHLIB_SETTINGS: "Heatmap Display",
   PATH_FINDER_SETTINGS: "Path Explorer Settings",
   GRAPHMAP_SETTINGS: "Gene Regulation Settings",
   SCATTERPLOT_SETTINGS: "Scatter Plot Settings",

@@ -14,8 +14,6 @@ import styles from "./share-menu.module.scss";
 
 const ROUTE_LABELS = {
   [ROUTES.CORRELATION]: TabNames.CORRELATION,
-  [ROUTES.CORRELATION_WEBGL]: TabNames.CORRELATION,
-  [ROUTES.CORRELATION_FAST]: TabNames.CORRELATION,
   [ROUTES.DR]: "Dimensionality reduction and clustering",
   [ROUTES.HEATMAP]: "Heatmap",
   [ROUTES.PATHFINDER]: TabNames.PATHFINDER,

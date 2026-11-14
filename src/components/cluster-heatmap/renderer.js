@@ -11,9 +11,9 @@
  * - Hit testing is arithmetic (row = floor(y / cellHeight)); there are no
  *   per-cell or per-node event listeners.
  *
- * It reads the JSON produced by `inchlib_clust` unchanged and exposes the part
- * of the InCHlib API that `components/heat-map` uses, so it can be passed to
- * that component as `inchlibConstructor`.
+ * It reads the JSON produced by `inchlib_clust` unchanged. `components/heat-map`
+ * was written for InCHlib, so the methods it calls keep InCHlib's names
+ * (read_data, update_settings, highlight_rows, ...).
  *
  * The module has no dependencies.
  */
