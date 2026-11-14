@@ -1,6 +1,7 @@
 const ROUTES = Object.freeze({
   HOME: "/",
   GENE: "/gene",
+  DATASETS: "/datasets",
   CORRELATION: "/correlation",
   CORRELATION_WEBGL: "/correlation-webgl",
   CORRELATION_FAST: "/correlation-fast",

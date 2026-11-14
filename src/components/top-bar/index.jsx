@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TopBar as TopBarCmp } from "@oliasoft-open-source/react-ui-library";
-import { FaHome, FaBars, FaTimes, FaCloudUploadAlt, FaSearch } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaCloudUploadAlt, FaSearch, FaDatabase } from "react-icons/fa";
 import {
   FcMindMap,
   FcScatterPlot,
@@ -139,6 +139,11 @@ const TopBar = () => {
       icon: () => <FcTodoList size={"2em"} />,
       name: TabNames.GENELISTCOMPARE,
       toLink: ROUTES.GENELISTCOMPARE,
+    },
+    {
+      icon: () => <FaDatabase size={"1.7em"} color="#5d6877" />,
+      name: TabNames.DATASETS,
+      toLink: ROUTES.DATASETS,
     },
     {
       icon: () => <FaCloudUploadAlt size={"2em"} color="#1976d2" />,

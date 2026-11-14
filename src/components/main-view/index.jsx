@@ -25,6 +25,7 @@ import { GenelistCompare } from "../genelist-compare";
 import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
 import UploadDatasetPage from "../../pages/upload-dataset/upload-dataset-page";
 import { GenePage } from "../../pages/gene/gene-page";
+import { DatasetsPage } from "../../pages/datasets/datasets-page";
 
 // A rendering error in one page must not blank the whole application: the
 // page area shows an error box with "Try again", the navigation keeps working,
@@ -70,6 +71,7 @@ const MainView = () => {
           />
           <Route path={ROUTES.ABOUTUS} element={<PageBoundary><AboutPage /></PageBoundary>} />
           <Route path={ROUTES.GENE} element={<PageBoundary><GenePage /></PageBoundary>} />
+          <Route path={ROUTES.DATASETS} element={<PageBoundary><DatasetsPage /></PageBoundary>} />
           <Route path={ROUTES.UPLOAD_DATASET} element={<PageBoundary><UploadDatasetPage /></PageBoundary>} />
           <Route element={<SideBarLayout />}>
             <Route path={ROUTES.DR} element={<DimReductionPage />} />

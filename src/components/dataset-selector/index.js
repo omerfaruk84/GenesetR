@@ -28,6 +28,8 @@ import {
   PathFinderSettingsTypes,
 } from "../side-bar/settings/enums";
 import styles from "./AccordionMenu.scss";
+import { Link } from "react-router-dom";
+import { DATASET_KINDS, datasetMatches } from "../../utils/datasetFilters";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
 import { updateGeneLists, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
@@ -235,6 +237,9 @@ const DatasetSelector = forwardRef(
 
     const [datasetList, setDatasetList] = useState([]);
     const [loading, setLoading] = useState(true);
+    // Narrow the list by free text and by kind (genome-wide / focused / own uploads)
+    const [filterText, setFilterText] = useState("");
+    const [filterKind, setFilterKind] = useState("all");
 
     // Function to handle user dataset deletion
     const handleDeleteUserDataset = useCallback(async (datasetId, event) => {
@@ -612,7 +617,60 @@ const DatasetSelector = forwardRef(
 
     // Filter datasets based on route
     // DR results are flagged explicitly; user-uploaded datasets are regular datasets
-    const backendDatasets = datasetList.filter((x) => x.isDrResult !== true);
+    const allBackendDatasets = datasetList.filter((x) => x.isDrResult !== true);
+    const backendDatasets = allBackendDatasets.filter((x) =>
+      datasetMatches(x, { text: filterText, kind: filterKind })
+    );
+    const hasOwnUploads = allBackendDatasets.some((x) => x.isUserUploaded === true);
+
+    const filterBar = (
+      <div style={{ marginBottom: "6px" }}>
+        <input
+          type="search"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          placeholder="Filter datasets (name, cell line, CRISPRi...)"
+          aria-label="Filter datasets"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            height: "26px",
+            padding: "0 8px",
+            border: "1px solid #c4c9d0",
+            borderRadius: "4px",
+            fontSize: "12px",
+          }}
+        />
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+          {DATASET_KINDS.filter((kind) => kind.id !== "mine" || hasOwnUploads).map((kind) => (
+            <button
+              key={kind.id}
+              type="button"
+              aria-pressed={filterKind === kind.id}
+              onClick={() => setFilterKind(kind.id)}
+              style={{
+                padding: "1px 8px",
+                border: "1px solid " + (filterKind === kind.id ? "#a63648" : "#c4c9d0"),
+                borderRadius: "999px",
+                background: filterKind === kind.id ? "#a63648" : "#fff",
+                color: filterKind === kind.id ? "#fff" : "#333",
+                fontSize: "11px",
+                cursor: "pointer",
+              }}
+            >
+              {kind.label}
+            </button>
+          ))}
+          <Link
+            to={ROUTES.DATASETS}
+            style={{ marginLeft: "auto", fontSize: "11px", color: "#1565c0" }}
+            title="Descriptions, sizes, citations and licences of all datasets"
+          >
+            About the datasets
+          </Link>
+        </div>
+      </div>
+    );
     const filteredDatasets = location.pathname !== ROUTES.DR
       ? backendDatasets
       : [...backendDatasets, ...drResultItems];
@@ -637,6 +695,7 @@ const DatasetSelector = forwardRef(
       
       return (
         <>
+          {filterBar}
           <div
             className={styles._itemHeader_1fhdv_401}
             style={{ 
@@ -678,7 +737,7 @@ const DatasetSelector = forwardRef(
                 color: "#999",
                 fontStyle: "italic"
               }}>
-                No datasets are available.
+                No datasets match.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -1009,6 +1068,7 @@ const DatasetSelector = forwardRef(
 
     return (
       <>
+        {filterBar}
         <div
           className={styles._itemHeader_1fhdv_401}
           style={{
@@ -1061,7 +1121,7 @@ const DatasetSelector = forwardRef(
               color: "#999",
               fontStyle: "italic"
             }}>
-              No datasets are available.
+              No datasets match.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
