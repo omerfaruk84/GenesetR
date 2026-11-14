@@ -7,6 +7,7 @@ import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
 import V2ReleasePopup from "../../components/v2-release-popup";
+import { GeneSearch } from "../../components/gene-search";
 
 const MainPage = ({ coreSettingsChanged }) => {
   const navigate = useNavigate();
@@ -98,6 +99,10 @@ const MainPage = ({ coreSettingsChanged }) => {
             the data it generates are free for all uses, including commercial
             purposes.
           </p>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", margin: "6px 0 22px" }}>
+            <GeneSearch size="lg" placeholder="Explore a gene across all datasets, e.g. ATF4" />
+          </div>
 
           <div className={`${styles["glass-panel"]}`}>
             <h2 style={{ margin: "0px" }}>Potential Analyses in GeneSetR:</h2>

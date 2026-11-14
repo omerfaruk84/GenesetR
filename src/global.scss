@@ -3,3 +3,21 @@
   min-height: 100vh;
 }
 
+
+/* Colour tokens. New pages use these instead of fixed colours so that the
+   dark theme (html[data-theme="dark"], see components/theme-toggle) only has
+   to redefine them. */
+:root {
+  --gs-bg: #ffffff;
+  --gs-surface: #ffffff;
+  --gs-surface-alt: #f6f7f9;
+  --gs-hover: #eef1f5;
+  --gs-selected: #e6f0fb;
+  --gs-text: #1f2733;
+  --gs-muted: #5d6877;
+  --gs-border: #e1e5ea;
+  --gs-border-strong: #c4c9d0;
+  --gs-link: #1565c0;
+  --gs-accent: #a63648;
+  --gs-accent-soft: rgba(166, 54, 72, 0.18);
+}

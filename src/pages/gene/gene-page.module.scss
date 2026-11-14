@@ -1,0 +1,270 @@
+@use "../../common/page" as page;
+
+.page {
+  @include page.shell;
+}
+
+.inner {
+  @include page.inner(1280px);
+}
+
+.searchRow {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.intro {
+  max-width: 720px;
+  margin: 40px auto;
+  text-align: center;
+
+  h1 {
+    font-size: 26px;
+    margin-bottom: 10px;
+  }
+
+  p {
+    color: var(--gs-muted);
+    line-height: 1.5;
+  }
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  color: var(--gs-muted);
+}
+
+.status {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 16px 20px;
+  border: 1px solid var(--gs-border);
+  border-radius: 6px;
+  background: var(--gs-surface-alt);
+  text-align: center;
+}
+
+.header {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gs-border);
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+    font-size: 30px;
+  }
+}
+
+.geneName {
+  font-size: 17px;
+  color: var(--gs-muted);
+}
+
+.description {
+  max-width: 980px;
+  margin: 10px 0 6px;
+  line-height: 1.5;
+}
+
+.textButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-link);
+  font: inherit;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--gs-muted);
+  font-size: 13px;
+}
+
+.help {
+  max-width: 980px;
+  margin: 4px 0 10px;
+  color: var(--gs-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.links,
+.datasetChips,
+.openIn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.chip {
+  @include page.chip;
+}
+
+.chipActive {
+  @include page.chip-active;
+}
+
+.action {
+  @include page.button;
+}
+
+.section {
+  margin-top: 28px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+  }
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  @include page.table;
+
+  tbody tr {
+    cursor: pointer;
+  }
+}
+
+.rowSelected {
+  background: var(--gs-selected) !important;
+}
+
+.rowButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.value {
+  display: inline-block;
+  min-width: 52px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.geneLink {
+  color: var(--gs-link);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.matrix {
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th {
+    padding: 4px 8px;
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--gs-text);
+  }
+
+  thead th {
+    height: 120px;
+    vertical-align: bottom;
+    text-align: left;
+    padding: 0;
+
+    span {
+      display: block;
+      width: 44px;
+      transform: rotate(-55deg);
+      transform-origin: bottom left;
+      translate: 26px 0;
+      white-space: nowrap;
+    }
+  }
+
+  td {
+    width: 44px;
+    height: 30px;
+    border: 1px solid var(--gs-surface);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--gs-text);
+  }
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.card {
+  padding: 14px 16px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.rankedTitle {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gs-muted);
+}
+
+.rankedList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 13px;
+}
