@@ -87,6 +87,9 @@ const LEGEND_H = 34; // value histogram above the colour bar
 const GAP = 6;
 const MAX_CELL = 64;
 const HIT_PX = 6;
+const TRACK = 10; // width of one annotation track, including 1 px of space
+const TRACK_COLORS = ["#111111", ...["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf"]];
+const TRACK_OFF = "#e3e6ea";
 // The dendrogram uses this share of its area, leaving a rest position for the
 // cut line beyond the root. A cut at or above 1 (the root) means "no cut".
 const TREE_SHARE = 0.92;
@@ -411,6 +414,8 @@ class ClusterHeatmap {
     this._highlightRows = [];
     this._marks = { rows: [], cols: [] }; // highlightGenes()
     this._clusterLabels = { row: {}, col: {} }; // setClusterLabels()
+    this._annotations = { rows: [], columns: [] }; // as given to setAnnotations()
+    this._tracks = { rows: [], cols: [] }; // resolved against the matrix
     this._pointers = new Map(); // touch points, for pinch zoom
     this._pinch = null;
     this._boxZoom = null; // rectangle being drawn with Shift-drag
@@ -443,6 +448,8 @@ class ClusterHeatmap {
     const source = json && json.data ? json : { data: json };
     this.data = source.data || { nodes: {}, feature_names: [] };
     this.column_dendrogram = source.column_dendrogram || null;
+    this._metadata = source.metadata || null;
+    this._columnMetadata = source.column_metadata || null;
 
     const nodes = this.data.nodes || {};
     const rowTree = buildTree(nodes, false);
@@ -633,6 +640,7 @@ class ClusterHeatmap {
     this._dataDirty = true;
     this._computeStats();
     this._applyAutoRange();
+    this._resolveTracks(); // the column order may have changed
   }
 
   /* ------------------------------------------------------------ settings */
@@ -802,6 +810,91 @@ class ClusterHeatmap {
     this._requestRender();
   }
 
+  /**
+   * Annotation tracks: colour bars beside the rows and below the columns.
+   *
+   *   setAnnotations({ rows: [track, ...], columns: [track, ...] })
+   *   track = { name, values }, values keyed by gene symbol (a guide suffix
+   *   is ignored): true marks membership, a string is a category, a number
+   *   is drawn on a light-to-dark scale.
+   *
+   * Row metadata and column metadata of the InCHlib format are shown the
+   * same way without a call.
+   */
+  setAnnotations(annotations) {
+    this._annotations = {
+      rows: (annotations?.rows || []).filter((track) => track && track.values),
+      columns: (annotations?.columns || []).filter((track) => track && track.values),
+    };
+    this._resolveTracks();
+    if (this._layoutBox) this._relayout(false);
+  }
+
+  /** Maps every track onto the rows / columns in display order and picks its colours. */
+  _resolveTracks() {
+    const base = (name) => String(name).split("_")[0].toUpperCase();
+    const build = (name, values) => {
+      const present = values.filter((value) => value !== null && value !== undefined && value !== false && value !== "");
+      if (!present.length) return null;
+      let colors;
+      if (present.every((value) => typeof value === "number")) {
+        const min = Math.min(...present);
+        const max = Math.max(...present);
+        colors = values.map((value) => {
+          if (typeof value !== "number") return null;
+          const t = max > min ? (value - min) / (max - min) : 1;
+          const shade = Math.round(225 - t * 190);
+          return `rgb(${shade},${shade},${Math.min(255, shade + 20)})`;
+        });
+      } else if (present.every((value) => value === true)) {
+        colors = values.map((value) => (value === true ? TRACK_COLORS[0] : TRACK_OFF));
+      } else {
+        const categories = Array.from(new Set(present.map(String)));
+        colors = values.map((value) =>
+          value === null || value === undefined || value === false || value === ""
+            ? null
+            : TRACK_COLORS[(categories.indexOf(String(value)) + 1) % TRACK_COLORS.length]
+        );
+      }
+      return { name: String(name), values, colors };
+    };
+    const lookup = (values, keys) => {
+      const map = new Map(Object.entries(values).map(([key, value]) => [base(key), value]));
+      return keys.map((names) => {
+        const hit = names.map(base).find((key) => map.has(key));
+        return hit === undefined ? null : map.get(hit);
+      });
+    };
+    const rows = [];
+    const cols = [];
+    if (!this.data) {
+      this._tracks = { rows, cols };
+      return;
+    }
+    // Metadata that came with the data (InCHlib format).
+    const metadata = this._metadata;
+    if (metadata?.nodes) {
+      const names = metadata.feature_names || [];
+      const count = Math.max(0, ...Object.values(metadata.nodes).map((list) => (Array.isArray(list) ? list.length : 0)));
+      for (let i = 0; i < count; i++) {
+        rows.push(build(names[i] || `Metadata ${i + 1}`, this._rowLeafIds.map((id) => metadata.nodes[id]?.[i] ?? null)));
+      }
+    }
+    const columnMetadata = this._columnMetadata;
+    if (Array.isArray(columnMetadata?.features)) {
+      const order = this._columnOrder();
+      columnMetadata.features.forEach((list, i) => {
+        const inOrder = Array.from({ length: this._nCols }, (_, p) => list?.[order ? order[p] : p] ?? null);
+        cols.push(build(columnMetadata.feature_names?.[i] || `Metadata ${i + 1}`, inOrder));
+      });
+    }
+    this._annotations.rows.forEach((track) => rows.push(build(track.name, lookup(track.values, this._rowObjects))));
+    this._annotations.columns.forEach((track) =>
+      cols.push(build(track.name, lookup(track.values, this._colLabels.map((label) => [label]))))
+    );
+    this._tracks = { rows: rows.filter(Boolean), cols: cols.filter(Boolean) };
+  }
+
   /** Identifies the matrix a saved view belongs to. */
   _signature() {
     const rows = this._rowLabels || [];
@@ -854,6 +947,204 @@ class ClusterHeatmap {
     cam.sy = (Number(state.centerY) || 0) * this._nRows * cam.ch - box.availH / 2;
     this._clampCamera();
     this._requestRender();
+  }
+
+  /**
+   * Runs `draw` with the whole matrix laid out at `cell` px per cell (smaller
+   * when that would exceed the canvas limit), then restores the view.
+   */
+  _withExportLayout(cell, scale, draw) {
+    const saved = { box: this._layoutBox, cam: this._cam, dpr: this._dpr, exporting: this._exporting };
+    if (!saved.box || !saved.cam) return null;
+    const limit = 8192 / scale;
+    const fixedW = saved.box.hmX + saved.box.trackW + saved.box.rowLabelW + PAD;
+    const fixedH = saved.box.hmY + saved.box.trackH + saved.box.colLabelH + PAD;
+    let cw = Math.max(Math.min(cell, (limit - fixedW) / Math.max(this._nCols, 1)), 0.25);
+    let ch = Math.max(Math.min(cell, (limit - fixedH) / Math.max(this._nRows, 1)), 0.25);
+    if (this.settings.square_cells) cw = ch = Math.min(cw, ch);
+    const availW = this._nCols * cw;
+    const availH = this._nRows * ch;
+    this._layoutBox = {
+      ...saved.box,
+      availW, availH, fitCw: cw, fitCh: ch,
+      width: Math.ceil(fixedW + availW),
+      height: Math.ceil(fixedH + availH),
+    };
+    this._cam = { cw, ch, sx: 0, sy: 0 };
+    this._dpr = scale;
+    this._exporting = true;
+    try {
+      return draw();
+    } finally {
+      this._layoutBox = saved.box;
+      this._cam = saved.cam;
+      this._dpr = saved.dpr;
+      this._exporting = saved.exporting;
+    }
+  }
+
+  /**
+   * The whole heatmap (not only the part on screen) as a canvas, `scale`
+   * device pixels per unit, with labels where the cells are large enough.
+   */
+  exportCanvas({ cell = 14, scale = 2, background = "#ffffff" } = {}) {
+    if (!this._root) return null;
+    const sizes = [this._base, this._overlay].map((canvas) => [canvas.width, canvas.height]);
+    const out = this._withExportLayout(cell, scale, () => {
+      const box = this._layoutBox;
+      [this._base, this._overlay].forEach((canvas) => {
+        canvas.width = Math.round(box.width * scale);
+        canvas.height = Math.round(box.height * scale);
+      });
+      this._render();
+      const copy = document.createElement("canvas");
+      copy.width = this._base.width;
+      copy.height = this._base.height;
+      const ctx = copy.getContext("2d");
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, copy.width, copy.height);
+      ctx.drawImage(this._base, 0, 0);
+      ctx.drawImage(this._overlay, 0, 0);
+      return copy;
+    });
+    // Back to the view on screen.
+    [this._base, this._overlay].forEach((canvas, i) => {
+      canvas.width = sizes[i][0];
+      canvas.height = sizes[i][1];
+    });
+    this._renderNow();
+    return out;
+  }
+
+  /**
+   * The whole heatmap as an SVG document: dendrograms, labels, tracks and
+   * legend as vectors, the matrix as an embedded image of one pixel per cell.
+   */
+  exportSvg({ cell = 14 } = {}) {
+    if (!this._root) return null;
+    return this._withExportLayout(cell, 1, () => {
+      const box = this._layoutBox;
+      const cam = this._cam;
+      const view = this._viewRect();
+      const n = (value) => Math.round(value * 100) / 100;
+      const escape = (text) =>
+        String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+      const parts = [
+        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${box.width}" height="${box.height}" viewBox="0 0 ${box.width} ${box.height}" font-family="Helvetica, Arial, sans-serif">`,
+        `<rect width="100%" height="100%" fill="#ffffff"/>`,
+      ];
+
+      // Matrix: one pixel per cell, scaled without smoothing.
+      const image = document.createElement("canvas");
+      image.width = this._nCols;
+      image.height = this._nRows;
+      const imageCtx = image.getContext("2d");
+      const pixels = imageCtx.createImageData(this._nCols, this._nRows);
+      for (let i = 0; i < this._values.length; i++) {
+        const color = this._colorOf(this._values[i]);
+        pixels.data[i * 4] = color[0];
+        pixels.data[i * 4 + 1] = color[1];
+        pixels.data[i * 4 + 2] = color[2];
+        pixels.data[i * 4 + 3] = 255;
+      }
+      imageCtx.putImageData(pixels, 0, 0);
+      parts.push(
+        `<image x="${n(view.x)}" y="${n(view.y)}" width="${n(view.w)}" height="${n(view.h)}" preserveAspectRatio="none" image-rendering="pixelated" style="image-rendering:pixelated" xlink:href="${image.toDataURL("image/png")}"/>`
+      );
+
+      // Dendrograms, coloured by cluster where a cut is set.
+      [["row", box.dendW], ["col", box.colDendH]].forEach(([kind, shown]) => {
+        const tree = this._tree(kind);
+        if (!shown || !tree || !tree.nodeCount) return;
+        const frame = this._treeFrame(kind);
+        const clusters = this._clusters[kind];
+        const paths = new Map();
+        for (let i = 0; i < tree.nodeCount; i++) {
+          let color = "#5a6470";
+          if (clusters) {
+            const cluster = clusters.list[clusters.leafCluster[tree.lo[i]]];
+            if (cluster.color >= 0 && tree.hi[i] <= cluster.hi) color = CLUSTER_COLORS[cluster.color % CLUSTER_COLORS.length];
+          }
+          const a = frame.along(tree.aPos[i]);
+          const b = frame.along(tree.bPos[i]);
+          const h = frame.across(tree.h[i]);
+          const points = [
+            frame.point(a, frame.across(tree.aH[i])),
+            frame.point(a, h),
+            frame.point(b, h),
+            frame.point(b, frame.across(tree.bH[i])),
+          ];
+          const d = points.map((p, k) => `${k ? "L" : "M"}${n(p[0])} ${n(p[1])}`).join("");
+          paths.set(color, (paths.get(color) || "") + d);
+        }
+        paths.forEach((d, color) => {
+          parts.push(`<path d="${d}" fill="none" stroke="${color}" stroke-width="${Number(this.settings.dendrogram_line_width) || 1}"/>`);
+        });
+      });
+
+      // Cluster strips and boundaries.
+      const rowClusters = box.dendW ? this._clusters.row : null;
+      const colClusters = box.colDendH ? this._clusters.col : null;
+      (rowClusters?.list || []).forEach((cluster) => {
+        const y0 = view.y + cluster.lo * cam.ch;
+        if (cluster.color >= 0) {
+          parts.push(`<rect x="${n(view.x - GAP)}" y="${n(y0)}" width="${GAP - 1}" height="${n((cluster.hi - cluster.lo + 1) * cam.ch)}" fill="${CLUSTER_COLORS[cluster.color % CLUSTER_COLORS.length]}"/>`);
+        }
+        if (cluster.lo > 0) parts.push(`<line x1="${n(view.x)}" y1="${n(y0)}" x2="${n(view.x + view.w)}" y2="${n(y0)}" stroke="#000" stroke-opacity="0.8"/>`);
+      });
+      (colClusters?.list || []).forEach((cluster) => {
+        const x0 = view.x + cluster.lo * cam.cw;
+        if (cluster.color >= 0) {
+          parts.push(`<rect x="${n(x0)}" y="${n(view.y - GAP)}" width="${n((cluster.hi - cluster.lo + 1) * cam.cw)}" height="${GAP - 1}" fill="${CLUSTER_COLORS[cluster.color % CLUSTER_COLORS.length]}"/>`);
+        }
+        if (cluster.lo > 0) parts.push(`<line x1="${n(x0)}" y1="${n(view.y)}" x2="${n(x0)}" y2="${n(view.y + view.h)}" stroke="#000" stroke-opacity="0.8"/>`);
+      });
+
+      // Annotation tracks.
+      this._tracks.rows.forEach((track, t) => {
+        track.colors.forEach((color, r) => {
+          if (color) parts.push(`<rect x="${n(view.x + view.w + 6 + t * TRACK)}" y="${n(view.y + r * cam.ch)}" width="${TRACK - 1}" height="${n(cam.ch)}" fill="${color}"/>`);
+        });
+      });
+      this._tracks.cols.forEach((track, t) => {
+        track.colors.forEach((color, c) => {
+          if (color) parts.push(`<rect x="${n(view.x + c * cam.cw)}" y="${n(view.y + view.h + 6 + t * TRACK)}" width="${n(cam.cw)}" height="${TRACK - 1}" fill="${color}"/>`);
+        });
+      });
+
+      // Labels, where a cell is tall / wide enough for text.
+      if (this.settings.draw_row_ids && cam.ch >= 6) {
+        const size = n(clamp(cam.ch * 0.8, 5, 12));
+        const x = n(view.x + view.w + 6 + box.trackW);
+        this._rowLabels.forEach((label, r) => {
+          parts.push(`<text x="${x}" y="${n(view.y + (r + 0.5) * cam.ch)}" font-size="${size}" dominant-baseline="central" fill="#222">${escape(label)}</text>`);
+        });
+      }
+      if (this.settings.heatmap_header && cam.cw >= 6) {
+        const size = n(clamp(cam.cw * 0.8, 5, 12));
+        const y = n(view.y + view.h + 6 + box.trackH);
+        this._colLabels.forEach((label, c) => {
+          const x = n(view.x + (c + 0.5) * cam.cw);
+          parts.push(`<text transform="translate(${x} ${y}) rotate(-90)" text-anchor="end" font-size="${size}" dominant-baseline="central" fill="#222">${escape(label)}</text>`);
+        });
+      }
+
+      // Legend.
+      const range = this._range;
+      const stops = Array.from({ length: 13 }, (_, i) => {
+        const value = range.min + (i / 12) * (range.max - range.min);
+        return `<stop offset="${n(i / 12)}" stop-color="${rgb(this._colorOf(value))}"/>`;
+      }).join("");
+      parts.push(
+        `<defs><linearGradient id="heatmap-scale">${stops}</linearGradient></defs>`,
+        `<rect x="${PAD}" y="${PAD + 4}" width="160" height="12" fill="url(#heatmap-scale)" stroke="#000" stroke-opacity="0.25"/>`,
+        `<text x="${PAD}" y="${PAD + 28}" font-size="11" fill="#333">${escape(formatValue(range.min))}</text>`,
+        `<text x="${PAD + 160}" y="${PAD + 28}" font-size="11" text-anchor="end" fill="#333">${escape(formatValue(range.max))}</text>`
+      );
+      parts.push("</svg>");
+      return parts.join("\n");
+    });
   }
 
   /** Row and column labels in display order. */
@@ -1255,17 +1546,19 @@ class ClusterHeatmap {
 
     const hmX = PAD + dendW + (dendW ? GAP : 0);
     const hmY = PAD + LEGEND_H + colDendH + (colDendH ? GAP : 0);
-    const availW = Math.max(60, width - hmX - rowLabelW - PAD);
+    const trackW = this._tracks.rows.length ? this._tracks.rows.length * TRACK + 3 : 0;
+    const trackH = this._tracks.cols.length ? this._tracks.cols.length * TRACK + 3 : 0;
+    const availW = Math.max(60, width - hmX - trackW - rowLabelW - PAD);
     const maxRowH = Number(s.max_row_height) || 20;
     const maxColW = Number(s.max_column_width) || 20;
-    const availH = clamp(this._nRows * maxRowH, 120, Math.max(120, budget - hmY - colLabelH - PAD));
-    const height = Math.ceil(hmY + availH + colLabelH + PAD);
+    const availH = clamp(this._nRows * maxRowH, 120, Math.max(120, budget - hmY - trackH - colLabelH - PAD));
+    const height = Math.ceil(hmY + availH + trackH + colLabelH + PAD);
 
     let fitCw = this._nCols ? Math.min(maxColW, availW / this._nCols) : maxColW;
     let fitCh = this._nRows ? Math.min(maxRowH, availH / this._nRows) : maxRowH;
     if (s.square_cells) fitCw = fitCh = Math.min(fitCw, fitCh);
     this._layoutBox = {
-      width, height, dendW, colDendH, rowLabelW, colLabelH,
+      width, height, dendW, colDendH, rowLabelW, colLabelH, trackW, trackH,
       hmX, hmY, availW, availH, fitCw, fitCh,
       dendX: PAD, colDendY: PAD + LEGEND_H,
     };
@@ -1337,6 +1630,7 @@ class ClusterHeatmap {
     this._drawOverlay();
     this._dataDirty = false;
     this._lutDirty = false;
+    if (this._exporting) return;
     // Tell the host when the view changed (it stores it for shared links).
     const state = this.getViewState();
     const key = JSON.stringify(state);
@@ -1694,13 +1988,35 @@ class ClusterHeatmap {
       ctx.fillRect(x0, view.y - GAP, x1 - x0, GAP - 1);
     });
 
+    // Annotation tracks: beside the rows, below the columns.
+    this._tracks.rows.forEach((track, t) => {
+      const x = view.x + view.w + 6 + t * TRACK;
+      for (let r = firstRow; r <= lastRow; r++) {
+        if (!track.colors[r]) continue;
+        const y0 = Math.max(rowY(r), view.y);
+        const y1 = Math.min(rowY(r + 1), view.y + view.h);
+        ctx.fillStyle = track.colors[r];
+        ctx.fillRect(x, y0, TRACK - 1, Math.max(y1 - y0, 0.5));
+      }
+    });
+    this._tracks.cols.forEach((track, t) => {
+      const y = view.y + view.h + 6 + t * TRACK;
+      for (let c = firstCol; c <= lastCol; c++) {
+        if (!track.colors[c]) continue;
+        const x0 = Math.max(colX(c), view.x);
+        const x1 = Math.min(colX(c + 1), view.x + view.w);
+        ctx.fillStyle = track.colors[c];
+        ctx.fillRect(x0, y, Math.max(x1 - x0, 0.5), TRACK - 1);
+      }
+    });
+
     // Row labels: only the visible rows, only when they are legible.
     const markedRows = new Set(this._marks.rows);
     const markedCols = new Set(this._marks.cols);
     ctx.fillStyle = "#222";
     ctx.textBaseline = "middle";
     if (this.settings.draw_row_ids) {
-      const x = view.x + view.w + 6;
+      const x = view.x + view.w + 6 + box.trackW;
       ctx.textAlign = "left";
       if (cam.ch >= 8) {
         ctx.font = `${clamp(cam.ch * 0.8, 8, 12)}px ${font}`;
@@ -1717,7 +2033,7 @@ class ClusterHeatmap {
       }
     }
     if (this.settings.heatmap_header) {
-      const y = view.y + view.h + 6;
+      const y = view.y + view.h + 6 + box.trackH;
       const drawColumn = (c, weight) => {
         const x = clamp(colX(c) + cam.cw / 2, view.x + 6, view.x + view.w - 6);
         ctx.save();
@@ -1762,7 +2078,7 @@ class ClusterHeatmap {
     const w = Math.min(maxW, maxH * aspect);
     const h = Math.min(maxH, maxW / aspect);
     if (w < 12 || h < 12) return null;
-    return { x: view.x + box.availW + 6, y: view.y + box.availH + 6, w, h };
+    return { x: view.x + box.availW + 6 + box.trackW, y: view.y + box.availH + 6 + box.trackH, w, h };
   }
 
   _drawMinimap(ctx) {
@@ -2145,11 +2461,21 @@ class ClusterHeatmap {
     if (box.colDendH && inX && y >= box.colDendY && y < view.y) return { name: "colTree", x, y };
     // Labels (only where they are drawn): a click opens the gene.
     const cam = this._cam;
-    if (this.settings.draw_row_ids && cam.ch >= 8 && inY && x >= view.x + view.w + 6 && x <= view.x + view.w + box.rowLabelW) {
+    if (box.trackW && inY && x >= view.x + view.w + 6 && x < view.x + view.w + 6 + this._tracks.rows.length * TRACK) {
+      const index = Math.floor((y - view.y + cam.sy) / cam.ch);
+      const track = Math.floor((x - view.x - view.w - 6) / TRACK);
+      if (index >= 0 && index < this._nRows) return { name: "rowTrack", x, y, index, track };
+    }
+    if (box.trackH && inX && y >= view.y + view.h + 6 && y < view.y + view.h + 6 + this._tracks.cols.length * TRACK) {
+      const index = Math.floor((x - view.x + cam.sx) / cam.cw);
+      const track = Math.floor((y - view.y - view.h - 6) / TRACK);
+      if (index >= 0 && index < this._nCols) return { name: "colTrack", x, y, index, track };
+    }
+    if (this.settings.draw_row_ids && cam.ch >= 8 && inY && x >= view.x + view.w + 6 + box.trackW && x <= view.x + view.w + box.trackW + box.rowLabelW) {
       const index = Math.floor((y - view.y + cam.sy) / cam.ch);
       if (index >= 0 && index < this._nRows) return { name: "rowLabel", x, y, index };
     }
-    if (this.settings.heatmap_header && cam.cw >= 8 && inX && y >= view.y + view.h + 6 && y <= view.y + view.h + box.colLabelH) {
+    if (this.settings.heatmap_header && cam.cw >= 8 && inX && y >= view.y + view.h + 6 + box.trackH && y <= view.y + view.h + box.trackH + box.colLabelH) {
       const index = Math.floor((x - view.x + cam.sx) / cam.cw);
       if (index >= 0 && index < this._nCols) return { name: "colLabel", x, y, index };
     }
@@ -2306,6 +2632,28 @@ class ClusterHeatmap {
       this._requestRender();
     }
     this._setHover(cell, e, region);
+    if (region.name === "rowTrack" || region.name === "colTrack") {
+      // What a track shows at this row / column.
+      const rowTrack = region.name === "rowTrack";
+      const track = (rowTrack ? this._tracks.rows : this._tracks.cols)[region.track];
+      if (track) {
+        const value = track.values[region.index];
+        const label = rowTrack ? this._rowLabels[region.index] : this._colLabels[region.index];
+        const shown = value === true ? "yes" : value === null || value === undefined || value === false ? "no" : String(value);
+        this._showTooltip(`${track.name}: ${shown}\n${label}`, region);
+      }
+    }
+  }
+
+  _showTooltip(text, region) {
+    const tip = this._tooltip;
+    const box = this._layoutBox;
+    tip.textContent = text;
+    tip.style.display = "block";
+    const left = region.x + 14 + tip.offsetWidth > box.width ? region.x - tip.offsetWidth - 10 : region.x + 14;
+    const top = region.y + 16 + tip.offsetHeight > box.height ? region.y - tip.offsetHeight - 8 : region.y + 16;
+    tip.style.left = `${Math.max(0, left)}px`;
+    tip.style.top = `${Math.max(0, top)}px`;
   }
 
   _setHover(cell, e, region) {
@@ -2454,7 +2802,7 @@ class ClusterHeatmap {
     } else if (region.name === "colLabel") {
       const label = this._colLabels[region.index];
       this.events.label_onclick?.({ axis: "column", label, objects: [label] });
-    } else if (region.name !== "legend" && region.name !== "minimap") {
+    } else if (!["legend", "minimap", "rowTrack", "colTrack"].includes(region.name)) {
       this.events.empty_space_onclick?.(e);
     }
     this._updateHover(e);
@@ -2471,7 +2819,7 @@ class ClusterHeatmap {
 
   _onWheel(e) {
     const region = this._regionAt(e);
-    if (["none", "legend", "minimap", "rowLabel", "colLabel"].includes(region.name)) return;
+    if (!["heatmap", "rowTree", "colTree"].includes(region.name)) return;
     this._restoredView = null;
     const cam = this._cam;
     const view = this._viewRect();

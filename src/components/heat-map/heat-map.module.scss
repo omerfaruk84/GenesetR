@@ -275,3 +275,38 @@
     font: inherit;
   }
 }
+
+.annotate {
+  position: relative;
+  display: inline-flex;
+}
+
+.annotateMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 300px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #c4c9d0);
+  border-radius: 6px;
+  background: var(--surface-color, #fff);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  font-size: 13px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    cursor: pointer;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.4;
+  }
+}

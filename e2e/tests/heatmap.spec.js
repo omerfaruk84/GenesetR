@@ -510,4 +510,94 @@ test("zoom, position and cuts come back when the same result is drawn again", as
   expect(await withHeatmap(page, (hm) => hm.getClusters().columns.length)).toBe(3);
 });
 
+test("annotation tracks mark genes beside rows and below columns", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  const before = await withHeatmap(page, (hm) => ({ availW: hm._layoutBox.availW, availH: hm._layoutBox.availH }));
+
+  const tracks = await withHeatmap(page, (hm) => {
+    const ribosome = { name: "Ribosome", values: { RPL3: true, RPL4: true, RPS3: true } };
+    const family = { name: "Family", values: { PSMA1: "proteasome", RPL3: "ribosome", NDUFA2: "complex I" } };
+    hm.setAnnotations({ rows: [ribosome, family], columns: [ribosome] });
+    hm._renderNow();
+    const row = hm._rowLabels.indexOf("RPL3");
+    const other = hm._rowLabels.indexOf("PSMA1");
+    return {
+      rows: hm._tracks.rows.map((track) => track.name),
+      cols: hm._tracks.cols.map((track) => track.name),
+      member: hm._tracks.rows[0].colors[row],
+      nonMember: hm._tracks.rows[0].colors[other],
+      categories: new Set(hm._tracks.rows[1].colors.filter(Boolean)).size,
+      box: hm._layoutBox,
+    };
+  });
+  expect(tracks.rows).toEqual(["Ribosome", "Family"]);
+  expect(tracks.cols).toEqual(["Ribosome"]);
+  expect(tracks.member).toBe("#111111");
+  expect(tracks.nonMember).not.toBe("#111111");
+  expect(tracks.categories).toBe(3);
+  // The tracks take their room from the heatmap, not from the labels.
+  expect(tracks.box.trackW).toBeGreaterThan(0);
+  expect(tracks.box.availW).toBeLessThan(before.availW);
+  expect(tracks.box.availH).toBeLessThan(before.availH);
+
+  // The menu lists saved gene lists; without any it says how to get one.
+  await page.getByRole("button", { name: "Annotate" }).click();
+  await expect(page.getByTestId("annotate-menu")).toContainText("No saved gene lists yet");
+  expect(await errors()).toEqual([]);
+});
+
+test("export: the whole matrix as a 2x image and as SVG", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  // Zoom in first: the export must still show everything.
+  const result = await withHeatmap(page, (hm) => {
+    hm._zoomBy(3, 100, 100);
+    hm._renderNow();
+    const cam = { ...hm._cam };
+    const size = [hm._base.width, hm._base.height];
+    const canvas = hm.exportCanvas({ cell: 14, scale: 2 });
+    const ctx = canvas.getContext("2d");
+    const box = hm._layoutBox;
+    // A cell in the bottom-right corner of the matrix, far outside the zoomed view.
+    const x = Math.round((box.hmX + 59.5 * 14) * 2);
+    const y = Math.round((box.hmY + 59.5 * 14) * 2);
+    const pixel = Array.from(ctx.getImageData(x, y, 1, 1).data);
+    const corner = Array.from(ctx.getImageData(2, canvas.height - 3, 1, 1).data);
+    const svg = hm.exportSvg({ cell: 14 });
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      pixel,
+      corner,
+      sameView: hm._cam.cw === cam.cw && hm._cam.sx === cam.sx,
+      sameSize: hm._base.width === size[0] && hm._base.height === size[1],
+      svgStart: svg.slice(0, 4),
+      svgLabels: (svg.match(/<text /g) || []).length,
+      svgHasImage: svg.includes("<image ") && svg.includes("data:image/png;base64,"),
+      svgHasTrees: (svg.match(/<path /g) || []).length,
+      svgHasGene: svg.includes(">PSMA1</text>"),
+    };
+  });
+  expect(result.width).toBeGreaterThan(60 * 14 * 2);
+  expect(result.height).toBeGreaterThan(60 * 14 * 2);
+  expect(result.pixel[3]).toBe(255);
+  expect(result.pixel.slice(0, 3)).not.toEqual([255, 255, 255]); // a coloured cell
+  expect(result.corner).toEqual([255, 255, 255, 255]); // white background
+  expect(result.sameView).toBe(true);
+  expect(result.sameSize).toBe(true);
+  expect(result.svgStart).toBe("<svg");
+  expect(result.svgLabels).toBeGreaterThanOrEqual(122); // 60 row + 60 column labels + legend
+  expect(result.svgHasImage).toBe(true);
+  expect(result.svgHasTrees).toBe(2);
+  expect(result.svgHasGene).toBe(true);
+
+  // The buttons download files.
+  const [png] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export PNG" }).click()]);
+  expect(png.suggestedFilename()).toMatch(/^heatmap-.*\.png$/);
+  const [svgFile] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export SVG" }).click()]);
+  expect(svgFile.suggestedFilename()).toMatch(/^heatmap-.*\.svg$/);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

@@ -32,6 +32,8 @@ import { withErrorBoundary } from "../error-boundary";
 import { SendToMenu } from "../send-to";
 import { setHeatmapRangeInfo } from "../cluster-heatmap/rangeInfo";
 import { genePagePath } from "../../utils/geneLinks";
+import { listGeneLists, useWorkspaceVersion } from "../../utils/workspace";
+import { toGeneArray } from "../../utils/sendTo";
 import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
@@ -54,6 +56,8 @@ const INCHLIB_OPTIONAL_METHODS = [
   "getClusters",
   "setSquareCells",
   "focusGene",
+  "setAnnotations",
+  "exportSvg",
 ];
 
 // Enrichr accepts lists of 3-400 genes; at most this many clusters are
@@ -200,6 +204,39 @@ const HeatMap = ({
   const [isExporting, setIsExporting] = useState(false);
   // Number of clusters defined by the dendrogram cut lines (0 when there is no cut).
   const [clusterCounts, setClusterCounts] = useState({ rows: 0, columns: 0 });
+  // Annotation tracks: saved gene lists whose genes are marked on the heatmap.
+  const workspaceVersion = useWorkspaceVersion();
+  const [savedLists, setSavedLists] = useState([]);
+  const [annotationIds, setAnnotationIds] = useState([]);
+  const [annotateOpen, setAnnotateOpen] = useState(false);
+  const [drawnInstance, setDrawnInstance] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    listGeneLists()
+      .then((lists) => {
+        if (current) setSavedLists(lists);
+      })
+      .catch(() => {
+        if (current) setSavedLists([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [workspaceVersion]);
+
+  // One track per chosen list, on both axes; applied again to every new heatmap.
+  useEffect(() => {
+    const inchlib = inchlibInstance.current;
+    if (!inchlib?.setAnnotations) return;
+    const tracks = savedLists
+      .filter((list) => annotationIds.includes(list.id))
+      .map((list) => ({
+        name: list.name,
+        values: Object.fromEntries(toGeneArray(list.genes).map((gene) => [gene, true])),
+      }));
+    inchlib.setAnnotations({ rows: tracks, columns: tracks });
+  }, [annotationIds, savedLists, drawnInstance]);
   const clusterCount = clusterCounts.rows + clusterCounts.columns;
   // Leaves of each dendrogram: the upper limit of the "clusters" inputs.
   const [treeSizes, setTreeSizes] = useState({ rows: 0, columns: 0 });
@@ -302,12 +339,15 @@ const HeatMap = ({
       inchlib?.navigation_layer?.hide?.();
       inchlib?.navigation_layer?.draw?.();
 
-      const canvas = compositeStageToCanvas();
+      // The cluster heatmap exports the whole matrix at twice the screen
+      // resolution; the InCHlib builds export the canvases as they are.
+      const full = inchlib.exportCanvas ? inchlib.exportCanvas({ cell: 14, scale: 2 }) : null;
+      const canvas = full || compositeStageToCanvas();
       const blob = await canvasToBlob(canvas);
       if (extension === "pdf") {
-        // The page gets the size of the heatmap on screen; the image keeps
-        // the full resolution of the canvas.
-        const ratio = window.devicePixelRatio || 1;
+        // The page gets the size of the heatmap in CSS pixels; the image
+        // keeps the full resolution of the canvas.
+        const ratio = full ? 2 : window.devicePixelRatio || 1;
         saveJpegAsPdf(new Uint8Array(await blob.arrayBuffer()), canvas.width / ratio, canvas.height / ratio, "heatmap");
         return;
       }
@@ -338,6 +378,13 @@ const HeatMap = ({
       quality: 1,
     });
   }, [exportHeatmapImage]);
+
+  const exportHeatmapAsSvg = useCallback(() => {
+    const svg = inchlibInstance.current?.exportSvg?.({ cell: 14 });
+    if (!svg) return;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    saveAs(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), `heatmap-${timestamp}.svg`);
+  }, []);
 
   const exportHeatmapAsPdf = useCallback(() => {
     return exportHeatmapImage({
@@ -1217,6 +1264,8 @@ const keyedData = useMemo(() => {
       }
     }
     
+    setDrawnInstance(currentInstanceId);
+
     // A view saved for this very matrix (a shared link, or the same genes run
     // again) is restored; for any other result it is ignored.
     inchlib.setViewState?.(inchlibSettings.heatmap_view);
@@ -1471,6 +1520,58 @@ const keyedData = useMemo(() => {
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
                   Export PDF
                 </button>
+                {capabilities.exportSvg && (
+                  <button
+                    type="button"
+                    onClick={exportHeatmapAsSvg}
+                    className={ui.button}
+                    title="Download the whole heatmap as SVG (dendrograms and labels as vectors)"
+                  >
+                    <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                    Export SVG
+                  </button>
+                )}
+                {capabilities.setAnnotations && (
+                  <span className={styles.annotate}>
+                    <button
+                      type="button"
+                      className={ui.button}
+                      aria-haspopup="true"
+                      aria-expanded={annotateOpen}
+                      onClick={() => setAnnotateOpen((open) => !open)}
+                      title="Mark the genes of saved gene lists beside the rows and below the columns"
+                    >
+                      Annotate{annotationIds.length > 0 ? ` (${annotationIds.length})` : ""}
+                    </button>
+                    {annotateOpen && (
+                      <div className={styles.annotateMenu} role="menu" data-testid="annotate-menu">
+                        {savedLists.length === 0 ? (
+                          <p>
+                            No saved gene lists yet. Save a list to the workspace (for example a
+                            cluster with "Send to…") to mark its genes here.
+                          </p>
+                        ) : (
+                          savedLists.map((list) => (
+                            <label key={list.id}>
+                              <input
+                                type="checkbox"
+                                checked={annotationIds.includes(list.id)}
+                                onChange={(event) =>
+                                  setAnnotationIds((ids) =>
+                                    event.target.checked
+                                      ? [...ids, list.id]
+                                      : ids.filter((id) => id !== list.id)
+                                  )
+                                }
+                              />
+                              {list.name} <small>({list.count})</small>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </span>
+                )}
                 {capabilities.getClusters && (
                   <span
                     className={styles.clusterInputs}
