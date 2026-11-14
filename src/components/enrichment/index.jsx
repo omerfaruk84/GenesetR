@@ -151,6 +151,9 @@ const GeneSetEnrichmentTable = ({
   const [limitNotice, setLimitNotice] = useState("");
   const [showNavigationMenu, setShowNavigationMenu] = useState(false);
   const [useBackground, setUseBackground] = useState(true);
+  // What the chart area shows when there is nothing to plot
+  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [significantTerms, setSignificantTerms] = useState(0);
   const hasBackground = Array.isArray(background) && background.length > 0;
   const activeBackground = hasBackground && useBackground ? background : null;
   const navigationMenuRef = useRef(null);
@@ -224,8 +227,10 @@ const GeneSetEnrichmentTable = ({
 
     if (selectedDatasets.length === 0) {
       setkeyedData([]);
+      setEnrichmentLoading(false);
       return;
     }
+    setEnrichmentLoading(true);
 
     const formatP = (value) => {
       const num = Number(value);
@@ -245,6 +250,7 @@ const GeneSetEnrichmentTable = ({
     })
       .then((results) => {
         if (!isCurrent()) return;
+        setEnrichmentLoading(false);
         const rows = [];
         for (const library of results || []) {
           for (const term of library?.data || []) {
@@ -275,6 +281,7 @@ const GeneSetEnrichmentTable = ({
       })
       .catch((error) => {
         if (!isCurrent()) return;
+        setEnrichmentLoading(false);
         setkeyedData([]);
         toast({
           message: {
@@ -695,6 +702,18 @@ const GeneSetEnrichmentTable = ({
       }
     }
 
+    setSignificantTerms(bubbleGraphData.length);
+
+    // The two legends span the values that are plotted. (Fixed limits used to
+    // push the strongest terms, and most ordinary ones, out of range, where
+    // they were drawn as faint white dots.)
+    const finiteOf = (key) => bubbleGraphData.map((d) => Number(d[key])).filter(Number.isFinite);
+    const logPValues = finiteOf("Adjusted log p-value");
+    const scoreValues = finiteOf("Combined score");
+    const logPMax = Math.max(2, Math.ceil(Math.max(0, ...logPValues)));
+    const scoreMin = scoreValues.length ? Math.floor(Math.min(...scoreValues)) : 0;
+    const scoreMax = scoreValues.length ? Math.max(scoreMin + 1, Math.ceil(Math.max(...scoreValues))) : 1;
+
     // -log10(adj. p) of the 10th most significant term (or the weakest one
     // when there are fewer than 10); terms at or above it get a label.
     const sortedLogP = bubbleGraphData
@@ -764,12 +783,12 @@ const GeneSetEnrichmentTable = ({
           top: "10%",
           dimension: 1,
           min: 0,
-          max: 20,
+          max: logPMax,
           itemWidth: 30,
           itemHeight: 120,
           calculable: true,
-          precision: 0.1,
-          text: ["P Value"],
+          precision: 1,
+          text: ["-log10\nadj. p"],
           textGap: 10,
           inRange: {
             symbolSize: [10, 70],
@@ -792,12 +811,12 @@ const GeneSetEnrichmentTable = ({
           bottom: "10%",
           // "Combined score" is the third dataset dimension (index 2)
           dimension: 2,
-          min: 100,
-          max: 1000,
+          min: scoreMin,
+          max: scoreMax,
           itemWidth: 30,
           itemHeight: 120,
           calculable: true,
-          precision: 0.1,
+          precision: 0,
           text: ["Combined\nScore"],
           textGap: 10,
           inRange: {
@@ -852,10 +871,7 @@ const GeneSetEnrichmentTable = ({
         {
           //name: '1990',
           type: "scatter",
-          symbolSize: function (data) {
-            const score = Number(data?.["Combined score"]);
-            return Number.isFinite(score) && score > 0 ? Math.sqrt(score) : 10;
-          },
+          // Size and shade come from the two visualMaps above.
           emphasis: {
             label: {
               show: true,
@@ -928,9 +944,12 @@ const GeneSetEnrichmentTable = ({
 
       tooltip: {
         trigger: "axis",
+        confine: true,
         axisPointer: {
           type: "shadow",
         },
+        valueFormatter: (value) =>
+          typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : value,
       },
 
       toolbox: {
@@ -938,7 +957,7 @@ const GeneSetEnrichmentTable = ({
         feature: {
           dataZoom: {},
           mark: { show: true },
-          saveAsImage: { show: true, pixelRatio: 3 },
+          saveAsImage: { show: true, pixelRatio: 3, name: "genesetr_enrichment" },
           mySvg: svgToolboxFeature("genesetr-enrichment"),
           myPdf: pdfToolboxFeature("genesetr-enrichment"),
         },
@@ -961,7 +980,7 @@ const GeneSetEnrichmentTable = ({
           type: "value",
           position: "top",
           inverse: true,
-          name: "Adjusted log p-value",
+          name: "-log10 (adjusted p)",
           nameLocation: "center",
           nameTextStyle: {
             fontWeight: "bold",
@@ -987,8 +1006,11 @@ const GeneSetEnrichmentTable = ({
           },
         },
         axisLabel: {
-          margin: 10, // Adjusts the space between the labels and the axis line
-          // Other properties like rotate, formatter, etc., can also be adjusted here
+          margin: 10,
+          // Long term names are cut instead of running under the zoom slider;
+          // the tooltip has the full name.
+          width: 260,
+          overflow: "truncate",
         },
         type: "category",
         nameRotate: 90,
@@ -1017,7 +1039,7 @@ const GeneSetEnrichmentTable = ({
           width: 30,
           height: "80%",
           showDataShadow: true,
-          left: "93%",
+          right: 4,
           filterMode: "filter",
         },
       ],
@@ -1032,7 +1054,7 @@ const GeneSetEnrichmentTable = ({
           },
         },
         {
-          name: "Adjusted log p-value",
+          name: "-log10 (adjusted p)",
           type: "scatter",
           xAxisIndex: 1, // Use second xAxis for Adjusted p-value
           symbolSize: 7, // Adjust as needed
@@ -1613,15 +1635,39 @@ const GeneSetEnrichmentTable = ({
 
           <Row spacing={0} width="100%" height="70%">
             <div style={{ width: "100%", height: "100%" }}>
-              <ReactEChartsCore
-                echarts={echarts}
-                option={
-                  genesetEnrichmentSettings.isBargraph ? options2 : options
-                }
-                style={{ height: "60VH", width: "100%" }}
-                notMerge={true}
-                lazyUpdate={true}
-              />
+              {significantTerms > 0 ? (
+                <ReactEChartsCore
+                  echarts={echarts}
+                  option={
+                    genesetEnrichmentSettings.isBargraph ? options2 : options
+                  }
+                  style={{ height: "60VH", width: "100%" }}
+                  notMerge={true}
+                  lazyUpdate={true}
+                />
+              ) : (
+                selectedCluster && (
+                  <div
+                    role="status"
+                    data-testid="enrichment-chart-empty"
+                    style={{
+                      margin: "16px 0",
+                      padding: "18px 14px",
+                      textAlign: "center",
+                      border: "1px dashed #c4c9d0",
+                      borderRadius: "6px",
+                      color: "#5a6470",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {enrichmentLoading
+                      ? "Running the enrichment…"
+                      : keyedData.length > 0
+                      ? `None of the ${keyedData.length} terms has an adjusted p-value below 0.05, so there is nothing to plot. The table below lists them all.`
+                      : "No enrichment results for this gene list."}
+                  </div>
+                )
+              )}
             </div>
           </Row>
           <div

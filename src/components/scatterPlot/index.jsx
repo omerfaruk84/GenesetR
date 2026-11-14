@@ -38,6 +38,7 @@ import $, { param } from "jquery";
 import { string } from "prop-types";
 import { ToolbarButton } from "../ui";
 import { PlotHelp } from "../plot-help";
+import { SendToMenu } from "../send-to";
 // import text from './sample.json';
 
 echarts.use([
@@ -74,6 +75,8 @@ const ScatterPlot = ({
   // Gene found by "Search & Zoom": { gene, index, x: [min,max], y, z }
   const [focus, setFocus] = useState(null);
   const chartInstanceRef = useRef(null);
+  // Genes inside the brush drawn on the 2D plot (toolbox: rectangle / polygon)
+  const [brushedGenes, setBrushedGenes] = useState([]);
   // Axis titles follow the method that produced the embedding
   const axisPrefix =
     { pca: "PC", umap: "UMAP", tsne: "t-SNE", mde: "MDE" }[
@@ -154,17 +157,19 @@ const ScatterPlot = ({
       "#b5bd48",
       "#8378EA",
       "#96BFFF",
-      "#1f77b4",
+      "#00429d",
       "#ff7f0e",
-      "#2ca02c",
+      "#006d2c",
       "#d62728",
       "#9467bd",
       "#8c564b",
       "#e377c2",
-      "#7f7f7f",
+      "#f032e6",
       "#bcbd22",
       "#17becf",
     ];
+    // Entry 0 is the grey of unclustered points; clusters cycle through the rest.
+    const clusterColor = (index) => COLOR_ALL[1 + (index % (COLOR_ALL.length - 1))];
 
     let graphdata = graphData;
     
@@ -353,7 +358,7 @@ const ScatterPlot = ({
           pieces.push({
             value: i,
             label: "Cluster " + (i + 1),
-            color: COLOR_ALL[(i + 1) % 18],
+            color: clusterColor(i),
             symbolSize: scatterplotSettings.symbolSize,
             symbol: "circle",
           });
@@ -377,7 +382,7 @@ const ScatterPlot = ({
       }
     }
 
-    return { data, pieces, clusterData, minandmax, clusters, COLOR_ALL, shouldColorByCellLine };
+    return { data, pieces, clusterData, minandmax, clusters, COLOR_ALL, clusterColor, shouldColorByCellLine };
   }, [graphData, scatterplotSettings.symbolSize, precomputedDrSettings?.colorBy]);
 
   const data = processedData.data;
@@ -386,6 +391,7 @@ const ScatterPlot = ({
   const minandmax = processedData.minandmax;
   const clusters = processedData.clusters;
   const COLOR_ALL = processedData.COLOR_ALL;
+  const clusterColor = processedData.clusterColor;
   const shouldColorByCellLine = processedData.shouldColorByCellLine;
 
   useEffect(() => {
@@ -406,7 +412,7 @@ const ScatterPlot = ({
         }
       }
 
-      var color = COLOR_ALL[(curIndex + 1) % 18];
+      var color = clusterColor(curIndex);
 
       return {
         type: "polygon",
@@ -595,11 +601,15 @@ const ScatterPlot = ({
             symbolSize: scatterplotSettings.symbolSize,
             itemGroupId: 4,
             datasetIndex: 0,
-            emphasis: {
-              focus: "self",
-            },
+            // Thousands of points (the all-genes embeddings): no entry animation.
+            animation: data.length < 3000,
+            labelLayout: { hideOverlap: true },
             label: {
-              show: true,
+              // A label element per point is costly, so only when labels are asked for.
+              show:
+                scatterplotSettings.showLabels === true ||
+                genesTolabel.size > 0 ||
+                focusGene !== undefined,
               position: scatterplotSettings.labelLoc,
               fontSize: scatterplotSettings.labelSize,
               formatter: function (params) {
@@ -774,13 +784,8 @@ const ScatterPlot = ({
             saveAsImage: { show: true },
             mySvg: svgToolboxFeature("genesetr-embedding"),
             myPdf: pdfToolboxFeature("genesetr-embedding"),
-            dataZoom: {},
-            brush: {
-              type: ["rect", "polygon", "keep", "clear"],
-            },
           },
         },
-        brush: {},
         series: [
           {
             symbol: "circle",
@@ -817,7 +822,7 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData, focus, genesTolabel]);
+  }, [coreSettings.graphType, coreSettings.currentModule, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData, focus, genesTolabel]);
 
   // Search a gene: zoom the axes around it and emphasise its point/label.
   // The zoom window and the highlighted gene live in state so they survive
@@ -963,6 +968,13 @@ const ScatterPlot = ({
               Reset view
             </ToolbarButton>
           )}
+          {brushedGenes.length > 0 && (
+            <SendToMenu
+              genes={brushedGenes}
+              label={`Send ${brushedGenes.length} selected…`}
+              defaultName="Embedding selection"
+            />
+          )}
         </div>
         <Row spacing={0} width="100%" height="80vh">
           <ReactEChartsCore
@@ -971,6 +983,20 @@ const ScatterPlot = ({
             style={{ height: "100%", width: "100%" }}
             notMerge={true}
             lazyUpdate={true}
+            onEvents={{
+              // Row 0 of the dataset is its header, so point i is data[i + 1].
+              brushselected: (event) => {
+                const indices = (event?.batch?.[0]?.selected || []).flatMap((entry) => entry.dataIndex || []);
+                const genes = Array.from(
+                  new Set(indices.map((index) => data[index + 1]?.[3]).filter(Boolean).map(String))
+                );
+                setBrushedGenes((previous) =>
+                  previous.length === genes.length && previous.every((gene, i) => gene === genes[i])
+                    ? previous
+                    : genes
+                );
+              },
+            }}
             onChartReady={(chart) => {
               chartInstanceRef.current = chart;
             }}
