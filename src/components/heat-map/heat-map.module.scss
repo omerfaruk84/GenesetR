@@ -160,3 +160,34 @@
   font-size: 13px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
 }
+
+/* Cluster panel beside the heatmap (fast renderer) */
+.panelDivider {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: var(--border-color, #dfe3e8);
+  touch-action: none;
+
+  &:hover {
+    background: #a63648;
+  }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-color, #fff);
+  border-bottom: 1px solid var(--border-color, #dfe3e8);
+}
+
+.panelActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

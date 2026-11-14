@@ -136,6 +136,9 @@ const GeneSetEnrichmentTable = ({
   // given, enrichment is tested against it instead of the whole genome.
   background = null,
   backgroundLabel = "analysed genes",
+  // Optional: called with a term's overlapping genes while its table row is
+  // hovered, and with null when the pointer leaves.
+  onTermHover = null,
   genesetEnrichmentSettingsChanged,
   genesetEnrichmentSettings,
   //clusteringSettingsChanged,
@@ -524,6 +527,8 @@ const GeneSetEnrichmentTable = ({
 
         return {
           cells: rowsCells,
+          onRowMouseEnter: onTermHover ? () => onTermHover(dataRow.GC) : undefined,
+          onRowMouseLeave: onTermHover ? () => onTermHover(null) : undefined,
 
           //onRowMouseEnter: () => setDisplayText('Genes ' + identified + "\nMissing: " + distinctValues),
           //onRowMouseLeave: () => setDisplayText(''),

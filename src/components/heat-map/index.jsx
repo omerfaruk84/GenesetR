@@ -28,6 +28,7 @@ import { saveAs } from "file-saver";
 import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
 import { withErrorBoundary } from "../error-boundary";
+import { SendToMenu } from "../send-to";
 import ui from "../ui/ui.module.scss";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
@@ -92,6 +93,12 @@ const HeatMap = ({
   const [selectedGenes, setSelectedGenes] = useState([]);
   // Which dendrogram the selected cluster came from ("row" or "column").
   const [selectedAxis, setSelectedAxis] = useState("row");
+  // Width of the enrichment panel shown beside the heatmap (fast renderer).
+  const [panelWidth, setPanelWidth] = useState(560);
+  const panelDragRef = useRef(null);
+  const mainContentRef = useRef(null);
+  // Height of the heatmap + panel area so that it ends at the window's edge.
+  const [panelAreaHeight, setPanelAreaHeight] = useState(null);
   const [selectedView, setSelectedView] = useState(0);
   //const [keyedData, setKeyedData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +127,34 @@ const HeatMap = ({
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const closeSelection = useCallback(() => {
+    setSelectedGenes([]);
+    inchlibInstance.current?.unhighlight_cluster?.();
+    inchlibInstance.current?.highlightGenes?.([]);
+  }, []);
+
+  // Hovering a term in the enrichment table marks its genes on the heatmap.
+  const handleTermHover = useCallback((genes) => {
+    inchlibInstance.current?.highlightGenes?.(genes || []);
+  }, []);
+
+  const onPanelDragStart = useCallback(
+    (event) => {
+      panelDragRef.current = { x: event.clientX, width: panelWidth };
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    },
+    [panelWidth]
+  );
+  const onPanelDragMove = useCallback((event) => {
+    const drag = panelDragRef.current;
+    if (!drag) return;
+    const limit = (heatmapContainerRef.current?.clientWidth || 1200) * 0.7;
+    setPanelWidth(Math.round(Math.min(Math.max(drag.width + drag.x - event.clientX, 320), limit)));
+  }, []);
+  const onPanelDragEnd = useCallback(() => {
+    panelDragRef.current = null;
+  }, []);
 
   const [isExporting, setIsExporting] = useState(false);
   // Number of clusters defined by the dendrogram cut lines (0 when there is no cut).
@@ -294,6 +329,26 @@ const HeatMap = ({
       window.removeEventListener("scroll", onScroll, true);
     };
   }, [contextMenu, closeContextMenu]);
+
+  const sidePanel = capabilities.getClusters && selectedGenes.length > 0;
+
+  // Side by side, heatmap and panel scroll on their own, so the area must fit
+  // the window instead of the stacked layout's full viewport height.
+  useEffect(() => {
+    if (!sidePanel) {
+      setPanelAreaHeight(null);
+      return undefined;
+    }
+    const measure = () => {
+      const element = mainContentRef.current;
+      if (!element) return;
+      const top = element.getBoundingClientRect().top + window.scrollY;
+      setPanelAreaHeight(Math.max(420, Math.round(window.innerHeight - top - 8)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [sidePanel]);
 
   const columns = useMemo(() => {
     if (isMultiDataset && datasets && datasets.length > 0) {
@@ -1220,7 +1275,19 @@ const keyedData = useMemo(() => {
           
           <div
             className={styles.mainContent}
-            style={{ display: selectedView === 0 ? "flex" : "none" }}
+            ref={mainContentRef}
+            style={{
+              display: selectedView === 0 ? "flex" : "none",
+              // With the fast renderer a selected cluster opens beside the heatmap.
+              ...(sidePanel
+                ? {
+                    flexDirection: "row",
+                    overflow: "hidden",
+                    flex: "0 0 auto",
+                    height: panelAreaHeight || undefined,
+                  }
+                : {}),
+            }}
           >
             <div
               className={styles.scaledWrapper}
@@ -1231,6 +1298,7 @@ const keyedData = useMemo(() => {
                 marginBottom: "10px",
                 position: "relative",
                 height: "auto",
+                ...(sidePanel ? { flex: "1 1 0", minWidth: 0, width: "auto" } : {}),
               }}
             >
               <div
@@ -1245,13 +1313,29 @@ const keyedData = useMemo(() => {
               ></div>
             </div>
             
+            {sidePanel && (
+              <div
+                className={styles.panelDivider}
+                role="separator"
+                aria-orientation="vertical"
+                title="Drag to resize"
+                onPointerDown={onPanelDragStart}
+                onPointerMove={onPanelDragMove}
+                onPointerUp={onPanelDragEnd}
+                onPointerCancel={onPanelDragEnd}
+              />
+            )}
             <div
               id="protein_div"
+              data-testid="cluster-panel"
               style={{
                 marginLeft: "auto",
                 display: "block",
                 marginRight: "auto",
                 width: "100%",
+                ...(sidePanel
+                  ? { flex: "0 0 auto", width: panelWidth, height: "100%", overflow: "auto", margin: 0 }
+                  : {}),
               }}
             >
               <div id="loadingform">
@@ -1279,8 +1363,27 @@ const keyedData = useMemo(() => {
               {/* Clusters too small for Enrichr get the table's own notice. */}
               {selectedGenes.length > 0 && (
                 <div className={styles.enrichmentTableContainer}>
+                  <div className={styles.panelHeader}>
+                    <strong>
+                      {selectedAxis === "column" ? "Column" : "Row"} cluster · {selectedGenes.length} gene
+                      {selectedGenes.length === 1 ? "" : "s"}
+                    </strong>
+                    <span className={styles.panelActions}>
+                      <SendToMenu genes={selectedGenes} defaultName="Heatmap cluster" />
+                      <button
+                        type="button"
+                        className={ui.button}
+                        onClick={closeSelection}
+                        aria-label="Close the cluster panel"
+                        title="Clear the selection"
+                      >
+                        Close
+                      </button>
+                    </span>
+                  </div>
                   <GeneSetEnrichmentTable
                     genesets={genesets}
+                    onTermHover={handleTermHover}
                     background={enrichmentBackground}
                     backgroundLabel={
                       selectedAxis === "column" ? "heatmap columns" : "heatmap rows"

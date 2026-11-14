@@ -348,6 +348,7 @@ class ClusterHeatmap {
     this._cut = { row: null, col: null }; // normalised cut height per axis
     this._clusters = { row: null, col: null };
     this._highlightRows = [];
+    this._marks = { rows: [], cols: [] }; // highlightGenes()
     this._exporting = false;
     this._raf = 0;
     this._viewportHint = null;
@@ -420,6 +421,7 @@ class ClusterHeatmap {
     this._cut = { row: null, col: null };
     this._clusters = { row: null, col: null };
     this._highlightRows = [];
+    this._marks = { rows: [], cols: [] };
     this._hover = null;
     this._cam = null;
     this._labelMetrics = null;
@@ -566,6 +568,27 @@ class ClusterHeatmap {
     this._requestRender();
   }
 
+  /**
+   * Marks the rows and columns of the given gene symbols (a guide suffix such
+   * as "_2" is ignored). An empty list removes the marks.
+   */
+  highlightGenes(symbols) {
+    const wanted = new Set((symbols || []).map((symbol) => String(symbol).split("_")[0].toUpperCase()));
+    const matches = (name) => wanted.has(String(name).split("_")[0].toUpperCase());
+    const rows = [];
+    const cols = [];
+    if (wanted.size) {
+      (this._rowObjects || []).forEach((objects, r) => {
+        if (objects.some(matches)) rows.push(r);
+      });
+      (this._colLabels || []).forEach((label, c) => {
+        if (matches(label)) cols.push(c);
+      });
+    }
+    this._marks = { rows, cols };
+    this._requestRender();
+  }
+
   unhighlight_cluster() {
     this._selected = { row: -1, col: -1 };
     this._requestRender();
@@ -681,6 +704,8 @@ class ClusterHeatmap {
       target.removeEventListener(type, handler, options)
     );
     this._listeners = [];
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
     if (this._gl) {
       this._gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
@@ -784,6 +809,17 @@ class ClusterHeatmap {
       } else if (region.name !== "none") this.resetCamera();
     });
     this._listen(root, "wheel", (e) => this._onWheel(e), { passive: false });
+
+    // Follow the container's width (a side panel opening, the sidebar collapsing).
+    if (typeof ResizeObserver !== "undefined") {
+      this._resizeObserver = new ResizeObserver(() => {
+        const width = target.clientWidth;
+        if (this._layoutBox && width > 0 && Math.abs(width - this._layoutBox.width) > 1) {
+          this._relayout(false);
+        }
+      });
+      this._resizeObserver.observe(target);
+    }
   }
 
   /* --------------------------------------------------------------- layout */
@@ -1195,6 +1231,18 @@ class ClusterHeatmap {
       }
     }
     ctx.restore();
+
+    // Genes marked by highlightGenes(): a bar in the gutter beside each row
+    // and below each column, visible at any zoom.
+    ctx.fillStyle = "#d7191c";
+    this._marks.rows.forEach((r) => {
+      if (r < firstRow || r > lastRow) return;
+      ctx.fillRect(view.x + view.w + 1, rowY(r), 4, Math.max(cam.ch, 1.5));
+    });
+    this._marks.cols.forEach((c) => {
+      if (c < firstCol || c > lastCol) return;
+      ctx.fillRect(colX(c), view.y + view.h + 1, Math.max(cam.cw, 1.5), 4);
+    });
 
     // Colour strip marking each cluster next to its dendrogram.
     (rowClusters?.list || []).forEach((cluster) => {

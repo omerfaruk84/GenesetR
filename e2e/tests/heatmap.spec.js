@@ -107,4 +107,37 @@ test("a cluster too small for enrichment says so", async ({ page }) => {
   await expect(page.getByText(/Enrichment is only run for lists of 3-400 genes/)).toBeVisible();
 });
 
+test("the cluster panel opens beside the heatmap and links terms to rows", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  const widthBefore = await withHeatmap(page, (hm) => hm._layoutBox.width);
+
+  const node = await treeNodePoint(page, "row", 8);
+  await page.mouse.click(node.x, node.y);
+  const panel = page.getByTestId("cluster-panel");
+  await expect(panel.getByText(`Row cluster · ${node.size} genes`)).toBeVisible();
+
+  // Side by side: the heatmap gave up width and the panel starts right of it.
+  await expect.poll(() => withHeatmap(page, (hm) => hm._layoutBox.width)).toBeLessThan(widthBefore - 200);
+  const heatmapBox = await page.locator("[data-cluster-heatmap]").boundingBox();
+  const panelBox = await panel.boundingBox();
+  expect(panelBox.x).toBeGreaterThanOrEqual(heatmapBox.x + heatmapBox.width - 1);
+  expect(Math.abs(panelBox.y - heatmapBox.y)).toBeLessThan(80);
+
+  // Hovering a term marks its overlap genes (RPL3, RPL4, RPS3 in the fixture).
+  await panel.getByText("Ribosome").first().hover();
+  await expect.poll(() => withHeatmap(page, (hm) => hm._marks.rows.length)).toBe(3);
+  expect(await withHeatmap(page, (hm) => hm._marks.rows.map((r) => hm._rowLabels[r]).sort())).toEqual([
+    "RPL3",
+    "RPL4",
+    "RPS3",
+  ]);
+
+  await panel.getByRole("button", { name: "Close the cluster panel" }).click();
+  await expect(panel.getByText(/Row cluster/)).toHaveCount(0);
+  await expect.poll(() => withHeatmap(page, (hm) => hm._layoutBox.width)).toBe(widthBefore);
+  expect(await withHeatmap(page, (hm) => hm._selected.row)).toBe(-1);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };
