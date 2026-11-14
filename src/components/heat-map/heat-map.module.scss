@@ -226,3 +226,26 @@
     background: rgba(166, 54, 72, 0.08);
   }
 }
+
+.geneSearch {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+
+  input {
+    height: 30px;
+    width: 150px;
+    padding: 0 8px;
+    border: 1px solid var(--border-color, #c4c9d0);
+    border-radius: 4px;
+    background: var(--surface-color, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .geneSearchMissing {
+    border-color: #d7191c;
+    outline: 1px solid #d7191c;
+  }
+}

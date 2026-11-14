@@ -52,6 +52,7 @@ const INCHLIB_OPTIONAL_METHODS = [
   "updateDendrogramLineWidth",
   "getClusters",
   "setSquareCells",
+  "focusGene",
 ];
 
 // Enrichr accepts lists of 3-400 genes; at most this many clusters are
@@ -198,6 +199,15 @@ const HeatMap = ({
   const [isExporting, setIsExporting] = useState(false);
   // Number of clusters defined by the dendrogram cut lines (0 when there is no cut).
   const [clusterCount, setClusterCount] = useState(0);
+  // "Find gene" box above the heatmap
+  const [geneQuery, setGeneQuery] = useState("");
+  const [geneOptions, setGeneOptions] = useState([]);
+  const [geneMissing, setGeneMissing] = useState(false);
+
+  const findGene = useCallback((query) => {
+    const result = inchlibInstance.current?.focusGene?.(query);
+    setGeneMissing(!!String(query).trim() && !!result && result.rows + result.columns === 0);
+  }, []);
 
   const exportClustersAsCsv = useCallback(() => {
     const clusters = inchlibInstance.current?.getClusters?.();
@@ -1001,6 +1011,9 @@ const keyedData = useMemo(() => {
     
     inchlibInstance.current = inchlib;
 
+    setGeneQuery("");
+    setGeneMissing(false);
+
     // Record which optional controls this library version supports.
     const nextCapabilities = detectInchlibCapabilities(inchlib);
     setCapabilities((prev) =>
@@ -1097,6 +1110,18 @@ const keyedData = useMemo(() => {
       heatmap_header: true,
     });
     inchlib.draw();
+    if (inchlib.getLabels) {
+      const labels = inchlib.getLabels();
+      setGeneOptions(
+        Array.from(
+          new Set([...labels.rows, ...labels.columns].map((label) => String(label).split(/[_ ]/)[0]))
+        )
+          .sort()
+          .slice(0, 5000)
+      );
+    } else {
+      setGeneOptions([]);
+    }
     if (inchlib.setAutoRange) {
       // The cluster heatmap starts from the display settings in the sidebar
       // (the InCHlib builds only follow them once they change).
@@ -1350,6 +1375,41 @@ const keyedData = useMemo(() => {
                 visibility: selectedView === 0 && !loading ? "visible" : "hidden",
               }}
             >
+              {capabilities.focusGene && (
+                <form
+                  className={styles.geneSearch}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    findGene(geneQuery);
+                  }}
+                >
+                  <input
+                    type="search"
+                    list="heatmap-gene-options"
+                    placeholder="Find gene…"
+                    aria-label="Find a gene in the heatmap"
+                    data-testid="heatmap-gene-search"
+                    value={geneQuery}
+                    className={geneMissing ? styles.geneSearchMissing : undefined}
+                    title={geneMissing ? "Not in this heatmap" : "Type a gene symbol and press Enter"}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setGeneQuery(value);
+                      // Cleared, or picked from the suggestions: act at once.
+                      if (!value.trim() || geneOptions.includes(value.trim().toUpperCase())) {
+                        findGene(value);
+                      } else {
+                        setGeneMissing(false);
+                      }
+                    }}
+                  />
+                  <datalist id="heatmap-gene-options">
+                    {geneOptions.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                </form>
+              )}
               <div className={styles.zoomControls}>
                 <PlotHelp kind={window.location.pathname.includes("correlation") ? "correlationHeatmap" : "expressionHeatmap"} />
                 <button

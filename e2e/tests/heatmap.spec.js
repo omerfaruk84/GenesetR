@@ -411,4 +411,49 @@ test("navigation: box zoom, zoom to a cluster, square cells, touch pinch", async
   expect(await errors()).toEqual([]);
 });
 
+test("find a gene: the view jumps to it; the minimap shows and moves the view", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  expect(await withHeatmap(page, (hm) => hm._minimapRect())).toBeNull(); // everything is in view
+
+  const search = page.getByTestId("heatmap-gene-search");
+  await search.fill("psma1");
+  await search.press("Enter");
+  const found = await withHeatmap(page, (hm) => {
+    const view = hm._viewRect();
+    const row = hm._marks.rows[0];
+    const y = row * hm._cam.ch - hm._cam.sy;
+    return {
+      rows: hm._marks.rows.map((r) => hm._rowLabels[r]),
+      cols: hm._marks.cols.map((c) => hm._colLabels[c]),
+      cell: hm._cam.ch,
+      visible: y >= 0 && y + hm._cam.ch <= view.h + 0.5,
+    };
+  });
+  expect(found.rows).toEqual(["PSMA1"]);
+  expect(found.cols).toEqual(["PSMA1"]);
+  expect(found.cell).toBeGreaterThanOrEqual(12);
+  expect(found.visible).toBe(true);
+
+  // Zoomed in now: the minimap appears; a click on its corner goes there.
+  const minimap = await withHeatmap(page, (hm) => {
+    const rect = hm._minimapRect();
+    const root = hm._root.getBoundingClientRect();
+    return rect && { x: root.left + rect.x, y: root.top + rect.y, w: rect.w, h: rect.h };
+  });
+  expect(minimap).not.toBeNull();
+  await page.mouse.click(minimap.x + 1, minimap.y + 1);
+  expect(await withHeatmap(page, (hm) => [hm._cam.sx, hm._cam.sy])).toEqual([0, 0]);
+  await page.mouse.click(minimap.x + minimap.w - 1, minimap.y + minimap.h - 1);
+  expect(await withHeatmap(page, (hm) => hm._cam.sy)).toBeGreaterThan(0);
+
+  // An unknown symbol is flagged; clearing the box removes the marks.
+  await search.fill("NOSUCHGENE");
+  await search.press("Enter");
+  await expect(search).toHaveAttribute("title", "Not in this heatmap");
+  await search.fill("");
+  expect(await withHeatmap(page, (hm) => hm._marks.rows.length + hm._marks.cols.length)).toBe(0);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

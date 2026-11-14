@@ -798,6 +798,53 @@ class ClusterHeatmap {
     this._requestRender();
   }
 
+  /** Row and column labels in display order. */
+  getLabels() {
+    return { rows: (this._rowLabels || []).slice(), columns: (this._colLabels || []).slice() };
+  }
+
+  /**
+   * Finds a gene by symbol (exact, else by prefix; a guide suffix is
+   * ignored), marks its rows and columns and brings the first one to the
+   * middle of the view, zooming in far enough to read its label. An empty
+   * query removes the marks. Returns the number of rows and columns found.
+   */
+  focusGene(query) {
+    const wanted = String(query || "").trim().toUpperCase();
+    const base = (name) => String(name).split("_")[0].toUpperCase();
+    const search = (test) => {
+      const rows = [];
+      const cols = [];
+      (this._rowObjects || []).forEach((objects, r) => {
+        if (objects.some((object) => test(base(object)))) rows.push(r);
+      });
+      (this._colLabels || []).forEach((label, c) => {
+        if (test(base(label))) cols.push(c);
+      });
+      return { rows, cols };
+    };
+    let found = { rows: [], cols: [] };
+    if (wanted) {
+      found = search((name) => name === wanted);
+      if (!found.rows.length && !found.cols.length) found = search((name) => name.startsWith(wanted));
+    }
+    this._marks = found;
+    const cam = this._cam;
+    const box = this._layoutBox;
+    if (cam && box && (found.rows.length || found.cols.length)) {
+      const readable = 12;
+      if (found.rows.length) cam.ch = Math.max(cam.ch, readable);
+      if (found.cols.length) cam.cw = Math.max(cam.cw, readable);
+      if (this.settings.square_cells) cam.cw = cam.ch = Math.max(cam.cw, cam.ch);
+      this._clampCamera();
+      if (found.rows.length) cam.sy = (found.rows[0] + 0.5) * cam.ch - box.availH / 2;
+      if (found.cols.length) cam.sx = (found.cols[0] + 0.5) * cam.cw - box.availW / 2;
+      this._clampCamera();
+    }
+    this._requestRender();
+    return { rows: found.rows.length, columns: found.cols.length };
+  }
+
   unhighlight_cluster() {
     this._selected = { row: -1, col: -1 };
     this._requestRender();
@@ -1073,7 +1120,7 @@ class ClusterHeatmap {
       } else if (kind && this._cut[kind] !== null) {
         this._selected = { row: -1, col: -1 }; // undo the selection made by the first click
         this._setCut(kind, null, true);
-      } else if (region.name !== "none") this.resetCamera();
+      } else if (region.name !== "none" && region.name !== "minimap") this.resetCamera();
     });
     this._listen(root, "wheel", (e) => this._onWheel(e), { passive: false });
 
@@ -1116,6 +1163,13 @@ class ClusterHeatmap {
   _relayout(resetCamera) {
     const target = this._target();
     if (!this._root || !target) return;
+    // A view that shows everything keeps doing so when the layout changes;
+    // a view the user zoomed keeps its zoom.
+    const wasFit =
+      !!this._cam &&
+      !!this._layoutBox &&
+      this._cam.cw === this._layoutBox.fitCw &&
+      this._cam.ch === this._layoutBox.fitCh;
 
     const width = Math.max(target.clientWidth || this._viewportHint?.width || 0, 320);
     const metrics = this._measureLabels();
@@ -1171,7 +1225,7 @@ class ClusterHeatmap {
     this.settings.height = height;
     this.settings.width = width;
 
-    if (resetCamera || !this._cam) this._cam = { cw: fitCw, ch: fitCh, sx: 0, sy: 0 };
+    if (resetCamera || !this._cam || wasFit) this._cam = { cw: fitCw, ch: fitCh, sx: 0, sy: 0 };
     this._clampCamera();
     this._requestRender();
   }
@@ -1573,6 +1627,8 @@ class ClusterHeatmap {
     });
 
     // Row labels: only the visible rows, only when they are legible.
+    const markedRows = new Set(this._marks.rows);
+    const markedCols = new Set(this._marks.cols);
     ctx.fillStyle = "#222";
     ctx.textBaseline = "middle";
     if (this.settings.draw_row_ids) {
@@ -1583,8 +1639,10 @@ class ClusterHeatmap {
         for (let r = firstRow; r <= lastRow; r++) {
           const y = rowY(r) + cam.ch / 2;
           if (y < view.y - 1 || y > view.y + view.h + 1) continue;
+          ctx.fillStyle = markedRows.has(r) ? "#d7191c" : "#222";
           ctx.fillText(this._rowLabels[r], x, y);
         }
+        ctx.fillStyle = "#222";
       } else if (hover) {
         ctx.font = `bold 11px ${font}`;
         ctx.fillText(this._rowLabels[hover.row], x, clamp(rowY(hover.row) + cam.ch / 2, view.y + 6, view.y + view.h - 6));
@@ -1599,6 +1657,7 @@ class ClusterHeatmap {
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = "right";
         ctx.font = `${weight}${clamp(cam.cw * 0.8, 8, 12)}px ${font}`;
+        ctx.fillStyle = markedCols.has(c) ? "#d7191c" : "#222";
         ctx.fillText(this._colLabels[c], 0, 0);
         ctx.restore();
       };
@@ -1612,6 +1671,88 @@ class ClusterHeatmap {
         drawColumn(hover.col, "bold ");
       }
     }
+    this._drawMinimap(ctx);
+  }
+
+  /**
+   * Where the minimap goes: the empty corner below the row labels and right
+   * of the column labels. Null when the whole matrix is in view or the corner
+   * is too small.
+   */
+  _minimapRect() {
+    const box = this._layoutBox;
+    const cam = this._cam;
+    if (!box || !cam || !this._nRows || !this._nCols) return null;
+    const zoomed = this._nCols * cam.cw > box.availW + 1 || this._nRows * cam.ch > box.availH + 1;
+    if (!zoomed) return null;
+    const view = this._viewRect();
+    const maxW = box.rowLabelW - 10;
+    const maxH = box.colLabelH - 10;
+    if (maxW < 30 || maxH < 30) return null;
+    // Same proportions as the whole matrix at the current cell shape.
+    const aspect = (this._nCols * cam.cw) / (this._nRows * cam.ch);
+    const w = Math.min(maxW, maxH * aspect);
+    const h = Math.min(maxH, maxW / aspect);
+    if (w < 12 || h < 12) return null;
+    return { x: view.x + box.availW + 6, y: view.y + box.availH + 6, w, h };
+  }
+
+  _drawMinimap(ctx) {
+    const rect = this._exporting ? null : this._minimapRect();
+    if (!rect) return;
+    if (!this._thumbnail || this._dataDirty || this._lutDirty) {
+      // A small picture of the whole matrix, one sampled cell per pixel.
+      const size = 64;
+      const thumb = this._thumbnail || document.createElement("canvas");
+      thumb.width = Math.min(size, this._nCols);
+      thumb.height = Math.min(size, this._nRows);
+      const thumbCtx = thumb.getContext("2d");
+      const pixels = thumbCtx.createImageData(thumb.width, thumb.height);
+      for (let y = 0; y < thumb.height; y++) {
+        const r = Math.floor(((y + 0.5) / thumb.height) * this._nRows);
+        for (let x = 0; x < thumb.width; x++) {
+          const c = Math.floor(((x + 0.5) / thumb.width) * this._nCols);
+          const rgb = this._colorOf(this._values[r * this._nCols + c]);
+          const i = (y * thumb.width + x) * 4;
+          pixels.data[i] = rgb[0];
+          pixels.data[i + 1] = rgb[1];
+          pixels.data[i + 2] = rgb[2];
+          pixels.data[i + 3] = 255;
+        }
+      }
+      thumbCtx.putImageData(pixels, 0, 0);
+      this._thumbnail = thumb;
+    }
+    const cam = this._cam;
+    const view = this._viewRect();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this._thumbnail, rect.x, rect.y, rect.w, rect.h);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rect.x - 0.5, rect.y - 0.5, rect.w + 1, rect.h + 1);
+    // The part of the matrix on screen.
+    const fx = rect.w / (this._nCols * cam.cw);
+    const fy = rect.h / (this._nRows * cam.ch);
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(
+      rect.x + cam.sx * fx,
+      rect.y + cam.sy * fy,
+      Math.max(view.w * fx, 2),
+      Math.max(view.h * fy, 2)
+    );
+  }
+
+  /** Centres the view on the point (x, y) of the minimap. */
+  _panToMinimap(x, y) {
+    const rect = this._minimapRect();
+    if (!rect) return;
+    const cam = this._cam;
+    const box = this._layoutBox;
+    cam.sx = (clamp(x - rect.x, 0, rect.w) / rect.w) * this._nCols * cam.cw - box.availW / 2;
+    cam.sy = (clamp(y - rect.y, 0, rect.h) / rect.h) * this._nRows * cam.ch - box.availH / 2;
+    this._clampCamera();
+    this._requestRender();
   }
 
   /**
@@ -1934,6 +2075,10 @@ class ClusterHeatmap {
     if (inX && inY) return { name: "heatmap", x, y };
     if (box.dendW && inY && x >= box.dendX && x < view.x) return { name: "rowTree", x, y };
     if (box.colDendH && inX && y >= box.colDendY && y < view.y) return { name: "colTree", x, y };
+    const minimap = this._minimapRect();
+    if (minimap && x >= minimap.x && x <= minimap.x + minimap.w && y >= minimap.y && y <= minimap.y + minimap.h) {
+      return { name: "minimap", x, y };
+    }
     if (this._stats) {
       const legend = this._legendFrame();
       if (
@@ -1975,6 +2120,7 @@ class ClusterHeatmap {
     if (e.button !== 0) return;
     this._root.focus?.({ preventScroll: true });
     const region = this._regionAt(e);
+    if (region.name === "minimap") this._panToMinimap(region.x, region.y);
     this._drag = {
       region: region.name,
       // Shift-drag on the heatmap draws a box to zoom to.
@@ -2004,6 +2150,12 @@ class ClusterHeatmap {
       return;
     }
     const drag = this._drag;
+    if (drag && drag.region === "minimap") {
+      const { x, y } = this._point(e);
+      drag.moved = true;
+      this._panToMinimap(x, y);
+      return;
+    }
     if (drag && drag.box) {
       const view = this._viewRect();
       const { x, y } = this._point(e);
@@ -2212,7 +2364,7 @@ class ClusterHeatmap {
       } else {
         this.events.empty_space_onclick?.(e);
       }
-    } else if (region.name !== "legend") {
+    } else if (region.name !== "legend" && region.name !== "minimap") {
       this.events.empty_space_onclick?.(e);
     }
     this._updateHover(e);
@@ -2229,7 +2381,7 @@ class ClusterHeatmap {
 
   _onWheel(e) {
     const region = this._regionAt(e);
-    if (region.name === "none" || region.name === "legend") return;
+    if (region.name === "none" || region.name === "legend" || region.name === "minimap") return;
     const cam = this._cam;
     const view = this._viewRect();
     const box = this._layoutBox;
