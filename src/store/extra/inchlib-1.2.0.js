@@ -1669,6 +1669,10 @@ InCHlib.prototype.draw = function () {
     self.root_id = self._get_root_id(self.data.nodes);
     self._draw_row_dendrogram(self.root_id);
 
+    if (self.settings.column_dendrogram && !(self.column_dendrogram && self.column_dendrogram.nodes)) {
+      // The data has no column dendrogram: nothing to draw for it
+      self.settings.column_dendrogram = false;
+    }
     if (self.settings.column_dendrogram) {
       self.column_root_id = self._get_root_id(self.column_dendrogram.nodes);
       self.nodes2columns = false;
@@ -4734,7 +4738,13 @@ InCHlib.prototype._get_color_for_value = function (
   color_scale
 ) {
   var self = this;
-  
+
+  // With very few values the median can coincide with the minimum or the
+  // maximum, which would divide by zero below: use the centre of the range.
+  if (max > min && !(middle > min && middle < max)) {
+    middle = (min + max) / 2;
+  }
+
   // Use cache for frequently calculated colors
   if (!self._color_cache) {
     self._color_cache = new Map();

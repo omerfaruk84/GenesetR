@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { runCalculation } from "../../store/results";
@@ -24,23 +24,37 @@ const UrlStateSync = () => {
   const { pathname, search } = location;
   // Page whose address has already been read; nothing is written before that
   const readFor = useRef(null);
+  // Bumped when the address has been read, so the write effect runs once more
+  const [readCount, setReadCount] = useState(0);
 
   useEffect(() => {
     if (readFor.current === pathname) return;
     if (!hasUrlState(pathname)) {
       readFor.current = pathname;
-      return;
+      return undefined;
     }
     const params = new URLSearchParams(search);
     const snapshot = queryToSnapshot(search, pathname);
     // The dataset can only be selected once the dataset list has arrived
-    if (snapshot?.core?.ds && !datasetsReady) return;
-    if (snapshot) dispatch(applySnapshot(snapshot));
-    readFor.current = pathname;
-    if (params.get("run") === "1") {
-      // Let the page mount with the new settings before the analysis starts
-      setTimeout(() => dispatch(runCalculation(pathname)), 50);
+    if (snapshot?.core?.ds && !datasetsReady) return undefined;
+    const finish = () => {
+      if (snapshot) dispatch(applySnapshot(snapshot));
+      readFor.current = pathname;
+      setReadCount((count) => count + 1);
+      if (params.get("run") === "1") {
+        // Let the page mount with the new settings before the analysis starts
+        setTimeout(() => dispatch(runCalculation(pathname)), 50);
+      }
+    };
+    if (!snapshot) {
+      finish();
+      return undefined;
     }
+    // Applied after the mount effects of the page: the sidebar gene lists write
+    // their normalised default text to the store when they mount, which would
+    // otherwise replace a list that came with the address.
+    const timer = setTimeout(finish, 0);
+    return () => clearTimeout(timer);
   }, [pathname, search, datasetsReady, dispatch]);
 
   useEffect(() => {
@@ -52,7 +66,7 @@ const UrlStateSync = () => {
       }
     }, WRITE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [settings, pathname, search, navigate]);
+  }, [settings, pathname, search, navigate, readCount]);
 
   return null;
 };

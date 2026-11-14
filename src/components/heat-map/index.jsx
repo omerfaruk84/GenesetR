@@ -396,7 +396,7 @@ const HeatMap = ({
   const heatmapWidth = useMemo(() => {
     const featureCount = graphData?.data?.feature_names?.length;
     if (featureCount) {
-      return Math.min(Math.max(featureCount * 32, 200), 6500);
+      return Math.min(Math.max(featureCount * 32, 420), 6500);
     }
     return 200;
   }, [graphData]);
@@ -862,7 +862,9 @@ const keyedData = useMemo(() => {
     inchlib.request_viewport_update?.();
 
     // Apply same order if needed
-    if (correlationSettings?.row_col_sameorder) {
+    // Very small results come without a column dendrogram; their columns are
+    // left in the order of the data, where header and cells agree.
+    if (correlationSettings?.row_col_sameorder && graphData.column_dendrogram?.nodes) {
       // Check if properties exist before calling Object.entries
       if (inchlib.leaves_y_coordinates && inchlib.objects2leaves) {
         let coordinates = Object.entries(inchlib.leaves_y_coordinates).sort(
