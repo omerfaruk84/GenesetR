@@ -900,9 +900,21 @@ const getSessionStats = async (sessionId) => {
   }
 };
 
+/**
+ * "Project my signature": compare a differential-expression signature with
+ * the perturbations of the selected datasets (API tasks/signature_projection.py).
+ *   signature: [[gene, value], ...]   datasets: [id, ...]   method: cosine | pearson | spearman
+ * Resolves to the parsed result object.
+ */
+const runSignatureProjection = async ({ signature, datasets, method = "cosine", topN = 50 }) => {
+  const body = { signature, datasets, method, top_n: topN, request: "projectSignature" };
+  const result = await getData(body, "signatureProjection", { disableModuleTracking: true });
+  return typeof result === "string" ? JSON.parse(result) : result;
+};
+
 // Export task cancellation function
 export { cancelTask, isTaskCancelledError } from "./websocket";
-export { getLastRequest };
+export { getLastRequest, runSignatureProjection };
 export { SERVER_ADDRESS } from "./config";
 
 // Export new RESTful API functions (optional - can be used instead of legacy functions)

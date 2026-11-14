@@ -35,7 +35,7 @@ const moduleDescription = {
   title: "Upload Your Own Dataset",
   description: "Upload your Perturb-Seq data matrix to analyze with GeneSetR. Your data will be processed and stored temporarily for 48 hours. Supports CSV/TSV format with genes on rows and perturbations on columns (or transposed).",
   requirements: [
-    "File format: CSV or TSV",
+    "File format: CSV, TSV, or an aggregated AnnData .h5ad (rows = perturbations, columns = genes)",
     "Maximum file size: 100 MB",
     "Up to 5 uploaded datasets per browser session; each is deleted after 48 hours",
     "Data format: Genes (rows) × Perturbations (columns) or transposed",
@@ -93,12 +93,12 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
       return false;
     }
 
-    const validExtensions = ['.csv', '.tsv', '.txt'];
+    const validExtensions = ['.csv', '.tsv', '.txt', '.h5ad'];
     const fileName = file.name.toLowerCase();
     const isValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
 
     if (!isValidExtension) {
-      setFileError('Invalid file type. Please upload CSV or TSV file.');
+      setFileError('Invalid file type. Please upload a CSV, TSV or h5ad file.');
       return false;
     }
 
@@ -411,7 +411,7 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
               <input
                 id="file-input"
                 type="file"
-                accept=".csv,.tsv,.txt"
+                accept=".csv,.tsv,.txt,.h5ad"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />
@@ -447,7 +447,7 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
                     or click to browse
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
-                    Supports CSV, TSV (max 100 MB)
+                    Supports CSV, TSV and h5ad (max 100 MB)
                   </Typography>
                 </Box>
               )}

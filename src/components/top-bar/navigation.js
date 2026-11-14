@@ -63,6 +63,7 @@ export const NAV_GROUPS = [
     title: "Bring your data",
     question: "Can I analyse my own experiment here?",
     items: [
+      { name: "Project my signature", to: ROUTES.PROJECT_SIGNATURE, about: "Find perturbations that mimic or reverse your differential-expression result" },
       { name: TabNames.UPLOAD_DATASET, to: ROUTES.UPLOAD_DATASET, about: "Analyse your own expression matrix with every module" },
       { name: TabNames.GENESIGNATURE, to: ROUTES.GENESIGNATURE, about: "Find perturbations that reproduce your up/down gene list", secondary: true },
     ],

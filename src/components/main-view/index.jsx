@@ -26,6 +26,7 @@ import { CellCyclePage } from "../../pages/cell-cycle/cell-cycle-page";
 import UploadDatasetPage from "../../pages/upload-dataset/upload-dataset-page";
 import { GenePage } from "../../pages/gene/gene-page";
 import { DatasetsPage } from "../../pages/datasets/datasets-page";
+import { ProjectSignaturePage } from "../../pages/project-signature/project-signature-page";
 import { PermalinkPage } from "../../pages/permalink/permalink-page";
 import { UrlStateSync } from "../url-state-sync";
 import { Tour } from "../tour";
@@ -77,6 +78,7 @@ const MainView = () => {
           <Route path={ROUTES.ABOUTUS} element={<PageBoundary><AboutPage /></PageBoundary>} />
           <Route path={ROUTES.GENE} element={<PageBoundary><GenePage /></PageBoundary>} />
           <Route path={ROUTES.PERMALINK} element={<PageBoundary><PermalinkPage /></PageBoundary>} />
+          <Route path={ROUTES.PROJECT_SIGNATURE} element={<PageBoundary><ProjectSignaturePage /></PageBoundary>} />
           <Route path={ROUTES.DATASETS} element={<PageBoundary><DatasetsPage /></PageBoundary>} />
           <Route path={ROUTES.UPLOAD_DATASET} element={<PageBoundary><UploadDatasetPage /></PageBoundary>} />
           <Route element={<SideBarLayout />}>

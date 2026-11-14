@@ -1,0 +1,282 @@
+@use "../../common/page" as page;
+
+.page {
+  @include page.shell;
+}
+
+.inner {
+  @include page.inner(1400px);
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+  }
+
+  h2 {
+    margin: 18px 0 6px;
+    font-size: 15px;
+  }
+
+  code {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--gs-surface-alt);
+    font-size: 0.92em;
+  }
+}
+
+.lead {
+  max-width: 900px;
+  margin: 0 0 18px;
+  color: var(--gs-muted);
+  line-height: 1.5;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 460px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inputCard,
+.tableCard,
+.placeholder {
+  padding: 16px 18px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+}
+
+.inputCard h2:first-child {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--gs-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.textarea {
+  width: 100%;
+  height: 170px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.action {
+  @include page.button;
+}
+
+.chip {
+  @include page.chip;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.chipActive {
+  @include page.chip-active;
+}
+
+.parseStatus {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.errorText {
+  color: #c0392b;
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.small {
+  width: 80px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 4px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+}
+
+.datasetChips,
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.method {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.run {
+  width: 100%;
+  height: 40px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--gs-accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.results {
+  min-width: 0;
+}
+
+.placeholder {
+  h2 {
+    margin-top: 0;
+  }
+
+  ol {
+    margin: 0 0 10px;
+    padding-left: 20px;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+}
+
+.status,
+.warning {
+  padding: 14px 16px;
+  border: 1px solid var(--gs-border);
+  border-radius: 6px;
+  background: var(--gs-surface-alt);
+}
+
+.warning {
+  margin: 8px 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--gs-muted);
+}
+
+.resultHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tabs {
+  margin-bottom: 10px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.tableHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+}
+
+.tableScroll {
+  max-height: 560px;
+  overflow: auto;
+}
+
+.table {
+  @include page.table;
+
+  thead th {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rank {
+  width: 34px;
+  color: var(--gs-muted) !important;
+}
+
+.value {
+  display: inline-block;
+  min-width: 58px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-align: right;
+}
+
+.geneLink {
+  color: var(--gs-link);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
