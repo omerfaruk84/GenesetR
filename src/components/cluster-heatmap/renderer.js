@@ -349,6 +349,7 @@ class ClusterHeatmap {
     this._clusters = { row: null, col: null };
     this._highlightRows = [];
     this._marks = { rows: [], cols: [] }; // highlightGenes()
+    this._clusterLabels = { row: {}, col: {} }; // setClusterLabels()
     this._exporting = false;
     this._raf = 0;
     this._viewportHint = null;
@@ -422,6 +423,7 @@ class ClusterHeatmap {
     this._clusters = { row: null, col: null };
     this._highlightRows = [];
     this._marks = { rows: [], cols: [] };
+    this._clusterLabels = { row: {}, col: {} };
     this._hover = null;
     this._cam = null;
     this._labelMetrics = null;
@@ -605,6 +607,7 @@ class ClusterHeatmap {
     const active = !!tree && tree.nodeCount > 0 && height !== null && height < 1;
     this._cut[kind] = active ? Math.max(height, 0.005) : null;
     this._clusters[kind] = active ? cutTree(tree, this._cut[kind]) : null;
+    this._clusterLabels[kind] = {}; // labels belong to the previous clusters
     this._requestRender();
     if (notify) this.events.clusters_onchange?.(this.getClusters());
   }
@@ -642,9 +645,44 @@ class ClusterHeatmap {
     this._setCut(kind, lower < upper ? (lower + upper) / 2 : upper * 0.999, true);
   }
 
+  /**
+   * Short texts drawn on the clusters of a cut, keyed by cluster number as in
+   * getClusters(): { rows: { 1: "Ribosome" }, columns: { 2: "Proteasome" } }.
+   */
+  setClusterLabels(labels) {
+    this._clusterLabels = { row: { ...(labels?.rows || {}) }, col: { ...(labels?.columns || {}) } };
+    this._requestRender();
+  }
+
+  /** Selects a cluster of the cut as if its colour strip had been clicked. */
+  selectCluster(axis, number) {
+    const kind = axis === "row" ? "row" : "col";
+    const cluster = this._clusters[kind]?.list[number - 1];
+    if (!cluster || cluster.node < 0) return false;
+    this._selectNode(kind, cluster.node, null);
+    this._requestRender();
+    return true;
+  }
+
+  _selectNode(kind, node, event) {
+    const tree = this._tree(kind);
+    if (kind === "row") {
+      this._selected = { row: node, col: -1 };
+      const objects = [];
+      for (let r = tree.lo[node]; r <= tree.hi[node]; r++) objects.push(...this._rowObjects[r]);
+      this.events.dendrogram_node_onclick?.(objects, tree.ids[node], event);
+    } else {
+      this._selected = { row: -1, col: node };
+      const positions = [];
+      for (let c = tree.lo[node]; c <= tree.hi[node]; c++) positions.push(c);
+      this.events.column_dendrogram_node_onclick?.(positions, tree.ids[node], event);
+    }
+  }
+
   clearClusterCut() {
     this._cut = { row: null, col: null };
     this._clusters = { row: null, col: null };
+    this._clusterLabels = { row: {}, col: {} };
     this._requestRender();
     this.events.clusters_onchange?.(this.getClusters());
   }
@@ -1184,6 +1222,37 @@ class ClusterHeatmap {
       ctx.stroke();
     }
 
+    // Labels of the clusters (setClusterLabels), where the band has room.
+    const drawClusterLabel = (text, x, y, maxWidth) => {
+      ctx.font = `bold 11px ${font}`;
+      const width = Math.min(ctx.measureText(text).width, maxWidth);
+      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillRect(x, y, width + 8, 15);
+      ctx.fillStyle = "#111";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + 4, y + 8, maxWidth);
+    };
+    (rowClusters?.list || []).forEach((cluster, k) => {
+      const text = this._clusterLabels.row[k + 1];
+      if (!text) return;
+      const y0 = Math.max(rowY(cluster.lo), view.y);
+      const y1 = Math.min(rowY(cluster.hi + 1), view.y + view.h);
+      // The bottom line belongs to the column labels when there are any.
+      const reserved = colClusters && Object.keys(this._clusterLabels.col).length ? 21 : 0;
+      if (y1 - y0 >= 19 && y0 + 17 <= view.y + view.h - reserved) {
+        drawClusterLabel(text, view.x + 4, y0 + 2, view.w - 16);
+      }
+    });
+    (colClusters?.list || []).forEach((cluster, k) => {
+      const text = this._clusterLabels.col[k + 1];
+      if (!text) return;
+      const x0 = Math.max(colX(cluster.lo), view.x);
+      const x1 = Math.min(colX(cluster.hi + 1), view.x + view.w);
+      // Below the row labels' line so the two sets do not collide.
+      if (x1 - x0 >= 60) drawClusterLabel(text, x0 + 4, view.y + view.h - 19, x1 - x0 - 16);
+    });
+
     // Selected clusters: wash out everything outside the cluster.
     const wash = "rgba(255,255,255,0.55)";
     const selRow = this._selected.row;
@@ -1676,22 +1745,14 @@ class ClusterHeatmap {
     } else if (region.name === "rowTree") {
       const node = this._nodeAt("row", region);
       if (node >= 0) {
-        this._selected = { row: node, col: -1 };
-        const objects = [];
-        for (let r = this._rowTree.lo[node]; r <= this._rowTree.hi[node]; r++) {
-          objects.push(...this._rowObjects[r]);
-        }
-        this.events.dendrogram_node_onclick?.(objects, this._rowTree.ids[node], e);
+        this._selectNode("row", node, e);
       } else {
         this.events.empty_space_onclick?.(e);
       }
     } else if (region.name === "colTree") {
       const node = this._nodeAt("col", region);
       if (node >= 0) {
-        this._selected = { row: -1, col: node };
-        const positions = [];
-        for (let c = this._colTree.lo[node]; c <= this._colTree.hi[node]; c++) positions.push(c);
-        this.events.column_dendrogram_node_onclick?.(positions, this._colTree.ids[node], e);
+        this._selectNode("col", node, e);
       } else {
         this.events.empty_space_onclick?.(e);
       }

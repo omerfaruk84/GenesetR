@@ -140,4 +140,36 @@ test("the cluster panel opens beside the heatmap and links terms to rows", async
   expect(await errors()).toEqual([]);
 });
 
+test("every cluster of a cut can be enriched at once", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  await withHeatmap(page, (hm) => hm.setClusterCount("row", 4));
+  const sizes = await withHeatmap(page, (hm) => hm.getClusters().rows.map((cluster) => cluster.size));
+  expect(sizes.reduce((a, b) => a + b, 0)).toBe(60);
+
+  await page.getByRole("button", { name: "Enrich clusters" }).click();
+  const summary = page.getByTestId("cluster-summary");
+  await expect(summary.getByText(`Cluster enrichment · ${sizes.length} clusters`)).toBeVisible();
+  const enrichable = sizes.filter((size) => size >= 3).length;
+  await expect(summary.getByText(/Ribosome/)).toHaveCount(enrichable);
+  await expect(summary.getByText("Best term of each cluster", { exact: false })).toBeVisible();
+  // The best terms are written onto the heatmap's cluster bands.
+  expect(await withHeatmap(page, (hm) => Object.values(hm._clusterLabels.row))).toEqual(
+    Array(enrichable).fill("Ribosome")
+  );
+
+  // A row of the summary opens that cluster; "All clusters" goes back.
+  const first = sizes.findIndex((size) => size >= 3);
+  await summary.getByText(`Row ${first + 1}`, { exact: true }).click();
+  const panel = page.getByTestId("cluster-panel");
+  await expect(panel.getByText(`Row cluster · ${sizes[first]} genes`)).toBeVisible();
+  await panel.getByRole("button", { name: "All clusters" }).click();
+  await expect(summary.getByText(/Cluster enrichment/)).toBeVisible();
+
+  // Moving the cut discards the summary.
+  await withHeatmap(page, (hm) => hm.setClusterCount("row", 3));
+  await expect(page.getByTestId("cluster-summary")).toHaveCount(0);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

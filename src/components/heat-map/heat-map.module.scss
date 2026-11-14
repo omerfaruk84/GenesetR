@@ -191,3 +191,38 @@
   align-items: center;
   gap: 6px;
 }
+
+.panelNote {
+  margin: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.summaryTable {
+  width: calc(100% - 24px);
+  margin: 0 12px 12px;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color, #dfe3e8);
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.summaryRow {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(166, 54, 72, 0.08);
+  }
+}

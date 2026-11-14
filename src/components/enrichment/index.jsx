@@ -1660,4 +1660,11 @@ const MainContainer = withErrorBoundary(ConnectedGeneSetEnrichmentTable, {
   label: "Enrichment",
 });
 
-export { MainContainer as GeneSetEnrichmentTable };
+/** Enrichr libraries currently ticked in the library selector (names with spaces). */
+const getSelectedLibraries = () => {
+  const checked = (node) =>
+    node.children ? node.children.flatMap(checked) : node.checked ? [node.label] : [];
+  return Array.from(new Set(data.flatMap(checked)));
+};
+
+export { MainContainer as GeneSetEnrichmentTable, getSelectedLibraries };

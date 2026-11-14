@@ -7,7 +7,8 @@ import React, {
 } from "react";
 import InCHlib from "../../store/extra/inchlib-1.2.0.js";
 import styles from "./heat-map.module.scss";
-import { GeneSetEnrichmentTable } from "../enrichment/index.jsx";
+import { GeneSetEnrichmentTable, getSelectedLibraries } from "../enrichment/index.jsx";
+import { performEnrichment } from "../enrichment/enrichrAPI";
 import {
   FaChartBar,
   FaTable,
@@ -50,6 +51,39 @@ const INCHLIB_OPTIONAL_METHODS = [
   "updateDendrogramLineWidth",
   "getClusters",
 ];
+
+// Enrichr accepts lists of 3-400 genes; at most this many clusters are
+// enriched in one summary run (each one is several requests).
+const SUMMARY_MIN_GENES = 3;
+const SUMMARY_MAX_GENES = 400;
+const SUMMARY_MAX_CLUSTERS = 16;
+
+const baseSymbol = (name) => String(name).split("_")[0];
+
+const formatAdjP = (value) => {
+  if (!Number.isFinite(value)) return "";
+  return value < 0.001 ? value.toExponential(1) : value.toFixed(3);
+};
+
+/** Lowest adjusted p-value over all libraries of an Enrichr result. */
+const bestTerm = (results) => {
+  let best = null;
+  (results || []).forEach((library) => {
+    (library?.data || []).forEach((term) => {
+      const adjP = Number(term?.[6]);
+      if (!Array.isArray(term) || !Number.isFinite(adjP)) return;
+      if (!best || adjP < best.adjP) {
+        best = {
+          term: String(term[1] ?? "").split("(")[0].trim(),
+          library: String(library.name || "").replaceAll("_", " "),
+          adjP,
+          overlap: Array.isArray(term[5]) ? term[5].length : 0,
+        };
+      }
+    });
+  });
+  return best;
+};
 
 const csvField = (value) => {
   const text = String(value ?? "");
@@ -96,6 +130,9 @@ const HeatMap = ({
   // Width of the enrichment panel shown beside the heatmap (fast renderer).
   const [panelWidth, setPanelWidth] = useState(560);
   const panelDragRef = useRef(null);
+  // Enrichment of every cluster of the current cut: { running, done, total, rows }.
+  const [summary, setSummary] = useState(null);
+  const summaryRunRef = useRef(0);
   const mainContentRef = useRef(null);
   // Height of the heatmap + panel area so that it ends at the window's edge.
   const [panelAreaHeight, setPanelAreaHeight] = useState(null);
@@ -330,7 +367,7 @@ const HeatMap = ({
     };
   }, [contextMenu, closeContextMenu]);
 
-  const sidePanel = capabilities.getClusters && selectedGenes.length > 0;
+  const sidePanel = capabilities.getClusters && (selectedGenes.length > 0 || !!summary);
 
   // Side by side, heatmap and panel scroll on their own, so the area must fit
   // the window instead of the stacked layout's full viewport height.
@@ -468,20 +505,90 @@ const HeatMap = ({
 
   // Enrichment of a cluster is tested against the genes it was drawn from:
   // all rows for a row cluster, all columns for a column cluster.
-  const enrichmentBackground = useMemo(() => {
+  const backgrounds = useMemo(() => {
     const data = graphData?.data;
-    if (!data?.nodes) return null;
-    const names =
-      selectedAxis === "column"
-        ? data.feature_names || []
-        : Object.values(data.nodes).flatMap((node) =>
-            node && Array.isArray(node.objects) ? node.objects : []
-          );
-    const genes = Array.from(
-      new Set(names.map((name) => String(name).split("_")[0]).filter(Boolean))
-    );
-    return genes.length > 0 ? genes : null;
-  }, [graphData, selectedAxis]);
+    if (!data?.nodes) return { row: null, column: null };
+    const unique = (names) => {
+      const genes = Array.from(new Set(names.map(baseSymbol).filter(Boolean)));
+      return genes.length > 0 ? genes : null;
+    };
+    return {
+      row: unique(
+        Object.values(data.nodes).flatMap((node) =>
+          node && Array.isArray(node.objects) ? node.objects : []
+        )
+      ),
+      column: unique(data.feature_names || []),
+    };
+  }, [graphData]);
+  const enrichmentBackground = backgrounds[selectedAxis] || null;
+
+  const closeSummary = useCallback(() => {
+    summaryRunRef.current += 1; // drop a run still in progress
+    setSummary(null);
+    inchlibInstance.current?.setClusterLabels?.({});
+  }, []);
+
+  // Runs Enrichr for every cluster of the cut and keeps the best term of each.
+  const runClusterSummary = useCallback(async () => {
+    const inchlib = inchlibInstance.current;
+    const clusters = inchlib?.getClusters?.();
+    if (!clusters) return;
+    const runId = ++summaryRunRef.current;
+    const libraries = getSelectedLibraries().join().replaceAll(" ", "_");
+
+    const rows = [];
+    [
+      ["row", clusters.rows],
+      ["column", clusters.columns],
+    ].forEach(([axis, list]) => {
+      (list || []).forEach(({ cluster, items }) => {
+        const genes = Array.from(new Set(items.map(baseSymbol).filter(Boolean)));
+        const fits = genes.length >= SUMMARY_MIN_GENES && genes.length <= SUMMARY_MAX_GENES;
+        rows.push({ axis, cluster, size: genes.length, genes, status: fits ? "pending" : "skipped" });
+      });
+    });
+    const eligible = rows.filter((row) => row.status === "pending");
+    eligible.slice(SUMMARY_MAX_CLUSTERS).forEach((row) => {
+      row.status = "not run";
+    });
+    const jobs = eligible.slice(0, SUMMARY_MAX_CLUSTERS);
+
+    setSelectedGenes([]);
+    inchlib.unhighlight_cluster?.();
+    inchlib.setClusterLabels?.({});
+    setSummary({ running: jobs.length > 0, done: 0, total: jobs.length, rows: rows.map((row) => ({ ...row })) });
+
+    const labels = { rows: {}, columns: {} };
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      let update;
+      try {
+        const results = await performEnrichment(job.genes.join(","), libraries, {
+          background: backgrounds[job.axis],
+        });
+        const best = bestTerm(results);
+        update = best ? { status: "done", ...best } : { status: "none" };
+        if (best && best.adjP < 0.05) {
+          labels[job.axis === "row" ? "rows" : "columns"][job.cluster] = best.term;
+        }
+      } catch (error) {
+        update = { status: "failed" };
+      }
+      if (summaryRunRef.current !== runId || !isMountedRef.current) return;
+      inchlibInstance.current?.setClusterLabels?.(labels);
+      setSummary((previous) =>
+        previous && {
+          ...previous,
+          done: i + 1,
+          running: i + 1 < jobs.length,
+          rows: previous.rows.map((row) =>
+            row.axis === job.axis && row.cluster === job.cluster ? { ...row, ...update } : row
+          ),
+        }
+      );
+    }
+  }, [backgrounds]);
 
   const heatmapWidth = useMemo(() => {
     const featureCount = graphData?.data?.feature_names?.length;
@@ -499,6 +606,8 @@ const HeatMap = ({
   // a new one.
   useEffect(() => {
     setSelectedGenes([]);
+    summaryRunRef.current += 1;
+    setSummary(null);
   }, [graphData]);
 
   useEffect(() => {
@@ -923,6 +1032,9 @@ const keyedData = useMemo(() => {
     setClusterCount(0);
     inchlib.events.clusters_onchange = function (clusters) {
       if (isMountedRef.current) {
+        // A summary describes the previous clusters.
+        summaryRunRef.current += 1;
+        setSummary(null);
         setClusterCount(
           (clusters?.rows?.length || 0) + (clusters?.columns?.length || 0)
         );
@@ -1222,6 +1334,19 @@ const keyedData = useMemo(() => {
                     Export clusters
                   </button>
                 )}
+                {capabilities.getClusters && clusterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={runClusterSummary}
+                    className={ui.button}
+                    disabled={!!summary?.running}
+                    title="Run enrichment for every cluster of the cut and show the best term of each"
+                  >
+                    {summary?.running
+                      ? `Enriching ${summary.done}/${summary.total}…`
+                      : "Enrich clusters"}
+                  </button>
+                )}
               </div>
               {(capabilities.resetCamera || capabilities.fitToScreen) && (
                 <div className={styles.zoomControls}>
@@ -1361,6 +1486,74 @@ const keyedData = useMemo(() => {
               </div>
 
               {/* Clusters too small for Enrichr get the table's own notice. */}
+              {selectedGenes.length === 0 && summary && (
+                <div className={styles.enrichmentTableContainer} data-testid="cluster-summary">
+                  <div className={styles.panelHeader}>
+                    <strong>Cluster enrichment · {summary.rows.length} clusters</strong>
+                    <span className={styles.panelActions}>
+                      <button
+                        type="button"
+                        className={ui.button}
+                        onClick={closeSummary}
+                        aria-label="Close the cluster enrichment"
+                      >
+                        Close
+                      </button>
+                    </span>
+                  </div>
+                  <p className={styles.panelNote}>
+                    {summary.running
+                      ? `Enriching cluster ${summary.done + 1} of ${summary.total}…`
+                      : "Best term of each cluster (lowest adjusted p-value over the selected libraries), " +
+                        "tested against the heatmap's own genes. Click a row to open the cluster."}
+                  </p>
+                  <table className={styles.summaryTable}>
+                    <thead>
+                      <tr>
+                        <th>Cluster</th>
+                        <th>Genes</th>
+                        <th>Top term</th>
+                        <th>Adj. p</th>
+                        <th>Overlap</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.rows.map((row) => {
+                        const significant = row.status === "done" && row.adjP < 0.05;
+                        let text = "…";
+                        if (row.status === "skipped") {
+                          text =
+                            row.size < SUMMARY_MIN_GENES
+                              ? `fewer than ${SUMMARY_MIN_GENES} genes`
+                              : `more than ${SUMMARY_MAX_GENES} genes`;
+                        } else if (row.status === "not run") {
+                          text = `not run (first ${SUMMARY_MAX_CLUSTERS} clusters only)`;
+                        } else if (row.status === "failed") text = "Enrichr did not answer";
+                        else if (row.status === "none") text = "no term";
+                        else if (row.status === "done") text = `${row.term} (${row.library})`;
+                        return (
+                          <tr
+                            key={`${row.axis}-${row.cluster}`}
+                            className={row.size > 1 ? styles.summaryRow : undefined}
+                            onClick={() =>
+                              inchlibInstance.current?.selectCluster?.(row.axis, row.cluster)
+                            }
+                          >
+                            <td>
+                              {row.axis === "column" ? "Column" : "Row"} {row.cluster}
+                            </td>
+                            <td>{row.size}</td>
+                            <td style={significant ? undefined : { opacity: 0.6 }}>{text}</td>
+                            <td>{row.status === "done" ? formatAdjP(row.adjP) : ""}</td>
+                            <td>{row.status === "done" ? `${row.overlap} / ${row.size}` : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {selectedGenes.length > 0 && (
                 <div className={styles.enrichmentTableContainer}>
                   <div className={styles.panelHeader}>
@@ -1369,6 +1562,16 @@ const keyedData = useMemo(() => {
                       {selectedGenes.length === 1 ? "" : "s"}
                     </strong>
                     <span className={styles.panelActions}>
+                      {summary && (
+                        <button
+                          type="button"
+                          className={ui.button}
+                          onClick={closeSelection}
+                          title="Back to the enrichment of all clusters"
+                        >
+                          All clusters
+                        </button>
+                      )}
                       <SendToMenu genes={selectedGenes} defaultName="Heatmap cluster" />
                       <button
                         type="button"
