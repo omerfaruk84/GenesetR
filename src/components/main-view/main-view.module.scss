@@ -21,7 +21,10 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  // Older pages draw with fixed light colours: they keep a light "paper"
+  // (and dark text) in dark mode.
   background: white;
+  color: #1f2733;
   padding-top: 40px;
   padding-bottom: 20px;
 }
@@ -31,6 +34,7 @@
     height: calc(100vh - 60px); // Allow content to take up all vertical space
     overflow-y: auto; // Enable vertical scroll
     background-color: white;
+    color: #1f2733;
     padding: 20px; // or whatever padding you need
     width: 100vw;
 

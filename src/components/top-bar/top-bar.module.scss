@@ -1,209 +1,253 @@
+// Top navigation. Height 60px: pages below it start at 60px (see main-view).
+
 .topBar {
-  position: relative;
-  font-size: medium;
-  max-width: 1760px; // keep in sync with MAX_BAR_WIDTH in index.jsx
-  height: 60px;
-  margin-top: 30px;
-}
-
-.barInner {
-  width: 100%;
-  div {
-    > div:nth-child(2) {
-      display: flex;
-      margin-right: 15px;
-    }
-
-    margin-left: 1px;
-    padding-right: 10px;
-    padding-left: 10px;
-    > div {
-      > a > span {
-        // Labels wrap onto (at most) two centred lines instead of being clipped
-        white-space: normal;
-        text-align: center;
-        overflow: visible;
-        text-overflow: clip;
-        max-width: 110px;
-        line-height: 1.15em;
-        font-size: 0.75em;
-        margin-top: 2px;
-      }
-      > a {
-        display: flex;
-        flex-direction: column;
-      }
-    }
-    justify-content: center;
-    margin-top: 3px;
-  }
-  ul {
-    height: 100%;
-    padding: 0px;
-    margin: 0px;
-    display: flex;
-    list-style: none;
-    justify-content: space-evenly;
-    color: whitesmoke;
-    cursor: pointer;
-    .active {
-      background-color: white;
-      color: black;
-    }
-    li {
-      display: flex;
-      align-items: center;
-      a {
-        display: flex;
-        align-items: center;
-        border-radius: 5px;
-        font-size: 1px;
-        padding: 10px;
-
-        text-decoration: none;
-        &:hover {
-          @extend .active;
-          background-color: rgb(199, 58, 58);
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .topBar {
-    margin-top: 15px;
-    padding: 0 4px;
-    font-size: 0.95em;
-  }
-  .barInner {
-    div > div:nth-child(2) {
-      margin-right: 0;
-      gap: 6px;
-    }
-    div > div > a > span {
-      font-size: 0.7em;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .topBar {
-    margin-top: 8px;
-    padding: 0 2px;
-    font-size: 0.85em;
-  }
-  .barInner {
-    div > div:nth-child(2) {
-      gap: 4px;
-    }
-    div > div > a > span {
-      font-size: 0.65em;
-    }
-    img, svg {
-      max-width: 22px !important;
-      max-height: 22px !important;
-    }
-  }
-}
-
-@media (max-width: 1024px) and (min-width: 601px) {
-  .topBar {
-    margin-top: 12px;
-    padding: 0 2px;
-    font-size: 0.92em;
-  }
-  .barInner {
-    div > div:nth-child(2) {
-      gap: 8px;
-      margin-right: 0;
-    }
-    div > div > a > span {
-      font-size: 0.72em;
-      max-width: 96px;
-    }
-    img, svg {
-      max-width: 26px !important;
-      max-height: 26px !important;
-    }
-  }
-}
-
-
-
-.drawerOverlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.4);
-  z-index: 1200;
+  right: 0;
+  z-index: 1100;
   display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 60px;
+  padding: 0 16px;
+  background: var(--gs-surface);
+  border-bottom: 1px solid var(--gs-border);
+  color: var(--gs-text);
+  font-size: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+  margin-right: 12px;
+  text-decoration: none;
+
+  img {
+    height: 40px;
+    width: auto;
+    display: block;
+  }
+}
+
+.version {
+  font-size: 10px;
+  color: var(--gs-muted);
+  line-height: 1.6;
+}
+
+.groups {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.group {
+  position: relative;
+}
+
+.groupButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover,
+  &.groupOpen {
+    background: var(--gs-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-accent);
+    outline-offset: 1px;
+  }
+}
+
+.groupActive {
+  color: var(--gs-accent);
+  box-shadow: inset 0 -2px 0 var(--gs-accent);
+  border-radius: 6px 6px 0 0;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 360px;
+  padding: 8px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+.question {
+  padding: 6px 10px 8px;
+  color: var(--gs-muted);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--gs-text);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--gs-hover);
+  }
+}
+
+.itemActive {
+  background: var(--gs-selected);
+}
+
+.itemName {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.itemAbout {
+  color: var(--gs-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.advancedLabel {
+  margin-top: 6px;
+  padding: 6px 10px 2px;
+  border-top: 1px solid var(--gs-border);
+  color: var(--gs-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.search {
+  width: 250px;
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--gs-text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gs-hover);
+  }
+}
+
+// The gene search goes first when space runs out, then the groups collapse
+// into the menu.
+@media (max-width: 1320px) {
+  .search {
+    display: none;
+  }
+}
+
+@media (max-width: 1040px) {
+  .groups {
+    display: none;
+  }
+
+  .right {
+    margin-left: auto;
+  }
+
+  .menuButton {
+    display: inline-flex;
+  }
+}
+
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .drawer {
-  background: #fff;
-  width: 240px;
-  max-width: 80vw;
-  height: 100vh;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-  padding: 24px 12px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1201;
-  animation: slideInLeft 0.2s;
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  max-width: 88vw;
+  height: 100%;
+  padding: 48px 12px 24px;
+  overflow-y: auto;
+  background: var(--gs-surface);
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
 }
 
 .drawerClose {
   position: absolute;
   top: 10px;
   right: 10px;
+  border: 0;
   background: none;
-  border: none;
-  font-size: 2em;
+  color: var(--gs-text);
+  font-size: 22px;
   cursor: pointer;
 }
 
-.drawerNavLink {
-  display: flex;
-  align-items: center;
-  padding: 12px 0;
-  font-size: 1.1em;
-  color: #222;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
+.drawerGroup {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gs-border);
+}
+
+.drawerTitle {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gs-accent);
+}
+
+.drawerLink {
+  display: block;
+  padding: 9px 10px;
   border-radius: 6px;
-  transition: background 0.2s;
-}
-.drawerNavLink:hover {
-  background: #f0f0f0;
-}
+  color: var(--gs-text);
+  font-weight: 600;
+  text-decoration: none;
 
-.drawerNavLinkActive {
-  background: rgba(25, 118, 210, 0.10);
-}
-
-.drawerNavLink img, .drawerNavLink svg {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px;
-  min-height: 28px;
-  margin-right: 12px;
-  vertical-align: middle;
-  display: inline-block;
-}
-
-.drawerNavLink span {
-  vertical-align: middle;
-  display: inline-block;
+  &:hover {
+    background: var(--gs-hover);
+  }
 }

@@ -1,53 +1,12 @@
 import React from "react";
-import { connect } from "react-redux";
-import { Row, Spacer } from "@oliasoft-open-source/react-ui-library";
+import { Spacer } from "@oliasoft-open-source/react-ui-library";
 import styles from "./mainpage.module.scss";
-import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../common/routes";
-import { coreSettingsChanged } from "../../store/settings/core-settings";
-import { CoreSettingsTypes } from "../../components/side-bar/settings/enums";
+import { Link } from "react-router-dom";
 import V2ReleasePopup from "../../components/v2-release-popup";
 import { GeneSearch } from "../../components/gene-search";
+import { NAV_GROUPS } from "../../components/top-bar/navigation";
 
-const MainPage = ({ coreSettingsChanged }) => {
-  const navigate = useNavigate();
-  const handleClick = (page) => {
-    switch (page) {
-      case 1:
-        navigate(ROUTES.GENE_REGULATION);
-        break;
-      case 2:
-        navigate(ROUTES.GENESIGNATURE);
-        break;
-      case 3:
-        navigate(ROUTES.PATHFINDER);
-        break;
-      case 4:
-        navigate(ROUTES.DR);
-        break;
-      case 5:
-        coreSettingsChanged({
-          settingName: CoreSettingsTypes.DATA_TYPE,
-          newValue: 1,
-        });
-        navigate(ROUTES.CORRELATION);
-        break;
-      case 6:
-        coreSettingsChanged({
-          settingName: CoreSettingsTypes.DATA_TYPE,
-          newValue: 2,
-        });
-        navigate(ROUTES.CORRELATION);
-        break;
-      case 7:
-        navigate(ROUTES.HEATMAP);
-        break;
-
-      default:
-        console.log(`Strange! You shouldn't be seeing this message.`);
-    }
-  };
-
+const MainPage = () => {
   return (
     <>
       <V2ReleasePopup />
@@ -104,56 +63,24 @@ const MainPage = ({ coreSettingsChanged }) => {
             <GeneSearch size="lg" placeholder="Explore a gene across all datasets, e.g. ATF4" />
           </div>
 
-          <div className={`${styles["glass-panel"]}`}>
-            <h2 style={{ margin: "0px" }}>Potential Analyses in GeneSetR:</h2>
-            <div className={`${styles["button-container"]}`}>
-              <button
-                onClick={() => handleClick(1)}
-                className={`${styles["glass-button"]}`}
-              >
-                Find genes that regulate, or are regulated by, a given gene of
-                interest
-              </button>
-              <Row />
-              <button
-                onClick={() => handleClick(3)}
-                className={`${styles["glass-button"]}`}
-              >
-                Analyze RNA-seq results to identify pathways
-              </button>
-              <button
-                onClick={() => handleClick(4)}
-                className={`${styles["glass-button"]}`}
-              >
-                Cluster a given genelist to identify functional groups
-              </button>
-              <button
-                onClick={() => handleClick(5)}
-                className={`${styles["glass-button"]}`}
-              >
-                Draw a correlation map based on knockdown profiles
-              </button>
-              <button
-                onClick={() => handleClick(6)}
-                className={`${styles["glass-button"]}`}
-              >
-                Generate a correlation map based on expression of genes upon
-                perturbations
-              </button>
-              <button
-                onClick={() => handleClick(7)}
-                className={`${styles["glass-button"]}`}
-              >
-                Generate a heatmap illustrating the relationship between chosen
-                genes and perturbations
-              </button>
-              <button
-                onClick={() => handleClick(2)}
-                className={`${styles["glass-button"]}`}
-              >
-                Find perturbations that modulate a given gene signature
-              </button>
-            </div>
+          <div className={styles.entryGrid}>
+            {NAV_GROUPS.map((group) => (
+              <section key={group.id} className={styles.entryCard}>
+                <h2>{group.title}</h2>
+                <p>{group.question}</p>
+                <ul>
+                  {group.items
+                    .filter((item) => !item.advanced)
+                    .map((item) => (
+                      <li key={item.name}>
+                        <Link to={item.to} title={item.about}>
+                          {item.name}
+                        </Link>
+                      </li>
+                    ))}
+                </ul>
+              </section>
+            ))}
           </div>
 
           <Spacer height={45} />
@@ -301,13 +228,4 @@ const MainPage = ({ coreSettingsChanged }) => {
   );
 };
 
-const mapStateToProps = ({ settings }, { path }) => ({
-  coreSettings: settings?.core ?? {},
-});
-
-const mapDispatchToProps = {
-  coreSettingsChanged,
-};
-
-const MainContainer = connect(mapStateToProps, mapDispatchToProps)(MainPage);
-export { MainContainer as MainPage };
+export { MainPage };

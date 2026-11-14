@@ -1,273 +1,170 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { TopBar as TopBarCmp } from "@oliasoft-open-source/react-ui-library";
-import { FaHome, FaBars, FaTimes, FaCloudUploadAlt, FaSearch, FaDatabase } from "react-icons/fa";
-import {
-  FcMindMap,
-  FcScatterPlot,
-  FcSerialTasks,
-  FcAbout,
-  FcElectricalSensor,
-  FcWorkflow,
-  FcTodoList,
-  FcClock,
-} from "react-icons/fc";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { FaBars, FaChevronDown, FaTimes } from "react-icons/fa";
 import { ROUTES, isActiveTab } from "../../common/routes";
-import { TabNames } from "./enums";
-//import styles from "./top-bar.module.scss";
+import { GeneSearch } from "../gene-search";
+import { ThemeToggle } from "../theme-toggle";
+import { NAV_GROUPS, NAV_LINKS } from "./navigation";
 import styles from "./top-bar.module.scss";
-import heatmapicon from "../../common/images/heatmap.png";
-import clusteringicon from "../../common/images/clustering.png";
-//import generegicon from "../../common/images/generegulation.png";
-// Keep in sync with .topBar max-width in top-bar.module.scss
-const MAX_BAR_WIDTH = 1760;
 
-// Approximate rendered width of a nav link whose label may wrap onto two lines.
-const estimateLinkWidth = (label) => {
-  const text = String(label || "");
-  const longestWord = text.split(/\s+/).reduce((m, word) => Math.max(m, word.length), 0);
-  const chars = Math.max(longestWord, Math.ceil(text.length / 2));
-  return Math.max(58, Math.round(chars * 6.6 + 24));
+const APP_VERSION = "V2.0.0";
+
+const groupIsActive = (group, pathname) => group.items.some((item) => !item.secondary && isActiveTab(pathname, item.to));
+
+/** One entry of a group: name plus a one-line description. */
+const GroupItem = ({ item, pathname, onNavigate }) => (
+  <Link
+    to={item.to}
+    role="menuitem"
+    className={`${styles.item} ${isActiveTab(pathname, item.to) ? styles.itemActive : ""}`}
+    onClick={onNavigate}
+  >
+    <span className={styles.itemName}>{item.name}</span>
+    <span className={styles.itemAbout}>{item.about}</span>
+  </Link>
+);
+
+const GroupItems = ({ group, pathname, onNavigate }) => {
+  const main = group.items.filter((item) => !item.advanced);
+  const advanced = group.items.filter((item) => item.advanced);
+  return (
+    <>
+      {main.map((item) => (
+        <GroupItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+      ))}
+      {advanced.length > 0 && (
+        <>
+          <div className={styles.advancedLabel}>Advanced</div>
+          {advanced.map((item) => (
+            <GroupItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+          ))}
+        </>
+      )}
+    </>
+  );
 };
 
+/**
+ * Top navigation, organised by question (see navigation.js). Wide screens get
+ * one drop-down per question; narrow screens get a single menu with all of them.
+ */
 const TopBar = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { pathname } = location;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1200
-  );
+  const { pathname } = useLocation();
+  const [openGroup, setOpenGroup] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const barRef = useRef(null);
+
+  // Any navigation closes the menus
+  useEffect(() => {
+    setOpenGroup(null);
+    setDrawerOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    if (!openGroup) return undefined;
+    const onPointerDown = (event) => {
+      if (barRef.current && !barRef.current.contains(event.target)) setOpenGroup(null);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setOpenGroup(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openGroup]);
 
-  const navLinks = useMemo(() => [
-    {
-      icon: () => <FaHome size={"2em"} />,
-      name: TabNames.HOME,
-      toLink: ROUTES.HOME,
-    },
-    {
-      icon: () => <FaSearch size={"1.7em"} color="#a63648" />,
-      name: TabNames.GENE,
-      toLink: ROUTES.GENE,
-    },
-    {
-      icon: () => <FcScatterPlot size={"2em"} />,
-      name: TabNames.CORRELATION,
-      toLink: ROUTES.CORRELATION,
-    },      
-    {
-      icon: () => <FcScatterPlot size={"2em"} />,
-      name: TabNames.CORRELATION_WEBGL,
-      toLink: ROUTES.CORRELATION_WEBGL,
-    },
-    {
-      icon: () => <FcScatterPlot size={"2em"} />,
-      name: TabNames.CORRELATION_FAST,
-      toLink: ROUTES.CORRELATION_FAST,
-    },
-    {
-      icon: () => <FcElectricalSensor size={"2em"} />,
-      name: TabNames.GENESIGNATURE,
-      toLink: ROUTES.GENESIGNATURE,
-    },
-    {
-      icon: () => (
-        <img
-          src={clusteringicon}
-          style={{ width: 28 }}
-          alt="Dimensionality Reduction and Clustering"
-        />
-      ),
-      name: TabNames.DR,
-      toLink: ROUTES.DR,
-    },
-    {
-      icon: () => <FcWorkflow size={"2em"} />,
-      name: TabNames.EXPRESSIONANALYZER,
-      toLink: ROUTES.EXPRESSIONANALYZER,
-    },
-    
-    {
-      icon: () => <FcSerialTasks size={"2em"} />,
-      name: TabNames.MULTIDATASET_COMPARISON,
-      toLink: ROUTES.MULTIDATASET_COMPARISON,
-    },
-    {
-      icon: () => <FcMindMap size={"2em"} />,
-      name: TabNames.GENE_REGULATION,
-      toLink: ROUTES.GENE_REGULATION,
-    },
-    {
-      icon: () => <FcMindMap size={"2em"} style={{ filter: "hue-rotate(120deg)" }} />,
-      name: TabNames.GENE_REGULATION_ENHANCED,
-      toLink: ROUTES.GENE_REGULATION_ENHANCED,
-    },
-    {
-      icon: () => (
-        <img
-          src={heatmapicon}
-          style={{ width: 28 }}
-          alt="Heatmap"
-        />
-      ),
-      name: TabNames.HEATMAP,
-      toLink: ROUTES.HEATMAP,
-    },
-    {
-      icon: () => <FcSerialTasks size={"2em"} />,
-      name: TabNames.PATHFINDER,
-      toLink: ROUTES.PATHFINDER,
-    },
-  
-    {
-      icon: () => <FcClock size={"2em"} />,
-      name: TabNames.CELL_CYCLE,
-      toLink: ROUTES.CELL_CYCLE,
-    },
-    {
-      icon: () => <FcElectricalSensor size={"2em"} style={{ filter: "hue-rotate(180deg)" }} />,
-      name: TabNames.DEREGULATED_GENES,
-      toLink: ROUTES.DEREGULATED_GENES,
-    },
-    {
-      icon: () => <FcTodoList size={"2em"} />,
-      name: TabNames.GENELISTCOMPARE,
-      toLink: ROUTES.GENELISTCOMPARE,
-    },
-    {
-      icon: () => <FaDatabase size={"1.7em"} color="#5d6877" />,
-      name: TabNames.DATASETS,
-      toLink: ROUTES.DATASETS,
-    },
-    {
-      icon: () => <FaCloudUploadAlt size={"2em"} color="#1976d2" />,
-      name: TabNames.UPLOAD_DATASET,
-      toLink: ROUTES.UPLOAD_DATASET,
-    },
-    {
-      icon: () => <FcAbout size={"2em"} />,
-      name: TabNames.ABOUT,
-      toLink: ROUTES.ABOUTUS,
-    },
-  ], []);
-
-  // How many links fit: estimate each link's width from its label (labels wrap
-  // onto two lines at spaces, see top-bar.module.scss) and show as many as fit
-  // next to the logo; the rest go into the "More" menu. Fixed breakpoints used
-  // to clip labels ("Ho", "Corre", ...) on ordinary desktop widths.
-  const visibleCount = useMemo(() => {
-    const w = viewportWidth;
-    if (w <= 600) return 0;
-    const LOGO_AND_MARGINS = 230;
-    const MORE_BUTTON = 70;
-    const available = Math.min(w, MAX_BAR_WIDTH) - LOGO_AND_MARGINS;
-    const widths = navLinks.map((l) => estimateLinkWidth(l.name));
-    const total = widths.reduce((a, b) => a + b, 0);
-    if (total <= available) return navLinks.length;
-    let used = MORE_BUTTON;
-    let count = 0;
-    for (const width of widths) {
-      if (used + width > available) break;
-      used += width;
-      count += 1;
-    }
-    return count;
-  }, [viewportWidth, navLinks]);
-
-  const visibleNavLinks = useMemo(
-    () => navLinks.slice(0, Math.min(navLinks.length, visibleCount)),
-    [navLinks, visibleCount]
-  );
-
-  const overflowNavLinks = useMemo(
-    () => navLinks.slice(Math.min(navLinks.length, visibleCount)),
-    [navLinks, visibleCount]
-  );
-
-  const drawerLinks = useMemo(() => {
-    if (viewportWidth <= 600) return navLinks;
-    return overflowNavLinks;
-  }, [navLinks, overflowNavLinks, viewportWidth]);
-
-  const overflowActive = useMemo(
-    () => overflowNavLinks.some((l) => isActiveTab(pathname, l.toLink)),
-    [overflowNavLinks, pathname]
-  );
-
-  // Drawer nav for mobile
-  const handleNavClick = (toLink) => {
-    setMenuOpen(false);
-    navigate(toLink);
+  const closeAll = () => {
+    setOpenGroup(null);
+    setDrawerOpen(false);
   };
 
   return (
-    <div className={styles.topBar}>
-      <div className={styles.barInner}>
-        <TopBarCmp
-          height={60}
-          content={visibleNavLinks.map(({ icon, name, toLink }) => ({
-            icon: icon(),
-            label: name,
-            onClick: () => navigate(toLink),
-            type: "Link",
-            active: isActiveTab(pathname, toLink),
-          }))}
-          title={{
-            onClick: () => navigate(ROUTES.HOME),
-            version: "V2.0.0",
-            logo: <img alt="logo" src="/images/logo.png" />,
-          }}
-          contentRight={
-            drawerLinks.length > 0
-              ? [
-                  {
-                    icon: <FaBars size={22} />,
-                    label: viewportWidth <= 600 ? "Menu" : "More",
-                    onClick: () => setMenuOpen(true),
-                    type: "Link",
-                    active: overflowActive || menuOpen,
-                  },
-                ]
-              : undefined
-          }
-        />
-      </div>
-      {/* Drawer overlay and menu */}
-      {menuOpen && (
-        <div className={styles.drawerOverlay} onClick={() => setMenuOpen(false)}>
-          <nav
-            className={styles.drawer}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Mobile navigation"
+    <header className={styles.topBar} ref={barRef}>
+      <Link to={ROUTES.HOME} className={styles.brand} aria-label="GeneSetR start page">
+        <img alt="GeneSetR" src="/images/logo.png" />
+        <span className={styles.version}>{APP_VERSION}</span>
+      </Link>
+
+      <nav className={styles.groups} aria-label="Main">
+        {NAV_GROUPS.map((group) => {
+          const open = openGroup === group.id;
+          return (
+            <div key={group.id} className={styles.group}>
+              <button
+                type="button"
+                className={`${styles.groupButton} ${groupIsActive(group, pathname) ? styles.groupActive : ""} ${open ? styles.groupOpen : ""}`}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onClick={() => setOpenGroup(open ? null : group.id)}
+              >
+                {group.title}
+                <FaChevronDown size={10} aria-hidden="true" />
+              </button>
+              {open && (
+                <div className={styles.panel} role="menu" aria-label={group.title}>
+                  <div className={styles.question}>{group.question}</div>
+                  <GroupItems group={group} pathname={pathname} onNavigate={closeAll} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {NAV_LINKS.map((link) => (
+          <Link
+            key={link.name}
+            to={link.to}
+            className={`${styles.groupButton} ${isActiveTab(pathname, link.to) ? styles.groupActive : ""}`}
           >
-            <button
-              className={styles.drawerClose}
-              aria-label="Close menu"
-              onClick={() => setMenuOpen(false)}
-            >
+            {link.name}
+          </Link>
+        ))}
+      </nav>
+
+      <div className={styles.right}>
+        {pathname !== ROUTES.GENE && pathname !== ROUTES.HOME && (
+          <div className={styles.search}>
+            <GeneSearch placeholder="Search a gene" />
+          </div>
+        )}
+        <ThemeToggle />
+        <button
+          type="button"
+          className={styles.menuButton}
+          aria-label="Open the menu"
+          aria-expanded={drawerOpen}
+          onClick={() => setDrawerOpen(true)}
+        >
+          <FaBars size={20} />
+        </button>
+      </div>
+
+      {drawerOpen && (
+        <div className={styles.drawerOverlay} onClick={() => setDrawerOpen(false)}>
+          <nav className={styles.drawer} aria-label="Main" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className={styles.drawerClose} aria-label="Close the menu" onClick={() => setDrawerOpen(false)}>
               <FaTimes />
             </button>
-            {drawerLinks.map(({ icon, name, toLink }) => (
-              <button
-                key={name}
-                className={`${styles.drawerNavLink} ${
-                  isActiveTab(pathname, toLink) ? styles.drawerNavLinkActive : ""
-                }`}
-                onClick={() => handleNavClick(toLink)}
-              >
-                {icon()} <span style={{ marginLeft: 12 }}>{name}</span>
-              </button>
+            <Link to={ROUTES.HOME} className={styles.drawerLink} onClick={closeAll}>
+              Home
+            </Link>
+            {NAV_GROUPS.map((group) => (
+              <div key={group.id} className={styles.drawerGroup}>
+                <div className={styles.drawerTitle}>{group.title}</div>
+                <GroupItems group={group} pathname={pathname} onNavigate={closeAll} />
+              </div>
+            ))}
+            {NAV_LINKS.map((link) => (
+              <Link key={link.name} to={link.to} className={styles.drawerLink} onClick={closeAll}>
+                {link.name}
+              </Link>
             ))}
           </nav>
         </div>
       )}
-    </div>
+    </header>
   );
 };
 

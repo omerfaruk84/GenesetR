@@ -5,7 +5,7 @@
 
 
 /* Colour tokens. New pages use these instead of fixed colours so that the
-   dark theme (html[data-theme="dark"], see components/theme-toggle) only has
+   dark theme (html[data-gs-theme="dark"], see utils/theme.js) only has
    to redefine them. */
 :root {
   --gs-bg: #ffffff;
@@ -20,4 +20,23 @@
   --gs-link: #1565c0;
   --gs-accent: #a63648;
   --gs-accent-soft: rgba(166, 54, 72, 0.18);
+}
+
+html[data-gs-theme="dark"] {
+  --gs-bg: #14181d;
+  --gs-surface: #1c2128;
+  --gs-surface-alt: #232a33;
+  --gs-hover: #2b333e;
+  --gs-selected: #233549;
+  --gs-text: #e6eaf0;
+  --gs-muted: #9aa5b3;
+  --gs-border: #313a46;
+  --gs-border-strong: #45505e;
+  --gs-link: #7ab8ff;
+  --gs-accent: #e0667a;
+  --gs-accent-soft: rgba(224, 102, 122, 0.25);
+}
+
+body {
+  background: var(--gs-bg);
 }

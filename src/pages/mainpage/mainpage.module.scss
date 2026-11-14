@@ -335,3 +335,52 @@ p {
   padding-bottom: 32px;
   color: rgba(255,255,255,0.6);
 }*/
+
+// Five entry points by question (same groups as the top navigation)
+.entryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.entryCard {
+  padding: 14px 16px;
+  border: 1px solid #e1e5ea;
+  border-radius: 10px;
+  background: #fafbfc;
+  text-align: left;
+
+  h2 {
+    margin: 0 0 2px;
+    font-size: 17px;
+    color: #a63648;
+  }
+
+  p {
+    margin: 0 0 8px;
+    color: #5d6877;
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding: 2px 0;
+  }
+
+  a {
+    color: #1565c0;
+    font-size: 14px;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

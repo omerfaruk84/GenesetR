@@ -3,6 +3,16 @@
 // global.scss so the pages follow the light/dark theme.
 
 @mixin shell {
+  // The UI library styles bare elements; set the basics explicitly
+  h1,
+  h2,
+  h3,
+  p,
+  dd,
+  li {
+    color: var(--gs-text);
+  }
+
   width: 100%;
   height: calc(100vh - 60px);
   margin-top: 60px;
@@ -81,6 +91,9 @@
   td {
     padding: 7px 10px;
     border-bottom: 1px solid var(--gs-border);
+    // set explicitly: global table rules elsewhere give cells a white background
+    background: transparent;
+    color: var(--gs-text);
     text-align: left;
     vertical-align: middle;
   }
@@ -91,6 +104,10 @@
     color: var(--gs-muted);
     white-space: nowrap;
     background: var(--gs-surface-alt);
+  }
+
+  tr {
+    background: transparent;
   }
 
   tbody tr:hover {
