@@ -530,6 +530,7 @@ const Genelist = ({
                         if (
                           pathname === ROUTES.CORRELATION ||
                           pathname === ROUTES.CORRELATION_WEBGL ||
+                          pathname === ROUTES.CORRELATION_FAST ||
                           pathname === ROUTES.DR ||
                           pathname === ROUTES.HEATMAP
                         ) {

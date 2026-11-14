@@ -97,6 +97,29 @@ const SettingsSelector = ({ pathname }) => {
         settings: <InchlibSettings />,
       },
     ],
+    [ROUTES.CORRELATION_FAST]: [
+      {
+        settingsName: SettingsTypes.CORE_SETTINGS,
+        settings: (
+          <CoreSettings
+            source={"CORR"}
+            showcellLineOptions={true}
+            showPerturbationList={true}
+            showGeneList={true}
+            showdataTypeOptions={true}
+            showgraphTypeOptions={false}
+          />
+        ),
+      },
+      {
+        settingsName: SettingsTypes.CORRELATION_SETTINGS,
+        settings: <CorrelationSettings />,
+      },
+      {
+        settingsName: SettingsTypes.INCHLIB_SETTINGS,
+        settings: <InchlibSettings />,
+      },
+    ],
     [ROUTES.PCA]: [
       {
         settingsName: SettingsTypes.DR_METHOD_SELECTOR,

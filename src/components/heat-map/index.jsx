@@ -45,7 +45,13 @@ const INCHLIB_OPTIONAL_METHODS = [
   "updateCellColors",
   "updateCellColorsPercentile",
   "updateDendrogramLineWidth",
+  "getClusters",
 ];
+
+const csvField = (value) => {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
 
 const detectInchlibCapabilities = (instance) => {
   const caps = {};
@@ -112,6 +118,30 @@ const HeatMap = ({
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   const [isExporting, setIsExporting] = useState(false);
+  // Number of clusters defined by the dendrogram cut lines (0 when there is no cut).
+  const [clusterCount, setClusterCount] = useState(0);
+
+  const exportClustersAsCsv = useCallback(() => {
+    const clusters = inchlibInstance.current?.getClusters?.();
+    if (!clusters) return;
+    const lines = ["axis,cluster,size,name"];
+    [
+      ["row", clusters.rows],
+      ["column", clusters.columns],
+    ].forEach(([axis, list]) => {
+      (list || []).forEach(({ cluster, size, items }) => {
+        items.forEach((name) => {
+          lines.push([axis, cluster, size, csvField(name)].join(","));
+        });
+      });
+    });
+    if (lines.length === 1) return;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    saveAs(
+      new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" }),
+      `heatmap-clusters-${timestamp}.csv`
+    );
+  }, []);
 
   const exportHeatmapImage = useCallback(async ({ mimeType, extension, quality }) => {
     const inchlib = inchlibInstance.current;
@@ -796,6 +826,16 @@ const keyedData = useMemo(() => {
       inchlib.highlight_rows([]);
     };
 
+    // Only the texture-based renderer has cut lines; the others ignore this.
+    setClusterCount(0);
+    inchlib.events.clusters_onchange = function (clusters) {
+      if (isMountedRef.current) {
+        setClusterCount(
+          (clusters?.rows?.length || 0) + (clusters?.columns?.length || 0)
+        );
+      }
+    };
+
     inchlib.events.empty_space_onclick = function () {
       inchlib.highlight_rows([]);
       inchlib.unhighlight_cluster();
@@ -1065,6 +1105,17 @@ const keyedData = useMemo(() => {
                   <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
                   Export JPEG
                 </button>
+                {capabilities.getClusters && clusterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={exportClustersAsCsv}
+                    className={ui.button}
+                    title="Download the clusters defined by the dendrogram cut lines as CSV"
+                  >
+                    <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                    Export clusters
+                  </button>
+                )}
               </div>
               {(capabilities.resetCamera || capabilities.fitToScreen) && (
                 <div className={styles.zoomControls}>

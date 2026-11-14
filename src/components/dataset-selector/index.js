@@ -191,7 +191,8 @@ const DatasetSelector = forwardRef(
     const location = useLocation();
     const isCorrelationModule =
       location.pathname === ROUTES.CORRELATION ||
-      location.pathname === ROUTES.CORRELATION_WEBGL;
+      location.pathname === ROUTES.CORRELATION_WEBGL ||
+      location.pathname === ROUTES.CORRELATION_FAST;
     const isPathFinderModule = location.pathname === ROUTES.PATHFINDER;
     const isDeregulatedModule = location.pathname === ROUTES.DEREGULATED_GENES;
     const isGeneSignatureModule = location.pathname === ROUTES.GENESIGNATURE;

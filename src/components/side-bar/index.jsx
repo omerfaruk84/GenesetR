@@ -51,13 +51,16 @@ const SideBar = ({
   }
 
   const isCorrelationRoute =
-    pathname === ROUTES.CORRELATION || pathname === ROUTES.CORRELATION_WEBGL;
+    pathname === ROUTES.CORRELATION ||
+    pathname === ROUTES.CORRELATION_WEBGL ||
+    pathname === ROUTES.CORRELATION_FAST;
 
   // Custom button labels per module
   const buttonLabels = {
     [ROUTES.GENESIGNATURE]: "Calculate Gene Signature",
     [ROUTES.CORRELATION]: "Calculate Correlation",
     [ROUTES.CORRELATION_WEBGL]: "Calculate Correlation",
+    [ROUTES.CORRELATION_FAST]: "Calculate Correlation",
     [ROUTES.HEATMAP]: "Generate Heatmap",
     [ROUTES.PATHFINDER]: "Find Path",
     [ROUTES.EXPRESSIONANALYZER]: "Analyze Expression",

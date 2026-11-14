@@ -4,6 +4,7 @@ import { ErrorBoundary } from "../error-boundary";
 import { ROUTES } from "../../common/routes";
 import { CorrelationPage } from "../../pages/correlation/correlation-page";
 import { CorrelationPageWebGL } from "../../pages/correlation/correlation-page-webgl";
+import { CorrelationPageFast } from "../../pages/correlation/correlation-page-fast";
 import { TopBar } from "../top-bar";
 import styles from "./main-view.module.scss";
 import { NotFoundPage } from "../not-found-page";
@@ -77,6 +78,10 @@ const MainView = () => {
             <Route
               path={ROUTES.CORRELATION_WEBGL}
               element={<CorrelationPageWebGL path={ROUTES.CORRELATION_WEBGL} />}
+            />
+            <Route
+              path={ROUTES.CORRELATION_FAST}
+              element={<CorrelationPageFast path={ROUTES.CORRELATION_FAST} />}
             />
             <Route
               path={ROUTES.PATHFINDER}
