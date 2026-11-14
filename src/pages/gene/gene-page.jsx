@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import { GeneSearch } from "../../components/gene-search";
-import { fetchGeneInfo, fetchGeneSummary } from "../../store/api/genes";
+import { fetchGeneInfo, fetchGeneSummary, resolveGeneAlias } from "../../store/api/genes";
 import { baseSymbol, geneLinks, genePagePath } from "../../utils/geneLinks";
 import { sendGenesTo } from "../../utils/sendTo";
 import { SendToMenu } from "../../components/send-to";
@@ -106,12 +106,14 @@ const GenePage = () => {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [showFullText, setShowFullText] = useState(false);
+  const [aliases, setAliases] = useState([]); // official symbols when `symbol` is an alias
 
   useEffect(() => {
     setSummary(null);
     setInfo(null);
     setSelected(null);
     setShowFullText(false);
+    setAliases([]);
     if (!symbol) {
       setState("idle");
       return undefined;
@@ -129,6 +131,11 @@ const GenePage = () => {
         if (controller.signal.aborted) return;
         setError(err.message);
         setState(err.notFound ? "notFound" : "error");
+        if (err.notFound) {
+          resolveGeneAlias(symbol, { signal: controller.signal }).then((hits) => {
+            if (!controller.signal.aborted) setAliases(hits);
+          });
+        }
       });
     fetchGeneInfo(symbol, { signal: controller.signal }).then((data) => {
       if (!controller.signal.aborted) setInfo(data);
@@ -198,6 +205,16 @@ const GenePage = () => {
           <div className={styles.status} role="alert">
             <strong>{symbol}</strong> is neither a perturbation nor a measured gene in any dataset. Check the spelling
             or use the official HGNC symbol.
+            {aliases.length > 0 && (
+              <div className={styles.examples}>
+                Did you mean:
+                {aliases.map((hit) => (
+                  <Link key={hit.symbol} className={styles.chip} to={genePagePath(hit.symbol)} title={hit.name}>
+                    {hit.symbol}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

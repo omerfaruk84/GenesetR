@@ -66,3 +66,26 @@ export const fetchGeneInfo = async (symbol, { signal } = {}) => {
     return null;
   }
 };
+
+/**
+ * Official symbols for which `text` is an alias or an old name (mygene.info).
+ * Best effort: resolves to [] when nothing is found or the service is down.
+ */
+export const resolveGeneAlias = async (text, { signal } = {}) => {
+  const query = String(text || "").trim();
+  if (!/^[A-Za-z0-9._-]{1,40}$/.test(query)) return [];
+  try {
+    const response = await Axios.get("https://mygene.info/v3/query", {
+      params: { q: `alias:${query} OR symbol:${query}`, species: "human", size: 5, fields: "symbol,name" },
+      signal,
+      timeout: 8000,
+    });
+    const seen = new Set();
+    return (response.data?.hits || [])
+      .filter((hit) => hit.symbol && hit.symbol.toUpperCase() !== query.toUpperCase())
+      .filter((hit) => !seen.has(hit.symbol) && seen.add(hit.symbol))
+      .map((hit) => ({ symbol: hit.symbol.toUpperCase(), name: hit.name || "" }));
+  } catch (error) {
+    return [];
+  }
+};

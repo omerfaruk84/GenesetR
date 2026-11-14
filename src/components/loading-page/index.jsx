@@ -74,6 +74,13 @@ const LoadingPage = ({
 
   const stage = getStage(progressMessage);
 
+  // Time left, extrapolated from the progress the server reports. Shown only
+  // once there is enough progress for the estimate to mean something.
+  const remainingSeconds =
+    clampedPercentage !== null && clampedPercentage >= 5 && elapsed >= 3
+      ? Math.round((elapsed * (100 - clampedPercentage)) / clampedPercentage)
+      : null;
+
   return (
     <div className={styles.mainView} aria-busy="true">
       <div
@@ -132,6 +139,9 @@ const LoadingPage = ({
             <div className={styles.metaLeft}>
               {clampedPercentage === null ? "Working…" : `Progress: ${clampedPercentage}%`}
               <span className={styles.elapsed}> · {formatElapsed(elapsed)} elapsed</span>
+              {remainingSeconds !== null && remainingSeconds > 0 && (
+                <span className={styles.elapsed}> · about {formatElapsed(remainingSeconds)} left</span>
+              )}
             </div>
             <div className={styles.dots} aria-hidden="true">
               <span />

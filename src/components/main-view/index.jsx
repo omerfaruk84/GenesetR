@@ -30,6 +30,7 @@ import { ProjectSignaturePage } from "../../pages/project-signature/project-sign
 import { PermalinkPage } from "../../pages/permalink/permalink-page";
 import { UrlStateSync } from "../url-state-sync";
 import { Tour } from "../tour";
+import { ResultBadges } from "../result-badges";
 
 // A rendering error in one page must not blank the whole application: the
 // page area shows an error box with "Try again", the navigation keeps working,
@@ -50,6 +51,7 @@ const SideBarLayout = () => (
     <div className={styles.flexContainer}>
       <SideBar />
       <div className={styles.routeContent}>
+        <ResultBadges />
         <PageBoundary>
           <Outlet />
         </PageBoundary>
