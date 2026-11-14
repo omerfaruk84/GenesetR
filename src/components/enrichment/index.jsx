@@ -132,6 +132,10 @@ Container component manages state and configuration of table
 const GeneSetEnrichmentTable = ({
   //runEnrichr,
   genesets,
+  // Optional universe the gene lists were drawn from (array of symbols). When
+  // given, enrichment is tested against it instead of the whole genome.
+  background = null,
+  backgroundLabel = "analysed genes",
   genesetEnrichmentSettingsChanged,
   genesetEnrichmentSettings,
   //clusteringSettingsChanged,
@@ -143,6 +147,9 @@ const GeneSetEnrichmentTable = ({
   const [genelistOptions, setGeneListOptions] = useState([]);
   const [limitNotice, setLimitNotice] = useState("");
   const [showNavigationMenu, setShowNavigationMenu] = useState(false);
+  const [useBackground, setUseBackground] = useState(true);
+  const hasBackground = Array.isArray(background) && background.length > 0;
+  const activeBackground = hasBackground && useBackground ? background : null;
   const navigationMenuRef = useRef(null);
   // Monotonic id of the latest enrichment request; older responses are ignored.
   const enrichmentRequestRef = useRef(0);
@@ -223,11 +230,16 @@ const GeneSetEnrichmentTable = ({
       return num > 0.001 ? num.toFixed(5) : num.toExponential(2);
     };
     const formatFixed = (value, digits) => {
+      // Enrichr reports an infinite odds ratio when every background gene of
+      // a term is in the list.
+      if (value === "Infinity") return "∞";
       const num = Number(value);
       return Number.isFinite(num) ? num.toFixed(digits) : "";
     };
 
-    performEnrichment(genes, selectedDatasets.join().replaceAll(" ", "_"))
+    performEnrichment(genes, selectedDatasets.join().replaceAll(" ", "_"), {
+      background: activeBackground,
+    })
       .then((results) => {
         if (!isCurrent()) return;
         const rows = [];
@@ -669,6 +681,15 @@ const GeneSetEnrichmentTable = ({
       }
     }
 
+    // An infinite score ("∞" in the table) is drawn at the largest finite one.
+    for (const key of ["Combined score", "Z-score"]) {
+      const finite = bubbleGraphData.map((d) => d[key]).filter(Number.isFinite);
+      const cap = finite.length ? Math.max(...finite) : 1;
+      for (const item of bubbleGraphData) {
+        if (!Number.isFinite(item[key])) item[key] = cap;
+      }
+    }
+
     // -log10(adj. p) of the 10th most significant term (or the weakest one
     // when there are fewer than 10); terms at or above it get a label.
     const sortedLogP = bubbleGraphData
@@ -1089,7 +1110,7 @@ const GeneSetEnrichmentTable = ({
     if (geneItem?.genes) {
       performEnrichmentNow(geneItem.genes);
     }
-  }, [selectedCluster, genelistOptions]);
+  }, [selectedCluster, genelistOptions, activeBackground]);
 
   const handleSaveGeneList = () => {
     const genesString = cleanSelectedGenes().join(",");
@@ -1537,6 +1558,23 @@ const GeneSetEnrichmentTable = ({
                   </div>
                 )}
               </div>
+              <Spacer width="6px" />
+              {hasBackground && (
+                <span
+                  title={
+                    "On: terms are tested against the " + backgroundLabel +
+                    " only, which is the correct comparison for a cluster taken from a chosen gene list. " +
+                    "Off: against the whole genome (Enrichr default), which overstates significance for pre-selected lists."
+                  }
+                  data-testid="enrichment-background"
+                >
+                  <Toggle
+                    label={`Background: ${backgroundLabel} (${background.length})`}
+                    checked={useBackground}
+                    onChange={({ target: { checked } }) => setUseBackground(checked)}
+                  />
+                </span>
+              )}
               <Spacer width="6px" />
               <Toggle
                 label="Bar Graph"

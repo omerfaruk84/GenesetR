@@ -99,15 +99,23 @@ export async function hashGeneList(geneList) {
  * It uses IndexedDB for caching, p-queue to limit concurrency,
  * and an in-flight map to avoid duplicate simultaneous requests.
  */
-export async function performEnrichment(geneList, datasets) {
+export async function performEnrichment(geneList, datasets, options = {}) {
   const geneListHash = await hashGeneList(geneList);
   // Make sure we convert datasets to a canonical string for the cache key
   const datasetsKey = canonicalizeDatasets(datasets);
-  const key = `${geneListHash}_${datasetsKey}`;
 
   if (geneListHash === "empty_geneList" || !datasetsKey) {
     return [];
   }
+
+  // With a background (the universe the list was drawn from) the test runs
+  // against that set instead of Enrichr's genome-wide default.
+  const background = backgroundFor(geneList, options.background);
+  if (background) {
+    return performBackgroundEnrichment(geneList, geneListHash, datasetsKey, background);
+  }
+
+  const key = `${geneListHash}_${datasetsKey}`;
 
   // If a request for the same combination is already in-flight, return it:
   if (inFlightMap.has(key)) {
@@ -131,7 +139,9 @@ export async function performEnrichment(geneList, datasets) {
     }
 
     // 3) Now retrieve the actual dataset enrichment results
-    return retrieveEnrichmentData(listID, datasetsKey);
+    return retrieveEnrichmentData(datasetsKey, `${CACHE_PREFIX}res_${listID}`, (dataset) =>
+      getEnrichr(listID, dataset)
+    );
   })();
 
   // Store the promise in the map
@@ -150,10 +160,9 @@ export async function performEnrichment(geneList, datasets) {
  * using local caching, and runs them through our p-queue
  * to avoid too many requests in a short burst.
  */
-async function retrieveEnrichmentData(listID, datasetsKey) {
+async function retrieveEnrichmentData(datasetsKey, resultsCacheKey, fetchLibrary) {
   // Convert CSV string to array
   const datasets = datasetsKey.split(",").filter(Boolean);
-  const resultsCacheKey = `${CACHE_PREFIX}res_${listID}`;
 
   // Try to load existing data from IDB (dropped when older than the TTL)
   const storedResults = await safeGet(resultsCacheKey);
@@ -169,7 +178,7 @@ async function retrieveEnrichmentData(listID, datasetsKey) {
   if (missingDatasets.length > 0) {
     // Queue the requests ("queue.add" ensures requests go through p-queue)
     const operations = missingDatasets.map((dataset) =>
-      queue.add(() => getEnrichr(listID, dataset))
+      queue.add(() => fetchLibrary(dataset))
     );
 
     // Wait for all requests to finish
@@ -214,6 +223,91 @@ async function retrieveEnrichmentData(listID, datasetsKey) {
 
   // Filter only the requested datasets, in case we have extras
   return enrichRdata.filter((item) => datasets.includes(item.name));
+}
+
+/**
+ * The background to test against, or null for Enrichr's default. A background
+ * must contain the list and be larger than it; it is returned canonical
+ * (see normalizeGeneList) with the list's genes included.
+ */
+export function backgroundFor(geneList, background) {
+  if (!background) return null;
+  const listGenes = normalizeGeneList(geneList);
+  const raw = Array.isArray(background) ? background.join("\n") : background;
+  const genes = Array.from(new Set([...normalizeGeneList(raw), ...listGenes])).sort();
+  return genes.length > listGenes.length ? genes : null;
+}
+
+/**
+ * Enrichr writes Infinity / NaN into its answers (odds ratio of a term whose
+ * background genes are all in the list), which JSON.parse rejects. They become
+ * the strings "Infinity" / "NaN"; values inside quotes are left alone.
+ */
+export function parseEnrichrJson(text) {
+  return JSON.parse(String(text).replace(/([[,]\s*)(-?Infinity|NaN)(?=\s*[,\]])/g, '$1"$2"'));
+}
+
+const SPEEDRICHR = "https://maayanlab.cloud/speedrichr/api";
+
+const postForm = async (url, fields) => {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([name, value]) => formData.append(name, value));
+  const response = await fetch(url, { method: "POST", body: formData });
+  if (!response.ok) throw new Error(`Request failed (${response.status}).`);
+  return parseEnrichrJson(await response.text());
+};
+
+/**
+ * Enrichment against a custom background (Enrichr's "speedrichr" API): the
+ * list and the background are registered once each, then every library is
+ * queried with both ids. Same caching and queueing as the default path.
+ */
+async function performBackgroundEnrichment(geneList, geneListHash, datasetsKey, background) {
+  const backgroundHash = await hashGeneList(background.join("\n"));
+  const key = `${geneListHash}_bg${backgroundHash}_${datasetsKey}`;
+  if (inFlightMap.has(key)) {
+    return inFlightMap.get(key);
+  }
+
+  const cachedId = async (cacheKey, create) => {
+    const stored = await safeGet(cacheKey);
+    if (isFresh(stored) && stored.id) return stored.id;
+    const id = await create();
+    if (id) await safeSet(cacheKey, { id, time: Date.now() });
+    return id;
+  };
+
+  const enrichmentPromise = (async () => {
+    const listID = await cachedId(`${CACHE_PREFIX}slist_${geneListHash}`, async () => {
+      const genes = normalizeGeneList(geneList).join("\n");
+      return (await postForm(`${SPEEDRICHR}/addList`, { list: genes, description: "" })).userListId;
+    });
+    const backgroundID = await cachedId(`${CACHE_PREFIX}bg_${backgroundHash}`, async () =>
+      (await postForm(`${SPEEDRICHR}/addbackground`, { background: background.join("\n") })).backgroundid
+    );
+    if (!listID || !backgroundID) return [];
+
+    return retrieveEnrichmentData(
+      datasetsKey,
+      `${CACHE_PREFIX}bres_${listID}_${backgroundID}`,
+      async (dataset) => {
+        const result = await postForm(`${SPEEDRICHR}/backgroundenrich`, {
+          userListId: listID,
+          backgroundid: backgroundID,
+          backgroundType: dataset,
+        });
+        const rows = result && Array.isArray(result[dataset]) ? result[dataset] : [];
+        return { name: dataset, data: rows };
+      }
+    );
+  })();
+
+  inFlightMap.set(key, enrichmentPromise);
+  try {
+    return await enrichmentPromise;
+  } finally {
+    inFlightMap.delete(key);
+  }
 }
 
 /**

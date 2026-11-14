@@ -40,6 +40,27 @@ const mockApi = async (page) => {
     })
   );
 
+  // Enrichr (both the default API and the background-aware "speedrichr" one).
+  // The answers carry Infinity as the real service does, which is not JSON.
+  const enrichr = [];
+  await page.route(/maayanlab\.cloud/, async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const body = request.postData() || "";
+    enrichr.push({ path: url.pathname, body });
+    const text = (value) => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: value });
+    if (url.pathname.endsWith("/addList")) return text('{"userListId": 4711, "shortId": "abc"}');
+    if (url.pathname.endsWith("/addbackground")) return text('{"backgroundid": "bg-1"}');
+    const library =
+      url.searchParams.get("backgroundType") ||
+      (body.match(/name="backgroundType"\s+(\S+)/) || [])[1] ||
+      "Library";
+    return text(
+      `{"${library}": [[1,"Ribosome (fixture)",1.2E-9, Infinity, Infinity, ["RPL3","RPL4","RPS3"],3.4E-8, 0, 0 ],` +
+        `[2,"Proteasome (fixture)",0.004, 12.5, 40.1, ["PSMA1"],0.01, 0, 0 ]]}`
+    );
+  });
+
   await page.route(API_HOSTS, (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") return json(route, {});
@@ -65,7 +86,7 @@ const mockApi = async (page) => {
     return notFound(route);
   });
 
-  return { requests, unmocked };
+  return { requests, unmocked, enrichr };
 };
 
 /**

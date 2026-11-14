@@ -90,6 +90,8 @@ const HeatMap = ({
 }) => {
   const dispatch = useDispatch();
   const [selectedGenes, setSelectedGenes] = useState([]);
+  // Which dendrogram the selected cluster came from ("row" or "column").
+  const [selectedAxis, setSelectedAxis] = useState("row");
   const [selectedView, setSelectedView] = useState(0);
   //const [keyedData, setKeyedData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -408,6 +410,23 @@ const HeatMap = ({
       ? { "Selected Genes": selectedGenes.join(", ") }
       : {};
   }, [selectedGenes]);
+
+  // Enrichment of a cluster is tested against the genes it was drawn from:
+  // all rows for a row cluster, all columns for a column cluster.
+  const enrichmentBackground = useMemo(() => {
+    const data = graphData?.data;
+    if (!data?.nodes) return null;
+    const names =
+      selectedAxis === "column"
+        ? data.feature_names || []
+        : Object.values(data.nodes).flatMap((node) =>
+            node && Array.isArray(node.objects) ? node.objects : []
+          );
+    const genes = Array.from(
+      new Set(names.map((name) => String(name).split("_")[0]).filter(Boolean))
+    );
+    return genes.length > 0 ? genes : null;
+  }, [graphData, selectedAxis]);
 
   const heatmapWidth = useMemo(() => {
     const featureCount = graphData?.data?.feature_names?.length;
@@ -829,13 +848,15 @@ const keyedData = useMemo(() => {
           return typeof name === "string" ? name.split("_")[0] : null;
         })
         .filter(Boolean);
-      if (selectedGenesTemp.length > 3 && isMountedRef.current) {
+      if (selectedGenesTemp.length > 0 && isMountedRef.current) {
+        setSelectedAxis("column");
         setSelectedGenes(selectedGenesTemp);
       }
     };
 
     inchlib.events.dendrogram_node_onclick = function (object_ids) {
       if (isMountedRef.current) {
+        setSelectedAxis("row");
         setSelectedGenes(
           (object_ids || []).map((gene) => String(gene).split("_")[0])
         );
@@ -1255,9 +1276,16 @@ const keyedData = useMemo(() => {
                 )}
               </div>
 
-              {selectedGenes.length > 3 && (
+              {/* Clusters too small for Enrichr get the table's own notice. */}
+              {selectedGenes.length > 0 && (
                 <div className={styles.enrichmentTableContainer}>
-                  <GeneSetEnrichmentTable genesets={genesets} />
+                  <GeneSetEnrichmentTable
+                    genesets={genesets}
+                    background={enrichmentBackground}
+                    backgroundLabel={
+                      selectedAxis === "column" ? "heatmap columns" : "heatmap rows"
+                    }
+                  />
                 </div>
               )}
             </div>
