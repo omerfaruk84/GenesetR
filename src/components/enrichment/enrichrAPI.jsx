@@ -363,7 +363,7 @@ function getEnrichr(listID, dataset) {
   )
     .then((response) => {
       if (response.ok) {
-        return response.json();
+        return response.text().then(parseEnrichrJson);
       }
       throw new Error(`Request failed (${response.status}).`);
     })

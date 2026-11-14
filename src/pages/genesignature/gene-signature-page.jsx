@@ -26,7 +26,7 @@ const moduleDescription = {
   title: "Gene Signature Analysis",
   description: "This module identifies genes that induce specific phenotypes upon their perturbation by applying mathematical expressions to z-score normalized data. It helps to identify sets of genes responsible for specific phenotypic changes (e.g. genes that regulate ER stress, cholesterol biosynthesis, etc).",
   tabs: {
-    chart: "Graph showing perturbations ranked by their effect on the gene signature. Green dots indicate perturbations that increase the signature, red dots decrease it.",
+    chart: "Graph showing perturbations ranked by their effect on the gene signature. Orange dots indicate perturbations that increase the signature, purple dots decrease it.",
     table: "Table of all perturbations showing their effect direction and z-scores based on the gene signature analysis.",
     similarGenes: "This table lists genes that show similar expression patterns to your gene signature and may be considered for inclusion in the signature to enhance its specificity. Higher similarity scores indicate stronger correlation with your signature."
   }

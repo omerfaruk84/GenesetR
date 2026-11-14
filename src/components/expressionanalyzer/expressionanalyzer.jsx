@@ -1,4 +1,15 @@
 import { PlotHelp } from "../plot-help";
+import { ChartLegend, EmptyState } from "../ui";
+import {
+  UP_RGB,
+  DOWN_RGB,
+  HIGHLIGHT_RGB,
+  CONTROL_RGB,
+  OTHER_RGB,
+  rgba,
+  stableUnit,
+} from "../../utils/chartStyle";
+
 import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
@@ -50,6 +61,16 @@ import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "../side-bar/settings/enums";
 import { fetchCellCycleComparisonV2 } from "../../store/api/v2";
 
+// Export buttons of the cell-cycle charts (the main scatter has its own)
+const cellCycleToolbox = {
+  right: 8,
+  feature: {
+    saveAsImage: { name: "genesetr_cell_cycle", pixelRatio: 2 },
+    mySvg: svgToolboxFeature("genesetr-cell-cycle"),
+    myPdf: pdfToolboxFeature("genesetr-cell-cycle"),
+  },
+};
+
 const isDevEnv = process.env.NODE_ENV !== "production";
 // Development-only logging.
 const debugLog = (...args) => {
@@ -78,24 +99,24 @@ const createAnalyzerTooltipFormatter = (isCorrelationMode) =>
       if (isCorrelationMode) {
         analysis =
           score > 0.5
-            ? { label: "Strong Positive Correlation", color: "#4caf50" }
+            ? { label: "Strong Positive Correlation", color: rgba(UP_RGB) }
             : score < -0.5
-              ? { label: "Strong Negative Correlation", color: "#f44336" }
-              : score > 0.2
-                ? { label: "Moderate Positive Correlation", color: "#8bc34a" }
-                : score < -0.2
-                  ? { label: "Moderate Negative Correlation", color: "#ff5722" }
+              ? { label: "Strong Negative Correlation", color: rgba(DOWN_RGB) }
+              : score > 0.15
+                ? { label: "Moderate Positive Correlation", color: rgba(UP_RGB, 0.75) }
+                : score < -0.15
+                  ? { label: "Moderate Negative Correlation", color: rgba(DOWN_RGB, 0.75) }
                   : { label: "Weak Correlation", color: "#9e9e9e" };
       } else {
         analysis =
           score > 2
-            ? { label: "Strong Upregulation", color: "#4caf50" }
+            ? { label: "Strong Upregulation", color: rgba(UP_RGB) }
             : score < -2
-              ? { label: "Strong Downregulation", color: "#f44336" }
+              ? { label: "Strong Downregulation", color: rgba(DOWN_RGB) }
               : score > 0.5
-                ? { label: "Moderate Upregulation", color: "#8bc34a" }
+                ? { label: "Moderate Upregulation", color: rgba(UP_RGB, 0.75) }
                 : score < -0.5
-                  ? { label: "Moderate Downregulation", color: "#ff5722" }
+                  ? { label: "Moderate Downregulation", color: rgba(DOWN_RGB, 0.75) }
                   : { label: "No Significant Change", color: "#9e9e9e" };
       }
       const rows = [
@@ -667,7 +688,8 @@ const ExpressionAnalyzer = ({
       const drawPoint =
         !isNonSignificant ||
         highlighted ||
-        Math.floor(Math.random() * 10) + 1 >= 7;
+        // 4 in 10, chosen by the gene's name: the same points every time
+        stableUnit(labels[i]) >= 0.6;
 
       if (drawPoint) {
         let index = Math.floor((zScores[i] - result.min) / result.binSize);
@@ -675,7 +697,7 @@ const ExpressionAnalyzer = ({
         if (index >= result.bins.length) index = result.bins.length - 1;
 
         let binLoc = result.bins[Math.max(0, index)]?.count || 0;
-        let histY = Math.random() * 2 * binLoc - binLoc;
+        let histY = (stableUnit(labels[i], 1) * 2 - 1) * binLoc;
         pointData2.push([
           zScores[i],
           histY,
@@ -933,37 +955,33 @@ const ExpressionAnalyzer = ({
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return "rgba(216, 245, 39, 0.5)";
+                return rgba(CONTROL_RGB, 0.5);
               else if (params.data[4] === true) {
-                return "rgba(39, 96, 245, 0.7)";
+                return rgba(HIGHLIGHT_RGB, 0.7);
               }
               else if (
                 (selectedInnerTab.value === 0 && params.data[0] > 2) ||
                 (selectedInnerTab.value === 1 && params.data[0] > 0.5)
               ) {
-                return "rgba(39, 245, 55, 0.7)";
+                return rgba(UP_RGB, 0.75);
               } else if (
                 (selectedInnerTab.value === 0 && params.data[0] < -2) ||
                 (selectedInnerTab.value === 1 && params.data[0] < -0.5)
               ) {
-                return "rgba(245, 55, 39, 0.7)";
+                return rgba(DOWN_RGB, 0.75);
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] > 0.15
               ) {
-                return "rgba(39, 245, 55, 0.4)";
+                return rgba(UP_RGB, 0.4);
               } else if (
                 selectedInnerTab.value === 1 &&
                 params.data[0] < -0.15
               ) {
                 // moderate negative correlation (mirror of the > 0.15 branch)
-                return "rgba(245, 55, 39, 0.4)";
+                return rgba(DOWN_RGB, 0.4);
               } else {
-                return (
-                  "rgba(200, 200, 200," +
-                  String((Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185) +
-                  ")"
-                );
+                return rgba(OTHER_RGB, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
               }
             },
           },
@@ -973,19 +991,28 @@ const ExpressionAnalyzer = ({
             position: "top",
             fontSize: 14,
             formatter: function (params) {
+              // Highlighted genes and strong effects (z beyond 2, or r beyond 0.5)
+              const strong = selectedInnerTab.value === 1 ? 0.5 : 2;
               if (params.data[4] === true) {
                 return params.data[2];
-              } else if (params.data[0] > 2 || params.data[0] < -2) {
+              } else if (Math.abs(params.data[0]) > strong) {
                 return params.data[2];
               } else {
                 return "";
               }
             },
           },
+          // Hundreds of points can pass the threshold: overlapping labels are
+          // dropped instead of piling into an unreadable block.
+          labelLayout: { hideOverlap: true },
           symbolSize: function (params) {
             if (params[2].startsWith("non-targeting")) return 6;
-            else if (params[0] > 2 || params[0] < -2) return 10;
-            else return Math.round(Math.abs(params[0]) * 2.5 + 3);
+            const magnitude = Math.abs(params[0]);
+            if (selectedInnerTab.value === 1) {
+              // correlations lie in [-1, 1]
+              return magnitude > 0.5 ? 10 : Math.round(magnitude * 10 + 3);
+            }
+            return magnitude > 2 ? 10 : Math.round(magnitude * 2.5 + 3);
           },
           type: "scatter",
         },
@@ -1022,6 +1049,7 @@ const ExpressionAnalyzer = ({
         valueFormatter: (v) => `${v}%`,
       },
       legend: { top: 28 },
+      toolbox: cellCycleToolbox,
       grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
       xAxis: { type: "category", data: ["Control", "Perturbation"] },
       yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
@@ -1070,6 +1098,7 @@ const ExpressionAnalyzer = ({
         valueFormatter: (v) => `${v}%`,
       },
       legend: { top: 28 },
+      toolbox: cellCycleToolbox,
       grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
       xAxis: { type: "category", data: ["G1", "S", "G2M"] },
       yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
@@ -1112,8 +1141,13 @@ const ExpressionAnalyzer = ({
 
       return {
         title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 600 } },
-        tooltip: { trigger: "axis" },
+        tooltip: {
+          trigger: "axis",
+          valueFormatter: (value) =>
+            typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : value,
+        },
         legend: { top: 28 },
+        toolbox: cellCycleToolbox,
         grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
         xAxis: { type: "value", name: "Score" },
         yAxis: { type: "value", name: "Density" },
@@ -1193,6 +1227,7 @@ const ExpressionAnalyzer = ({
           valueFormatter: (v) => Math.abs(v).toExponential(2),
         },
         legend: { top: 28 },
+        toolbox: cellCycleToolbox,
         grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
         xAxis: { type: "value", name: "Score" },
         yAxis: {
@@ -1542,7 +1577,7 @@ const ExpressionAnalyzer = ({
                     : " perturbation "}{" "}
                   of
                   {" " + expressionanalyzerSettings.selectedGene}?
-                 <span style={{ color: 'red', fontWeight: 'bold' }}> Red highlighted</span> genes are down regulated, while <span style={{ color: 'green', fontWeight: 'bold' }}>green highlighted</span> genes are up regulated.
+                
                 </Text>
                 <Spacer height={5} />
               </>
@@ -1561,7 +1596,7 @@ const ExpressionAnalyzer = ({
                   {" " +
                     expressionanalyzerSettings.selectedGene +
                     " expression"}
-                  ? <span style={{ color: 'red', fontWeight: 'bold' }}> Red highlighted</span> genes down regulate, while <span style={{ color: 'green', fontWeight: 'bold' }}>green highlighted</span> genes are up regulated.
+                  ?
                 </Text>
                 <Spacer height={5} />
               </>
@@ -1617,15 +1652,46 @@ const ExpressionAnalyzer = ({
             )}
             {selectedView === 0 && (
               <>
-                <div className={styles.mainView}>
-                  <ReactEChartsCore
-                    echarts={echarts}
-                    option={options}
-                    style={{ height: "100%", width: "100%" }}
-                    notMerge={true}
-                    lazyUpdate={true}
+                {pointData.length > 0 ? (
+                  <>
+                    <ChartLegend
+                      label="Score legend"
+                      items={
+                        selectedInnerTab.value === 1
+                          ? [
+                              { label: "r above 0.5", color: rgba(UP_RGB, 0.75) },
+                              { label: "r 0.15 to 0.5", color: rgba(UP_RGB, 0.4) },
+                              { label: "r -0.15 to -0.5", color: rgba(DOWN_RGB, 0.4) },
+                              { label: "r below -0.5", color: rgba(DOWN_RGB, 0.75) },
+                              { label: "Highlighted", color: rgba(HIGHLIGHT_RGB, 0.7) },
+                              { label: "Other", color: rgba(OTHER_RGB, 0.6) },
+                            ]
+                          : [
+                              { label: "Up (z above 2)", color: rgba(UP_RGB, 0.75) },
+                              { label: "Down (z below -2)", color: rgba(DOWN_RGB, 0.75) },
+                              { label: "Highlighted", color: rgba(HIGHLIGHT_RGB, 0.7) },
+                              { label: "Non-targeting control", color: rgba(CONTROL_RGB, 0.8) },
+                              { label: "Other", color: rgba(OTHER_RGB, 0.6) },
+                            ]
+                      }
+                      note="Non-significant points are thinned out in the chart; the table has every row"
+                    />
+                    <div className={styles.mainView}>
+                      <ReactEChartsCore
+                        echarts={echarts}
+                        option={options}
+                        style={{ height: "100%", width: "100%" }}
+                        notMerge={true}
+                        lazyUpdate={true}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState
+                    title="Nothing to plot here"
+                    hint="This result has no values for the selected tab. Try another tab, gene or dataset."
                   />
-                </div>
+                )}
               </>
             )}
             <Spacer height={5} />

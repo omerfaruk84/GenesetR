@@ -45,6 +45,15 @@ import { formulaSymbolSet, toggleGeneInFormula } from "../../utils/geneFormula";
 import { buildTopBottomGeneLists, splitGenesByScore } from "../../utils/geneListUtils";
 import { withErrorBoundary } from "../error-boundary";
 import { ToolbarButton, ChartLegend } from "../ui";
+import {
+  UP_RGB,
+  DOWN_RGB,
+  HIGHLIGHT_RGB,
+  CONTROL_RGB,
+  OTHER_RGB,
+  rgba,
+  stableUnit,
+} from "../../utils/chartStyle";
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 
@@ -123,9 +132,9 @@ const signatureTooltipFormatter = createGeneTooltipFormatter({
     const z = parsed.zScore;
     const effect =
       z > 2
-        ? { label: "Increases Signature", color: "#4caf50" }
+        ? { label: "Increases Signature", color: rgba(UP_RGB) }
         : z < -2
-          ? { label: "Decreases Signature", color: "#f44336" }
+          ? { label: "Decreases Signature", color: rgba(DOWN_RGB) }
           : { label: "No Significant Effect", color: "#9e9e9e" };
     return buildGeneScoreTooltip({
       geneSymbol,
@@ -175,7 +184,7 @@ const moduleDescription = {
   title: "Gene Signature Analysis",
   description: "This module identifies genes that induce specific phenotypes upon their perturbation by applying mathematical expressions to z-score normalized data. It helps to identify sets of genes responsible for specific phenotypic changes (e.g. genes that regulate ER stress, cholesterol biosynthesis, etc).",
   tabs: {
-    chart: "Graph showing perturbations ranked by their effect on the gene signature. Green dots indicate perturbations that increase the signature, red dots decrease it.",
+    chart: "Graph showing perturbations ranked by their effect on the gene signature. Orange dots indicate perturbations that increase the signature, purple dots decrease it.",
     table: "Table of all perturbations showing their effect direction and z-scores based on the gene signature analysis.",
     similarGenes: "This table lists genes that show similar expression patterns to your gene signature and may be considered for inclusion in the signature to enhance its specificity. Higher similarity scores indicate stronger correlation with your signature.",
     multiDataset: "Cross-dataset analysis showing how your gene signature performs across multiple cell lines and conditions. Results are ranked by average z-score and filtered by minimum dataset presence. Use settings to control ranking and filtering parameters.",
@@ -1547,12 +1556,13 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         // the chart stays responsive. Highlighted genes are always drawn.
         const highlighted = isHighlighted(labels[i]);
         if (zScores[i] < 1.5 && zScores[i] > -1.5 && !highlighted) {
-          let randomNum = Math.floor(Math.random() * 10) + 1; //Generate random num 1:10
-          if (randomNum < 7) continue;
+          // 4 in 10 are kept, chosen by the perturbation's name: the same
+          // points every time, whatever else changes on the page
+          if (stableUnit(labels[i]) < 0.6) continue;
         }
 
         let binLoc = bins[binIndexOf(zScores[i])]?.count || 0;
-        let histY = Math.random() * 2 * binLoc - binLoc;
+        let histY = (stableUnit(labels[i], 1) * 2 - 1) * binLoc;
         pointData.push([
           zScores[i],
           histY,
@@ -1672,7 +1682,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
               color: "black",
             },
           },
-          name: "Signature Score (Averaged Z-Score)",
+          name: "Z-score of the signature score",
           nameTextStyle: {
             fontSize: 16,
             color: "black",
@@ -1736,21 +1746,15 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return "rgba(216, 245, 39, 0.5)"; //yellow
+                return rgba(CONTROL_RGB, 0.5);
               else if (params.data[4] === true) {
-                return "rgba(39, 96, 245, 0.7)";
-              } //blue highlight
-              else if (params.data[0] > 2) {
-                return "rgba(39, 245, 55, 0.7)"; //green
+                return rgba(HIGHLIGHT_RGB, 0.7);
+              } else if (params.data[0] > 2) {
+                return rgba(UP_RGB, 0.75);
               } else if (params.data[0] < -2) {
-                return "rgba(245, 55, 39, 0.7)"; //red
+                return rgba(DOWN_RGB, 0.75);
               } else {
-                //if( params.data[3]> -2 &&params.data[3]<2 )
-                return (
-                  "rgba(200, 200, 200," +
-                  String((Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185) +
-                  ")"
-                );
+                return rgba(OTHER_RGB, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
               }
             },
           },
@@ -1769,6 +1773,8 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
               }
             },
           },
+          // The genes of the signature are all labelled and sit close together.
+          labelLayout: { hideOverlap: true },
           symbolSize: function (params) {
             if (params[2].startsWith("non-targeting")) return 6;
             else if (params[0] > 2 || params[0] < -2) return 10;
@@ -2237,11 +2243,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           <ChartLegend
             label="Signature score legend"
             items={[
-              { label: "Score above 2", color: "rgba(39, 245, 55, 0.7)" },
-              { label: "Score below -2", color: "rgba(245, 55, 39, 0.7)" },
-              { label: "Highlighted perturbation", color: "rgba(39, 96, 245, 0.7)" },
-              { label: "Non-targeting control", color: "rgba(216, 245, 39, 0.8)" },
-              { label: "Other perturbations", color: "rgba(200, 200, 200, 0.6)" },
+              { label: "Z-score above 2", color: rgba(UP_RGB, 0.75) },
+              { label: "Z-score below -2", color: rgba(DOWN_RGB, 0.75) },
+              { label: "Highlighted perturbation", color: rgba(HIGHLIGHT_RGB, 0.7) },
+              { label: "Non-targeting control", color: rgba(CONTROL_RGB, 0.8) },
+              { label: "Other perturbations", color: rgba(OTHER_RGB, 0.6) },
             ]}
             note="Each point is one perturbation; larger points have stronger scores"
           />
