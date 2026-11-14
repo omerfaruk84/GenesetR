@@ -6,6 +6,7 @@ import { GeneSearch } from "../../components/gene-search";
 import { fetchGeneInfo, fetchGeneSummary } from "../../store/api/genes";
 import { baseSymbol, geneLinks, genePagePath } from "../../utils/geneLinks";
 import { sendGenesTo } from "../../utils/sendTo";
+import { SendToMenu } from "../../components/send-to";
 import styles from "./gene-page.module.scss";
 
 const EXAMPLES = ["ATF4", "MED12", "HSPA5", "TP53", "MYC", "EIF2AK4"];
@@ -377,6 +378,14 @@ const GenePage = () => {
                     {current.as_perturbation ? (
                       <>
                         <p className={styles.help}>Genes whose expression changes most (z-score).</p>
+                        <div className={styles.cardActions}>
+                          <SendToMenu
+                            label="Send these genes to…"
+                            datasetId={current.dataset}
+                            defaultName={`${symbol} targets (${current.dataset})`}
+                            genes={[...current.as_perturbation.top_up, ...current.as_perturbation.top_down].map((row) => row.gene)}
+                          />
+                        </div>
                         <div className={styles.pair}>
                           <RankedList title="Up-regulated" rows={current.as_perturbation.top_up} labelKey="gene" valueKey="z" limit={5} />
                           <RankedList title="Down-regulated" rows={current.as_perturbation.top_down} labelKey="gene" valueKey="z" limit={5} />
@@ -392,6 +401,14 @@ const GenePage = () => {
                     {current.as_target ? (
                       <>
                         <p className={styles.help}>Perturbations that change its expression most (z-score).</p>
+                        <div className={styles.cardActions}>
+                          <SendToMenu
+                            label="Send these perturbations to…"
+                            datasetId={current.dataset}
+                            defaultName={`${symbol} regulators (${current.dataset})`}
+                            genes={[...current.as_target.top_increase, ...current.as_target.top_decrease].map((row) => baseSymbol(row.perturbation))}
+                          />
+                        </div>
                         <div className={styles.pair}>
                           <RankedList title="Increase it" rows={current.as_target.top_increase} labelKey="perturbation" valueKey="z" limit={5} />
                           <RankedList title="Decrease it" rows={current.as_target.top_decrease} labelKey="perturbation" valueKey="z" limit={5} />
@@ -410,6 +427,14 @@ const GenePage = () => {
                           Correlation of knock-down profiles ({current.neighbours.method}). Similar profiles suggest a
                           shared complex or pathway.
                         </p>
+                        <div className={styles.cardActions}>
+                          <SendToMenu
+                            label="Send the similar ones to…"
+                            datasetId={current.dataset}
+                            defaultName={`${symbol} neighbours (${current.dataset})`}
+                            genes={[symbol, ...current.neighbours.most_similar.map((row) => baseSymbol(row.perturbation))]}
+                          />
+                        </div>
                         <div className={styles.pair}>
                           <RankedList title="Most similar" rows={current.neighbours.most_similar} labelKey="perturbation" valueKey="r" limit={1} />
                           <RankedList title="Most opposite" rows={current.neighbours.most_opposite} labelKey="perturbation" valueKey="r" limit={1} />

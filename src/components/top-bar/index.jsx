@@ -4,6 +4,7 @@ import { FaBars, FaChevronDown, FaTimes } from "react-icons/fa";
 import { ROUTES, isActiveTab } from "../../common/routes";
 import { GeneSearch } from "../gene-search";
 import { ThemeToggle } from "../theme-toggle";
+import { WorkspacePanel } from "../workspace-panel";
 import { NAV_GROUPS, NAV_LINKS } from "./navigation";
 import styles from "./top-bar.module.scss";
 
@@ -129,6 +130,7 @@ const TopBar = () => {
             <GeneSearch placeholder="Search a gene" />
           </div>
         )}
+        <WorkspacePanel />
         <ThemeToggle />
         <button
           type="button"

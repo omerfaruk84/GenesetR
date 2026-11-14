@@ -58,6 +58,19 @@ export const sendGenesTo = (targetId, genes, { datasetId } = {}) => (dispatch, g
     if (dataset) dispatch(coreSettingsChanged({ settingName: "cellLine", newValue: dataset }));
   }
 
+  // Correlation needs at least one ticked dataset before it can run
+  if (target.id === "correlation") {
+    const state = getState()?.settings;
+    const ticked = state?.correlation?.selectedDatasets || [];
+    const dataset = datasetId || state?.core?.cellLine?.id;
+    if (dataset && (datasetId ? !ticked.includes(dataset) || ticked.length !== 1 : ticked.length === 0)) {
+      dispatch({
+        type: "correlation/correlationSettingsChanged",
+        payload: { settingName: "selectedDatasets", newValue: [dataset] },
+      });
+    }
+  }
+
   const first = baseSymbol(list[0]);
   switch (target.id) {
     case "genePage":

@@ -32,6 +32,7 @@ import { checkGenes } from "./helper";
 import { fetchHugoGenes, updateGeneLists } from "../../store/api";
 import { runCalculation } from "../../store/results/index";
 import { ROUTES } from "../../common/routes";
+import { SendToMenu } from "../send-to";
 
 /*
 let isLoaded = false;
@@ -493,6 +494,13 @@ const Genelist = ({
             <div style={{ width: "100%" }}>
               <Flex alignItems="center" justifyContent="space-between">
                 <Heading>{listTitle}</Heading>
+                {!isGeneSignature && numberOfGenesEntered > 0 && (
+                  <SendToMenu
+                    genes={() => currentGenes}
+                    label="Send to"
+                    style={{ height: 24, padding: "0 8px", fontSize: 12 }}
+                  />
+                )}
                 {exampleVisible && (
                   <Button
                     label="Example"

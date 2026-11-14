@@ -36,6 +36,7 @@ import { ScatterChart, EffectScatterChart, CustomChart } from "echarts/charts";
 import { performEnrichment } from "./enrichrAPI";
 import { saveAs } from "file-saver";
 import { CopyToClipboard } from "react-copy-to-clipboard";
+import { SendToMenu } from "../send-to";
 import { withErrorBoundary } from "../error-boundary";
 
 import {
@@ -1404,6 +1405,8 @@ const GeneSetEnrichmentTable = ({
                 />
               </CopyToClipboard>
 
+              <Spacer width="6px" />
+              <SendToMenu genes={() => cleanSelectedGenes()} />
               <Spacer width="6px" />
 
               <Button
