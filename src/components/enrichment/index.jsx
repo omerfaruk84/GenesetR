@@ -378,8 +378,10 @@ const GeneSetEnrichmentTable = ({
   };
 
   useEffect(() => {
+    // Also when the page size or the result changes: a later page of the old
+    // result may not exist any more, which left the table empty.
     setSelectedPage(1);
-  }, [filters, sorts]);
+  }, [filters, sorts, rowsPerPage, keyedData]);
   const firstVisibleRow = (selectedPage - 1) * rowsPerPage;
   const filterAndSortDataRows = (dataRows, filters, sorts) =>
     dataRows
@@ -568,7 +570,8 @@ const GeneSetEnrichmentTable = ({
             const csvData =
               exportHeadings.join("\t") +
               "\n" +
-              keyedData
+              // The rows as filtered and sorted in the table
+              filteredAndSortedData
                 .map((item) =>
                   headings
                     .filter((h) => h !== "GC")
@@ -586,7 +589,7 @@ const GeneSetEnrichmentTable = ({
             });
 
             // Save the blob as a file using FileSaver.js
-            saveAs(blob, "data.tsv");
+            saveAs(blob, `genesetr_enrichment_${new Date().toISOString().slice(0, 10)}.tsv`);
           },
         },
       ],

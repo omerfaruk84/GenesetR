@@ -622,7 +622,41 @@ test("the Heatmap page draws with the cluster heatmap too", async ({ page }) => 
   }
   await page.locator('[data-tour="run"] button').first().click();
   await expect(page.locator("[data-cluster-heatmap] canvas").first()).toBeVisible();
-  expect(await withHeatmap(page, (hm) => [hm._nRows, hm._nCols, hm._mode])).toEqual([60, 60, "gl"]);
+  // fixtures/task_heatMap.json: expression of the example genes under the example perturbations
+  const drawn = await withHeatmap(page, (hm) => ({ rows: hm._nRows, cols: hm._nCols, mode: hm._mode, range: hm._range }));
+  expect(drawn.rows).toBeGreaterThan(5);
+  expect(drawn.cols).toBeGreaterThan(5);
+  expect(drawn.mode).toBe("gl");
+  expect(drawn.range.mid).toBe(0); // z-scores of both signs: centred on zero
+  expect(await errors()).toEqual([]);
+});
+
+test("result table: gene links, export of the rows as filtered", async ({ page }) => {
+  const fs = require("fs");
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  await page.getByText("Table", { exact: true }).first().click();
+
+  // Gene symbols open the gene page.
+  const link = page.locator('a[href*="/gene?symbol="]').first();
+  await expect(link).toBeVisible();
+  expect(await link.getAttribute("target")).toBe("_blank");
+
+  // The export is real CSV and holds only the rows that pass the filter.
+  const symbol = (await link.textContent()).trim();
+  await page.getByPlaceholder("Symbol").first().fill(symbol);
+  await page.waitForTimeout(600);
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "CSV" }).first().click(),
+  ]);
+  expect(file.suggestedFilename()).toMatch(/^genesetr_table-.*\.csv$/);
+  const lines = fs.readFileSync(await file.path(), "utf-8").replace(/^\uFEFF/, "").trim().split(/\r?\n/);
+  expect(lines[0]).toBe("Gene 1,Gene 2,Score");
+  expect(lines.length).toBeGreaterThan(1);
+  expect(lines.length).toBeLessThan(200); // far fewer than all 60 x 59 pairs
+  // (the column filter is a fuzzy match, so near-identical symbols may pass too)
+  expect(lines.slice(1).some((line) => line.split(",")[0] === symbol)).toBe(true);
   expect(await errors()).toEqual([]);
 });
 

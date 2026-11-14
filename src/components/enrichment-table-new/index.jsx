@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -6,26 +7,23 @@ import {
 import { Box, Button } from "@mui/material";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
-import { mkConfig, generateCsv, download } from "export-to-csv";
 import React from "react";
 import GenelistAdd from "../genelist-add";
 import { withErrorBoundary } from "../error-boundary";
 import { flattenColumns } from "../../utils/geneListUtils";
 import { EmptyState } from "../ui";
 import { formatNumber } from "../../utils/formatNumber";
+import { downloadTable } from "../../utils/exporters";
+import { TableExportButtons } from "../export-buttons";
+import { genePagePath } from "../../utils/geneLinks";
 
-// File name for exports: genesetr_<name>_<yyyy-mm-dd>.csv
-const csvConfigFor = (exportName) =>
-  mkConfig({
-    fieldSeparator: "\t",
-    decimalSeparator: ".",
-    useKeysAsHeaders: true,
-    filename: `genesetr_${String(exportName || "table")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "") || "table"}_${new Date().toISOString().slice(0, 10)}`,
-  });
+// File name for exports: genesetr_<name> (the date and extension are added on download)
+const exportFilename = (exportName) =>
+  `genesetr_${String(exportName || "table")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "table"}`;
 
 // Numbers without a column-specific renderer get one consistent format.
 const DEFAULT_COLUMN = {
@@ -84,7 +82,42 @@ export const collectGenes = (rows, accessors) => {
   return genes;
 };
 
-// export-to-csv only accepts primitive cell values.
+// A symbol that has a gene page: one word, not a control guide.
+const isLinkableGene = (value) =>
+  typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && !/^non-targeting/i.test(value);
+
+/**
+ * Columns whose values are gene symbols open the gene page (in a new tab, so
+ * the result stays). Columns with their own Cell renderer are left alone.
+ */
+const withGeneLinks = (columns, geneKeys) =>
+  (columns || []).map((column) => {
+    if (Array.isArray(column.columns)) {
+      return { ...column, columns: withGeneLinks(column.columns, geneKeys) };
+    }
+    if (column.Cell || !geneKeys.includes(column.accessorKey)) return column;
+    return {
+      ...column,
+      Cell: ({ cell }) => {
+        const value = cell.getValue();
+        if (!isLinkableGene(value)) return value ?? "";
+        return (
+          <Link
+            to={genePagePath(value)}
+            target="_blank"
+            rel="noopener"
+            title={`Open the gene page of ${value}`}
+            style={{ color: "inherit", textDecorationStyle: "dotted" }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {value}
+          </Link>
+        );
+      },
+    };
+  });
+
+// Exports hold primitive cell values only.
 const toExportRows = (rows) =>
   (rows || []).map((row) => {
     const out = {};
@@ -106,7 +139,7 @@ const EnrichmentTable = ({
   geneAccessors,
   exportName,
 }) => {
-  const csvConfig = csvConfigFor(exportName);
+  const filename = exportFilename(exportName);
   const [newListVisible, setNewListVisible] = useState(false);
   const [genesToSave, setgenesToSave] = useState("");
   const [sorting, setSorting] = useState([]);
@@ -161,9 +194,16 @@ const EnrichmentTable = ({
 
   const geneKeys = resolveGeneAccessors(geneAccessors, columns, data);
   const canCreateGenelist = geneKeys.length > 0;
+  const geneKeyList = geneKeys.join("\u0000");
+  const linkedColumns = useMemo(
+    () => withGeneLinks(columns, geneKeyList ? geneKeyList.split("\u0000") : []),
+    [columns, geneKeyList]
+  );
+  // Leaf columns, in display order, for the exports.
+  const exportColumns = useMemo(() => flattenColumns(columns), [columns]);
 
   const table = useMaterialReactTable({
-    columns,
+    columns: linkedColumns,
     data,
     defaultColumn: DEFAULT_COLUMN,
     renderEmptyRowsFallback: () =>
@@ -278,13 +318,12 @@ const EnrichmentTable = ({
           flexWrap: "wrap",
         }}
       >
-        <Button
-          disabled={!Array.isArray(data) || data.length === 0}
-          onClick={handleExportData}
-          startIcon={<FileDownloadIcon />}
-        >
-          Export
-        </Button>
+        {/* The rows as filtered and sorted on screen (all pages) */}
+        <TableExportButtons
+          rows={() => toExportRows(table.getSortedRowModel().rows.map((row) => row.original))}
+          columns={exportColumns}
+          filename={filename}
+        />
 
         <Button
           disabled={
@@ -345,17 +384,14 @@ const EnrichmentTable = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorting, columnFilters, globalFilter, data]);
 
-  const handleExportData = () => {
-    if (!Array.isArray(data) || data.length === 0) return;
-    const csv = generateCsv(csvConfig)(toExportRows(data));
-    download(csvConfig)(csv);
-  };
-
   const handleExportRows = (rows) => {
     const rowData = rows.map((row) => row.original);
     if (rowData.length === 0) return;
-    const csv = generateCsv(csvConfig)(toExportRows(rowData));
-    download(csvConfig)(csv);
+    downloadTable(toExportRows(rowData), {
+      columns: exportColumns,
+      filename: `${filename}_selected`,
+      format: "csv",
+    });
   };
 
   const handleSaveGeneList = (rows) => {
