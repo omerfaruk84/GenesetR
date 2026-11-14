@@ -407,6 +407,9 @@ class ClusterHeatmap {
     this._highlightRows = [];
     this._marks = { rows: [], cols: [] }; // highlightGenes()
     this._clusterLabels = { row: {}, col: {} }; // setClusterLabels()
+    this._pointers = new Map(); // touch points, for pinch zoom
+    this._pinch = null;
+    this._boxZoom = null; // rectangle being drawn with Shift-drag
     this._exporting = false;
     this._raf = 0;
     this._viewportHint = null;
@@ -674,6 +677,61 @@ class ClusterHeatmap {
     this._relayout(false);
   }
 
+  /** Keeps cells square: both axes share one cell size and zoom together. */
+  setSquareCells(enabled) {
+    this.settings.square_cells = !!enabled;
+    this._relayout(false);
+  }
+
+  /** Zooms so that the given cluster of the cut fills the view along its axis. */
+  zoomToCluster(axis, number) {
+    const kind = axis === "row" ? "row" : "col";
+    const cluster = this._clusters[kind]?.list[number - 1];
+    if (!cluster || !this._cam) return false;
+    const cam = this._cam;
+    const view = this._viewRect();
+    const cols = [cam.sx / cam.cw, (cam.sx + view.w) / cam.cw];
+    const rows = [cam.sy / cam.ch, (cam.sy + view.h) / cam.ch];
+    if (kind === "row") this._zoomToCells(cols[0], cols[1], cluster.lo, cluster.hi + 1);
+    else this._zoomToCells(cluster.lo, cluster.hi + 1, rows[0], rows[1]);
+    return true;
+  }
+
+  /** Shows the cell rectangle [c0, c1) x [r0, r1) as large as the view allows. */
+  _zoomToCells(c0, c1, r0, r1) {
+    const box = this._layoutBox;
+    const cam = this._cam;
+    if (!box || !cam || !(c1 > c0) || !(r1 > r0)) return;
+    cam.cw = box.availW / (c1 - c0);
+    cam.ch = box.availH / (r1 - r0);
+    this._clampCamera(); // applies the limits (and square cells) to the sizes
+    cam.sx = c0 * cam.cw;
+    cam.sy = r0 * cam.ch;
+    this._clampCamera();
+    this._requestRender();
+  }
+
+  /** Multiplies the cell size, keeping the point (px, py) of the view in place. */
+  _zoomBy(factor, px, py, zoomX = true, zoomY = true) {
+    const cam = this._cam;
+    const box = this._layoutBox;
+    if (!cam || !box) return false;
+    const before = { cw: cam.cw, ch: cam.ch };
+    if (this.settings.square_cells) zoomX = zoomY = true;
+    if (zoomX) {
+      const next = clamp(cam.cw * factor, box.fitCw, Math.max(MAX_CELL, box.fitCw));
+      cam.sx = ((cam.sx + px) * next) / cam.cw - px;
+      cam.cw = next;
+    }
+    if (zoomY) {
+      const next = clamp(cam.ch * factor, box.fitCh, Math.max(MAX_CELL, box.fitCh));
+      cam.sy = ((cam.sy + py) * next) / cam.ch - py;
+      cam.ch = next;
+    }
+    this._clampCamera();
+    return cam.cw !== before.cw || cam.ch !== before.ch;
+  }
+
   setCellValueVisibility(visible) {
     this.settings.show_cell_values = !!visible;
     this._requestRender();
@@ -869,11 +927,16 @@ class ClusterHeatmap {
     this._requestRender();
   }
 
+  /**
+   * Re-fits the canvas to its container (called by the host on every resize).
+   * The zoom is kept: a side panel opening must not throw the user back to
+   * the overview. resetCamera() is the explicit "show everything".
+   */
   fitToScreen(width, height) {
     if (Number.isFinite(width) && Number.isFinite(height)) {
       this._viewportHint = { width, height };
     }
-    this._relayout(true);
+    this._relayout(false);
   }
 
   cleanup() {
@@ -936,7 +999,11 @@ class ClusterHeatmap {
     if (this._root) this._teardownDom();
 
     const root = document.createElement("div");
-    root.style.cssText = "position:relative;width:100%;overflow:hidden;touch-action:none;user-select:none;";
+    root.style.cssText =
+      "position:relative;width:100%;overflow:hidden;touch-action:none;user-select:none;outline:none;";
+    root.tabIndex = 0; // keyboard: arrows pan, + / - zoom, 0 fits
+    root.setAttribute("role", "application");
+    root.setAttribute("aria-label", "Cluster heatmap. Arrow keys pan, plus and minus zoom, zero fits the view.");
     const makeCanvas = () => {
       const canvas = document.createElement("canvas");
       canvas.style.cssText = "position:absolute;left:0;top:0;display:block;";
@@ -982,9 +1049,13 @@ class ClusterHeatmap {
     this._listen(root, "pointerdown", (e) => this._onPointerDown(e));
     this._listen(root, "pointermove", (e) => this._onPointerMove(e));
     this._listen(root, "pointerup", (e) => this._onPointerUp(e));
-    this._listen(root, "pointercancel", () => {
+    this._listen(root, "pointercancel", (e) => {
+      this._pointers.delete(e.pointerId);
+      this._pinch = null;
       this._drag = null;
+      this._boxZoom = null;
     });
+    this._listen(root, "keydown", (e) => this._onKeyDown(e));
     this._listen(root, "pointerleave", (e) => this._onPointerLeave(e));
     this._listen(root, "dblclick", (e) => {
       const region = this._regionAt(e);
@@ -994,6 +1065,11 @@ class ClusterHeatmap {
         // Double-click on the legend goes back to the automatic range.
         this.setAutoRange();
         this.events.range_onuserchange?.({ min: this._range.min, max: this._range.max, auto: true });
+      } else if (kind && this._clusters[kind] && this._onStrip(kind, region)) {
+        // Double-click on a cluster's colour strip zooms to that cluster.
+        const leaf = this._treeFrame(kind).leafAt(region.x, region.y);
+        const index = this._clusters[kind].leafCluster[leaf];
+        if (index !== undefined) this.zoomToCluster(kind === "row" ? "row" : "column", index + 1);
       } else if (kind && this._cut[kind] !== null) {
         this._selected = { row: -1, col: -1 }; // undo the selection made by the first click
         this._setCut(kind, null, true);
@@ -1071,8 +1147,9 @@ class ClusterHeatmap {
     const availH = clamp(this._nRows * maxRowH, 120, Math.max(120, budget - hmY - colLabelH - PAD));
     const height = Math.ceil(hmY + availH + colLabelH + PAD);
 
-    const fitCw = this._nCols ? Math.min(maxColW, availW / this._nCols) : maxColW;
-    const fitCh = this._nRows ? Math.min(maxRowH, availH / this._nRows) : maxRowH;
+    let fitCw = this._nCols ? Math.min(maxColW, availW / this._nCols) : maxColW;
+    let fitCh = this._nRows ? Math.min(maxRowH, availH / this._nRows) : maxRowH;
+    if (s.square_cells) fitCw = fitCh = Math.min(fitCw, fitCh);
     this._layoutBox = {
       width, height, dendW, colDendH, rowLabelW, colLabelH,
       hmX, hmY, availW, availH, fitCw, fitCh,
@@ -1103,6 +1180,7 @@ class ClusterHeatmap {
     const cam = this._cam;
     const box = this._layoutBox;
     if (!cam || !box) return;
+    if (this.settings.square_cells) cam.cw = cam.ch = Math.min(cam.cw, cam.ch);
     cam.cw = clamp(cam.cw, box.fitCw, Math.max(MAX_CELL, box.fitCw));
     cam.ch = clamp(cam.ch, box.fitCh, Math.max(MAX_CELL, box.fitCh));
     cam.sx = clamp(cam.sx, 0, Math.max(0, this._nCols * cam.cw - box.availW));
@@ -1442,6 +1520,17 @@ class ClusterHeatmap {
       });
     }
 
+    if (this._boxZoom) {
+      const { x0, y0, x1, y1 } = this._boxZoom;
+      ctx.fillStyle = "rgba(17,17,17,0.12)";
+      ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(Math.min(x0, x1) + 0.5, Math.min(y0, y1) + 0.5, Math.abs(x1 - x0), Math.abs(y1 - y0));
+      ctx.setLineDash([]);
+    }
+
     const hover = this._exporting ? null : this._hover;
     if (hover) {
       ctx.fillStyle = "rgba(0,0,0,0.10)";
@@ -1634,8 +1723,9 @@ class ClusterHeatmap {
     if (!this._exporting) {
       const hints = [
         `${this._nRows} × ${this._nCols}`,
-        "scroll: zoom",
+        "scroll or pinch: zoom",
         "drag: pan",
+        "shift-drag: zoom to a box",
         "double-click: fit",
         "drag a dashed dendrogram line: cut into clusters",
         "drag the legend's ends: colour range",
@@ -1773,14 +1863,20 @@ class ClusterHeatmap {
     return Math.abs(frame.coord(region.x, region.y) - at) <= 5 ? kind : null;
   }
 
+  /** True when the pointer is on the cluster colour strip between a tree and the heatmap. */
+  _onStrip(kind, region) {
+    const frame = this._treeFrame(kind);
+    const stripStart = kind === "row" ? frame.rect.x + frame.rect.w : frame.rect.y + frame.rect.h;
+    return frame.coord(region.x, region.y) >= stripStart;
+  }
+
   /** The tree node under the pointer; with a cut, anywhere in a cluster's band picks that cluster. */
   _nodeAt(kind, region) {
     const tree = this._tree(kind);
     const clusters = this._clusters[kind];
     const frame = this._treeFrame(kind);
     // The colour strip between tree and heatmap always picks the whole cluster.
-    const stripStart = kind === "row" ? frame.rect.x + frame.rect.w : frame.rect.y + frame.rect.h;
-    const onStrip = !!clusters && frame.coord(region.x, region.y) >= stripStart;
+    const onStrip = !!clusters && this._onStrip(kind, region);
     const node = onStrip ? -1 : this._treeNodeAt(tree, kind, region.x, region.y);
     if (node >= 0 || !clusters) return node;
     const leaf = frame.leafAt(region.x, region.y);
@@ -1860,10 +1956,29 @@ class ClusterHeatmap {
   }
 
   _onPointerDown(e) {
+    if (e.pointerType === "touch") {
+      this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this._pointers.size === 2) {
+        // Second finger: the drag becomes a pinch.
+        const [a, b] = Array.from(this._pointers.values());
+        this._drag = null;
+        this._boxZoom = null;
+        this._setHover(null, e);
+        this._pinch = {
+          distance: Math.max(Math.hypot(a.x - b.x, a.y - b.y), 1),
+          mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          cam: { ...this._cam },
+        };
+        return;
+      }
+    }
     if (e.button !== 0) return;
+    this._root.focus?.({ preventScroll: true });
     const region = this._regionAt(e);
     this._drag = {
       region: region.name,
+      // Shift-drag on the heatmap draws a box to zoom to.
+      box: e.shiftKey && region.name === "heatmap" ? { x0: region.x, y0: region.y, x1: region.x, y1: region.y } : null,
       cut: this._cutHandleAt(region),
       // Dragging an end of the legend's colour range; the axis is fixed for the drag.
       legend: region.name === "legend" ? this._legendHandleAt(region.x, region.y) : null,
@@ -1875,11 +1990,31 @@ class ClusterHeatmap {
       moved: false,
       pointerId: e.pointerId,
     };
-    this._root.setPointerCapture?.(e.pointerId);
+    try {
+      this._root.setPointerCapture?.(e.pointerId);
+    } catch (error) {
+      // The pointer is already gone (or was synthetic); the drag works without capture.
+    }
   }
 
   _onPointerMove(e) {
+    if (this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this._pinch) {
+      if (this._pointers.size >= 2) this._applyPinch();
+      return;
+    }
     const drag = this._drag;
+    if (drag && drag.box) {
+      const view = this._viewRect();
+      const { x, y } = this._point(e);
+      drag.box.x1 = clamp(x, view.x, view.x + view.w);
+      drag.box.y1 = clamp(y, view.y, view.y + view.h);
+      drag.moved = true;
+      this._boxZoom = drag.box;
+      this._setHover(null, e);
+      this._requestRender();
+      return;
+    }
     if (drag && drag.legend) {
       const frame = drag.legendFrame;
       const value = frame.toValue(this._point(e).x);
@@ -1975,11 +2110,75 @@ class ClusterHeatmap {
     tip.style.top = `${Math.max(0, top)}px`;
   }
 
+  _applyPinch() {
+    const [a, b] = Array.from(this._pointers.values());
+    const start = this._pinch;
+    const cam = this._cam;
+    const rect = this._root.getBoundingClientRect();
+    const view = this._viewRect();
+    const scale = Math.hypot(a.x - b.x, a.y - b.y) / start.distance;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    // The content under the fingers' midpoint at the start stays under it.
+    Object.assign(cam, start.cam);
+    this._zoomBy(scale, start.mid.x - rect.left - view.x, start.mid.y - rect.top - view.y);
+    cam.sx -= mid.x - start.mid.x;
+    cam.sy -= mid.y - start.mid.y;
+    this._clampCamera();
+    this._requestRender();
+  }
+
+  _onKeyDown(e) {
+    const cam = this._cam;
+    if (!cam || e.ctrlKey || e.metaKey || e.altKey) return;
+    const view = this._viewRect();
+    const step = e.shiftKey ? 240 : 48;
+    switch (e.key) {
+      case "ArrowLeft": cam.sx -= step; break;
+      case "ArrowRight": cam.sx += step; break;
+      case "ArrowUp": cam.sy -= step; break;
+      case "ArrowDown": cam.sy += step; break;
+      case "+":
+      case "=": this._zoomBy(1.25, view.w / 2, view.h / 2); break;
+      case "-":
+      case "_": this._zoomBy(0.8, view.w / 2, view.h / 2); break;
+      case "0":
+      case "Home": this.resetCamera(); break;
+      default: return;
+    }
+    e.preventDefault();
+    this._clampCamera();
+    this._requestRender();
+  }
+
   _onPointerUp(e) {
+    this._pointers.delete(e.pointerId);
+    if (this._pinch) {
+      // A pinch ends when a finger lifts; the other finger does not start a drag.
+      if (this._pointers.size < 2) this._pinch = null;
+      this._drag = null;
+      return;
+    }
     const drag = this._drag;
     this._drag = null;
     if (!drag) return;
-    this._root.releasePointerCapture?.(drag.pointerId);
+    try {
+      this._root.releasePointerCapture?.(drag.pointerId);
+    } catch (error) {
+      // Nothing was captured.
+    }
+    if (drag.box) {
+      this._boxZoom = null;
+      const { x0, y0, x1, y1 } = drag.box;
+      if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 4) {
+        const cam = this._cam;
+        const view = this._viewRect();
+        const col = (x) => (x - view.x + cam.sx) / cam.cw;
+        const row = (y) => (y - view.y + cam.sy) / cam.ch;
+        this._zoomToCells(col(Math.min(x0, x1)), col(Math.max(x0, x1)), row(Math.min(y0, y1)), row(Math.max(y0, y1)));
+      }
+      this._requestRender();
+      return;
+    }
     if (drag.legend) {
       if (drag.moved) {
         this.events.range_onuserchange?.({ min: this._range.min, max: this._range.max, auto: false });
@@ -2033,29 +2232,34 @@ class ClusterHeatmap {
     if (region.name === "none" || region.name === "legend") return;
     const cam = this._cam;
     const view = this._viewRect();
-    const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    const factor = Math.exp(-delta * 0.0015);
-    // Over a dendrogram only its own axis zooms; Shift/Alt do the same on the heatmap.
-    const zoomX = region.name !== "rowTree" && !e.altKey;
-    const zoomY = region.name !== "colTree" && !e.shiftKey;
-    const before = { cw: cam.cw, ch: cam.ch };
     const box = this._layoutBox;
-    if (zoomX) {
-      const next = clamp(cam.cw * factor, box.fitCw, Math.max(MAX_CELL, box.fitCw));
-      const px = clamp(region.x - view.x, 0, box.availW);
-      cam.sx = ((cam.sx + px) * next) / cam.cw - px;
-      cam.cw = next;
+    const before = { ...cam };
+    const pixels = e.deltaMode === 0;
+
+    // A trackpad's two-finger scroll arrives as small pixel deltas, usually on
+    // both axes: it pans. A mouse wheel (large steps) and a pinch (ctrl) zoom.
+    const trackpadScroll = pixels && !e.ctrlKey && (e.deltaX !== 0 || Math.abs(e.deltaY) < 30);
+    if (trackpadScroll) {
+      if (region.name !== "rowTree") cam.sx += e.deltaX;
+      if (region.name !== "colTree") cam.sy += e.deltaY;
+      this._clampCamera();
+    } else {
+      const delta = pixels ? e.deltaY : e.deltaY * 16;
+      const factor = Math.exp(-delta * (e.ctrlKey && pixels ? 0.01 : 0.0015));
+      // Over a dendrogram only its own axis zooms; Shift/Alt do the same on the heatmap.
+      const zoomX = region.name !== "rowTree" && !e.altKey;
+      const zoomY = region.name !== "colTree" && !e.shiftKey;
+      this._zoomBy(
+        factor,
+        clamp(region.x - view.x, 0, box.availW),
+        clamp(region.y - view.y, 0, box.availH),
+        zoomX,
+        zoomY
+      );
     }
-    if (zoomY) {
-      const next = clamp(cam.ch * factor, box.fitCh, Math.max(MAX_CELL, box.fitCh));
-      const py = clamp(region.y - view.y, 0, box.availH);
-      cam.sy = ((cam.sy + py) * next) / cam.ch - py;
-      cam.ch = next;
-    }
-    // At a zoom limit the wheel scrolls the page as usual.
-    if (cam.cw === before.cw && cam.ch === before.ch) return;
+    // At a limit nothing moves, and the wheel scrolls the page as usual.
+    if (cam.cw === before.cw && cam.ch === before.ch && cam.sx === before.sx && cam.sy === before.sy) return;
     e.preventDefault();
-    this._clampCamera();
     this._updateHover(e);
     this._requestRender();
   }

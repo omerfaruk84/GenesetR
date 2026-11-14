@@ -51,6 +51,7 @@ const INCHLIB_OPTIONAL_METHODS = [
   "updateCellColorsPercentile",
   "updateDendrogramLineWidth",
   "getClusters",
+  "setSquareCells",
 ];
 
 // Enrichr accepts lists of 3-400 genes; at most this many clusters are
@@ -803,6 +804,11 @@ const keyedData = useMemo(() => {
       const height = container.clientHeight || container.offsetHeight;
       if (width > 0 && height > 0) {
         inchlibInstance.current.fitToScreen?.(width, height);
+        // The cluster heatmap keeps its zoom when it is only resized; the
+        // button means "show everything".
+        if (inchlibInstance.current.setAutoRange) {
+          inchlibInstance.current.resetCamera?.();
+        }
       }
     }, 150);
   }, []);
@@ -846,6 +852,12 @@ const keyedData = useMemo(() => {
       inchlibInstance.current.setRowScaling?.(asBool(inchlibSettings.row_scaling));
     }
   }, [inchlibSettings.row_scaling, asBool]);
+
+  useEffect(() => {
+    if (inchlibInstance.current && instanceIdRef.current) {
+      inchlibInstance.current.setSquareCells?.(asBool(inchlibSettings.square_cells));
+    }
+  }, [inchlibSettings.square_cells, asBool]);
 
   // The settings panel sizes its range slider from the heatmap on screen.
   useEffect(() => () => setHeatmapRangeInfo(null), []);
@@ -1089,6 +1101,7 @@ const keyedData = useMemo(() => {
       // The cluster heatmap starts from the display settings in the sidebar
       // (the InCHlib builds only follow them once they change).
       inchlib.setRowScaling(asBool(inchlibSettings.row_scaling));
+      inchlib.setSquareCells(asBool(inchlibSettings.square_cells));
       if (inchlibSettings.color_range_auto === false) {
         inchlib.updateCellColorsPercentile({
           minValue: inchlibSettings.color_percentile_min,

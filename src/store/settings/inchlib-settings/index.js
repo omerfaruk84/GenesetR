@@ -17,6 +17,8 @@ const initialState = {
   color_range_auto: true,
   // show each row as z-scores of its own values
   row_scaling: false,
+  // one cell size for both axes
+  square_cells: false,
   color_percentile_min: -1, 
   color_percentile_max: 1,  
   max_column_width: 100,

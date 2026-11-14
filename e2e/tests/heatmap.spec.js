@@ -288,4 +288,127 @@ test("zoomed out, cells that share a pixel are averaged", async ({ page }) => {
   expect(Math.min(...pixel.rgb)).toBeGreaterThan(150);
 });
 
+/** Viewport position of the middle of the heatmap's visible part. */
+const heatmapCentre = (page) =>
+  withHeatmap(page, (hm) => {
+    const rect = hm._root.getBoundingClientRect();
+    const view = hm._viewRect();
+    return { x: rect.left + view.x + view.w / 2, y: rect.top + view.y + view.h / 2, left: rect.left + view.x, top: rect.top + view.y };
+  });
+const camera = (page) => withHeatmap(page, (hm) => ({ ...hm._cam, fitCw: hm._layoutBox.fitCw, fitCh: hm._layoutBox.fitCh }));
+
+test("navigation: wheel zooms, trackpad scroll pans, pinch zooms, keys work", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  const centre = await heatmapCentre(page);
+  const fit = await camera(page);
+  await page.mouse.move(centre.x, centre.y);
+
+  // Mouse wheel (large steps): zoom in around the pointer.
+  await page.mouse.wheel(0, -400);
+  const zoomed = await camera(page);
+  expect(zoomed.cw).toBeGreaterThan(fit.cw * 1.5);
+  expect(zoomed.ch).toBeGreaterThan(fit.ch * 1.5);
+
+  // Trackpad two-finger scroll (small deltas on both axes): pan, no zoom.
+  await page.mouse.wheel(-12, -9);
+  const panned = await camera(page);
+  expect(panned.cw).toBe(zoomed.cw);
+  expect(panned.sx).toBeCloseTo(zoomed.sx - 12, 3);
+  expect(panned.sy).toBeCloseTo(zoomed.sy - 9, 3);
+
+  // Pinch on a trackpad arrives as ctrl + small wheel deltas: zoom.
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -20);
+  await page.keyboard.up("Control");
+  expect((await camera(page)).cw).toBeGreaterThan(panned.cw);
+
+  // Keyboard: 0 fits, + zooms, arrows pan.
+  await page.locator("[data-cluster-heatmap]").focus();
+  await page.keyboard.press("0");
+  expect((await camera(page)).cw).toBe(fit.cw);
+  await page.keyboard.press("+");
+  await page.keyboard.press("+");
+  const keyed = await camera(page);
+  expect(keyed.cw).toBeGreaterThan(fit.cw);
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowDown");
+  const moved = await camera(page);
+  expect(moved.sx).toBeGreaterThan(keyed.sx);
+  expect(moved.sy).toBeGreaterThan(keyed.sy);
+  expect(await errors()).toEqual([]);
+});
+
+test("navigation: box zoom, zoom to a cluster, square cells, touch pinch", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openHeatmap(page);
+  const centre = await heatmapCentre(page);
+  const fit = await camera(page);
+
+  // Shift-drag draws a box; the view zooms to it.
+  await page.keyboard.down("Shift");
+  await page.mouse.move(centre.left + 40, centre.top + 40);
+  await page.mouse.down();
+  await page.mouse.move(centre.left + 140, centre.top + 100, { steps: 4 });
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  const boxed = await camera(page);
+  expect(boxed.cw).toBeGreaterThan(fit.cw * 2);
+  expect(boxed.sx).toBeCloseTo((40 / fit.cw) * boxed.cw, 0);
+  // No cluster was selected by the drag.
+  await expect(page.getByTestId("cluster-panel").getByText(/cluster ·/)).toHaveCount(0);
+
+  // Double-click on a cluster's colour strip zooms to that cluster.
+  await withHeatmap(page, (hm) => {
+    hm.resetCamera();
+    hm.setClusterCount("row", 4);
+  });
+  const strip = await withHeatmap(page, (hm) => {
+    const rect = hm._root.getBoundingClientRect();
+    const view = hm._viewRect();
+    const cluster = hm._clusters.row.list.find((c) => c.node >= 0 && c.hi - c.lo + 1 < hm._nRows / 2);
+    return {
+      x: rect.left + view.x - 3,
+      y: rect.top + view.y + ((cluster.lo + cluster.hi + 1) / 2) * hm._cam.ch,
+      lo: cluster.lo,
+      rows: cluster.hi - cluster.lo + 1,
+    };
+  });
+  await page.mouse.dblclick(strip.x, strip.y);
+  await expect
+    .poll(() => withHeatmap(page, (hm) => Math.round(hm._viewRect().h / hm._cam.ch)))
+    .toBeLessThanOrEqual(Math.max(strip.rows, Math.ceil((await withHeatmap(page, (hm) => hm._layoutBox.availH)) / 64)));
+  expect(await withHeatmap(page, (hm) => Math.round(hm._cam.sy / hm._cam.ch))).toBe(strip.lo);
+
+  // Square cells: one size for both axes.
+  await page.getByTestId("cluster-panel").getByRole("button", { name: "Close the cluster panel" }).click();
+  await page.getByText("Square cells", { exact: true }).click();
+  await expect.poll(() => withHeatmap(page, (hm) => hm._cam.cw === hm._cam.ch)).toBe(true);
+  await page.getByText("Square cells", { exact: true }).click();
+
+  // Two fingers moving apart zoom in.
+  const before = await withHeatmap(page, (hm) => {
+    hm.resetCamera();
+    return hm._cam.cw;
+  });
+  await withHeatmap(
+    page,
+    (hm, [x, y]) => {
+      const fire = (type, id, px) =>
+        hm._root.dispatchEvent(
+          new PointerEvent(type, { pointerId: id, pointerType: "touch", clientX: px, clientY: y, button: 0, bubbles: true })
+        );
+      fire("pointerdown", 11, x - 30);
+      fire("pointerdown", 12, x + 30);
+      fire("pointermove", 11, x - 90);
+      fire("pointermove", 12, x + 90);
+      fire("pointerup", 11, x - 90);
+      fire("pointerup", 12, x + 90);
+    },
+    [centre.x, centre.y]
+  );
+  expect(await withHeatmap(page, (hm) => hm._cam.cw)).toBeGreaterThan(before * 2);
+  expect(await errors()).toEqual([]);
+});
+
 module.exports = { openHeatmap, withHeatmap, treeNodePoint };

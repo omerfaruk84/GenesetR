@@ -194,6 +194,17 @@ const InchlibSettings = ({ inchlibSettings, inchlibSettingsChanged }) => {
           <CheckBox
             onChange={({ target: { checked } }) =>
               inchlibSettingsChanged({
+                settingName: InchlibSettingsTypes.SQUARE_CELLS,
+                newValue: checked,
+              })
+            }
+            checked={!!inchlibSettings?.square_cells}
+            label="Square cells"
+          />
+
+          <CheckBox
+            onChange={({ target: { checked } }) =>
+              inchlibSettingsChanged({
                 settingName: InchlibSettingsTypes.DRAW_ROW_IDS,
                 newValue: checked,
               })
