@@ -96,6 +96,11 @@ const normalizeSignatureFormula = (value) =>
 const toPythonBoolString = (value) =>
   value === true || String(value).toLowerCase() === "true" ? "True" : "False";
 
+// The last request sent for each result module, kept so the user can copy it
+// as an API call (see components/share-menu).
+const lastRequests = {};
+const getLastRequest = (moduleName) => lastRequests[moduleName] || null;
+
 const getData = async (body, moduleName = null, options = {}) => {
   const disableModuleTracking = !!options.disableModuleTracking;
   try {
@@ -105,6 +110,8 @@ const getData = async (body, moduleName = null, options = {}) => {
       moduleName = requestToModuleMap[body.request];
       trackedModuleName = moduleName;
     }
+    const requestModule = trackedModuleName || requestToModuleMap[body?.request];
+    if (requestModule && body) lastRequests[requestModule] = { ...body };
 
     const response = await Axios.post(
       SERVER_ADRESS + "/getData",
@@ -895,6 +902,7 @@ const getSessionStats = async (sessionId) => {
 
 // Export task cancellation function
 export { cancelTask, isTaskCancelledError } from "./websocket";
+export { getLastRequest };
 export { SERVER_ADDRESS } from "./config";
 
 // Export new RESTful API functions (optional - can be used instead of legacy functions)

@@ -13,6 +13,7 @@ import { ModulePathNames } from "../../store/results/enums";
 import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged } from "../../store/settings/core-settings";
 import { CoreSettingsTypes } from "./settings/enums";
+import { ShareMenu } from "../share-menu";
 const SideBar = ({
   runCalculation,
   calcResults,
@@ -193,11 +194,14 @@ const SideBar = ({
               )}
             </>
           )}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: "4px" }}>
+          <ShareMenu pathname={pathname} />
+        </div>
         <Spacer />
         <div
           id="scrollableDiv"
           style={{
-            height: "calc(100vh - 140px)",
+            height: "calc(100vh - 165px)",
             overflowY: "auto",
             scrollbarWidth: "thin",
             scrollbarColor: "#a63648 transparent",
