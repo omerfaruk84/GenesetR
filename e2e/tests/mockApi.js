@@ -10,6 +10,8 @@ const FIXTURES = {
   datasetsV1: fixture("datasets_v1"),
   geneSearch: fixture("gene_search"),
   geneATF4: fixture("gene_ATF4"),
+  // Output of the backend's clusterData() for 60 K562 perturbations
+  corrCluster: fixture("corr_cluster"),
 };
 
 const API_HOSTS = /^(https?|wss?):\/\/(localhost:8443|127\.0\.0\.1:8443|genesetr\.uio\.no\/api)\//;
@@ -53,6 +55,11 @@ const mockApi = async (page) => {
       return json(route, { error: { code: "NOT_FOUND", message: "Gene not found in any dataset", details: {} } }, 404);
     }
     if (pathname.startsWith("/health")) return json(route, { status: "healthy" });
+    // A correlation run: the task is created and is finished on the first poll.
+    if (request.method() === "POST" && pathname === "/getData") return json(route, { task_id: "corr-fixture" });
+    if (pathname === "/tasks/corr-fixture") {
+      return json(route, { status: "SUCCESS", task_result: JSON.stringify(FIXTURES.corrCluster) });
+    }
 
     unmocked.push(`${request.method()} ${pathname}`);
     return notFound(route);

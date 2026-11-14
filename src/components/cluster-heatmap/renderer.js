@@ -761,6 +761,9 @@ class ClusterHeatmap {
     target.innerHTML = "";
     target.appendChild(root);
     this._root = root;
+    // Lets the browser tests (and the console) reach the instance behind a heatmap.
+    root.setAttribute("data-cluster-heatmap", "");
+    root.__heatmap = this;
     this._dataDirty = true;
     this._lutDirty = true;
 
