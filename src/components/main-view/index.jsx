@@ -86,6 +86,7 @@ const MainView = () => {
           <Route path={ROUTES.TF_REGULATORS} element={<PageBoundary><TfRegulatorsPage /></PageBoundary>} />
           <Route path={ROUTES.INTEGRATED} element={<PageBoundary><IntegratedPage /></PageBoundary>} />
           <Route path={ROUTES.DATASETS} element={<PageBoundary><DatasetsPage /></PageBoundary>} />
+          <Route path={ROUTES.CELL_CYCLE} element={<PageBoundary><CellCyclePage /></PageBoundary>} />
           <Route path={ROUTES.UPLOAD_DATASET} element={<PageBoundary><UploadDatasetPage /></PageBoundary>} />
           <Route element={<SideBarLayout />}>
             <Route path={ROUTES.DR} element={<DimReductionPage />} />
@@ -115,7 +116,6 @@ const MainView = () => {
                 <ExpressionAnalyzerPage path={ROUTES.EXPRESSIONANALYZER} />
               }
             />
-            <Route path={ROUTES.CELL_CYCLE} element={<CellCyclePage />} />
             <Route
               path={ROUTES.MULTIDATASET_COMPARISON}
               element={

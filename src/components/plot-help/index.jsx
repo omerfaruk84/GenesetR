@@ -58,15 +58,6 @@ export const PLOT_HELP = {
       "The correlation views list perturbations, or genes, whose profile across the dataset resembles that of your gene.",
     ],
   },
-  cellCycle: {
-    title: "How to read this table",
-    points: [
-      "Each row is a perturbed gene. The values are the change in the share of cells in G1, S and G2/M compared with control cells, in percentage points.",
-      "A large positive value in one phase means cells pile up there, for example +G1 for an arrest before DNA replication.",
-      "The three changes of a gene add up to about zero, because the shares always sum to 100%.",
-      "Click a gene to compare its phase distribution with the control in each cell line.",
-    ],
-  },
   signature: {
     title: "How to read this plot",
     points: [

@@ -21,7 +21,7 @@ export const NAV_GROUPS = [
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Network of regulators and targets of a gene" },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Regulation network combined over several datasets" },
       { name: TabNames.EXPRESSIONANALYZER, to: ROUTES.EXPRESSIONANALYZER, about: "What changes a gene's expression, and what it changes" },
-      { name: TabNames.CELL_CYCLE, to: ROUTES.CELL_CYCLE, about: "Cell-cycle phase shifts caused by a perturbation" },
+      { name: TabNames.CELL_CYCLE, to: ROUTES.CELL_CYCLE, about: "Which perturbations push cells into G1, S or G2/M, in every dataset" },
       { name: "Integrated analysis", to: ROUTES.INTEGRATED, about: "Consensus targets and regulators of a gene over all knock-down datasets", secondary: true },
     ],
   },

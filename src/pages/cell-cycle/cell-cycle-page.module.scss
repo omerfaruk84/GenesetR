@@ -1,143 +1,530 @@
-.mainView {
-  padding: 10px;
-  width: 100%;
+@use "../../common/page" as page;
+
+.page {
+  @include page.shell;
 }
 
-.legendLine {
+.inner {
+  @include page.inner(1500px);
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+  }
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+  }
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+
+  h4 {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--gs-text);
+  }
+}
+
+.titleRow {
   display: flex;
-  gap: 16px;
-  align-items: center;
-  font-size: 13px;
-  color: #111827;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
 }
 
-.legendItem {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
+.lead {
+  max-width: 900px;
+  margin: 0 0 14px;
+  color: var(--gs-muted);
+  line-height: 1.5;
 }
 
-.legendSwatchControl {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: #9aa0a6;
-  border: 1px solid #8b9197;
+.muted {
+  color: var(--gs-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
-.legendSwatchPert {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: #1a73e8;
-  border: 1px solid #1666cf;
+.strong {
+  font-weight: 700;
+  color: var(--gs-text);
 }
 
-.controls {
-  padding: 12px 14px;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  margin-bottom: 12px;
+.up {
+  color: var(--gs-up);
+  font-weight: 600;
+}
+
+.down {
+  color: var(--gs-down);
+  font-weight: 600;
+}
+
+.small {
+  margin-left: 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+// ---- tabs and controls
+
+.tabs {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.controlsMeta {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 4px;
+  margin: 4px 0 16px;
+  border-bottom: 1px solid var(--gs-border);
 }
 
-.datasetBadge {
-  font-size: 12px;
-  color: #0f172a;
+.tab {
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--gs-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--gs-text);
+  }
 }
 
-.status {
-  color: #444;
-  font-size: 13px;
+.tabActive {
+  border-bottom-color: var(--gs-accent);
+  color: var(--gs-text);
 }
 
-.statusError {
-  color: #b00020;
-  font-size: 13px;
-}
-
-.tableContainer {
-  width: 100%;
-  height: 100%;
-}
-
-.noData {
-  display: flex;
-  justify-content: center;
+.pickerLabel {
+  display: inline-flex;
   align-items: center;
-  height: 280px;
-  color: #666;
-  font-size: 16px;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gs-text);
 }
 
-.detailHeaderRow {
-  display: grid;
-  grid-template-columns: minmax(160px, 220px) 1fr 1fr 1fr;
+.select {
+  min-width: 260px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.number {
+  width: 70px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 4px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--gs-text);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
-  align-items: end;
 }
 
-.detailHeader {
-  font-size: 12px;
-  font-weight: 800;
-  color: #374151;
-  text-align: center;
+.chip {
+  @include page.chip;
 }
 
-.detailRows {
+.chipActive {
+  @include page.chip-active;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.action {
+  @include page.button;
+  text-decoration: none;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-link);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+// ---- layout
+
+.view {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.datasetHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
 }
 
-.detailRow {
-  display: grid;
-  grid-template-columns: minmax(160px, 220px) 1fr 1fr 1fr;
-  gap: 10px;
-  align-items: stretch;
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
 }
 
-.detailCellLine {
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 10px 12px;
-}
-
-.detailCellLineName {
-  font-weight: 900;
-  color: #111827;
-  font-size: 14px;
-}
-
-.detailCellLineMeta {
-  margin-top: 4px;
+.statLabel {
   font-size: 12px;
-  color: #5f6368;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--gs-muted);
 }
 
-.detailChart {
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 6px;
+.statValue {
+  font-size: 22px;
+  font-weight: 650;
+  color: var(--gs-text);
 }
 
-@media (max-width: 1200px) {
-  .detailHeaderRow {
-    display: none;
-  }
-  .detailRow {
+.mapLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .mapLayout {
     grid-template-columns: 1fr;
+  }
+}
+
+.side {
+  min-width: 0;
+}
+
+.hits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.hitList {
+  padding: 12px 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+
+  ol {
+    columns: 2;
+    column-gap: 18px;
+    margin: 8px 0 0;
+    padding-left: 22px;
+    font-size: 13px;
+  }
+
+  li {
+    break-inside: avoid;
+    padding: 1px 0;
+
+    span {
+      margin-left: 6px;
+      font-size: 12px;
+    }
+  }
+}
+
+.hitHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tableSection {
+  min-width: 0;
+}
+
+.explain {
+  max-width: 1000px;
+  margin: 0;
+  color: var(--gs-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.status {
+  padding: 14px 16px;
+  border: 1px solid var(--gs-border);
+  border-radius: 6px;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+}
+
+// ---- phase bits
+
+.phaseBar {
+  display: inline-flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--gs-surface-alt);
+  vertical-align: middle;
+
+  span {
+    height: 100%;
+  }
+}
+
+.barPair {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.phaseLegend {
+  display: inline-flex;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--gs-muted);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  i {
+    display: inline-block;
+    width: 12px;
+    height: 10px;
+    border-radius: 2px;
+  }
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.badgePhase {
+  background: var(--gs-up-soft);
+  color: var(--gs-text);
+}
+
+.badgeProfile {
+  background: var(--gs-surface-alt);
+  color: var(--gs-muted);
+  border: 1px solid var(--gs-border);
+}
+
+.verdict {
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-left: 3px solid var(--gs-border-strong);
+  border-radius: 2px;
+  background: var(--gs-surface-alt);
+  font-size: 13px;
+  color: var(--gs-text);
+}
+
+.verdict_g1 {
+  border-left-color: #0072b2;
+}
+
+.verdict_s {
+  border-left-color: #e69f00;
+}
+
+.verdict_g2m {
+  border-left-color: #009e73;
+}
+
+.densityPair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 16px;
+  margin: 10px 0 0;
+
+  div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  dt {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--gs-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+  }
+}
+
+// ---- gene view
+
+.geneSearchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.geneSearchBox {
+  width: 340px;
+  max-width: 100%;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gs-border-strong);
+    color: var(--gs-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gs-border);
+    color: var(--gs-text);
+    vertical-align: middle;
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.clickRow {
+  cursor: pointer;
+
+  &:hover td {
+    background: var(--gs-hover);
+  }
+}
+
+.caret {
+  display: inline-block;
+  width: 12px;
+  color: var(--gs-muted);
+}
+
+// ---- compare view
+
+.compareControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.heatCell {
+  display: inline-block;
+  min-width: 44px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--gs-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.method {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.55;
+
+  li {
+    margin-bottom: 4px;
   }
 }

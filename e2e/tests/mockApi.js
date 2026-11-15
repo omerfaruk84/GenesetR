@@ -36,6 +36,12 @@ const FIXTURES = {
   benchmarkCorum: fixture("benchmark_corum"),
   // Output of the backend's clusterData() for 60 K562 perturbations
   corrCluster: fixture("corr_cluster"),
+  // Cell cycle: answers of the API's /api/v1/cellcycle endpoints (real data, 2026-11-15)
+  cellCycleDatasets: fixture("cellcycle_datasets"),
+  cellCycleTable: fixture("cellcycle_table_K562essential"),
+  cellCycleCDK1: fixture("cellcycle_K562essential_CDK1"),
+  cellCycleGeneCDK1: fixture("cellcycle_gene_CDK1"),
+  cellCycleCompare: fixture("cellcycle_compare_essential"),
 };
 
 // Results of the backend's own task code for the requests the pages send for
@@ -191,6 +197,12 @@ const mockApi = async (page) => {
       return json(route, FIXTURES.enrichment);
     }
     if (pathname === "/api/v1/benchmark/corum") return json(route, FIXTURES.benchmarkCorum);
+    // every dataset answers with the K562 essential table, every perturbation with CDK1
+    if (pathname === "/api/v1/cellcycle/datasets") return json(route, FIXTURES.cellCycleDatasets);
+    if (/^\/api\/v1\/cellcycle\/datasets\/[^/]+\/perturbations$/.test(pathname)) return json(route, FIXTURES.cellCycleTable);
+    if (/^\/api\/v1\/cellcycle\/datasets\/[^/]+\/perturbations\/CDK1$/i.test(pathname)) return json(route, FIXTURES.cellCycleCDK1);
+    if (/^\/api\/v1\/cellcycle\/genes\/CDK1$/i.test(pathname)) return json(route, FIXTURES.cellCycleGeneCDK1);
+    if (request.method() === "POST" && pathname === "/api/v1/cellcycle/compare") return json(route, FIXTURES.cellCycleCompare);
     if (pathname.startsWith("/health")) return json(route, { status: "healthy" });
     // An analysis run: the task is created and is finished on the first poll.
     if (request.method() === "POST" && pathname === "/getData") {

@@ -261,6 +261,14 @@ const GenePage = () => {
               <p className={styles.muted}>
                 Perturbed in {summary.perturbed_in.length} and measured in {summary.measured_in.length} of{" "}
                 {summary.datasets_searched} datasets.
+                {summary.perturbed_in.length > 0 && (
+                  <>
+                    {" "}
+                    <Link to={`/cell-cycle?view=gene&gene=${encodeURIComponent(summary.symbol)}`} data-testid="gene-cell-cycle-link">
+                      Cell-cycle effect of perturbing {summary.symbol}
+                    </Link>
+                  </>
+                )}
               </p>
             </header>
 

@@ -39,7 +39,6 @@ const ROUTE_SLICES = {
   [ROUTES.MULTIDATASET_COMPARISON]: ["multidatasetComparison"],
   [ROUTES.GENE_REGULATION]: ["geneRegulationCore", "graphmap"],
   [ROUTES.GENE_REGULATION_ENHANCED]: ["geneRegulationEnhanced"],
-  [ROUTES.CELL_CYCLE]: ["cellCycle"],
 };
 
 // core setting -> query parameter

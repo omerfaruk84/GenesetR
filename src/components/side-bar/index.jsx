@@ -178,7 +178,6 @@ const SideBar = ({
         onResize={handleSideBarResize}
       >
         {pathname !== ROUTES.GENELISTCOMPARE &&
-          pathname !== ROUTES.CELL_CYCLE &&
           !(pathname === ROUTES.DR && coreSettings.currentModule === "precomputed") && (
             <>
               <Spacer />
