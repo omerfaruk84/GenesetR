@@ -23,8 +23,6 @@ import { connect, useDispatch } from "react-redux";
 import { Spacer, ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { LoadingPage } from "../loading-page";
 import { throttle, debounce } from "lodash";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { saveAs } from "file-saver";
 import { inchlibSettingsChanged } from "../../store/settings/inchlib-settings";
 import { InchlibSettingsTypes } from "../side-bar/settings/enums";
@@ -35,6 +33,8 @@ import { describeLine, entityPagePath, isDrugList, useDrugLabelsVersion } from "
 import { listGeneLists, useWorkspaceVersion } from "../../utils/workspace";
 import { toGeneArray } from "../../utils/sendTo";
 import ui from "../ui/ui.module.scss";
+import { ModuleIntro, Notice } from "../ui";
+import { getTheme, useTheme } from "../../utils/theme";
 import { PlotHelp } from "../plot-help";
 import { saveJpegAsPdf } from "../../utils/exporters";
 
@@ -309,7 +309,7 @@ const HeatMap = ({
       if (!ctx) throw new Error("Export failed: canvas context not available");
 
       // Force an opaque white background (PNG/JPEG) so labels/dendrograms render clearly.
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = getTheme() === "dark" ? "#14181d" : "#ffffff";
       ctx.fillRect(0, 0, out.width, out.height);
 
       for (const c of canvases) {
@@ -1043,6 +1043,7 @@ const keyedData = useMemo(() => {
       target: containerId,
       max_height: maxHeatmapHeight,
       heatmap_colors: inchlibSettings.color_scale?.color ?? "BuWhRd",
+      theme: getTheme(),
       heatmap_part_width: 0.95,
       max_column_width: 20,
       max_row_height: 20,
@@ -1273,6 +1274,12 @@ const keyedData = useMemo(() => {
     handleFitToScreen,
   ]);
 
+  // Labels, dendrograms and legend follow the page theme
+  const pageTheme = useTheme();
+  useEffect(() => {
+    inchlibInstance.current?.setTheme?.(pageTheme);
+  }, [pageTheme, drawnInstance]);
+
   // Resize observer
   useEffect(() => {
     if (!heatmapContainerRef.current) return;
@@ -1355,52 +1362,12 @@ const keyedData = useMemo(() => {
         />
       )}
       {showDescription && (
-          <Accordion
-            sx={{
-              marginBottom: '14px',
-              backgroundColor: '#f8f9fa', 
-              border: '1px solid #e9ecef',
-              borderRadius: '8px',
-              '&:before': {
-                display: 'none',
-              },
-              '& .MuiAccordionSummary-root': {
-                minHeight: '30px',
-                height: '30px',
-              },
-              '& .MuiAccordionSummary-root.Mui-expanded': {
-                minHeight:  '30px',
-                height: '30px',
-              }
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              sx={{ 
-                backgroundColor: '#f5f5f5',
-                borderBottom: '1px solid #e0e0e0',
-                minHeight: '30px',
-                '&.Mui-expanded': {
-                  minHeight: '30px'
-                }
-              }}
-            >
-              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-            </AccordionSummary>
-            <AccordionDetails sx={{ padding: '0 14px 5px' }}>
-              <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-                {moduleDescription.description}
-              </p>
-              <div style={{ fontSize: '13px', color: '#424242' }}>
-                <strong>Key Features:</strong>
-                <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
-                  {moduleDescription.features.map((capability, index) => (
-                    <li key={index} style={{ marginBottom: '2px' }}>{capability}</li>
-                  ))}
-                </ul>
-              </div>
-            </AccordionDetails>
-          </Accordion>
+          <ModuleIntro
+            title={moduleDescription.title}
+            description={moduleDescription.description}
+            features={moduleDescription.features}
+            defaultExpanded={false}
+          />
         )}
       <div
         style={{ visibility: loading ? "hidden" : "visible" }}
@@ -1475,7 +1442,7 @@ const keyedData = useMemo(() => {
                   disabled={isExporting}
                   title="Download the heatmap as a PNG image"
                 >
-                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  <FaDownload aria-hidden="true" size={11} />
                   {isExporting ? "Exporting…" : "Export PNG"}
                 </button>
                 <button
@@ -1485,7 +1452,7 @@ const keyedData = useMemo(() => {
                   disabled={isExporting}
                   title="Download the heatmap as a JPEG image"
                 >
-                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  <FaDownload aria-hidden="true" size={11} />
                   Export JPEG
                 </button>
                 <button
@@ -1495,7 +1462,7 @@ const keyedData = useMemo(() => {
                   disabled={isExporting}
                   title="Download the heatmap as a PDF page"
                 >
-                  <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                  <FaDownload aria-hidden="true" size={11} />
                   Export PDF
                 </button>
                 {capabilities.exportSvg && (
@@ -1505,7 +1472,7 @@ const keyedData = useMemo(() => {
                     className={ui.button}
                     title="Download the whole heatmap as SVG (dendrograms and labels as vectors)"
                   >
-                    <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                    <FaDownload aria-hidden="true" size={11} />
                     Export SVG
                   </button>
                 )}
@@ -1591,7 +1558,7 @@ const keyedData = useMemo(() => {
                     className={ui.button}
                     title="Download the clusters defined by the dendrogram cut lines as CSV"
                   >
-                    <FaDownload aria-hidden="true" style={{ marginRight: 6 }} />
+                    <FaDownload aria-hidden="true" size={11} />
                     Export clusters
                   </button>
                 )}
@@ -1637,20 +1604,10 @@ const keyedData = useMemo(() => {
           <Spacer height={5} />
 
           {graphData && !hasValidData && (
-            <div
-              role="alert"
-              style={{
-                padding: "12px",
-                backgroundColor: "#fff3cd",
-                borderLeft: "4px solid #ffc107",
-                borderRadius: "4px",
-                color: "#8a6d3b",
-                marginBottom: "8px",
-              }}
-            >
+            <Notice kind="warning">
               The result does not contain heatmap data. Please check the gene
               lists and run the calculation again.
-            </div>
+            </Notice>
           )}
 
           {keyedData && selectedView === 1 && (
@@ -1736,8 +1693,8 @@ const keyedData = useMemo(() => {
                         height: 44,
                         margin: "24px auto",
                         borderRadius: "50%",
-                        border: "4px solid rgba(166, 54, 72, 0.18)",
-                        borderTopColor: "#a63648",
+                        border: "4px solid var(--gs-accent-soft)",
+                        borderTopColor: "var(--gs-accent)",
                         animation: "genesetr-spin 0.9s linear infinite",
                       }}
                     />

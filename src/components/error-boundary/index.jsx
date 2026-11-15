@@ -77,11 +77,11 @@ class ErrorBoundary extends React.Component {
         style={{
           margin: "12px 0",
           padding: "14px 16px",
-          border: "1px solid #f5c2c7",
-          borderLeft: "4px solid #dc3545",
+          border: "1px solid var(--gs-danger)",
+          borderLeft: "3px solid var(--gs-danger)",
           borderRadius: 6,
-          background: "#fff5f5",
-          color: "#842029",
+          background: "var(--gs-danger-soft)",
+          color: "var(--gs-text)",
           fontSize: 14,
           lineHeight: 1.5,
         }}
@@ -89,7 +89,7 @@ class ErrorBoundary extends React.Component {
         <div style={{ fontWeight: 600, marginBottom: 4 }}>
           {label ? `${label} could not be displayed` : "This view could not be displayed"}
         </div>
-        <div style={{ marginBottom: 10, color: "#6c757d" }}>
+        <div style={{ marginBottom: 10, color: "var(--gs-muted)" }}>
           Something went wrong while drawing this part of the page. The rest of the
           application is still usable.
           {error?.message ? (
@@ -103,10 +103,10 @@ class ErrorBoundary extends React.Component {
           onClick={this.reset}
           style={{
             padding: "6px 14px",
-            border: "1px solid #dc3545",
-            borderRadius: 4,
-            background: "#ffffff",
-            color: "#dc3545",
+            border: "1px solid var(--gs-danger)",
+            borderRadius: 6,
+            background: "var(--gs-surface)",
+            color: "var(--gs-danger)",
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,

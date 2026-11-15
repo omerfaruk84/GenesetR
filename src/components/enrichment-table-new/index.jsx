@@ -4,14 +4,13 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { Box, Button } from "@mui/material";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import PlaylistAddCircleRoundedIcon from "@mui/icons-material/PlaylistAddCircleRounded";
+import { FaDownload, FaListUl } from "react-icons/fa";
 import React from "react";
 import GenelistAdd from "../genelist-add";
 import { withErrorBoundary } from "../error-boundary";
 import { flattenColumns } from "../../utils/geneListUtils";
-import { EmptyState } from "../ui";
+import { EmptyState, Toolbar, ToolbarButton } from "../ui";
+import { mrtLook } from "../../utils/tableStyle";
 import { formatNumber } from "../../utils/formatNumber";
 import { downloadTable } from "../../utils/exporters";
 import { TableExportButtons } from "../export-buttons";
@@ -24,6 +23,13 @@ const exportFilename = (exportName) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "") || "table"}`;
+
+// The shared table look (utils/tableStyle.js), with filters and search open.
+const LOOK = mrtLook({
+  pageSize: 50,
+  maxHeight: "70vh",
+  initialState: { showColumnFilters: true, showGlobalFilter: true },
+});
 
 // Numbers without a column-specific renderer get one consistent format.
 const DEFAULT_COLUMN = {
@@ -119,7 +125,7 @@ const withGeneLinks = (columns, geneKeys) =>
             target="_blank"
             rel="noopener"
             title={drug ? drugTitle : `Open the gene page of ${value}`}
-            style={{ color: "inherit", textDecorationStyle: "dotted" }}
+            style={{ color: "var(--gs-link)", textDecoration: "none", fontWeight: 500 }}
             onClick={(event) => event.stopPropagation()}
           >
             {value}
@@ -233,19 +239,16 @@ const EnrichmentTable = ({
           hint="The analysis returned no rows for the current settings."
         />
       ),
+    ...LOOK,
     enableRowSelection: true,
-    enableStickyHeader: true,
-    //enableColumnResizing: true,
-    enableDensityToggle: false,
     enableFacetedValues: true,
     enableColumnActions: false, // Disable three dots menu on all columns
     displayColumnDefOptions: {
       "mrt-row-select": {
         enableColumnActions: false,
         enableHiding: true,
-        size: "20px",
-        maxSize: "40px",
-        p: 5,
+        size: 36,
+        maxSize: 40,
       },
     },
     state: {
@@ -256,47 +259,28 @@ const EnrichmentTable = ({
     onSortingChange: setSorting,
     onColumnFiltersChange: handleColumnFiltersChange,
     onGlobalFilterChange: setGlobalFilter,
-    initialState: {
-      density: "compact",
-      showColumnFilters: true,
-      showGlobalFilter: true,
-      pagination: {
-        pageIndex: 0,
-        pageSize: 50,
-      },
-    },
     muiSelectCheckboxProps: {
-      sx: {
-        width: "20px",
-      },
+      size: "small",
+      sx: { padding: "2px" },
+    },
+    muiSelectAllCheckboxProps: {
+      size: "small",
+      sx: { padding: "2px" },
     },
     muiTableBodyCellProps: {
       sx: {
-        p: "0px 8px",
-        height: "10px",
+        ...LOOK.muiTableBodyCellProps.sx,
+        padding: "4px 10px",
       },
     },
-    muiTableProps: {
-      sx: {
-        p: "0px 16px",
-        height: "10px",
-      },
-    },
-    muiTableBodyRowProps: {
-      sx: {
-        height: "10px",
-      },
-    },
-
     muiSearchTextFieldProps: {
       size: "small",
       variant: "outlined",
+      placeholder: "Search all columns",
     },
-    muiTablePaperProps: {
-      sx: {
-        m: "auto",
-        maxWidth: "100%",
-      },
+    muiFilterTextFieldProps: {
+      size: "small",
+      sx: { "& .MuiInputBase-input": { fontSize: 12 } },
     },
     // Custom styling to conditionally hide filters on grouped header cells
     muiTableHeadCellFilterTextFieldProps: ({ column }) => {
@@ -325,41 +309,39 @@ const EnrichmentTable = ({
     paginationDisplayMode: "pages",
     positionToolbarAlertBanner: "bottom",
     renderTopToolbarCustomActions: ({ table }) => (
-      <Box
-        sx={{
-          display: "flex",
-          gap: "16px",
-          padding: "8px",
-          flexWrap: "wrap",
-        }}
-      >
+      <Toolbar style={{ padding: "6px 4px" }}>
         {/* The rows as filtered and sorted on screen (all pages) */}
         <TableExportButtons
           rows={() => toExportRows(table.getSortedRowModel().rows.map((row) => row.original))}
           columns={exportColumns}
           filename={filename}
         />
-
-        <Button
+        <ToolbarButton
+          size="sm"
+          icon={<FaDownload size={11} aria-hidden="true" />}
           disabled={
             !table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
           }
           onClick={() => handleExportRows(table.getSelectedRowModel().rows)}
-          startIcon={<FileDownloadIcon />}
+          title="Download the ticked rows as CSV"
         >
           Export Selected
-        </Button>
-        <Button
+        </ToolbarButton>
+        <ToolbarButton
+          size="sm"
+          icon={<FaListUl size={11} aria-hidden="true" />}
           disabled={!canCreateGenelist || !(table.getFilteredRowModel().rows.length > 0)}
           onClick={() => {
             handleSaveGeneList(table.getFilteredRowModel().rows);
             table.resetRowSelection();
           }}
-          startIcon={<PlaylistAddCircleRoundedIcon />}
+          title="Save the genes of the rows shown (after filtering) as a gene list"
         >
           Create Genelist
-        </Button>
-        <Button
+        </ToolbarButton>
+        <ToolbarButton
+          size="sm"
+          icon={<FaListUl size={11} aria-hidden="true" />}
           disabled={
             !canCreateGenelist ||
             (!table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected())
@@ -368,11 +350,11 @@ const EnrichmentTable = ({
             handleSaveGeneList(table.getSelectedRowModel().rows);
             table.resetRowSelection();
           }}
-          startIcon={<PlaylistAddCircleRoundedIcon />}
+          title="Save the genes of the ticked rows as a gene list"
         >
           Create Genelist From Selected
-        </Button>
-      </Box>
+        </ToolbarButton>
+      </Toolbar>
     ),
   });
 

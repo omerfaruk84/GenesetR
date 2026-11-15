@@ -5,17 +5,17 @@ import { EXAMPLE_GENE_SETS, EXAMPLE_SIGNATURES } from "../../utils/examples";
 const triggerStyle = {
   height: 24,
   padding: "0 10px",
-  border: "1px solid #2e9e5b",
+  border: "1px solid var(--gs-success)",
   borderRadius: 4,
-  background: "#2e9e5b",
-  color: "#fff",
+  background: "var(--gs-success-soft)",
+  color: "var(--gs-success)",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 600,
   cursor: "pointer",
 };
 
-const aboutStyle = { display: "block", color: "#5d6877", fontSize: 11.5, whiteSpace: "normal", maxWidth: 300 };
+const aboutStyle = { display: "block", color: "var(--gs-muted)", fontSize: 11.5, whiteSpace: "normal", maxWidth: 300 };
 
 /**
  * "Example" button of a gene list box: curated gene sets (or signature

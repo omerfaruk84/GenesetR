@@ -26,7 +26,9 @@
     padding: 5px;
     &.empty {
     }
-    border-color: black// $borderColor;
+    border: 1px solid var(--gs-border-strong);
+    background: var(--gs-surface);
+    color: var(--gs-text);
   }
 
   textarea.studyView {
@@ -69,32 +71,33 @@
   span.oqlNotice,
   span.errorMessage {
     font-size: small;
-    color: rgb(207, 60, 7); // $redError;
-    font-weight: bold;
+    color: var(--gs-danger);
+    font-weight: 600;
   }
   div.validBubble,
   div.invalidBubble {
-    color: #fff;
     display: flex;
     align-items: center;
     @extend .validationBubbleBase;
     span.icon {
-      color: #fff;
+      color: inherit;
       line-height: 17px;
     }
   }
   div.invalidBubble {
-    background: rgb(207, 60, 7); // $redError;
+    background: var(--gs-danger-soft);
+    color: var(--gs-danger);
     white-space: nowrap;
   }
   div.warningBubble {
-    background: rgb(230, 233, 48); // $redError;
+    background: var(--gs-warning-soft);
+    color: var(--gs-warning);
     white-space: nowrap;
     border-radius: 15px;
     padding-right:8px;
     
     .icon {
-      color: rgb(0, 0, 0);
+      color: inherit;
       line-height: 15px;
       text-align: center;
       margin-top: 5px;
@@ -103,13 +106,14 @@
     }
   }
   div.warningBubble2 {
-    background: rgb(162, 233, 48); // $redError;
+    background: var(--gs-success-soft);
+    color: var(--gs-success);
     white-space: nowrap;
     border-radius: 15px;
     padding-right:8px;
     
     .icon {
-      color: rgb(0, 0, 0);
+      color: inherit;
       line-height: 15px;
       text-align: center;
       margin-top: 5px;
@@ -118,13 +122,14 @@
     }
   }
   div.warningBubble3 {
-    background: rgb(233, 153, 48); // $redError;
+    background: var(--gs-up-soft);
+    color: var(--gs-up);
     white-space: nowrap;
     border-radius: 15px;
     padding-right:8px;
     
     .icon {
-      color: rgb(0, 0, 0);
+      color: inherit;
       line-height: 15px;
       text-align: center;
       margin-top: 5px;
@@ -133,23 +138,25 @@
     }
   }
   div.validBubble {
-    background: green; // $greenSuccess;
+    background: var(--gs-success-soft);
+    color: var(--gs-success);
     white-space: nowrap;
   }
   div.suggestionBubble {
-    color: rgba(0, 0, 0, 0.5);
+    color: var(--gs-muted);
     white-space: nowrap;
     cursor: pointer;
     display: flex;
     align-items: center;
     @extend .validationBubbleBase;
-    background-color: rgb(170, 168, 168); //$lightGrey;
+    background-color: var(--gs-surface-alt);
+    border: 1px solid var(--gs-border);
     border-radius: 2px;
     &:hover {
-      background-color: grey; // $mediumGrey;
+      background-color: var(--gs-hover);
     }
     span.icon {
-      color: darkgray; // $darkGrey;
+      color: var(--gs-faint);
       line-height: 17px;
     }
     span.noChoiceLabel {

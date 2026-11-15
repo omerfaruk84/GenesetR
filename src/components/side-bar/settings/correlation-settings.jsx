@@ -348,7 +348,7 @@ const CorrelationSettings = ({
             {isAdjusting && debouncedTrimThreshold !== localTrimThreshold && (
               <div style={{ 
                 fontSize: '12px', 
-                color: '#666', 
+                color: 'var(--gs-muted)', 
                 marginTop: '4px',
                 fontStyle: 'italic'
               }}>

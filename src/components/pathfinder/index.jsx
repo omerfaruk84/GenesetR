@@ -1,6 +1,6 @@
 import { PlotHelp } from "../plot-help";
 import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { connect } from "react-redux";
 import * as echarts from "echarts/core";
 import { ButtonGroup } from "@oliasoft-open-source/react-ui-library";
@@ -8,6 +8,7 @@ import { GraphChart } from "echarts/charts";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../../components/enrichment-table-new";
 import { createGeneTooltipFormatter } from "../../utils/geneFunctionUtils";
+import { effectLabel } from "../../utils/perturbationKind";
 import {
   GridComponent,
   TooltipComponent,
@@ -20,11 +21,11 @@ import { CanvasRenderer } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
 import styles from "./pathfinder.module.scss";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { withErrorBoundary } from "../error-boundary";
-import { ChartLegend } from "../ui";
+import { ChartLegend, EmptyState, ModuleIntro, Notice, Toolbar } from "../ui";
+import { useChartTheme, haloLabel, saveImageFeature } from "../../utils/chartTheme";
+import { networkColors } from "../NetworkGraphAlternatives/networkColors";
 
 // Networks above this size are drawn with the circular layout; dagre is only
 // computed for networks it will actually be used for.
@@ -67,12 +68,18 @@ const debugWarn = (...args) => {
   }
 };
 
-const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
+const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData, selectedDataset }) => {
+  // "Knockdown" or "Overexpression" in the node tooltips, read when one opens
+  const effectLabelRef = useRef("Knockdown");
+  effectLabelRef.current = effectLabel(selectedDataset);
   //Import json file. Used in {options}.
 
   const [options, setOptions] = useState({});
   const [keyedData, setkeyedData] = useState([]);
   const [selectedView, setSelectedView] = useState(0);
+  const chart = useChartTheme();
+  // Edge and node colours of the current theme; the legend uses the same object
+  const colors = useMemo(() => networkColors(chart.p), [chart.p]);
   const columns = useMemo(
     () => [
       {
@@ -251,17 +258,17 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             1
           ), //y = 0.813x + 0.187 //ax+b = y // ((1-pathfinderSettings.minEdgeopacity)/0.8) + ((pathfinderSettings.minEdgeopacity-0.2)/0.8)
           width: Math.max(
-            2.222 * Math.abs(edge.type === "Int" ? 1 : edge.value) + 3.556,
-            4
+            1.4 * Math.abs(edge.type === "Int" ? 1 : edge.value) + 1.2,
+            1.5
           ),
           color:
             edge.type === "Cor"
-              ? "rgb(25, 25, 250)"
+              ? colors.correlation
               : edge.value < -0.2
-                ? "rgb(25, 206, 17)"
+                ? colors.lower
                 : edge.value > 0.2
-                  ? "rgb(255, 1, 1)"
-                  : "rgb(123, 123, 123)",
+                  ? colors.raise
+                  : colors.neutral,
           type:
             edge.type === "Cor"
               ? "dotted"
@@ -550,9 +557,9 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           // Isolated node (only kept when "isolated nodes" is switched on)
           node["neighbours"] = 0;
           node["symbolSize"] = 8;
-          node["label"] = { show: true, position: "right", color: "black" };
+          node["label"] = { show: true, position: "right" };
           node["itemStyle"] = {
-            color: "orange",
+            color: colors.node,
             opacity: pathfinderSettings.minNodeopacity,
           };
         }
@@ -565,12 +572,11 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           node["neighbours"] = nodeCounts[id];
           node["label"] = {
             show: nodeCounts[id] > pathfinderSettings?.showLabels,
-            position: nodeCounts[id] > 6 ? "inside" : "right",
-            color: nodeCounts[id] > 6 ? "black" : "black",
+            position: "right",
           };
           //node["opacity"] = Math.max(Math.min(nodeCounts[id]*4 +4,40),8);
           node["itemStyle"] = {
-            color: nodeCounts[id] > 6 ? "red" : "orange",
+            color: nodeCounts[id] > 6 ? colors.hub : colors.node,
             //opacity: node["kd"]? Math.min(0.4118*Math.abs(node["kd"]),1):0.5
             opacity: node["kd"]
               ? Math.min(
@@ -708,18 +714,15 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         tooltip: {
           extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#ffffff",
-          borderColor: "#e0e0e0",
-          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#333333",
             lineHeight: 1.4,
           },
           formatter: createGeneTooltipFormatter({
             parseData: (params) => ({
               geneSymbol: params.data.name,
               knockdown: params.data.kd,
+              effectLabel: effectLabelRef.current,
               neighbourCount: params.data.neighbours
             })
           }),
@@ -737,7 +740,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           feature: {
             mark: { show: true },
             restore: { show: true },
-            saveAsImage: { show: true, name: "genesetr_pathway_network", pixelRatio: 2 },
+            saveAsImage: saveImageFeature(chart.p, "genesetr_pathway_network"),
             mySvg: svgToolboxFeature("genesetr-path-network"),
             myPdf: pdfToolboxFeature("genesetr-path-network"),
             myGraphml: graphmlToolboxFeature("genesetr-path-network"),
@@ -760,41 +763,38 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
             data: nodesFinal,
             links: edgesFinal,
             edgeSymbol: ["circle", "arrow"],
-            edgeSymbolSize: [4, 14],
+            edgeSymbolSize: [3, 9],
             edgeLabel: {
-              fontSize: 16,
+              fontSize: 12,
             },
 
-            label: {
+            label: haloLabel(chart.p, {
               show: true,
               position: "right",
+              distance: 4,
               formatter: function (params) {
                 return params.data.name;
               },
-              fontWeight: "bold",
-              color: "black",
-            },
+              fontSize: 12,
+              fontWeight: 600,
+            }),
+            labelLayout: { hideOverlap: true },
             emphasis: {
               focus: "adjacency",
               blurScope: "global",
+              label: { show: true },
               lineStyle: {
-                width: 6,
+                width: 4,
               },
             },
 
             itemStyle: {
-              color: function (params) {
-                if (params.data.direction === "down") {
-                  return "#1e81b0";
-                } else {
-                  return "red";
-                }
-              },
-              borderColor: "black",
-              borderWidth: 2,
+              color: colors.node,
+              borderColor: colors.nodeBorder,
+              borderWidth: 1.5,
             },
             lineStyle: {
-              width: 4,
+              width: 2,
             },
             // categories: sample.categories,
             roam: true,
@@ -811,7 +811,7 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       setOptions({});
       setkeyedData([]);
     }
-  }, [pathFinderGraph, pathfinderSettings, blacklistData]);
+  }, [pathFinderGraph, pathfinderSettings, blacklistData, chart.p, colors]);
 
   // Debug logging for settings changes
   useEffect(() => {
@@ -848,74 +848,32 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
 
   return (
     <>
-      {/* Add module description header */}
-      <Accordion 
-        sx={{
-          marginBottom: '14px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #e9ecef',
-          borderRadius: '8px',
-          '&:before': {
-            display: 'none',
-          },
-              '& .MuiAccordionSummary-root': {
-        minHeight: '30px',
-        height: '30px',
-      }
-      , '& .MuiAccordionSummary-root.Mui-expanded': {
-        minHeight:  '30px',
-        height: '30px',
-      }
-        }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ padding: '6px 14px 5px' }}>
-          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-            {moduleDescription.description}
-          </p>
-          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-            {moduleDescription.description2}
-          </p>
-          <div style={{ fontSize: '13px', color: '#424242' }}>
-            <strong>Key Features:</strong>
-            <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '2px' }}>{feature}</li>
-              ))}
-            </ul>
-          </div>
-        </AccordionDetails>
-      </Accordion>
-
-      <ButtonGroup
-        items={[
-          {
-            icon: <FaChartBar />,
-            key: 0,
-            label: "Chart",
-          },
-          {
-            icon: <FaTable />,
-            key: 1,
-            label: "Link Table",
-          },
-        ]}
-        onSelected={(key) => setSelectedView(key)}
-        value={selectedView}
+      <ModuleIntro
+        title={moduleDescription.title}
+        description={[moduleDescription.description, moduleDescription.description2]}
+        features={moduleDescription.features}
+        defaultExpanded={false}
       />
-      <PlotHelp kind="pathNetwork" />
+
+      <Toolbar style={{ marginBottom: 10 }}>
+        <ButtonGroup
+          items={[
+            {
+              icon: <FaChartBar />,
+              key: 0,
+              label: "Chart",
+            },
+            {
+              icon: <FaTable />,
+              key: 1,
+              label: "Link Table",
+            },
+          ]}
+          onSelected={(key) => setSelectedView(key)}
+          value={selectedView}
+        />
+        <PlotHelp kind="pathNetwork" />
+      </Toolbar>
 
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
@@ -923,16 +881,9 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
       
       {/* Show warning if node limit was applied */}
       {pathFinderGraph?.nodes?.length > (pathfinderSettings.maxNodes || 1000) && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#fff3e0', 
-          borderLeft: '4px solid #ff9800',
-          borderRadius: '4px',
-          color: '#e65100',
-          marginBottom: '8px'
-        }}>
+        <Notice kind="warning">
           The network has {pathFinderGraph.nodes.length} genes. Only the {pathfinderSettings.maxNodes || 1000} genes with the most links are shown.
-        </div>
+        </Notice>
       )}
       
       {selectedView === 0 &&
@@ -941,26 +892,29 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
         options.series[0].data?.length > 0 && (
           <>
             {pathfinderSettings.layout === "none" &&
-            options.series[0].data?.length > DAGRE_MAX_NODES
-              ? "The hierarchical layout cannot be applied to a network of this size; a circular layout is shown instead."
-              : ""}
+              options.series[0].data?.length > DAGRE_MAX_NODES && (
+                <Notice kind="info">
+                  The hierarchical layout cannot be applied to a network of this size; a circular layout is shown instead.
+                </Notice>
+              )}
             <ChartLegend
               label="Network legend"
               items={[
-                { label: "Perturbation raises expression", color: "rgb(255, 1, 1)", line: "solid" },
-                { label: "Perturbation lowers expression", color: "rgb(25, 206, 17)", line: "solid" },
-                { label: "Correlation", color: "rgb(25, 25, 250)", line: "dotted" },
-                { label: "Protein interaction", color: "rgb(123, 123, 123)", line: "dashed" },
-                { label: "Hub (more than 6 links)", color: "red" },
-                { label: "Other gene", color: "orange" },
+                { label: "Perturbation raises expression", color: colors.raise, line: "solid" },
+                { label: "Perturbation lowers expression", color: colors.lower, line: "solid" },
+                { label: "Correlation", color: colors.correlation, line: "dotted" },
+                { label: "Protein interaction", color: colors.interaction, line: "dashed" },
+                { label: "Hub (more than 6 links)", color: colors.hub },
+                { label: "Other gene", color: colors.node },
               ]}
               note="Fainter nodes and links have weaker effects"
             />
-            <div className={styles.mainView}>
+            <div className={styles.chartFrame}>
               <ReactEChartsCore
                 echarts={echarts}
+                theme={chart.theme}
                 option={options}
-                style={{ height: "120%", width: "100%" }}
+                style={{ height: "100%", width: "100%" }}
                 notMerge={true}
                 lazyUpdate={true}
               />
@@ -973,30 +927,12 @@ const PathFinder = ({ pathFinderGraph, pathfinderSettings, blacklistData }) => {
           options.series.length === 0 ||
           !options.series[0].data ||
           options.series[0].data.length === 0) && (
-          <>
-            <div className={styles.mainView}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "50vh", // This assumes the parent container takes up the full viewport height
-                  margin: "0 auto",
-                  lineHeight: "1.6",
-                  fontSize: "1.5em",
-                  fontWeight: "bold",
-                  padding: "20px",
-                  maxWidth: "500px",
-                  borderRadius: "10px",
-                  textAlign: "center", // Ensuring text is centered within the div
-                }}
-              >
-                Unfortunately, no links were identified among submitted genes.
-                You may try decreasing the Z-Score cutoff or increasing search
-                depth.
-              </div>
-            </div>
-          </>
+          <div className={styles.chartFrame}>
+            <EmptyState
+              title="No links were identified among the submitted genes"
+              hint="Try decreasing the Z-Score cutoff or increasing the search depth."
+            />
+          </div>
         )}
     </>
   );
@@ -1006,6 +942,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   pathFinderGraph: calcResults?.pathFinderGraph?.result ?? null,
   graphmapSettings: settings?.graphmap ?? {},
   pathfinderSettings: settings?.pathfinder ?? {},
+  selectedDataset: settings?.core?.cellLine,
   // Note: blacklistData is passed as a prop from the parent page component
 });
 

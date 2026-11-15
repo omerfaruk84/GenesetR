@@ -204,7 +204,7 @@ const SideBar = ({
                   style={{
                     textAlign: "center",
                     fontSize: "12px",
-                    color: "#8a6d3b",
+                    color: "var(--gs-warning)",
                     marginTop: "4px",
                   }}
                 >
@@ -222,8 +222,6 @@ const SideBar = ({
           style={{
             height: "calc(100vh - 165px)",
             overflowY: "auto",
-            scrollbarWidth: "thin",
-            scrollbarColor: "#a63648 transparent",
           }}
         >
           {pathname === ROUTES.DR ? (

@@ -1,12 +1,98 @@
 .mainView {
   position: relative;
-  padding: 10px;
   width: 100%;
   min-height: calc(100vh - 60px);
-  padding-top: 0px;
-
+  padding: 0 10px 10px;
+  color: var(--gs-text);
 }
 
+// Chart surface
+.chartArea {
+  width: 100%;
+  height: 460px;
+  min-height: 360px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg);
+}
 
+// A table manages its own height and scrolling
+.tableArea {
+  width: 100%;
+}
 
+.viewNote {
+  max-width: 980px;
+  margin: 4px 0 10px;
+  color: var(--gs-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 
+// Row of small controls above the multi-dataset tables
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface-alt);
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gs-text);
+  font-size: 13px;
+}
+
+.select {
+  width: 64px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dirtyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+// "Add" / "Remove" of a gene in the signature (similar-genes tables)
+.addButton,
+.removeButton {
+  min-width: 62px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addButton {
+  border-color: var(--gs-success);
+  background: var(--gs-success-soft);
+  color: var(--gs-success);
+}
+
+.removeButton {
+  border-color: var(--gs-danger);
+  background: var(--gs-danger-soft);
+  color: var(--gs-danger);
+}

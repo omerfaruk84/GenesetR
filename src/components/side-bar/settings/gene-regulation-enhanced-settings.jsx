@@ -181,7 +181,7 @@ const GeneRegulationEnhancedSettings = ({
         helpText="Configure which experiments to include and their weights."
       >
         {geneRegulationEnhancedSettings?.selectedExperiments?.map((expId, index) => (
-          <div key={expId} style={{ marginBottom: "10px", padding: "10px", border: "1px solid #e0e0e0", borderRadius: "4px" }}>
+          <div key={expId} style={{ marginBottom: "10px", padding: "10px", border: "1px solid var(--gs-border)", borderRadius: "8px", background: "var(--gs-surface-alt)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ minWidth: 0 }}>
                 <strong style={{ wordBreak: "break-word" }}>{expId}</strong>

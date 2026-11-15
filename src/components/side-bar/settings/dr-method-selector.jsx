@@ -42,17 +42,17 @@ const DrMethodSelector = ({
       label={
         <span style={{
           fontWeight: '600',
-          fontSize: '14px',
-          color: '#1976d2',
+          fontSize: '11px',
+          color: 'var(--gs-muted)',
           textTransform: 'uppercase',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.05em'
         }}>
-          🚀 DR Method Selection
+          DR Method Selection
         </span>
       }
       labelLeft={false}
       helpText={
-        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#555' }}>
+        <div style={{ fontSize: '12px', lineHeight: '1.4', color: 'var(--gs-text)' }}>
           <strong>Choose the dimensionality reduction method to run:</strong><br/>
           • <strong>PCA</strong>: Linear method for variance-based reduction<br/>
           • <strong>MDE</strong>: Nonlinear method optimized for clustering<br/>
@@ -60,15 +60,15 @@ const DrMethodSelector = ({
           • <strong>t-SNE</strong>: Best for visualizing local relationships<br/>
           • <strong>Pre-computed</strong>: All-genes analysis with optimized parameters<br/>
           <br/>
-          <em>💡 Tip: You can chain methods (e.g., PCA → MDE) by running one method and then selecting the result from the dataset selector below.</em>
+          <em>Tip: You can chain methods (e.g., PCA → MDE) by running one method and then selecting the result from the dataset selector below.</em>
         </div>
       }
       style={{
-        border: '2px solid #1976d2',
+        border: '1px solid var(--gs-border)',
         borderRadius: '8px',
         padding: '12px',
         marginBottom: '16px',
-        backgroundColor: '#f8f9fa'
+        backgroundColor: 'var(--gs-surface-alt)'
       }}
     >
       <Select
@@ -79,10 +79,6 @@ const DrMethodSelector = ({
             settingName: CoreSettingsTypes.CURRENT_MODULE,
             newValue: value,
           });
-        }}
-        style={{
-          fontSize: '14px',
-          fontWeight: '500'
         }}
       />
     </Field>

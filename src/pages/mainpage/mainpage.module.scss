@@ -1,365 +1,88 @@
-.mainView {
-  display: block;
-  //grid-template-rows: auto 1fr;
-  //height: 100vh;
-  width: 100%;
-  padding: 10px;
-  align-items: center;
-  min-height: 100vh;
-  justify-items: center;
-  margin-top: 40px;
-  margin-bottom: 20px;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 800px;
-}
+// Start page: what GeneSetR is, the gene search, and one card per question
+// (the same groups as the top navigation).
 
-.parentOfMainView {
-  display: flex;
-  justify-content: center;
-  width: auto;
-  max-width: 900px;
+.page {
+  width: 100%;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 0 16px;
-  box-sizing: border-box;
+  padding: 36px 20px 48px;
+  color: var(--gs-text);
 }
 
-@media (max-width: 900px) {
-  .parentOfMainView {
-    max-width: 100%;
-    padding: 0 8px;
-  }
-}
-
-@media (max-width: 600px) {
-  .parentOfMainView {
-    display: block;
-    padding: 0 2px;
-  }
-  .mainView {
-    max-width: 100%;
-    padding: 4px;
-    margin-top: 20px;
-  }
-  .infoSection {
-    font-size: 0.95em;
-    margin-bottom: 12px;
-  }
-  .glass-panel {
-    padding: 8px;
-  }
-  .glass-panel h2 {
-    font-size: 1.1em;
-  }
-  .glass-button {
-    font-size: 14px;
-    padding: 8px 6px;
-    height: auto;
-    min-height: 38px;
-    white-space: normal;
-    word-break: break-word;
-    line-height: 1.3;
-  }
-  .mainView h1 {
-    font-size: 1.3em !important;
-  }
-}
-
-@media (max-width: 400px) {
-  .mainView {
-    padding: 2px;
-    margin-top: 10px;
-  }
-  .infoSection {
-    font-size: 0.85em;
-  }
-  .glass-panel {
-    padding: 4px;
-  }
-  .glass-panel h2 {
-    font-size: 1em;
-  }
-  .glass-button {
-    font-size: 12px;
-    padding: 6px 3px;
-    min-height: 32px;
-  }
-  .mainView h1 {
-    font-size: 1.1em !important;
-  }
-}
-
-.cookie_consent_container {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: #fff;
-  padding: 10px;
-  text-align: center;
-  display: none; /* Hidden by default */
-}
-.consentContainer {
-  margin-top: 10px;
-  background: #f1e7ae;
-  border: 4px dashed;
-  padding: 12.5px 20px;
-  box-shadow: 0 -1px 10px 0 #acabab4d;
-  border-color: #0011ff;
-}
-
-.consentGroup {
+.hero {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 400;
-  font-family: "Poppins", sans-serif;
-}
-.consentBtn {
-  font-size: 20px;
-  //width: 3em;
-  font-family: inherit;
-
-  line-height: 20px;
-  padding: 5px 10px;
-  width: 120px;
-  height: 40px;
-  font-weight: 500;
-  margin: 0 8px 0 0;
-  border-radius: 2px;
-  white-space: nowrap;
-  cursor: pointer;
-  text-align: center;
-  min-height: 0;
-  color: #ffffff;
-  border-color: #1863dc;
-  background-color: #1863dc;
-  transition:
-    background-color 0.3s,
-    border-color 0.3s,
-    color 0.3s; /* Smooth transition for hover effect */
-}
-.consentBtn:hover {
-  background-color: #2feb00; /* Slightly lighter blue on hover */
-  border-color: #42e11a; /* Border color changes with background */
-  color: #000000; /* Optional: Slightly lighter text color on hover */
-}
-
-.consentBtnR:hover {
-  background-color: #e1841a; /* Slightly lighter blue on hover */
-  border-color: #e16a1a; /* Border color changes with background */
-  color: #e6e6e6; /* Optional: Slightly lighter text color on hover */
-}
-
-.consentBtnR {
-  font-size: 20px;
-  //width: 3em;
-  font-family: inherit;
-  width: 120px;
-  height: 40px;
-  line-height: 20px;
-  padding: 3px 15px;
-  font-weight: 500;
-  margin: 0 10px 0 10px;
-  border-radius: 2px;
-  white-space: nowrap;
-  cursor: pointer;
-  text-align: center;
-  min-height: 0;
-  color: #ffffff;
-  border-color: #dc1818;
-  background-color: #dc2f18;
-  transition:
-    background-color 0.3s,
-    border-color 0.3s,
-    color 0.3s; /* Smooth transition for hover effect */
-}
-.consentTitle {
-  color: #212121;
-  font-weight: 700;
-  font-size: 18px;
-  line-height: 24px;
-  margin: 0;
-  overflow-wrap: break-word;
-  font-family: "Poppins", sans-serif;
-}
-
-.infoSection {
-  display: flex;
-  width: 100%;
-  max-width: 880px;
-  font-size: large;
-  line-height: 1.3;
   margin-bottom: 30px;
-  //align-items: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  flex-direction: column;
+  text-align: center;
+
+  h1 {
+    margin: 0 0 12px;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--gs-text);
+  }
 }
 
-.moduleTextInfos {
-  width: 50%;
+.lead {
+  max-width: 820px;
+  margin: 0 0 22px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--gs-muted);
 }
 
-.float-right {
-  margin: 0 0 10px 10px;
-  height: 70px;
+.search {
   display: flex;
   justify-content: center;
-  flex-direction: row;
-  object-fit: scale-down;
-}
-
-.responsive-image {
-  max-width: 100%;
-  height: auto;
-}
-
-.glass-panel2 {
-  color: #fff;
-  //margin: 10px auto;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  //width: 100%;
-  height: 30%;
-  border-radius: 15px;
-  padding: 32px;
-  backdrop-filter: blur(10px);
-  //max-width: 800px;
-  //background: url('../../../public/images/background4.png') no-repeat center center fixed;
-  -webkit-background-size: 80%;
-  -moz-background-size: 80%;
-  -o-background-size: 80%;
-  background-size: 80%;
-}
-
-.button-container {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.glass-button2 {
-  //display: inline-block;
-
-  padding: 24px 32px;
-  border: 0;
-  font-weight: 900;
-  text-decoration: none;
-  border-radius: 15px;
-  background-color: rgba(199, 182, 34, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(30px);
-  color: rgba(0, 0, 0, 0.8);
-  font-size: 14px;
-  letter-spacing: 2px;
-  cursor: pointer;
-  text-transform: uppercase;
-  margin: 5px;
-  margin-top: 10px;
-}
-
-.glass-button2:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.glass-button:hover {
-  color: #fff;
-  background-color: #e76a16;
-  box-shadow: inset 0 0 0 2px #f7550a;
-}
-
-
-.glass-button {
   width: 100%;
-  max-width: 800px;
-  font-family: Lato, sans-serif;
-  display: inline-block;
-  outline: none;
+}
+
+.tourButton {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-link);
+  font-family: inherit;
+  font-size: 14px;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  border-radius: 500px;
-  transition-property: background-color, border-color, color, box-shadow, filter;
-  transition-duration: 0.3s;
-  border: 1px solid transparent;
-  //letter-spacing: 2px;
-  min-width: 160px;
-  //text-transform: uppercase;
-  white-space: normal;
-  //font-weight: 700;
-  text-align: center;
-  padding: 10px 10px 10px;
-  color: #000000;
-  box-shadow: inset 0 0 0 3px #616467;
-  background-color: transparent;
-  height: 48px;
-  //margin: 2px;
-  //margin-top: 2px;
-  margin-bottom: 2px;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
-/* Extra styles for demo */
-/* Article:  https://superdevresources.com/glassmorphism-ui-css/
-.background1 {
-  background: url(https://thumbs.dreamstime.com/b/blur-glass-background-abstract-blurred-colorful-40536095.jpg) no-repeat center center fixed;
-  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover;
-  background-size: cover;
-  text-align: center;
-  font-family: 'Open Sans', sans-serif;
-  background-color: rgb(122, 120, 120);
-}
- 
-
-h1, h1 a {
-  min-height: 120px;
-  width: 90%;
-  max-width: 700px;
-  vertical-align: middle;
-  text-align: center;
-  margin: 0 auto;
-  text-decoration: none;
-  color: #fff;
-  padding-top: 60px;
-  color: rgba(255,255,255,0.8);
-}
-
-p {
-  width: 80%;
-  margin: 0 auto;
-  padding-bottom: 32px;
-  color: rgba(255,255,255,0.6);
-}*/
-
-// Five entry points by question (same groups as the top navigation)
 .entryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
   width: 100%;
 }
 
 .entryCard {
-  padding: 14px 16px;
-  border: 1px solid #e1e5ea;
+  padding: 16px 18px;
+  border: 1px solid var(--gs-border);
   border-radius: 10px;
-  background: #fafbfc;
+  background: var(--gs-surface);
   text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--gs-border-strong);
+    box-shadow: var(--gs-shadow);
+  }
 
   h2 {
     margin: 0 0 2px;
     font-size: 17px;
-    color: #a63648;
+    color: var(--gs-accent);
   }
 
   p {
-    margin: 0 0 8px;
-    color: #5d6877;
+    margin: 0 0 10px;
+    color: var(--gs-muted);
     font-size: 13px;
     font-style: italic;
   }
@@ -371,11 +94,11 @@ p {
   }
 
   li {
-    padding: 2px 0;
+    padding: 2.5px 0;
   }
 
   a {
-    color: #1565c0;
+    color: var(--gs-link);
     font-size: 14px;
     text-decoration: none;
 
@@ -385,17 +108,93 @@ p {
   }
 }
 
-.tourButton {
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #1565c0;
-  font-family: inherit;
+.footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px 32px;
+  align-items: center;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gs-border);
   font-size: 14px;
-  cursor: pointer;
 
-  &:hover {
-    text-decoration: underline;
+  a {
+    color: var(--gs-link);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.footerTitle {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gs-muted);
+}
+
+.cite {
+  line-height: 1.5;
+}
+
+.logos {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+// The logos are drawn for a white page: they sit on a white tile in both themes
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  padding: 6px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: #ffffff;
+
+  img {
+    display: block;
+    max-width: 190px;
+    max-height: 38px;
+    object-fit: contain;
+  }
+}
+
+.github {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  color: var(--gs-muted);
+
+  > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding-top: 20px;
+  }
+
+  .hero h1 {
+    font-size: 26px;
+  }
+
+  .lead {
+    font-size: 14.5px;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
   }
 }

@@ -198,9 +198,10 @@ function ColorGradientSelector({ colorScale, onChange }) {
 
   const arrowStyle = {
     cursor: "pointer",
-    backgroundColor: "#ddd",
-    border: "none",
-    borderRadius: "1px",
+    backgroundColor: "var(--gs-surface-alt)",
+    color: "var(--gs-text)",
+    border: "1px solid var(--gs-border-strong)",
+    borderRadius: "4px",
     fontSize: "16px",
     padding: "8px 12px",
     height: "36px",
@@ -210,8 +211,8 @@ function ColorGradientSelector({ colorScale, onChange }) {
   const previewStyle = {
     height: "36px",
     flexGrow: 1,
-    border: "1px solid #999",
-    borderRadius: "1px",
+    border: "1px solid var(--gs-border-strong)",
+    borderRadius: "4px",
     cursor: "pointer",
     background: currentCSS,
   };
@@ -222,10 +223,10 @@ function ColorGradientSelector({ colorScale, onChange }) {
     width: "calc(100% - 84px)",
     left: "42px",
     top: "calc(100% + 0.1rem)", // 100%",
-    border: "1px solid #ccc",
-    borderRadius: "4px",
-    backgroundColor: "#fff",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+    border: "1px solid var(--gs-border)",
+    borderRadius: "6px",
+    backgroundColor: "var(--gs-surface)",
+    boxShadow: "var(--gs-shadow-pop)",
     zIndex: 999,
     display: dropdownOpen ? "block" : "none",
     maxHeight: "200px",
@@ -235,7 +236,7 @@ function ColorGradientSelector({ colorScale, onChange }) {
   const dropdownOptionStyle = {
     padding: "8px",
     cursor: "pointer",
-    backgroundColor: "#fff",
+    backgroundColor: "var(--gs-surface)",
     height: "28px",
   };
 

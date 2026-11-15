@@ -1,8 +1,12 @@
+// Cluster heatmap: toolbar, drawing area and the cluster panel beside it.
+// Colours are the tokens of global.scss (light / dark theme).
+
 .mainView {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Fill the viewport height */ 
+  height: 100%;
   flex: 1;
+  color: var(--gs-text);
 }
 
 .controlBar {
@@ -10,24 +14,20 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-  flex-wrap: wrap; /* Allow items to wrap on small screens */
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface-alt);
 }
 
 .controlGroup {
   display: flex;
   flex-direction: row;
   align-items: center;
-  flex-wrap: wrap; /* Allow wrapping within the group */
-}
-
-.instructionText {
-  font-size: 16px;
-  margin-right: 10px;
-  flex: 1 1 auto; /* Allow text to take up remaining space */
-  word-wrap: break-word; /* Allow long words to wrap */
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .zoomControls {
@@ -35,60 +35,30 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-}
-
-.zoomButton {
-  font-size: 16px;
-  margin-left: 10px;
-  background-color: green;
-  padding: 5px 10px;
-  transition-duration: 0.4s;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.zoomButton:hover {
-  background-color: yellow; /* Change color on hover */
-  color: black;
+  gap: 6px;
 }
 
 .mainContent {
-  flex: 1; /* Take up remaining space */
+  flex: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: scroll;  
-
+  overflow: auto;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg);
 }
 
 .geneTable {
-  //flex: 1; /* Allow it to grow and fill available space */
-  overflow: auto; /* Handle overflow if needed */
-}
-
-.transformWrapper {
-  flex: 1; /* Allow it to grow and fill available space */
-  overflow: auto; /* Handle overflow if needed */
+  overflow: auto;
 }
 
 .enrichmentTableContainer {
-  display: block; /* Or use flex if you prefer */
+  display: block;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
   height: fit-content;
-}
-.heatmapContainer {
-  flex: 1;
-  //overflow: auto;
-  display: flex;
-  justify-content: flex-start; /* Align to left */
-  align-items: flex-start;     /* Align to top */
-  padding: 10px;
-  box-sizing: border-box;
 }
 
 .scaledWrapper {
@@ -102,10 +72,10 @@
   min-width: 200px;
   max-width: 280px;
   padding: 6px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--gs-border);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  background: var(--gs-surface);
+  box-shadow: var(--gs-shadow-pop);
 }
 
 .contextMenuItem {
@@ -118,7 +88,8 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #212121;
+  color: var(--gs-text);
+  font-family: inherit;
   font-size: 13px;
   cursor: pointer;
 }
@@ -129,12 +100,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #616161;
+  color: var(--gs-muted);
   flex: 0 0 auto;
 }
 
-.contextMenuItem:hover {
-  background: #f5f5f5;
+.contextMenuItem:hover:not(:disabled) {
+  background: var(--gs-hover);
 }
 
 .contextMenuItem:disabled {
@@ -145,7 +116,7 @@
 .contextMenuSeparator {
   height: 1px;
   margin: 6px 4px;
-  background: #eeeeee;
+  background: var(--gs-border);
 }
 
 .exportOverlay {
@@ -153,23 +124,24 @@
   right: 16px;
   bottom: 16px;
   z-index: 10001;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(33, 33, 33, 0.92);
-  color: #ffffff;
+  padding: 10px 14px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
   font-size: 13px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--gs-shadow-pop);
 }
 
-/* Cluster panel beside the heatmap (fast renderer) */
+/* Cluster panel beside the heatmap */
 .panelDivider {
   flex: 0 0 6px;
   cursor: col-resize;
-  background: var(--border-color, #dfe3e8);
+  background: var(--gs-border);
   touch-action: none;
 
   &:hover {
-    background: #a63648;
+    background: var(--gs-accent);
   }
 }
 
@@ -182,8 +154,10 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  background: var(--surface-color, #fff);
-  border-bottom: 1px solid var(--border-color, #dfe3e8);
+  background: var(--gs-surface-alt);
+  border-bottom: 1px solid var(--gs-border);
+  color: var(--gs-text);
+  font-size: 13.5px;
 }
 
 .panelActions {
@@ -196,7 +170,7 @@
   margin: 8px 12px;
   font-size: 13px;
   line-height: 1.4;
-  opacity: 0.8;
+  color: var(--gs-muted);
 }
 
 .summaryTable {
@@ -209,13 +183,22 @@
   td {
     padding: 6px 8px;
     text-align: left;
-    border-bottom: 1px solid var(--border-color, #dfe3e8);
+    border-bottom: 1px solid var(--gs-border);
+    background: transparent;
+    color: var(--gs-text);
     vertical-align: top;
   }
 
   th {
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
+    color: var(--gs-muted);
+    background: var(--gs-surface-alt);
+  }
+
+  tr {
+    background: transparent;
   }
 }
 
@@ -223,30 +206,38 @@
   cursor: pointer;
 
   &:hover {
-    background: rgba(166, 54, 72, 0.08);
+    background: var(--gs-hover);
   }
 }
 
 .geneSearch {
   display: inline-flex;
   align-items: center;
-  margin-right: 8px;
 
   input {
-    height: 30px;
+    height: 32px;
     width: 150px;
     padding: 0 8px;
-    border: 1px solid var(--border-color, #c4c9d0);
-    border-radius: 4px;
-    background: var(--surface-color, #fff);
-    color: inherit;
+    border: 1px solid var(--gs-border-strong);
+    border-radius: 6px;
+    background: var(--gs-surface);
+    color: var(--gs-text);
     font: inherit;
     font-size: 13px;
+
+    &::placeholder {
+      color: var(--gs-faint);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--gs-focus);
+      outline-offset: 1px;
+    }
   }
 
   .geneSearchMissing {
-    border-color: #d7191c;
-    outline: 1px solid #d7191c;
+    border-color: var(--gs-danger);
+    outline: 1px solid var(--gs-danger);
   }
 }
 
@@ -254,24 +245,25 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 0 8px;
   font-size: 13px;
   white-space: nowrap;
+  color: var(--gs-text);
 
   label {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    color: var(--gs-muted);
   }
 
   input {
     width: 52px;
-    height: 28px;
+    height: 32px;
     padding: 0 4px;
-    border: 1px solid var(--border-color, #c4c9d0);
-    border-radius: 4px;
-    background: var(--surface-color, #fff);
-    color: inherit;
+    border: 1px solid var(--gs-border-strong);
+    border-radius: 6px;
+    background: var(--gs-surface);
+    color: var(--gs-text);
     font: inherit;
   }
 }
@@ -291,10 +283,11 @@
   max-height: 300px;
   overflow: auto;
   padding: 8px 10px;
-  border: 1px solid var(--border-color, #c4c9d0);
-  border-radius: 6px;
-  background: var(--surface-color, #fff);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  box-shadow: var(--gs-shadow-pop);
   font-size: 13px;
 
   label {
@@ -308,5 +301,6 @@
   p {
     margin: 0;
     line-height: 1.4;
+    color: var(--gs-muted);
   }
 }

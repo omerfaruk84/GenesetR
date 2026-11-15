@@ -48,7 +48,7 @@ for (const route of [...OTHER_ROUTES, ...ANALYSIS_ROUTES]) {
     await mockApi(page);
     const errors = watchErrors(page);
     await page.goto(route);
-    await expect(page.locator("body")).not.toContainText("Look like you're lost");
+    await expect(page.locator("body")).not.toContainText("This page does not exist");
     // Analysis pages have the sidebar with its run button
     if (ANALYSIS_ROUTES.includes(route) && !["/genelists", "/cell-cycle"].includes(route)) {
       await expect(page.locator('[data-tour="run"]').first()).toBeVisible();
@@ -61,7 +61,7 @@ for (const route of [...OTHER_ROUTES, ...ANALYSIS_ROUTES]) {
 test("unknown address shows the not-found page", async ({ page }) => {
   await mockApi(page);
   await page.goto("/no-such-page");
-  await expect(page.locator("body")).toContainText("Look like you're lost");
+  await expect(page.locator("body")).toContainText("This page does not exist");
 });
 
 test("gene page shows the cross-dataset summary", async ({ page }) => {

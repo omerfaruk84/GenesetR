@@ -349,6 +349,7 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
   // Show loading if session not initialized
   if (!sessionId) {
     return (
+      <div className={styles.shell}>
       <div className={styles.uploadPage}>
         <Card className={styles.progressCard}>
           <CardContent>
@@ -362,10 +363,12 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
           </CardContent>
         </Card>
       </div>
+      </div>
     );
   }
 
   return (
+    <div className={styles.shell}>
     <div className={styles.uploadPage}>
       <Accordion
         expanded={isDescriptionExpanded}
@@ -636,6 +639,7 @@ const UploadDatasetPage = ({ sessionId, dispatch }) => {
           </Card>
         )}
       </Box>
+    </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { PlotHelp } from "../../components/plot-help";
 import { pdfToolboxFeature, svgToolboxFeature, graphmlToolboxFeature } from "../../utils/exporters";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Table,
   Spacer,
@@ -29,9 +29,11 @@ import {
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import dagre from "dagre";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ChartLegend, ModuleIntro, Notice, Toolbar } from "../../components/ui";
+import { useChartTheme, haloLabel, saveImageFeature } from "../../utils/chartTheme";
+import { networkColors } from "../../components/NetworkGraphAlternatives/networkColors";
 import { createGeneTooltipFormatter, formatGeneTooltip } from "../../utils/geneFunctionUtils";
+import { effectLabel } from "../../utils/perturbationKind";
 
 // Add module description for Gene Regulation
 const moduleDescription = {
@@ -64,7 +66,11 @@ const GeneRegulation = ({
   geneRegulationGraph,
   blacklistData,
   blacklistLoading,
+  selectedDataset,
 }) => {
+  // "Knockdown" or "Overexpression" in the node tooltips, read when one opens
+  const effectLabelRef = useRef("Knockdown");
+  effectLabelRef.current = effectLabel(selectedDataset);
   const columns = useMemo(
     () => [
       {
@@ -192,6 +198,9 @@ const GeneRegulation = ({
   );
 
   const [selectedView, setSelectedView] = useState(0);
+  const chart = useChartTheme();
+  // Edge and node colours of the current theme; the legend uses the same object
+  const colors = useMemo(() => networkColors(chart.p), [chart.p]);
   const [options, setOptions] = useState({});
   const [keyedData, setkeyedData] = useState([]);
   const [genelists, setGeneLists] = useState([]);
@@ -218,7 +227,7 @@ const GeneRegulation = ({
         lineStyle: {
           opacity: node.kd ? Math.min(0.4118 * node.kd + 1.0235, 1) : 0.5,
         },
-        itemStyle: { borderColor: "black" },
+        itemStyle: { borderColor: colors.nodeBorder },
       }));
 
       edges = geneRegulationGraph.edges.map((edge) => ({
@@ -231,12 +240,12 @@ const GeneRegulation = ({
         lineStyle: {
           opacity: Math.min(0.4118 * Math.abs(edge.value) + 0.1765, 1),
           color: edge.id.includes("+cor+")
-            ? "rgb(153, 51, 255)"
+            ? colors.correlation
             : edge.value < -0.3
-              ? "rgb(25, 206, 17)"
+              ? colors.lower
               : edge.value > 0.3
-                ? "rgb(255, 1, 1)"
-                : "rgb(123, 123, 123)",
+                ? colors.raise
+                : colors.neutral,
           type: edge.id.includes("+cor+")
             ? "dotted"
             : edge.id.includes("+int+")
@@ -620,8 +629,9 @@ const GeneRegulation = ({
         const { id } = node;
         if (id === geneRegulationCoreSettings.selectedGene) {
           node["symbolSize"] = 40;
-          node["itemStyle"]["borderColor"] = "red";
-          node["itemStyle"]["color"] = "orange";
+          node["itemStyle"]["borderColor"] = colors.focusBorder;
+          node["itemStyle"]["borderWidth"] = 3;
+          node["itemStyle"]["color"] = colors.focus;
           node["neighbourCount"] = nodeCounts[id] ? nodeCounts[id] : 0;
         } else if (nodeCounts[id]) {
           node["neighbourCount"] = nodeCounts[id];
@@ -824,8 +834,9 @@ const GeneRegulation = ({
           const { id } = node;
           if (id === geneRegulationCoreSettings.selectedGene) {
             node["symbolSize"] = 40;
-            node["itemStyle"]["borderColor"] = "red";
-            node["itemStyle"]["color"] = "orange";
+            node["itemStyle"]["borderColor"] = colors.focusBorder;
+            node["itemStyle"]["borderWidth"] = 3;
+            node["itemStyle"]["color"] = colors.focus;
             node["neighbourCount"] = nodeCounts[id] ? nodeCounts[id] : 0;
           } else if (nodeCounts[id]) {
             node["neighbourCount"] = nodeCounts[id];
@@ -970,9 +981,6 @@ const GeneRegulation = ({
         tooltip: {
           extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
           confine: true,
-          backgroundColor: "#ffffff",
-          borderColor: "#e0e0e0",
-          borderWidth: 1,
           formatter: function (params, ticket, callback) {
             // Handle both node and edge tooltips
             if (params.dataType === 'edge') {
@@ -984,19 +992,19 @@ const GeneRegulation = ({
                 const value = Number.isFinite(Number(edge.value)) ? Number(edge.value).toFixed(3) : 'N/A';
                 const id = edge.id ? edge.id.replace("+cor+", " ~ ") : '';
                 const type = String(edge.Type || edge.type || '').replace("_", " to ");
-                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Correlation</div>
+                return `<div style="font-weight: 600; color: var(--gs-link); margin-bottom: 8px; font-size: 13px; line-height: 1.4;">Correlation</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>R:</strong> ${value}</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
                 <div style="line-height: 1.4; font-size: 12px;"><strong>Type:</strong> ${type}</div>`;
               } else if (edge.id && edge.id.includes("+int+")) {
                 const id = edge.id ? edge.id.replace("+int+", " ¤ ") : '';
-                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Protein Interaction</div>
+                return `<div style="font-weight: 600; color: var(--gs-link); margin-bottom: 8px; font-size: 13px; line-height: 1.4;">Protein Interaction</div>
                 <div style="line-height: 1.4; font-size: 12px;"><strong>Proteins:</strong> ${id}</div>`;
               } else {
                 const value = Number.isFinite(Number(edge.value)) ? Number(edge.value).toFixed(3) : 'N/A';
                 const id = edge.id ? edge.id.replace("+exp+", " → ") : '';
                 const type = String(edge.Type || edge.type || '').replace("_", " to ");
-                return `<div style="font-weight: bold; color: #1976d2; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">Expression Effect</div>
+                return `<div style="font-weight: 600; color: var(--gs-link); margin-bottom: 8px; font-size: 13px; line-height: 1.4;">Expression Effect</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Effect:</strong> ${value}</div>
                 <div style="margin-bottom: 6px; line-height: 1.4; font-size: 12px;"><strong>Genes:</strong> ${id}</div>
                 <div style="line-height: 1.4; font-size: 12px;"><strong>Type:</strong> ${type}</div>`;
@@ -1034,6 +1042,7 @@ const GeneRegulation = ({
                 geneSymbol: geneSymbol,
                 geneType: categoryName,
                 knockdown: kd,
+                effectLabel: effectLabelRef.current,
                 neighbourCount: neighbourCount
               });
               
@@ -1056,15 +1065,12 @@ const GeneRegulation = ({
               "Downstream Positively Regulated",
               "Downstream Negatively Regulated",
             ],
-            top: "top",
-            itemGap: 5,
-            left: "left",
-            padding: [
-              5, // up
-              5, // right
-              1, // down
-              5, // left
-            ],
+            top: 10,
+            left: 12,
+            itemGap: 6,
+            itemWidth: 12,
+            itemHeight: 12,
+            icon: "circle",
             orient: "vertical",
           },
         ],
@@ -1075,7 +1081,7 @@ const GeneRegulation = ({
           feature: {
             mark: { show: true },
             restore: { show: true },
-            saveAsImage: { show: true },
+            saveAsImage: saveImageFeature(chart.p, "genesetr-gene-regulation"),
             mySvg: svgToolboxFeature("genesetr-gene-regulation"),
             myPdf: pdfToolboxFeature("genesetr-gene-regulation"),
             myGraphml: graphmlToolboxFeature("genesetr-gene-regulation"),
@@ -1094,31 +1100,33 @@ const GeneRegulation = ({
             data: nodesFinal,
             links: edgesFinal,
             categories: [
-              { name: "Upstream Positive Regulator" },
-              { name: "Upstream Negative Regulator" },
-              { name: "Downstream Positively Regulated" },
-              { name: "Downstream Negatively Regulated" },
+              { name: "Upstream Positive Regulator", itemStyle: { color: colors.upstreamPositive } },
+              { name: "Upstream Negative Regulator", itemStyle: { color: colors.upstreamNegative } },
+              { name: "Downstream Positively Regulated", itemStyle: { color: colors.downstreamPositive } },
+              { name: "Downstream Negatively Regulated", itemStyle: { color: colors.downstreamNegative } },
             ],
             edgeSymbol: ["circle", "arrow"],
-            edgeSymbolSize: [4, 20],
+            edgeSymbolSize: [3, 9],
             edgeLabel: {
-              fontSize: 20,
+              fontSize: 12,
             },
 
-            label: {
+            label: haloLabel(chart.p, {
               show: true,
               position: "top",
+              distance: 4,
               formatter: function (params) {
                 return params.data.name;
               },
-
-              fontWeight: "bold",
-              color: "black",
-            },
+              fontSize: 12,
+              fontWeight: 600,
+            }),
+            labelLayout: { hideOverlap: true },
             emphasis: {
               focus: "adjacency",
+              label: { show: true },
               lineStyle: {
-                width: 6,
+                width: 4,
               },
             },
 
@@ -1131,11 +1139,11 @@ const GeneRegulation = ({
           }
         },*/
               //opacity: 0.9,
-              borderColor: "black",
-              borderWidth: 2,
+              borderColor: colors.nodeBorder,
+              borderWidth: 1.5,
             },
             lineStyle: {
-              width: 4,
+              width: 2,
             },
             draggable: true,
             // categories: sample.categories,
@@ -1159,131 +1167,76 @@ const GeneRegulation = ({
       setkeyedData([]);
       setGeneLists([]);
     }
-  }, [geneRegulationGraph, geneRegulationCoreSettings, blacklistData, blacklistLoading]);
+  }, [geneRegulationGraph, geneRegulationCoreSettings, blacklistData, blacklistLoading, chart.p, colors]);
 
   return (
     <>
-      <Accordion
-      sx={{
-         marginBottom: '14px',
-              backgroundColor: '#f8f9fa', 
-              border: '1px solid #e9ecef',
-
-              borderRadius: '8px',
-              '&:before': {
-                display: 'none',
-              },
-        '& .MuiAccordionSummary-root': {
-          minHeight: '30px',
-          height: '30px',
-        },
-        '& .MuiAccordionSummary-root.Mui-expanded': {
-          minHeight: '30px',
-          height: '30px',
-        }
-      }}
-      >
-        <AccordionSummary 
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-           
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ backgroundColor: '#fafafa', padding: '16px' }}>
-          <div style={{ marginBottom: '0px' }}>
-            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
-            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
-            <ul style={{ marginBottom: '0px', paddingLeft: '20px' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
-              ))}
-            </ul> 
-
-
-
-
-
-
-          </div>
-        </AccordionDetails>
-      </Accordion>
-      {!geneRegulationCoreSettings?.selectedGene && (
-  <div style={{ 
-    padding: '12px', 
-    backgroundColor: '#e3f2fd', 
-    borderLeft: '4px solid #1976d2',
-    borderRadius: '4px',
-    color: '#1565c0',
-    marginBottom: '8px'
-  }}>
-    💡 To start, please select a gene from the left menu.
-  </div>
-)}
-{geneRegulationCoreSettings?.selectedGene && blacklistLoading && (
-  <div style={{ 
-    padding: '12px', 
-    backgroundColor: '#e8f5e8', 
-    borderLeft: '4px solid #4caf50',
-    borderRadius: '4px',
-    color: '#2e7d32',
-    marginBottom: '8px'
-  }}>
-    🔄 Loading blacklist data for filtering...
-  </div>
-)}
-{geneRegulationCoreSettings?.selectedGene && !blacklistLoading && keyedData?.length === 0 && (
-  <div style={{ 
-    padding: '12px', 
-    backgroundColor: '#fff3e0', 
-    borderLeft: '4px solid #ff9800',
-    borderRadius: '4px',
-    color: '#e65100',
-    marginBottom: '8px'
-  }}>
-    ⚠️ No nodes are visible with current filter settings. Try relaxing the filters to see more connections.
-  </div>
-)}
-      <ButtonGroup
-        items={[
-          {
-            icon: <FaChartBar />,
-            key: 0,
-            label: "Chart",
-          },
-          {
-            icon: <FaTable />,
-            key: 1,
-            label: "Link Table",
-          },
-        ]}
-        onSelected={(key) => setSelectedView(key)}
-        value={selectedView}
+      <ModuleIntro
+        title={moduleDescription.title}
+        description={moduleDescription.description}
+        features={moduleDescription.features}
+        defaultExpanded={false}
       />
-      <PlotHelp kind="regulationNetwork" />
+      {!geneRegulationCoreSettings?.selectedGene && (
+        <Notice kind="info">To start, please select a gene from the left menu.</Notice>
+      )}
+      {geneRegulationCoreSettings?.selectedGene && blacklistLoading && (
+        <Notice kind="info">Loading blacklist data for filtering...</Notice>
+      )}
+      {geneRegulationCoreSettings?.selectedGene && !blacklistLoading && keyedData?.length === 0 && (
+        <Notice kind="warning">
+          No nodes are visible with current filter settings. Try relaxing the filters to see more connections.
+        </Notice>
+      )}
+      <Toolbar className={styles.viewBar}>
+        <ButtonGroup
+          items={[
+            {
+              icon: <FaChartBar />,
+              key: 0,
+              label: "Chart",
+            },
+            {
+              icon: <FaTable />,
+              key: 1,
+              label: "Link Table",
+            },
+          ]}
+          onSelected={(key) => setSelectedView(key)}
+          value={selectedView}
+        />
+        <PlotHelp kind="regulationNetwork" />
+      </Toolbar>
      
       {keyedData && selectedView === 1 && (
         <EnrichmentTable data={keyedData} columns={columns} />
       )}
       {selectedView === 0 && (
         <>
+          <ChartLegend
+            label="Network legend"
+            items={[
+              { label: "Gene of interest", color: colors.focus },
+              { label: "Perturbation raises expression", color: colors.raise, line: "solid" },
+              { label: "Perturbation lowers expression", color: colors.lower, line: "solid" },
+              { label: "Correlation", color: colors.correlation, line: "dotted" },
+              { label: "Protein interaction", color: colors.interaction, line: "dashed" },
+            ]}
+            note="Grey solid links are effects below the colour threshold; fainter links are weaker"
+          />
           <div className={styles.echart}>
             <ReactEChartsCore
               echarts={echarts}
+              theme={chart.theme}
               option={options}
-              style={{ height: "120%", width: "100%" }}
+              style={{ height: "100%", width: "100%" }}
               notMerge={true}
               lazyUpdate={true}
             />
           </div>
         </>
       )}
-      <Spacer height={70} />
-      {console.log(genelists)}
+      <Spacer height={24} />
       {genelists && Object.keys(genelists).length > 0 && (
         <>
           <GeneSetEnrichmentTable genesets={genelists} />
@@ -1297,6 +1250,7 @@ const mapStateToProps = ({ settings, calcResults }) => ({
   geneRegulationGraph: calcResults?.geneRegulationGraph?.result ?? null,
   graphmapSettings: settings?.graphmap ?? {},
   geneRegulationCoreSettings: settings?.geneRegulationCore ?? {},
+  selectedDataset: settings?.core?.cellLine,
 });
 
 const MainContainer = connect(mapStateToProps)(GeneRegulation);

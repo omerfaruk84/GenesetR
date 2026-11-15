@@ -1,11 +1,16 @@
+@use "../../common/page" as page;
+
+.shell {
+  @include page.shell;
+}
+
 .uploadPage {
-  padding: 24px;
+  padding: 24px 20px 60px;
   max-width: 900px;
   margin: 0 auto;
 
   .descriptionAccordion {
-    margin-bottom: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
   }
 
   .requirementsList {
@@ -24,38 +29,40 @@
   }
 
   .uploadForm {
-    padding: 32px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 28px;
+    border: 1px solid var(--gs-border);
+    border-radius: 8px;
+    box-shadow: none;
 
     .dropZone {
-      border: 2px dashed #ccc;
+      border: 2px dashed var(--gs-border-strong);
       border-radius: 8px;
       padding: 48px;
       text-align: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      background-color: #fafafa;
+      background-color: var(--gs-surface-alt);
       margin-bottom: 16px;
 
       &:hover {
-        border-color: #1976d2;
-        background-color: #f0f7ff;
+        border-color: var(--gs-accent);
+        background-color: var(--gs-hover);
       }
 
       &.dragging {
-        border-color: #1976d2;
-        background-color: #e3f2fd;
+        border-color: var(--gs-accent);
+        background-color: var(--gs-accent-soft);
         border-style: solid;
       }
 
       &.error {
-        border-color: #d32f2f;
-        background-color: #ffebee;
+        border-color: var(--gs-danger);
+        background-color: var(--gs-danger-soft);
       }
 
       .uploadIcon {
-        font-size: 64px;
-        color: #1976d2;
+        font-size: 52px;
+        color: var(--gs-accent);
         margin-bottom: 16px;
       }
 
@@ -66,8 +73,8 @@
         gap: 8px;
 
         .fileName {
-          font-weight: 500;
-          color: #1976d2;
+          font-weight: 600;
+          color: var(--gs-text);
           word-break: break-word;
           max-width: 100%;
         }
@@ -81,8 +88,9 @@
     .optionsBox {
       margin: 24px 0;
       padding: 16px;
-      background-color: #f5f5f5;
-      border-radius: 4px;
+      border: 1px solid var(--gs-border);
+      background-color: var(--gs-surface-alt);
+      border-radius: 8px;
 
       .optionHelp {
         margin-left: 32px;
@@ -100,7 +108,9 @@
 
   .progressCard {
     padding: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gs-border);
+    border-radius: 8px;
+    box-shadow: none;
 
     .progressBar {
       position: relative;
@@ -117,7 +127,7 @@
     .currentStep {
       margin: 16px 0;
       font-weight: 500;
-      color: #1976d2;
+      color: var(--gs-text);
       text-align: center;
     }
 
@@ -130,9 +140,10 @@
 
   .successCard {
     padding: 16px;
-    background-color: #f1f8f4;
-    border: 2px solid #4caf50;
-    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+    background-color: var(--gs-success-soft);
+    border: 1px solid var(--gs-success);
+    border-radius: 8px;
+    box-shadow: none;
 
     .successHeader {
       display: flex;
@@ -141,16 +152,17 @@
       margin-bottom: 16px;
 
       .successIcon {
-        font-size: 48px;
-        color: #4caf50;
+        font-size: 40px;
+        color: var(--gs-success);
       }
     }
 
     .datasetInfo {
       margin: 16px 0;
       padding: 12px;
-      background-color: white;
-      border-radius: 4px;
+      background-color: var(--gs-surface);
+      border: 1px solid var(--gs-border);
+      border-radius: 6px;
     }
 
     .successActions {
@@ -168,9 +180,10 @@
 
   .errorCard {
     padding: 16px;
-    background-color: #fff3f3;
-    border: 2px solid #d32f2f;
-    box-shadow: 0 2px 8px rgba(211, 47, 47, 0.2);
+    background-color: var(--gs-danger-soft);
+    border: 1px solid var(--gs-danger);
+    border-radius: 8px;
+    box-shadow: none;
 
     .errorHeader {
       display: flex;
@@ -179,8 +192,8 @@
       margin-bottom: 16px;
 
       .errorIcon {
-        font-size: 48px;
-        color: #d32f2f;
+        font-size: 40px;
+        color: var(--gs-danger);
       }
     }
 

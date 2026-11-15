@@ -3,23 +3,45 @@
   min-height: 100vh;
 }
 
-
-/* Colour tokens. New pages use these instead of fixed colours so that the
-   dark theme (html[data-gs-theme="dark"], see utils/theme.js) only has
-   to redefine them. */
+/* Colour tokens. Every page uses these instead of fixed colours, so the dark
+   theme (html[data-gs-theme="dark"], see utils/theme.js) only has to redefine
+   them. utils/palette.js holds the same values for code that cannot read CSS
+   variables (ECharts, canvas, the MUI theme): change both together. */
 :root {
   --gs-bg: #ffffff;
   --gs-surface: #ffffff;
-  --gs-surface-alt: #f6f7f9;
+  --gs-surface-alt: #f3f5f8;
   --gs-hover: #eef1f5;
   --gs-selected: #e6f0fb;
   --gs-text: #1f2733;
   --gs-muted: #5d6877;
+  --gs-faint: #8a94a3;
   --gs-border: #e1e5ea;
   --gs-border-strong: #c4c9d0;
   --gs-link: #1565c0;
   --gs-accent: #a63648;
-  --gs-accent-soft: rgba(166, 54, 72, 0.18);
+  --gs-accent-hover: #8f2d3d;
+  --gs-accent-soft: rgba(166, 54, 72, 0.14);
+  --gs-on-accent: #ffffff;
+  --gs-focus: #1976d2;
+  --gs-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --gs-shadow-pop: 0 10px 30px rgba(16, 24, 40, 0.16);
+
+  /* direction of an effect: orange = up, purple = down (colour-blind safe) */
+  --gs-up: #d95f02;
+  --gs-down: #5e3c99;
+  --gs-up-soft: rgba(230, 97, 1, 0.14);
+  --gs-down-soft: rgba(94, 60, 153, 0.14);
+
+  /* status colours: text on the page, and a soft box behind text */
+  --gs-info: #1565c0;
+  --gs-info-soft: #e8f1fb;
+  --gs-success: #23783b;
+  --gs-success-soft: #e6f4ea;
+  --gs-warning: #8a5a00;
+  --gs-warning-soft: #fdf3dc;
+  --gs-danger: #b3261e;
+  --gs-danger-soft: #fdecea;
 }
 
 html[data-gs-theme="dark"] {
@@ -30,13 +52,127 @@ html[data-gs-theme="dark"] {
   --gs-selected: #233549;
   --gs-text: #e6eaf0;
   --gs-muted: #9aa5b3;
+  --gs-faint: #6f7b8a;
   --gs-border: #313a46;
   --gs-border-strong: #45505e;
   --gs-link: #7ab8ff;
   --gs-accent: #e0667a;
-  --gs-accent-soft: rgba(224, 102, 122, 0.25);
+  --gs-accent-hover: #ea8394;
+  --gs-accent-soft: rgba(224, 102, 122, 0.22);
+  --gs-on-accent: #14181d;
+  --gs-focus: #7ab8ff;
+  --gs-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --gs-shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  --gs-up: #f6a04d;
+  --gs-down: #b39ae8;
+  --gs-up-soft: rgba(246, 160, 77, 0.2);
+  --gs-down-soft: rgba(179, 154, 232, 0.2);
+
+  --gs-info: #7ab8ff;
+  --gs-info-soft: #1d2f45;
+  --gs-success: #6fcf8a;
+  --gs-success-soft: #1b3324;
+  --gs-warning: #f0c060;
+  --gs-warning-soft: #3a2f16;
+  --gs-danger: #ff8a80;
+  --gs-danger-soft: #40211f;
+
+  color-scheme: dark;
 }
 
 body {
   background: var(--gs-bg);
+  color: var(--gs-text);
+}
+
+/* The UI library (sidebar, inputs, selects, buttons) has its own variables.
+   They are tied to the tokens above so its components match the rest of the
+   page in both themes; its dark set is switched on by html[data-theme].
+   The library's stylesheet is loaded after this one, hence `html:root`, which
+   outranks its `:root` and `html[data-theme]` rules. */
+html:root,
+html:root[data-theme="dark"] {
+  /* its greys are yellowish and its primary colour is orange: here they are
+     the blue-grey and the crimson accent of the application */
+  --color-neutral-50: hsl(215, 14%, 97.5%);
+  --color-neutral-100: hsl(215, 14%, 92.5%);
+  --color-neutral-150: hsl(215, 14%, 87.5%);
+  --color-neutral-200: hsl(215, 14%, 82.5%);
+  --color-neutral-250: hsl(215, 14%, 77.5%);
+  --color-neutral-300: hsl(215, 14%, 72.5%);
+  --color-neutral-350: hsl(215, 14%, 67.5%);
+  --color-neutral-400: hsl(215, 14%, 62.5%);
+  --color-neutral-450: hsl(215, 14%, 57.5%);
+  --color-neutral-500: hsl(215, 14%, 52.5%);
+  --color-neutral-550: hsl(215, 14%, 47.5%);
+  --color-neutral-600: hsl(215, 14%, 42.5%);
+  --color-neutral-650: hsl(215, 14%, 37.5%);
+  --color-neutral-700: hsl(215, 14%, 32.5%);
+  --color-neutral-750: hsl(215, 14%, 27.5%);
+  --color-neutral-800: hsl(215, 14%, 22.5%);
+  --color-neutral-850: hsl(215, 14%, 17.5%);
+  --color-neutral-900: hsl(215, 14%, 12.5%);
+  --color-neutral-950: hsl(215, 14%, 7.5%);
+  --color-neutral-1000: hsl(215, 14%, 2.5%);
+  --color-primary-50: hsl(350, 51%, 97%);
+  --color-primary-100: hsl(350, 51%, 93%);
+  --color-primary-150: hsl(350, 51%, 88%);
+  --color-primary-200: hsl(350, 51%, 82%);
+  --color-primary-250: hsl(350, 51%, 76%);
+  --color-primary-300: hsl(350, 51%, 69%);
+  --color-primary-350: hsl(350, 51%, 62%);
+  --color-primary-400: hsl(350, 51%, 55%);
+  --color-primary-450: hsl(350, 51%, 49%);
+  --color-primary-500: hsl(350, 51%, 43%);
+  --color-primary-550: hsl(350, 51%, 39%);
+  --color-primary-600: hsl(350, 51%, 35%);
+  --color-primary-650: hsl(350, 51%, 31%);
+  --color-primary-700: hsl(350, 51%, 27%);
+  --color-primary-750: hsl(350, 51%, 23%);
+  --color-primary-800: hsl(350, 51%, 19%);
+  --color-primary-850: hsl(350, 51%, 15%);
+  --color-primary-900: hsl(350, 51%, 11%);
+  --color-primary-950: hsl(350, 51%, 8%);
+  --shadow-focus: 0 0 0 2px var(--gs-accent-soft);
+
+  --color-text: var(--gs-text);
+  --color-text-muted: var(--gs-muted);
+  --color-text-faint: var(--gs-faint);
+  --color-background: var(--gs-bg);
+  --color-background-raised: var(--gs-surface);
+  --color-background-layer: var(--gs-surface);
+  --color-background-cardheader: var(--gs-surface-alt);
+  --color-background-listitem-hover: var(--gs-hover);
+  --color-background-listitem-active: var(--gs-selected);
+  --color-border: var(--gs-border);
+  --color-border-checkbox: var(--gs-border-strong);
+  --color-border-button: var(--gs-border-strong);
+  --color-border-hover: var(--gs-border-strong);
+  --color-border-drawer-tab: var(--gs-border);
+  --color-background-drawer-tab-hover: var(--gs-hover);
+}
+
+html:root[data-theme="dark"] {
+  --color-text-primary: var(--gs-accent);
+  --color-text-primary-hover: var(--gs-accent-hover);
+  --color-background-input: #171b21;
+  --color-background-disabled: rgba(255, 255, 255, 0.05);
+  --color-background-sidebar: var(--gs-surface);
+  --color-background-button-default: var(--gs-surface-alt);
+  --color-background-button-default-hover: var(--gs-hover);
+  --color-background-button-default-active: var(--gs-hover);
+  --color-border-button-default-active: var(--gs-accent);
+  --color-text-button-default-active: var(--gs-accent);
+  --color-background-primary-muted: var(--gs-accent-soft);
+}
+
+/* Thin scrollbars that follow the theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gs-border-strong) transparent;
+}
+
+::selection {
+  background: var(--gs-accent-soft);
 }

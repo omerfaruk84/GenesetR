@@ -1,51 +1,93 @@
-.mainView {
-  padding: 15px;
-  width: 100%;
-  overflow: auto;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+// Demonstration video in a framed card. The recordings have a white
+// background; the frame keeps them tidy on a dark page.
+
+.frame {
+  max-width: 1100px;
+  margin: 0 auto 16px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  overflow: hidden;
 }
 
-.infoSection {
-  display: block;
+.bar {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  max-width: 1200px;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-surface-alt);
 }
 
-.moduleTextInfos {
-  width: 90%;
-  font-size: 17px;
+.caption {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gs-muted);
 }
 
-.float-right {
-  float: right;
-  margin: 0 0 10px 10px;
+.controls {
+  display: inline-flex;
+  gap: 4px;
 }
 
-.responsive-image {
-  max-width: 100%;
-  height: auto;
-}
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  cursor: pointer;
 
-.fastRewind {
-  background-image: url("../../../public/images/rewind.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  flex: 1;
   &:hover {
-    background-image: url("../../../public/images/rewind_black.png");
+    background: var(--gs-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-focus);
+    outline-offset: 1px;
   }
 }
 
-.fastForward {
-  background-image: url("../../../public/images/forward.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  flex: 1;
-  &:hover {
-    background-image: url("../../../public/images/forward_black.png");
-  }
+.stage {
+  position: relative;
+  background: #ffffff;
+  line-height: 0;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  object-position: left top;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+html[data-gs-theme="dark"] .video {
+  // soften the white recordings a little on a dark page
+  filter: brightness(0.92);
+}
+
+.paused {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: rgba(20, 24, 29, 0.55);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
 }

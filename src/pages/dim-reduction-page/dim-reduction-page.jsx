@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { connect } from "react-redux";
 import { ScatterPlot } from "../../components/scatterPlot";
-import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import styles from "./dim-reduction-page.module.scss";
 import "echarts-gl";
 import * as echarts from "echarts/core";
@@ -33,9 +32,9 @@ import {
   // SVGRenderer,
 } from "echarts/renderers";
 import ReactEChartsCore from "echarts-for-react/lib/core";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { LoadingPage } from "../../components/loading-page";
+import { ModuleIntro, Notice, Panel } from "../../components/ui";
+import { saveImageFeature, useChartTheme } from "../../utils/chartTheme";
 
 
 // Add module description for Dimensionality Reduction
@@ -175,6 +174,7 @@ const DimReductionPage = ({
   }, [coreSettingsChanged]);
 
   const [graphoptions, setOptions] = useState({});
+  const chart = useChartTheme();
 
   // Check if any DR calculation is running
   const isAnyCalculationRunning =
@@ -220,60 +220,58 @@ const DimReductionPage = ({
       for (let i = 1; i < cumulative_ratio.length; i++)
         cumulative_ratio[i] = explained_ratio[i] + cumulative_ratio[i - 1];
 
+      const p = chart.p;
+      const axisName = { fontWeight: 500, fontSize: 13 };
+      const percent = (value) => value.toFixed(2) + " %";
       setOptions({
+        grid: { left: 70, right: 70, top: 46, bottom: 78 },
         tooltip: {
           trigger: "axis",
-          axisPointer: {
-            type: "cross",
-            crossStyle: {
-              color: "#999",
-            },
-          },
+          axisPointer: { type: "shadow" },
         },
         dataZoom: [
           {
             show: true,
             realtime: true,
-            xAxisIndex: [0, 1],
+            height: 18,
+            bottom: 12,
           },
           {
             type: "inside",
             realtime: true,
-            xAxisIndex: [0, 1],
           },
         ],
         toolbox: {
+          right: 8,
           feature: {
             dataView: { show: true, readOnly: false },
             magicType: { show: true, type: ["line", "bar"] },
             restore: { show: true },
-            saveAsImage: { show: true },
+            saveAsImage: saveImageFeature(p, "genesetr-pca-variance"),
             mySvg: svgToolboxFeature("genesetr-pca-variance"),
             myPdf: pdfToolboxFeature("genesetr-pca-variance"),
           },
         },
         legend: {
-          data: ["Cumulative Variance Explained", "Variance Explained"],
+          left: "center",
+          top: 6,
+          itemGap: 22,
+          data: ["Variance Explained", "Cumulative Variance Explained"],
         },
         xAxis: [
           {
             type: "category",
             // Principal components are numbered from 1
             data: explained_ratio.map((_, index) => "PC" + (index + 1)),
+            axisTick: { alignWithLabel: true },
           },
         ],
         yAxis: [
           {
             nameRotate: 90,
-            scale: true,
             nameLocation: "center",
-            nameGap: 50,
-            nameTextStyle: {
-              fontWeight: "bold",
-              fontSize: "14",
-              verticalAlign: "center",
-            },
-
+            nameGap: 48,
+            nameTextStyle: axisName,
             type: "value",
             min: 0,
             // The axis ends on a whole tick above PC1. (It used to end exactly on
@@ -282,7 +280,7 @@ const DimReductionPage = ({
             max:
               Math.ceil(explained_ratio[0] / Math.max(1, Math.round(explained_ratio[0] / 5))) *
               Math.max(1, Math.round(explained_ratio[0] / 5)),
-            name: "Variance exp.",
+            name: "Variance explained",
             interval: Math.max(1, Math.round(explained_ratio[0] / 5)),
             axisLabel: {
               formatter: "{value} %",
@@ -290,19 +288,16 @@ const DimReductionPage = ({
           },
           {
             nameRotate: 90,
-            scale: true,
             nameLocation: "center",
-            nameGap: 50,
-            nameTextStyle: {
-              fontWeight: "bold",
-              fontSize: "14",
-              verticalAlign: "center",
-            },
-            name: "Cum. var. exp.",
+            nameGap: 52,
+            nameTextStyle: axisName,
+            name: "Cumulative variance explained",
             type: "value",
             min: 0,
             max: 100,
             interval: 20,
+            // one set of grid lines (of the left axis) is enough
+            splitLine: { show: false },
             axisLabel: {
               formatter: "{value} %",
             },
@@ -312,28 +307,26 @@ const DimReductionPage = ({
           {
             name: "Variance Explained",
             type: "bar",
-            tooltip: {
-              valueFormatter: function (value) {
-                return value.toFixed(2) + " %";
-              },
-            },
+            barMaxWidth: 26,
+            itemStyle: { color: p.series[0], borderRadius: [2, 2, 0, 0] },
+            tooltip: { valueFormatter: percent },
             data: explained_ratio,
           },
           {
             name: "Cumulative Variance Explained",
             type: "line",
             yAxisIndex: 1,
-            tooltip: {
-              valueFormatter: function (value) {
-                return value.toFixed(2) + " %";
-              },
-            },
+            symbol: "circle",
+            symbolSize: 5,
+            lineStyle: { color: p.accent, width: 2 },
+            itemStyle: { color: p.accent },
+            tooltip: { valueFormatter: percent },
             data: cumulative_ratio,
           },
         ],
       });
     }
-  }, [pcaResults]);
+  }, [pcaResults, chart.p]);
 
   let graphdata = undefined;
   let content = undefined;
@@ -344,255 +337,136 @@ const DimReductionPage = ({
   else if (currentMethod === "mde") graphdata = mdeResults;
   else if (currentMethod === "precomputed") graphdata = precomputedResults;
 
+  const howTo = (name) => (
+    <p>
+      <strong>To perform {name} analysis,</strong> enter your gene list in the perturbation list
+      on the left, then click <strong>"{drButtonLabel}"</strong>. The results are shown in this
+      panel. You can run the calculation several times with different parameters, or run the
+      other methods one after another.
+    </p>
+  );
+
   if (currentMethod === "tsne" && graphdata === null) {
     content = (
-      <>
-        <div style={{ display: "flex" }}>
-          <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>
-              &nbsp; &nbsp; &nbsp; &nbsp;
-              <span>
-                <strong>t-SNE</strong> is a non-linear dimensionality reduction
-                technique. It&nbsp;
-              </span>
-              <span>
-                aids in the visual interpretation of GWPS data by transforming
-                the high-dimensional expression changes associated with each
-                perturbation into a lower-dimensional map. Similar
-                perturbations, based on their effects on gene expression, are
-                represented by points that are close together on the map. This
-                allows for the identification of functionally related genes or
-                perturbations and the exploration of genetic networks, as
-                perturbations that have similar effects likely target the same
-                pathways or biological processes. Thus, t-SNE is a valuable
-                approach for probing complex GWPS data, revealing underlying
-                patterns and structures that can guide further analysis and
-                research.
-              </span>
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <strong>To perform t-SNE analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
-              button. The t-SNE results will be displayed in this panel. You can
-              run the calculation multiple times with different parameters, or you
-              can run different DR methods sequentially by selecting the result
-              from the dataset selector.
-            </p>
-          </div>
-          <img alt="MDE" src="/images/correlation.png" />
-        </div>{" "}
-      </>
+      <Panel title="About t-SNE" bodyClassName={styles.about}>
+        <p>
+          <strong>t-SNE</strong> is a non-linear dimensionality reduction technique. It aids in the
+          visual interpretation of GWPS data by transforming the high-dimensional expression
+          changes associated with each perturbation into a lower-dimensional map. Similar
+          perturbations, based on their effects on gene expression, are represented by points
+          that are close together on the map. This allows for the identification of functionally
+          related genes or perturbations and the exploration of genetic networks, as
+          perturbations that have similar effects likely target the same pathways or biological
+          processes. Thus, t-SNE is a valuable approach for probing complex GWPS data, revealing
+          underlying patterns and structures that can guide further analysis and research.
+        </p>
+        {howTo("t-SNE")}
+      </Panel>
     );
   } else if (currentMethod === "umap" && graphdata === null) {
     content = (
-      <>
-        <div style={{ display: "flex" }}>
-          <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>
-              <span>
-                <strong>
-                  &nbsp; &nbsp; &nbsp; &nbsp;Uniform Manifold Approximation and
-                  Projection
-                </strong>{" "}
-                (UMAP) is a dimensionality reduction technique that is
-                particularly useful for visualizing high-dimensional datasets in
-                a lower-dimensional space, typically 2D or 3D.&nbsp;
-              </span>
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <span>
-                &nbsp; &nbsp; &nbsp; &nbsp;Both t-SNE and UMAP are effective at
-                preserving local structure, meaning that data points that are
-                close together in the high-dimensional space will remain close
-                in the lower-dimensional representation. However, UMAP generally
-                does a better job of preserving the global structure of the
-                data, ensuring that data point distance is similar in both high-
-                and low-dimensional space. t-SNE tends to prioritize local over
-                global relationships, which can sometimes result in misleading
-                representations when the goal is to uncover the broader
-                relationships in the data.
-              </span>
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <strong>To perform UMAP analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
-              button. The UMAP results will be displayed in this panel. For other
-              dimensionality reduction methods, you can choose one of the tabs
-              above. You can run the calculation multiple times with different
-              parameters, or you can run different methods sequentially.
-            </p>
-          </div>
-
-          <img alt="UMAP" src="/images/correlation.png" />
-        </div>{" "}
-      </>
+      <Panel title="About UMAP" bodyClassName={styles.about}>
+        <p>
+          <strong>Uniform Manifold Approximation and Projection</strong> (UMAP) is a
+          dimensionality reduction technique that is particularly useful for visualizing
+          high-dimensional datasets in a lower-dimensional space, typically 2D or 3D.
+        </p>
+        <p>
+          Both t-SNE and UMAP are effective at preserving local structure, meaning that data
+          points that are close together in the high-dimensional space will remain close in the
+          lower-dimensional representation. However, UMAP generally does a better job of
+          preserving the global structure of the data, ensuring that data point distance is
+          similar in both high- and low-dimensional space. t-SNE tends to prioritize local over
+          global relationships, which can sometimes result in misleading representations when
+          the goal is to uncover the broader relationships in the data.
+        </p>
+        {howTo("UMAP")}
+      </Panel>
     );
   } else if (currentMethod === "mde" && graphdata === null) {
     content = (
-      <>
-        <div style={{ display: "flex" }}>
-          <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>
-              <strong>
-                &nbsp; &nbsp; &nbsp; &nbsp;Minimum Distortion Embedding
-              </strong>{" "}
-              (MDE) is a nonlinear dimensionality reduction method used in the
-              field of data analysis.&nbsp;The "distortion" in MDE refers to the
-              discrepancy between distances (or more generally, relationships)
-              in the high-dimensional data and the lower-dimensional
-              representation. The goal of MDE is to minimize this distortion,
-              thereby maintaining a faithful representation of the relationships
-              within the data.
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <span>
-                <strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>In our extensive
-                benchmarking of various dimensionality reduction (DR)
-                algorithms,{" "}
-              </span>
-              MDE had superior performance at an optimal number of components
-              (NOC) of 43, yielding the highest clustering score of 48 and
-              identifying up to 15 distinct clusters. However, MDE had
-              limitations in handling high NOC values ({">"} 150
-              components).&nbsp;
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <strong>&nbsp; &nbsp; &nbsp; &nbsp;</strong>With the aim to
-              improve clustering, we combined PCA with the non-linear DR
-              algorithms and observed that the combination of PCA and MDE
-              provided the best clustering results with increasing scores up to
-              an impressive 80. This combination generated up to 23 clusters
-              covering almost all genes, with 12 clusters having a score {">"}1.
-              It is noteworthy that the computation cost of the PCA-MDE
-              combination remained acceptable in comparison to other methods.
-              Thus, in light of efficiency, computation time, and quality of
-              clustering, PCA-MDE integration appears to be the most efficient
-              approach in our tests.
-            </p>
-            <p className={styles.moduleTextInfos}>
-              <strong>To perform MDE analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
-              button. The MDE results will be displayed in this panel. For other
-              dimensionality reduction methods, you can choose one of the tabs
-              above. You can run the calculation multiple times with different
-              parameters, or you can run different methods sequentially.
-            </p>
-          </div>
-          <img
-            style={{ objectFit: "scale-down" }}
-            alt="MDE"
-            src="/images/correlation.png"
-          />
-        </div>{" "}
-      </>
+      <Panel title="About MDE" bodyClassName={styles.about}>
+        <p>
+          <strong>Minimum Distortion Embedding</strong> (MDE) is a nonlinear dimensionality
+          reduction method used in the field of data analysis. The "distortion" in MDE refers to
+          the discrepancy between distances (or more generally, relationships) in the
+          high-dimensional data and the lower-dimensional representation. The goal of MDE is to
+          minimize this distortion, thereby maintaining a faithful representation of the
+          relationships within the data.
+        </p>
+        <p>
+          In our extensive benchmarking of various dimensionality reduction (DR) algorithms, MDE
+          had superior performance at an optimal number of components (NOC) of 43, yielding the
+          highest clustering score of 48 and identifying up to 15 distinct clusters. However, MDE
+          had limitations in handling high NOC values ({">"} 150 components).
+        </p>
+        <p>
+          With the aim to improve clustering, we combined PCA with the non-linear DR algorithms
+          and observed that the combination of PCA and MDE provided the best clustering results
+          with increasing scores up to an impressive 80. This combination generated up to 23
+          clusters covering almost all genes, with 12 clusters having a score {">"}1. It is
+          noteworthy that the computation cost of the PCA-MDE combination remained acceptable in
+          comparison to other methods. Thus, in light of efficiency, computation time, and
+          quality of clustering, PCA-MDE integration appears to be the most efficient approach in
+          our tests.
+        </p>
+        {howTo("MDE")}
+      </Panel>
     );
   } else if (currentMethod === "pca") {
     content = (
-
       <div className={styles.submainView}>
         {pcaResults ? (
           <>
-            <div className={styles.infoSection}>
-              {" "}
-              Total number of principal components: {pcaResults.ratio?.length}
-            </div>
-            <Row spacing={0} width="100%" height="35vh">
-              <ReactEChartsCore
-                echarts={echarts}
-                option={graphoptions}
-                style={{ height: "100%", width: "100%" }}
-                notMerge={true}
-                lazyUpdate={true}
-              />
-            </Row>
-            <Spacer height="2em" />
+            <Panel
+              title="Variance explained"
+              subtitle={`${pcaResults.ratio?.length ?? 0} principal components`}
+              flush
+            >
+              <div className={styles.scree}>
+                <ReactEChartsCore
+                  echarts={echarts}
+                  theme={chart.theme}
+                  option={graphoptions}
+                  style={{ height: "100%", width: "100%" }}
+                  notMerge={true}
+                  lazyUpdate={true}
+                />
+              </div>
+            </Panel>
 
             <ScatterPlot graphData={pcaResults} />
           </>
         ) : (
-          <div className={styles.infoSection}>
-            <p className={styles.moduleTextInfos}>
-              <img
-                alt="PCA"
-                src="/images/PCA.png"
-                className={`${styles["float-right"]}`}
-              />
-              Principal Component Analysis (PCA) aids visualization and
-              interpretation of rich datasets by reducing their dimensionality
-              with minimal information loss. Given a dataset with an
-              N-dimensional space, where N represents the number of variables
-              under investigation, PCA summarizes the data by making a linear
-              transformation of vectors into a new coordinate system with fewer,
-              uncorrelated variables - the Principal Components. These variables
-              successively maximize variance from the original matrix and
-              graphically simplify the identification of trends, clusters, and
-              correlation among the subjects to analysis.
-              <br />
-              <br />
-              <strong>To perform PCA analysis,</strong> please enter your gene list to the
-              perturbation list on the left. Then, click the <strong>"{drButtonLabel}"</strong>
-              button. The PCA results will be displayed in this panel. For other
-              dimensionality reduction methods, you can choose one of the tabs
-              above. You can run the calculation multiple times with different
-              parameters, or you can run different methods sequentially.
-
+          <Panel title="About PCA" bodyClassName={styles.about}>
+            <img alt="PCA" src="/images/PCA.png" className={styles.aboutImage} />
+            <p>
+              Principal Component Analysis (PCA) aids visualization and interpretation of rich
+              datasets by reducing their dimensionality with minimal information loss. Given a
+              dataset with an N-dimensional space, where N represents the number of variables
+              under investigation, PCA summarizes the data by making a linear transformation of
+              vectors into a new coordinate system with fewer, uncorrelated variables - the
+              Principal Components. These variables successively maximize variance from the
+              original matrix and graphically simplify the identification of trends, clusters,
+              and correlation among the subjects to analysis.
             </p>
-          </div>
+            {howTo("PCA")}
+          </Panel>
         )}
-         
       </div>
-     
-
     );
   }
 
   return (
     <div className={styles.mainView}>
-      {/* Module Description */}
-      <Accordion 
+      <ModuleIntro
+        title={moduleDescription.title}
+        description={moduleDescription.description}
+        features={moduleDescription.features}
         expanded={isDescriptionExpanded}
-        onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
-       sx={{
-         marginBottom: '14px',
-         backgroundColor: '#f8f9fa', 
-         border: '1px solid #e9ecef',
-         borderRadius: '8px',
-         '&:before': {
-           display: 'none',
-         },
-         '& .MuiAccordionSummary-root': {
-           minHeight: '30px',
-           height: '30px',
-         },
-         '& .MuiAccordionSummary-root.Mui-expanded': {
-           minHeight: '30px',
-           height: '30px',
-         }
-       }}
-      >
-        <AccordionSummary 
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
-          <div style={{fontSize: '13px', marginBottom: '0px' }}>
-            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
-            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
-            <ul style={{ marginBottom: '0px', paddingLeft: '20px' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
-              ))}
-            </ul>
-          </div>
-        </AccordionDetails>
-      </Accordion>
-      
+        onChange={setIsDescriptionExpanded}
+      />
+
       {isAnyCalculationRunning && (
         <LoadingPage 
           progressMessage={progressState.message}
@@ -603,40 +477,24 @@ const DimReductionPage = ({
       {!isAnyCalculationRunning && (
         <>
       {!tsneResults && !umapResults && !mdeResults && !pcaResults && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#e3f2fd',
-          borderLeft: '4px solid #1976d2',
-          borderRadius: '4px',
-          color: '#1565c0',
-          marginBottom: '8px',
-          fontSize: '13px'
-        }}>
-          💡 To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"{drButtonLabel}"</strong> button.
-        </div>
+        <Notice kind="info">
+          To start, select a DR method in the settings panel, enter your gene list in the input box, and click the <strong>"{drButtonLabel}"</strong> button.
+        </Notice>
       )}
 
       {currentMethod === "pca" ? (
         <>
         {content}
-        <VideoHelpPage videoFile={helpVideo} />
+        {!pcaResults && <VideoHelpPage videoFile={helpVideo} />}
         </>
       ) : currentMethod === "precomputed" ? (
         graphdata !== null ? (
           <ScatterPlot graphData={graphdata} />
         ) : (
           <>
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#e3f2fd',
-              borderLeft: '4px solid #1976d2',
-              borderRadius: '4px',
-              color: '#1565c0',
-              marginBottom: '8px',
-              fontSize: '13px'
-            }}>
-              💡 Select your parameters in the left sidebar and click "Load Pre-computed Data" to view the all-genes DR visualization.
-            </div>
+            <Notice kind="info">
+              Select your parameters in the left sidebar and click "Load Pre-computed Data" to view the all-genes DR visualization.
+            </Notice>
             <VideoHelpPage videoFile={helpVideo} />
           </>
         )

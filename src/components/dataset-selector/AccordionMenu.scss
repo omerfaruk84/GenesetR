@@ -2,7 +2,7 @@
     font-family: Arial, sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    color: #333;
+    color: var(--gs-text);
   }
   div._itemHeader_1fhdv_401{
     padding-top: 5px;
@@ -23,13 +23,13 @@
     display: block;
     padding: 10px;
     cursor: pointer;
-    background-color: #f7f7f7;
-    border: 1px solid #ddd;
+    background-color: var(--gs-surface-alt);
+    border: 1px solid var(--gs-border);
     border-radius: 3px;
   }
   
   .menu-item.active .menu-item-button {
-    background-color: rgb(196, 176, 60);
+    background-color: var(--gs-accent-soft);
   }
   
   .menu-item-children {

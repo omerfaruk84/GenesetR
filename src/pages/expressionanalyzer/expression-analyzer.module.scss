@@ -1,8 +1,7 @@
 .mainView {
-  padding: 10px;
   width: 100%;
-  height: 350px;
-  padding-top: 0px;
+  padding: 0 10px 10px;
+  color: var(--gs-text);
 }
 
 .columns {
@@ -10,114 +9,112 @@
   margin-bottom: 20px;
 }
 
-.cellCyclePanel {
-  margin-bottom: 14px;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+// ---- result block (tabs, question, chart or table) ----
+
+.resultCard {
+  margin-top: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
 }
 
-.cellCycleHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px 6px;
+.question {
+  margin: 10px 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gs-text);
+  min-height: 20px;
 }
 
-.cellCycleHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.viewBar {
+  margin-bottom: 10px;
 }
+
+.chartArea {
+  width: 100%;
+  height: 460px;
+  margin-bottom: 8px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg);
+}
+
+// ---- cell-cycle panel ----
 
 .cellCycleHeaderControlLabel {
   font-size: 12px;
-  color: #5f6368;
-  font-weight: 700;
-}
-
-.cellCycleTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: #2b2f36;
-}
-
-.cellCycleSubtitle {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #5f6368;
+  font-weight: 600;
+  color: var(--gs-muted);
 }
 
 .cellCycleStatus {
-  padding: 0 14px 12px;
   font-size: 13px;
-  color: #444;
+  color: var(--gs-muted);
 }
 
 .cellCycleStatusError {
-  padding: 0 14px 12px;
   font-size: 13px;
-  color: #b00020;
+  color: var(--gs-danger);
 }
 
 .cellCycleCards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 6px 14px 10px;
+  margin-bottom: 12px;
 }
 
 .cellCycleStatCard {
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 10px 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 9px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface-alt);
 }
 
 .cellCycleStatLabel {
   font-size: 11px;
-  color: #5f6368;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gs-muted);
 }
 
 .cellCycleStatValue {
-  margin-top: 4px;
-  font-size: 16px;
-  font-weight: 800;
-  color: #1f2937;
+  margin-top: 3px;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gs-text);
 }
 
 .cellCycleCharts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 12px;
-  padding: 0 14px 14px;
+}
+
+.cellCycleChart,
+.cellCycleChartWide {
+  padding: 4px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg);
 }
 
 .cellCycleChartWide {
   grid-column: 1 / -1;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 6px;
-}
-
-.cellCycleChart {
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 6px;
 }
 
 @media (max-width: 1100px) {
   .cellCycleCards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .cellCycleCharts {
     grid-template-columns: 1fr;
   }
+
   .cellCycleChartWide {
     grid-column: auto;
   }

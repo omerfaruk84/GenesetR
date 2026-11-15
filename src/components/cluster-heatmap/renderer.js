@@ -80,7 +80,54 @@ const DIVERGING = new Set([
 
 const DEFAULT_SCALE = "BuWhRd";
 const MISSING = 3.0e38; // texel value for a missing cell
-const MISSING_RGB = [232, 232, 232];
+// Colours of everything drawn around the cells, per page theme. The cells
+// themselves (the colour scale) are data and do not change with the theme;
+// marks drawn on top of cells (cluster boundaries, selection frames, hover)
+// stay dark for the same reason.
+const THEMES = {
+  light: {
+    mode: "light",
+    bg: "#ffffff",
+    missing: [232, 232, 232],
+    text: "#222222",
+    strong: "#111111",
+    legendText: "#333333",
+    hint: "#888888",
+    tree: "#5a6470",
+    idle: "#9aa3ad",
+    histogram: "#aab2bd",
+    outline: "rgba(0,0,0,0.25)",
+    frame: "rgba(0,0,0,0.35)",
+    pill: "rgba(255,255,255,0.88)",
+    pillText: "#111111",
+    wash: "rgba(255,255,255,0.55)",
+    mark: "#d7191c",
+    trackOn: "#111111",
+    trackOff: "#e3e6ea",
+    tooltip: "background:rgba(33,37,41,0.94);color:#fff;border:1px solid transparent;",
+  },
+  dark: {
+    mode: "dark",
+    bg: "#14181d",
+    missing: [52, 60, 71],
+    text: "#d5dbe3",
+    strong: "#f2f4f7",
+    legendText: "#c3cad4",
+    hint: "#7f8a99",
+    tree: "#9aa5b3",
+    idle: "#5b6675",
+    histogram: "#5b6675",
+    outline: "rgba(255,255,255,0.28)",
+    frame: "rgba(255,255,255,0.35)",
+    pill: "rgba(20,24,29,0.86)",
+    pillText: "#f2f4f7",
+    wash: "rgba(20,24,29,0.62)",
+    mark: "#ff7b72",
+    trackOn: "#e6eaf0",
+    trackOff: "#313a46",
+    tooltip: "background:rgba(43,51,62,0.97);color:#f2f4f7;border:1px solid #45505e;",
+  },
+};
 const LUT_SIZE = 256;
 const PAD = 8;
 const LEGEND_H = 34; // value histogram above the colour bar
@@ -88,8 +135,8 @@ const GAP = 6;
 const MAX_CELL = 64;
 const HIT_PX = 6;
 const TRACK = 10; // width of one annotation track, including 1 px of space
-const TRACK_COLORS = ["#111111", ...["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf"]];
-const TRACK_OFF = "#e3e6ea";
+// Categories of an annotation track; a yes/no track uses the theme's trackOn / trackOff.
+const TRACK_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf", "#7f7f7f"];
 // The dendrogram uses this share of its area, leaving a rest position for the
 // cut line beyond the root. A cut at or above 1 (the root) means "no cut".
 const TREE_SHARE = 0.92;
@@ -372,8 +419,10 @@ class ClusterHeatmap {
       columns_order: [],
       highlighted_rows: [],
       font: "Helvetica, Arial, sans-serif",
+      theme: "light", // "light" | "dark": colours of labels, trees and legend
       ...options,
     };
+    this._theme = THEMES[this.settings.theme] || THEMES.light;
     this.events = {
       row_onclick: noop,
       row_onmouseover: noop,
@@ -821,6 +870,28 @@ class ClusterHeatmap {
    * Row metadata and column metadata of the InCHlib format are shown the
    * same way without a call.
    */
+  /** Switches the colours around the cells to the page theme ("light" | "dark") and redraws. */
+  setTheme(name) {
+    const theme = THEMES[name] || THEMES.light;
+    if (theme === this._theme) return;
+    this._theme = theme;
+    this.settings.theme = theme.mode;
+    this._resolveTracks();
+    // Missing cells take the theme's colour: matrix image and minimap are rebuilt.
+    this._lutDirty = true;
+    this._thumbnail = null;
+    if (this._tooltip) this._tooltip.style.cssText = this._tooltipCss();
+    if (this._root && this._layoutBox) this._renderNow();
+  }
+
+  _tooltipCss() {
+    return (
+      "position:absolute;display:none;pointer-events:none;white-space:pre;z-index:2;" +
+      "font:12px/1.35 Helvetica,Arial,sans-serif;padding:5px 8px;border-radius:4px;" +
+      this._theme.tooltip
+    );
+  }
+
   setAnnotations(annotations) {
     this._annotations = {
       rows: (annotations?.rows || []).filter((track) => track && track.values),
@@ -833,6 +904,8 @@ class ClusterHeatmap {
   /** Maps every track onto the rows / columns in display order and picks its colours. */
   _resolveTracks() {
     const base = (name) => String(name).split("_")[0].toUpperCase();
+    const dark = this._theme.mode === "dark";
+    const { trackOn, trackOff } = this._theme;
     const build = (name, values) => {
       const present = values.filter((value) => value !== null && value !== undefined && value !== false && value !== "");
       if (!present.length) return null;
@@ -843,17 +916,18 @@ class ClusterHeatmap {
         colors = values.map((value) => {
           if (typeof value !== "number") return null;
           const t = max > min ? (value - min) / (max - min) : 1;
-          const shade = Math.round(225 - t * 190);
+          // Stronger values stand out from the page: darker on light, lighter on dark.
+          const shade = Math.round(dark ? 70 + t * 170 : 225 - t * 190);
           return `rgb(${shade},${shade},${Math.min(255, shade + 20)})`;
         });
       } else if (present.every((value) => value === true)) {
-        colors = values.map((value) => (value === true ? TRACK_COLORS[0] : TRACK_OFF));
+        colors = values.map((value) => (value === true ? trackOn : trackOff));
       } else {
         const categories = Array.from(new Set(present.map(String)));
         colors = values.map((value) =>
           value === null || value === undefined || value === false || value === ""
             ? null
-            : TRACK_COLORS[(categories.indexOf(String(value)) + 1) % TRACK_COLORS.length]
+            : TRACK_COLORS[categories.indexOf(String(value)) % TRACK_COLORS.length]
         );
       }
       return { name: String(name), values, colors };
@@ -987,7 +1061,7 @@ class ClusterHeatmap {
    * The whole heatmap (not only the part on screen) as a canvas, `scale`
    * device pixels per unit, with labels where the cells are large enough.
    */
-  exportCanvas({ cell = 14, scale = 2, background = "#ffffff" } = {}) {
+  exportCanvas({ cell = 14, scale = 2, background = this._theme.bg } = {}) {
     if (!this._root) return null;
     const sizes = [this._base, this._overlay].map((canvas) => [canvas.width, canvas.height]);
     const out = this._withExportLayout(cell, scale, () => {
@@ -1030,9 +1104,10 @@ class ClusterHeatmap {
       const escape = (text) =>
         String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+      const theme = this._theme;
       const parts = [
         `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${box.width}" height="${box.height}" viewBox="0 0 ${box.width} ${box.height}" font-family="Helvetica, Arial, sans-serif">`,
-        `<rect width="100%" height="100%" fill="#ffffff"/>`,
+        `<rect width="100%" height="100%" fill="${theme.bg}"/>`,
       ];
 
       // Matrix: one pixel per cell, scaled without smoothing.
@@ -1061,7 +1136,7 @@ class ClusterHeatmap {
         const clusters = this._clusters[kind];
         const paths = new Map();
         for (let i = 0; i < tree.nodeCount; i++) {
-          let color = "#5a6470";
+          let color = theme.tree;
           if (clusters) {
             const cluster = clusters.list[clusters.leafCluster[tree.lo[i]]];
             if (cluster.color >= 0 && tree.hi[i] <= cluster.hi) color = CLUSTER_COLORS[cluster.color % CLUSTER_COLORS.length];
@@ -1118,7 +1193,7 @@ class ClusterHeatmap {
         const size = n(clamp(cam.ch * 0.8, 5, 12));
         const x = n(view.x + view.w + 6 + box.trackW);
         this._rowLabels.forEach((label, r) => {
-          parts.push(`<text x="${x}" y="${n(view.y + (r + 0.5) * cam.ch)}" font-size="${size}" dominant-baseline="central" fill="#222">${escape(label)}</text>`);
+          parts.push(`<text x="${x}" y="${n(view.y + (r + 0.5) * cam.ch)}" font-size="${size}" dominant-baseline="central" fill="${theme.text}">${escape(label)}</text>`);
         });
       }
       if (this.settings.heatmap_header && cam.cw >= 6) {
@@ -1126,7 +1201,7 @@ class ClusterHeatmap {
         const y = n(view.y + view.h + 6 + box.trackH);
         this._colLabels.forEach((label, c) => {
           const x = n(view.x + (c + 0.5) * cam.cw);
-          parts.push(`<text transform="translate(${x} ${y}) rotate(-90)" text-anchor="end" font-size="${size}" dominant-baseline="central" fill="#222">${escape(label)}</text>`);
+          parts.push(`<text transform="translate(${x} ${y}) rotate(-90)" text-anchor="end" font-size="${size}" dominant-baseline="central" fill="${theme.text}">${escape(label)}</text>`);
         });
       }
 
@@ -1138,9 +1213,9 @@ class ClusterHeatmap {
       }).join("");
       parts.push(
         `<defs><linearGradient id="heatmap-scale">${stops}</linearGradient></defs>`,
-        `<rect x="${PAD}" y="${PAD + 4}" width="160" height="12" fill="url(#heatmap-scale)" stroke="#000" stroke-opacity="0.25"/>`,
-        `<text x="${PAD}" y="${PAD + 28}" font-size="11" fill="#333">${escape(formatValue(range.min))}</text>`,
-        `<text x="${PAD + 160}" y="${PAD + 28}" font-size="11" text-anchor="end" fill="#333">${escape(formatValue(range.max))}</text>`
+        `<rect x="${PAD}" y="${PAD + 4}" width="160" height="12" fill="url(#heatmap-scale)" stroke="${theme.strong}" stroke-opacity="0.25"/>`,
+        `<text x="${PAD}" y="${PAD + 28}" font-size="11" fill="${theme.legendText}">${escape(formatValue(range.min))}</text>`,
+        `<text x="${PAD + 160}" y="${PAD + 28}" font-size="11" text-anchor="end" fill="${theme.legendText}">${escape(formatValue(range.max))}</text>`
       );
       parts.push("</svg>");
       return parts.join("\n");
@@ -1413,10 +1488,7 @@ class ClusterHeatmap {
     this._ctx = this._overlay.getContext("2d");
 
     const tooltip = document.createElement("div");
-    tooltip.style.cssText =
-      "position:absolute;display:none;pointer-events:none;white-space:pre;z-index:2;" +
-      "background:rgba(33,37,41,0.92);color:#fff;font:12px/1.35 Helvetica,Arial,sans-serif;" +
-      "padding:5px 8px;border-radius:4px;";
+    tooltip.style.cssText = this._tooltipCss();
     root.appendChild(tooltip);
     this._tooltip = tooltip;
 
@@ -1737,7 +1809,8 @@ class ClusterHeatmap {
     gl.uniform2f(u.uCount, this._nCols, this._nRows);
     gl.uniform3f(u.uRange, this._range.min, this._range.mid, this._range.max);
     gl.uniform1f(u.uHasMiddle, COLOR_SCALES[this.settings.heatmap_colors]?.middle ? 1 : 0);
-    gl.uniform3f(u.uMissing, MISSING_RGB[0] / 255, MISSING_RGB[1] / 255, MISSING_RGB[2] / 255);
+    const missing = this._theme.missing;
+    gl.uniform3f(u.uMissing, missing[0] / 255, missing[1] / 255, missing[2] / 255);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
@@ -1756,7 +1829,7 @@ class ClusterHeatmap {
   }
 
   _colorOf(v) {
-    if (v > 1e38) return MISSING_RGB;
+    if (v > 1e38) return this._theme.missing;
     const i = Math.round(this._scalePosition(v) * (LUT_SIZE - 1)) * 4;
     return [this._lut[i], this._lut[i + 1], this._lut[i + 2]];
   }
@@ -1874,9 +1947,9 @@ class ClusterHeatmap {
     const drawClusterLabel = (text, x, y, maxWidth) => {
       ctx.font = `bold 11px ${font}`;
       const width = Math.min(ctx.measureText(text).width, maxWidth);
-      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillStyle = this._theme.pill;
       ctx.fillRect(x, y, width + 8, 15);
-      ctx.fillStyle = "#111";
+      ctx.fillStyle = this._theme.pillText;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(text, x + 4, y + 8, maxWidth);
@@ -1902,7 +1975,7 @@ class ClusterHeatmap {
     });
 
     // Selected clusters: wash out everything outside the cluster.
-    const wash = "rgba(255,255,255,0.55)";
+    const wash = this._theme.wash;
     const selRow = this._selected.row;
     if (selRow >= 0 && this._rowTree) {
       const y0 = rowY(this._rowTree.lo[selRow]);
@@ -1962,7 +2035,7 @@ class ClusterHeatmap {
 
     // Genes marked by highlightGenes(): a bar in the gutter beside each row
     // and below each column, visible at any zoom.
-    ctx.fillStyle = "#d7191c";
+    ctx.fillStyle = this._theme.mark;
     this._marks.rows.forEach((r) => {
       if (r < firstRow || r > lastRow) return;
       ctx.fillRect(view.x + view.w + 1, rowY(r), 4, Math.max(cam.ch, 1.5));
@@ -2013,7 +2086,9 @@ class ClusterHeatmap {
     // Row labels: only the visible rows, only when they are legible.
     const markedRows = new Set(this._marks.rows);
     const markedCols = new Set(this._marks.cols);
-    ctx.fillStyle = "#222";
+    const textColor = this._theme.text;
+    const markColor = this._theme.mark;
+    ctx.fillStyle = textColor;
     ctx.textBaseline = "middle";
     if (this.settings.draw_row_ids) {
       const x = view.x + view.w + 6 + box.trackW;
@@ -2023,10 +2098,10 @@ class ClusterHeatmap {
         for (let r = firstRow; r <= lastRow; r++) {
           const y = rowY(r) + cam.ch / 2;
           if (y < view.y - 1 || y > view.y + view.h + 1) continue;
-          ctx.fillStyle = markedRows.has(r) ? "#d7191c" : "#222";
+          ctx.fillStyle = markedRows.has(r) ? markColor : textColor;
           ctx.fillText(this._rowLabels[r], x, y);
         }
-        ctx.fillStyle = "#222";
+        ctx.fillStyle = textColor;
       } else if (hover) {
         ctx.font = `bold 11px ${font}`;
         ctx.fillText(this._rowLabels[hover.row], x, clamp(rowY(hover.row) + cam.ch / 2, view.y + 6, view.y + view.h - 6));
@@ -2041,7 +2116,7 @@ class ClusterHeatmap {
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = "right";
         ctx.font = `${weight}${clamp(cam.cw * 0.8, 8, 12)}px ${font}`;
-        ctx.fillStyle = markedCols.has(c) ? "#d7191c" : "#222";
+        ctx.fillStyle = markedCols.has(c) ? markColor : textColor;
         ctx.fillText(this._colLabels[c], 0, 0);
         ctx.restore();
       };
@@ -2111,7 +2186,7 @@ class ClusterHeatmap {
     const view = this._viewRect();
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(this._thumbnail, rect.x, rect.y, rect.w, rect.h);
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.strokeStyle = this._theme.frame;
     ctx.lineWidth = 1;
     ctx.strokeRect(rect.x - 0.5, rect.y - 0.5, rect.w + 1, rect.h + 1);
     // The part of the matrix on screen.
@@ -2193,7 +2268,7 @@ class ClusterHeatmap {
       }
       this._histogram = { key, counts, peak: Math.max(1, ...counts) };
     }
-    ctx.fillStyle = "#aab2bd";
+    ctx.fillStyle = this._theme.histogram;
     const binW = frame.w / BINS;
     for (let i = 0; i < BINS; i++) {
       const h = frame.histH * Math.sqrt(this._histogram.counts[i] / this._histogram.peak);
@@ -2212,13 +2287,13 @@ class ClusterHeatmap {
     ctx.fillRect(xMax, frame.barY, Math.max(frame.x0 + frame.w - xMax, 0), frame.barH);
     ctx.fillStyle = gradient;
     ctx.fillRect(xMin, frame.barY, Math.max(xMax - xMin, 0), frame.barH);
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.strokeStyle = this._theme.outline;
     ctx.lineWidth = 1;
     ctx.strokeRect(frame.x0 + 0.5, frame.barY + 0.5, frame.w - 1, frame.barH - 1);
 
     // The two ends of the range, draggable.
     if (!this._exporting) {
-      ctx.fillStyle = "#111";
+      ctx.fillStyle = this._theme.strong;
       [xMin, xMax].forEach((x) => {
         ctx.fillRect(Math.round(x) - 1, frame.top, 2, frame.histH + frame.barH + 1);
         ctx.fillRect(Math.round(x) - 3, frame.barY + frame.barH, 6, 4);
@@ -2228,7 +2303,7 @@ class ClusterHeatmap {
     ctx.font = `11px ${this.settings.font}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
-    ctx.fillStyle = "#333";
+    ctx.fillStyle = this._theme.legendText;
     const y = frame.barY + frame.barH / 2;
     const rangeLabel =
       `${formatValue(range.min)} to ${formatValue(range.max)}` + (this._rangeMode === "auto" ? "  (auto)" : "");
@@ -2260,7 +2335,7 @@ class ClusterHeatmap {
       while (hints.length && ctx.measureText(hints.join(separator)).width > box.width - PAD - used - 24) {
         hints.pop();
       }
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = this._theme.hint;
       ctx.textAlign = "right";
       ctx.fillText(hints.join(separator), box.width - PAD, y);
     }
@@ -2346,7 +2421,7 @@ class ClusterHeatmap {
     }
     [PLAIN, ...CLUSTER_COLORS.keys(), FOCUS].forEach((bucket) => {
       if (!paths[bucket]) return;
-      ctx.strokeStyle = bucket === PLAIN ? "#5a6470" : bucket === FOCUS ? "#d7191c" : CLUSTER_COLORS[bucket];
+      ctx.strokeStyle = bucket === PLAIN ? this._theme.tree : bucket === FOCUS ? this._theme.mark : CLUSTER_COLORS[bucket];
       ctx.lineWidth = bucket === PLAIN ? base : bucket === FOCUS ? base + 1 : base + 0.5;
       ctx.stroke(paths[bucket]);
     });
@@ -2362,14 +2437,14 @@ class ClusterHeatmap {
       ctx.moveTo(from[0], from[1]);
       ctx.lineTo(to[0], to[1]);
       ctx.setLineDash([4, 3]);
-      ctx.strokeStyle = active ? "#111" : "#9aa3ad";
+      ctx.strokeStyle = active ? this._theme.strong : this._theme.idle;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.setLineDash([]);
       if (!this._exporting) {
         const middle = kind === "row" ? rect.y + rect.h / 2 : rect.x + rect.w / 2;
         const grip = frame.point(middle - 11, at - 2.5);
-        ctx.fillStyle = active ? "#111" : "#9aa3ad";
+        ctx.fillStyle = active ? this._theme.strong : this._theme.idle;
         if (kind === "row") ctx.fillRect(grip[0], grip[1], 5, 22);
         else ctx.fillRect(grip[0], grip[1], 22, 5);
       }

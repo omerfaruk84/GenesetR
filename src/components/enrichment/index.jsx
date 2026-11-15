@@ -59,6 +59,8 @@ import {
 } from "echarts/renderers";
 import { GeneSetEnrichmentSettingsTypes } from "../side-bar/settings/enums";
 import { hasActiveDrugDatasets, isDrugList, useDrugLabelsVersion } from "../../utils/drugLabels";
+import { haloLabel, saveImageFeature, useChartTheme } from "../../utils/chartTheme";
+import { Notice, ToolbarButton } from "../ui";
 
 echarts.use([
   TitleComponent,
@@ -146,6 +148,7 @@ const GeneSetEnrichmentTable = ({
 }) => {
   assignObjectPaths(data);
   const dispatch = useDispatch();
+  const chart = useChartTheme();
   const [keyedData, setkeyedData] = useState([]);
   const [selectedCluster, setselectedCluster] = useState("");
   const [genelistOptions, setGeneListOptions] = useState([]);
@@ -471,7 +474,7 @@ const GeneSetEnrichmentTable = ({
               <Heading marginBottom={0} top>
                 {title}
               </Heading>
-              <div style={{ color: "green" }}>{subtitle}</div>
+              <div style={{ color: "var(--gs-success)" }}>{subtitle}</div>
             </div>
           }
         >
@@ -729,6 +732,9 @@ const GeneSetEnrichmentTable = ({
         ? sortedLogP[Math.min(10, sortedLogP.length) - 1]
         : Number.POSITIVE_INFINITY;
 
+    const p = chart.p;
+    const bubbleColor = "#c23531";
+
     setOptions({
       dataset: {
         dimensions: [
@@ -740,7 +746,10 @@ const GeneSetEnrichmentTable = ({
         source: bubbleGraphData,
       },
       grid: {
-        right: "15%",
+        left: 64,
+        right: 130,
+        top: 48,
+        bottom: 56,
       },
       // Hovering a bubble shows what it is (the chart used to have no tooltip)
       tooltip: {
@@ -776,7 +785,7 @@ const GeneSetEnrichmentTable = ({
         feature: {
           dataZoom: {},
           mark: { show: true },
-          saveAsImage: { show: true, pixelRatio: 3, name: "genesetr_enrichment" },
+          saveAsImage: saveImageFeature(p, "genesetr_enrichment"),
           mySvg: svgToolboxFeature("genesetr-enrichment"),
           myPdf: pdfToolboxFeature("genesetr-enrichment"),
         },
@@ -799,14 +808,14 @@ const GeneSetEnrichmentTable = ({
           },
           outOfRange: {
             symbolSize: [10, 0],
-            color: ["rgba(255,255,255,0.4)"],
+            color: [`rgba(${p.otherRgb}, 0.4)`],
           },
           controller: {
             inRange: {
-              color: ["#c23531"],
+              color: [bubbleColor],
             },
             outOfRange: {
-              color: ["#999"],
+              color: [p.faint],
             },
           },
         },
@@ -824,52 +833,34 @@ const GeneSetEnrichmentTable = ({
           text: ["Combined\nScore"],
           textGap: 10,
           inRange: {
-            colorLightness: [0.9, 0.3],
+            // Stronger terms stand out from the page: darker on light, brighter on dark
+            colorLightness: chart.isDark ? [0.3, 0.72] : [0.88, 0.36],
           },
           outOfRange: {
-            color: ["rgba(255,255,255,0.4)"],
+            color: [`rgba(${p.otherRgb}, 0.4)`],
           },
           controller: {
             inRange: {
-              color: ["#c23531"],
+              color: [bubbleColor],
             },
             outOfRange: {
-              color: ["#999"],
+              color: [p.faint],
             },
           },
         },
       ],
 
       xAxis: {
-        splitLine: {
-          lineStyle: {
-            type: "dashed",
-          },
-        },
         nameLocation: "center",
-        nameTextStyle: {
-          fontWeight: "bold",
-          fontSize: "14",
-        },
-        name: "Z Score",
-        nameGap: 25,
+        name: "Z-score",
+        nameGap: 30,
       },
       yAxis: {
-        splitLine: {
-          lineStyle: {
-            type: "dashed",
-          },
-        },
         nameRotate: 90,
         scale: true,
-        name: "-log 10 (Adjusted p Value)",
+        name: "-log10 (adjusted p)",
         nameLocation: "center",
-        nameGap: 35,
-        nameTextStyle: {
-          fontWeight: "bold",
-          fontSize: "14",
-          verticalAlign: "center",
-        },
+        nameGap: 40,
       },
       series: [
         {
@@ -879,8 +870,10 @@ const GeneSetEnrichmentTable = ({
           emphasis: {
             label: {
               show: true,
-              backgroundColor: "black",
-              color: "white",
+              backgroundColor: p.text,
+              color: p.bg,
+              padding: [3, 6],
+              borderRadius: 3,
               formatter: function (param) {
                 return param.data["Term name"];
               },
@@ -898,7 +891,7 @@ const GeneSetEnrichmentTable = ({
           },
 
           label: {
-            textBorderColor: "black",
+            ...haloLabel(p),
             show: true,
             overflow: "truncate",
             distance: 15,
@@ -920,9 +913,10 @@ const GeneSetEnrichmentTable = ({
             //shadowBlur: 10,
             //shadowColor: 'rgba(120, 36, 50, 0.5)',
             //shadowOffsetY: 5,
-            color: "red",
+            color: bubbleColor,
             borderWidth: 1,
-            borderColor: "gray",
+            borderColor: p.bg,
+            opacity: 0.9,
             /*color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
                       offset: 0,
                       color: 'rgb(170, 120, 60)'
@@ -961,7 +955,7 @@ const GeneSetEnrichmentTable = ({
         feature: {
           dataZoom: {},
           mark: { show: true },
-          saveAsImage: { show: true, pixelRatio: 3, name: "genesetr_enrichment" },
+          saveAsImage: saveImageFeature(p, "genesetr_enrichment"),
           mySvg: svgToolboxFeature("genesetr-enrichment"),
           myPdf: pdfToolboxFeature("genesetr-enrichment"),
         },
@@ -974,11 +968,7 @@ const GeneSetEnrichmentTable = ({
           inverse: true,
           name: "Z-score",
           nameLocation: "center",
-          nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "14",
-          },
-          nameGap: 25,
+          nameGap: 28,
         },
         {
           type: "value",
@@ -986,11 +976,8 @@ const GeneSetEnrichmentTable = ({
           inverse: true,
           name: "-log10 (adjusted p)",
           nameLocation: "center",
-          nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: 14,
-          },
           nameGap: 30,
+          splitLine: { show: false },
 
           axisLine: { show: true }, // Hide axis line for Adjusted p-value
           axisTick: { show: true }, // Hide axis ticks for Adjusted p-value
@@ -1004,11 +991,7 @@ const GeneSetEnrichmentTable = ({
 
       yAxis: {
         inverse: true,
-        splitLine: {
-          lineStyle: {
-            type: "dashed",
-          },
-        },
+        axisTick: { show: false },
         axisLabel: {
           margin: 10,
           // Long term names are cut instead of running under the zoom slider;
@@ -1053,20 +1036,28 @@ const GeneSetEnrichmentTable = ({
           type: "bar",
           xAxisIndex: 0, // Use first xAxis for Z-score
           data: bubbleGraphData.map((item) => item["Z-score"]),
+          barMaxWidth: 18,
+          itemStyle: { color: p.series[0], borderRadius: [2, 0, 0, 2] },
           label: {
             show: true,
+            position: "left",
+            fontSize: 11,
+            color: p.muted,
+            formatter: ({ value }) => (typeof value === "number" && Number.isFinite(value) ? value.toFixed(1) : value),
           },
         },
         {
           name: "-log10 (adjusted p)",
           type: "scatter",
           xAxisIndex: 1, // Use second xAxis for Adjusted p-value
-          symbolSize: 7, // Adjust as needed
+          symbolSize: 8,
+          itemStyle: { color: p.series[1], borderColor: p.bg, borderWidth: 1 },
           data: bubbleGraphData.map((item) => item["Adjusted log p-value"]),
         },
       ],
     });
-  }, [keyedData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyedData, chart.p]);
 
   const [options2, setOptions2] = useState({});
 
@@ -1287,7 +1278,7 @@ const GeneSetEnrichmentTable = ({
           display: "block",
           marginLeft: "auto",
           marginRight: "auto",
-          width: "95%",
+          width: "100%",
         }}
       >
         <Card heading={<Heading>Enrichment</Heading>}>
@@ -1311,7 +1302,6 @@ const GeneSetEnrichmentTable = ({
             ) : null}
             <div
               style={{
-                borderColor: "orange",
                 alignItems: "flex-start",
                 display: "flex",
                 flexDirection: "row",
@@ -1320,15 +1310,16 @@ const GeneSetEnrichmentTable = ({
               <Modal centered={true} visible={datasetVisible}>
                 <div
                   style={{
-                    backgroundColor: "white",
-                    borderRadius: "12px",
+                    backgroundColor: "var(--gs-surface)",
+                    color: "var(--gs-text)",
+                    borderRadius: "8px",
                     padding: "20px",
                     minWidth: "600px",
                     maxWidth: "800px",
                     maxHeight: "80vh",
                     overflow: "auto",
-                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                    border: "1px solid #e5e7eb",
+                    boxShadow: "var(--gs-shadow-pop)",
+                    border: "1px solid var(--gs-border)",
                   }}
                 >
                   <div
@@ -1337,11 +1328,11 @@ const GeneSetEnrichmentTable = ({
                       justifyContent: "space-between",
                       alignItems: "center",
                       marginBottom: "16px",
-                      borderBottom: "1px solid #f3f4f6",
+                      borderBottom: "1px solid var(--gs-border)",
                       paddingBottom: "12px",
                     }}
                   >
-                    <Heading size="medium" style={{ color: "#1f2937", margin: 0 }}>
+                    <Heading size="medium" style={{ color: "var(--gs-text)", margin: 0 }}>
                       Select Datasets for Enrichment
                     </Heading>
                     <Button
@@ -1351,7 +1342,6 @@ const GeneSetEnrichmentTable = ({
                       small
                       onClick={handleCancelDatasets}
                       icon={<FaTimesCircle />}
-                      style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
                     />
                   </div>
                   
@@ -1365,20 +1355,20 @@ const GeneSetEnrichmentTable = ({
                         style={{
                           width: "100%",
                           padding: "10px 12px",
-                          border: "1px solid #e5e7eb",
+                          border: "1px solid var(--gs-border-strong)",
                           borderRadius: "6px",
                           fontSize: "14px",
-                          color: "#374151",
-                          backgroundColor: "white",
+                          color: "var(--gs-text)",
+                          backgroundColor: "var(--gs-surface)",
                           outline: "none",
                           transition: "border-color 0.2s ease, box-shadow 0.2s ease",
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = "#3b82f6";
-                          e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                          e.target.style.borderColor = "var(--gs-focus)";
+                          e.target.style.boxShadow = "0 0 0 3px var(--gs-accent-soft)";
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = "#e5e7eb";
+                          e.target.style.borderColor = "var(--gs-border-strong)";
                           e.target.style.boxShadow = "none";
                         }}
                       />
@@ -1402,7 +1392,7 @@ const GeneSetEnrichmentTable = ({
                       justifyContent: "flex-end",
                       gap: "12px",
                       marginTop: "16px",
-                      borderTop: "1px solid #f3f4f6",
+                      borderTop: "1px solid var(--gs-border)",
                       paddingTop: "12px",
                     }}
                   >
@@ -1410,70 +1400,46 @@ const GeneSetEnrichmentTable = ({
                       label="Cancel"
                       small
                       onClick={handleCancelDatasets}
-                      style={{ 
-                        backgroundColor: "#f3f4f6", 
-                        color: "#374151",
-                        border: "1px solid #d1d5db",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        fontWeight: "500"
-                      }}
                     />
                     <Button
                       label="Accept"
                       colored
                       small
                       onClick={handleAcceptDatasets}
-                      style={{ 
-                        backgroundColor: "#3b82f6", 
-                        color: "white",
-                        border: "1px solid #2563eb",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        fontWeight: "500"
-                      }}
                     />
                   </div>
                 </div>
               </Modal>
 
-              <Button
-                label="Set Datasets"
-                colored
-                small
-                width={80}
+              <ToolbarButton
+                size="sm"
                 onClick={() => {
                   // Initialize tempData with current data when opening modal
                   setTempData(JSON.parse(JSON.stringify(data)));
                   setdatasetVisible(true);
                 }}
-                icon={<FaDatabase />}
-              />
+                icon={<FaDatabase size={11} aria-hidden="true" />}
+              >
+                Set Datasets
+              </ToolbarButton>
               <Spacer width="6px" />
               <CopyToClipboard text={getCurrentGenes()}>
-                <Button
-                  small
-                  label="Copy Genes"
-                  colored="success"
-                  icon={<FaCopy />}
-                  width={80}
-                />
+                <ToolbarButton size="sm" icon={<FaCopy size={11} aria-hidden="true" />}>
+                  Copy Genes
+                </ToolbarButton>
               </CopyToClipboard>
 
               <Spacer width="6px" />
               <SendToMenu genes={() => cleanSelectedGenes()} />
               <Spacer width="6px" />
 
-              <Button
-                label="Create Genelist"
-                colored="danger"
-                width={80}
-                small
+              <ToolbarButton
+                size="sm"
                 onClick={handleSaveGeneList}
-                icon={<PlaylistAddCircleRoundedIcon />}
-              />
+                icon={<PlaylistAddCircleRoundedIcon sx={{ fontSize: 15 }} />}
+              >
+                Create Genelist
+              </ToolbarButton>
               {newListVisible && (
                 <GenelistAdd
                   genes={genesToSave}
@@ -1494,26 +1460,21 @@ const GeneSetEnrichmentTable = ({
                 overflowContainer
                 showCloseButton
               >
-                <Button
-                  label="List of Genes"
-                  colored="danger"
-                  small
-                  width={80}
-                  icon={<PlaylistAddCircleRoundedIcon />}
-                />
+                <ToolbarButton size="sm" icon={<PlaylistAddCircleRoundedIcon sx={{ fontSize: 15 }} />}>
+                  List of Genes
+                </ToolbarButton>
               </Popover>
               <Spacer width="6px" />
 
               {/* Navigation dropdown button */}
               <div ref={navigationMenuRef} style={{ position: "relative", display: "inline-block" }}>
-                <Button
-                  label="Open in..."
-                  colored="info"
-                  small
-                  width={100}
-                  icon={<FaExternalLinkAlt />}
+                <ToolbarButton
+                  size="sm"
+                  icon={<FaExternalLinkAlt size={11} aria-hidden="true" />}
                   onClick={() => setShowNavigationMenu(!showNavigationMenu)}
-                />
+                >
+                  Open in...
+                </ToolbarButton>
                 {showNavigationMenu && (
                   <div
                     style={{
@@ -1521,10 +1482,10 @@ const GeneSetEnrichmentTable = ({
                       top: "100%",
                       left: 0,
                       marginTop: "4px",
-                      backgroundColor: "white",
-                      border: "1px solid #e5e7eb",
+                      backgroundColor: "var(--gs-surface)",
+                      border: "1px solid var(--gs-border)",
                       borderRadius: "6px",
-                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                      boxShadow: "var(--gs-shadow-pop)",
                       zIndex: 1000,
                       minWidth: "200px",
                       overflow: "hidden",
@@ -1540,10 +1501,11 @@ const GeneSetEnrichmentTable = ({
                         backgroundColor: "transparent",
                         cursor: "pointer",
                         fontSize: "14px",
-                        color: "#374151",
+                        color: "var(--gs-text)",
+                        fontFamily: "inherit",
                         transition: "background-color 0.2s",
                       }}
-                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "var(--gs-hover)")}
                       onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
                     >
                       Correlation
@@ -1555,14 +1517,15 @@ const GeneSetEnrichmentTable = ({
                         padding: "10px 16px",
                         textAlign: "left",
                         border: "none",
-                        borderTop: "1px solid #e5e7eb",
+                        borderTop: "1px solid var(--gs-border)",
                         backgroundColor: "transparent",
                         cursor: "pointer",
                         fontSize: "14px",
-                        color: "#374151",
+                        color: "var(--gs-text)",
+                        fontFamily: "inherit",
                         transition: "background-color 0.2s",
                       }}
-                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "var(--gs-hover)")}
                       onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
                     >
                       DR & Clustering
@@ -1574,14 +1537,15 @@ const GeneSetEnrichmentTable = ({
                         padding: "10px 16px",
                         textAlign: "left",
                         border: "none",
-                        borderTop: "1px solid #e5e7eb",
+                        borderTop: "1px solid var(--gs-border)",
                         backgroundColor: "transparent",
                         cursor: "pointer",
                         fontSize: "14px",
-                        color: "#374151",
+                        color: "var(--gs-text)",
+                        fontFamily: "inherit",
                         transition: "background-color 0.2s",
                       }}
-                      onMouseEnter={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = "var(--gs-hover)")}
                       onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
                     >
                       Path Explorer
@@ -1621,20 +1585,9 @@ const GeneSetEnrichmentTable = ({
           </Row>
 
           {limitNotice && (
-            <div
-              role="status"
-              style={{
-                margin: "8px 0",
-                padding: "10px 12px",
-                backgroundColor: "#fff3cd",
-                border: "1px solid #ffeeba",
-                borderRadius: "6px",
-                color: "#8a6d3b",
-                fontSize: "14px",
-              }}
-            >
+            <Notice kind="warning" style={{ margin: "8px 0" }}>
               {limitNotice}
-            </div>
+            </Notice>
           )}
 
           <Row spacing={0} width="100%" height="70%">
@@ -1642,6 +1595,7 @@ const GeneSetEnrichmentTable = ({
               {significantTerms > 0 ? (
                 <ReactEChartsCore
                   echarts={echarts}
+                  theme={chart.theme}
                   option={
                     genesetEnrichmentSettings.isBargraph ? options2 : options
                   }
@@ -1658,9 +1612,9 @@ const GeneSetEnrichmentTable = ({
                       margin: "16px 0",
                       padding: "18px 14px",
                       textAlign: "center",
-                      border: "1px dashed #c4c9d0",
-                      borderRadius: "6px",
-                      color: "#5a6470",
+                      border: "1px dashed var(--gs-border-strong)",
+                      borderRadius: "8px",
+                      color: "var(--gs-muted)",
                       fontSize: "14px",
                     }}
                   >
@@ -1730,7 +1684,7 @@ const DrugAwareEnrichmentTable = (props) => {
       <div
         role="note"
         data-testid="enrichment-not-for-drugs"
-        style={{ padding: "10px 12px", fontSize: 13, color: "var(--gs-muted, #5d6877)" }}
+        style={{ padding: "10px 12px", fontSize: 13, color: "var(--gs-muted)" }}
       >
         Gene-set enrichment is not offered for lists of drugs. Open a drug on its drug page to see its annotated
         targets and the genes it changes.

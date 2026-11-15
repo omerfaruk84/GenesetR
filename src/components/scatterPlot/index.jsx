@@ -2,7 +2,6 @@ import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { connect } from "react-redux";
-import { Spacer, Row } from "@oliasoft-open-source/react-ui-library";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import { createGeneTooltipFormatter } from "../../utils/geneFunctionUtils";
 
@@ -36,7 +35,9 @@ import {
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import $, { param } from "jquery";
 import { string } from "prop-types";
-import { ToolbarButton } from "../ui";
+import { Panel, Toolbar, ToolbarButton } from "../ui";
+import { haloLabel, saveImageFeature, useChartTheme } from "../../utils/chartTheme";
+import styles from "./scatter-plot.module.scss";
 import { PlotHelp } from "../plot-help";
 import { SendToMenu } from "../send-to";
 // import text from './sample.json';
@@ -63,6 +64,20 @@ registerTransform(transform.clustering);
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 
+// Cluster colours. Entry 0 is the grey of unclustered points; clusters cycle
+// through the rest. The dark set is the same hues, lightened to stay readable
+// on a dark background (cluster i keeps its hue in both themes).
+const CLUSTER_COLORS = {
+  light: [
+    "#aab0ba", "#37A2DA", "#e06343", "#37a354", "#b55dba", "#b5bd48", "#8378EA", "#96BFFF", "#00429d",
+    "#ff7f0e", "#006d2c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#f032e6", "#bcbd22", "#17becf",
+  ],
+  dark: [
+    "#788290", "#4db3e6", "#f0806a", "#4cc26c", "#cd7fd2", "#c9d15c", "#9d94f5", "#a9cbff", "#5b8de0",
+    "#ff9a3d", "#3fae68", "#f0595a", "#b08fd8", "#b98478", "#f09ad5", "#f562ec", "#d4d54a", "#3fd3e2",
+  ],
+};
+
 const ScatterPlot = ({
   graphData,
   scatterplotSettings,
@@ -71,6 +86,8 @@ const ScatterPlot = ({
   precomputedDrSettings,
 }) => {
   const [options, setOptions] = useState({});
+  const chartTheme = useChartTheme();
+  const p = chartTheme.p;
   const [searchGene, setSearchGene] = useState("");
   // Gene found by "Search & Zoom": { gene, index, x: [min,max], y, z }
   const [focus, setFocus] = useState(null);
@@ -148,26 +165,7 @@ const ScatterPlot = ({
     const minandmax = [0, 0, 0, 0, 0, 0];
     const clusters = {};
 
-    var COLOR_ALL = [
-      "#9b9b9b",
-      "#37A2DA",
-      "#e06343",
-      "#37a354",
-      "#b55dba",
-      "#b5bd48",
-      "#8378EA",
-      "#96BFFF",
-      "#00429d",
-      "#ff7f0e",
-      "#006d2c",
-      "#d62728",
-      "#9467bd",
-      "#8c564b",
-      "#e377c2",
-      "#f032e6",
-      "#bcbd22",
-      "#17becf",
-    ];
+    const COLOR_ALL = CLUSTER_COLORS[p.mode] || CLUSTER_COLORS.light;
     // Entry 0 is the grey of unclustered points; clusters cycle through the rest.
     const clusterColor = (index) => COLOR_ALL[1 + (index % (COLOR_ALL.length - 1))];
 
@@ -238,9 +236,9 @@ const ScatterPlot = ({
 
     // Cell line color mapping
     const cellLineColors = {
-      "K562gwps": "#1f77b4",      // Blue
-      "HEK293gwps": "#ff7f0e",    // Orange
-      "HCT116gwps": "#2ca02c",    // Green
+      "K562gwps": p.series[0],
+      "HEK293gwps": p.series[1],
+      "HCT116gwps": p.series[2],
     };
     
     const cellLineNames = {
@@ -383,7 +381,7 @@ const ScatterPlot = ({
     }
 
     return { data, pieces, clusterData, minandmax, clusters, COLOR_ALL, clusterColor, shouldColorByCellLine };
-  }, [graphData, scatterplotSettings.symbolSize, precomputedDrSettings?.colorBy]);
+  }, [graphData, scatterplotSettings.symbolSize, precomputedDrSettings?.colorBy, p]);
 
   const data = processedData.data;
   const pieces = processedData.pieces;
@@ -463,12 +461,8 @@ const ScatterPlot = ({
           position: "top",
           extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#ffffff",
-          borderColor: "#e0e0e0",
-          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#333333",
             lineHeight: 1.4,
           },
           formatter: createGeneTooltipFormatter({
@@ -506,36 +500,39 @@ const ScatterPlot = ({
         },
         visualMap: {
           type: "piecewise",
-          top: "top",
-          left: "right",
+          top: 44,
+          right: 8,
           dimension: shouldColorByCellLine ? 4 : 4, // CellLine or Cluster is at index 4
           pieces: pieces,
           orient: "vertical",
           seriesIndex: 1,
-          //show:true,
-          padding: [60, 5, 5, 5],
           inverse: true,
-          itemGap: 5,
+          itemGap: 6,
+          itemWidth: 12,
+          itemHeight: 12,
+          itemSymbol: "circle",
           align: "left",
+          textStyle: { color: p.text, fontSize: 12 },
         },
         grid: {
-          right: "13%",
+          left: 70,
+          right: 130,
+          top: 44,
+          bottom: 56,
         },
         xAxis: {
           axisLabel: {
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: "black",
           },
           nameLocation: "center",
           nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "15",
-            color: "black",
+            fontWeight: 600,
+            fontSize: 14,
           },
           name: `${axisPrefix} 1`,
-          nameGap: 25,
+          nameGap: 30,
           min: xRange.min,
           max: xRange.max,
         },
@@ -545,7 +542,6 @@ const ScatterPlot = ({
             formatter: function (value) {
               return value.toFixed(2);
             },
-            color: "black",
           },
           nameRotate: 90,
           scale: true,
@@ -553,21 +549,20 @@ const ScatterPlot = ({
           nameLocation: "center",
           nameGap: 50,
           nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "15",
-            verticalAlign: "center",
-            color: "black",
+            fontWeight: 600,
+            fontSize: 14,
           },
           min: yRange.min,
           max: yRange.max,
         },
         toolbox: {
           show: true,
+          right: 8,
           feature: {
             mark: { show: true },
             dataView: { show: true, readOnly: false },
             restore: { show: true },
-            saveAsImage: { show: true, pixelRatio: 3 },
+            saveAsImage: saveImageFeature(p, "genesetr-embedding"),
             mySvg: svgToolboxFeature("genesetr-embedding"),
             myPdf: pdfToolboxFeature("genesetr-embedding"),
             dataZoom: {},
@@ -627,22 +622,40 @@ const ScatterPlot = ({
               },
               rich: {
                 focus: {
-                  color: "#ff0000",
+                  color: p.accent,
                   fontWeight: "bold",
                   fontSize: 18,
+                  textBorderColor: p.bg,
+                  textBorderWidth: 3,
                 },
               },
-
-              // fontWeight: 'bold',
-              color: "black",
+              ...haloLabel(p),
+            },
+            emphasis: {
+              itemStyle: { borderColor: p.text, borderWidth: 1.5 },
             },
           },
         ],
       });
     } else if (hasPC3) {
       //3D chart (only if PC3 is available)
+      // echarts-gl does not read the registered theme: colours are set here
+      const axis3D = {
+        axisLabel: {
+          formatter: function (value) {
+            return value.toFixed(2);
+          },
+          textStyle: { color: p.muted, fontSize: 12 },
+        },
+        nameTextStyle: { fontWeight: 600, fontSize: 14, color: p.text },
+        axisLine: { lineStyle: { color: p.axis } },
+        axisTick: { lineStyle: { color: p.axis } },
+        splitLine: { lineStyle: { color: p.grid } },
+        axisPointer: { lineStyle: { color: p.axis } },
+      };
       setOptions({
         grid3D: {
+          environment: p.bg,
           viewControl: {
             autoRotate: scatterplotSettings.autorotate,
             autoRotateSpeed: scatterplotSettings.rotationSpeed,
@@ -654,57 +667,25 @@ const ScatterPlot = ({
         },
 
         xAxis3D: {
-          axisLabel: {
-            formatter: function (value) {
-              return value.toFixed(2);
-            },
-            color: "black",
-          },
-          nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "15",
-            color: "black",
-          },
+          ...axis3D,
           name: `${axisPrefix} 1`,
           nameGap: 25,
           min: xRange.min,
           max: xRange.max,
         },
         yAxis3D: {
-          axisLabel: {
-            formatter: function (value) {
-              return value.toFixed(2);
-            },
-            color: "black",
-          },
+          ...axis3D,
           scale: true,
           name: `${axisPrefix} 2`,
 
-          nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "15",
-            verticalAlign: "center",
-            color: "black",
-          },
           min: yRange.min,
           max: yRange.max,
         },
         zAxis3D: {
-          axisLabel: {
-            formatter: function (value) {
-              return value.toFixed(2);
-            },
-            color: "black",
-          },
+          ...axis3D,
           scale: true,
           name: `${axisPrefix} 3`,
 
-          nameTextStyle: {
-            fontWeight: "bold",
-            fontSize: "15",
-            verticalAlign: "center",
-            color: "black",
-          },
           min: zRange.min,
           max: zRange.max,
         },
@@ -716,6 +697,8 @@ const ScatterPlot = ({
           dimension: 4,
           pieces: pieces,
           orient: "horizontal",
+          itemSymbol: "circle",
+          textStyle: { color: p.text, fontSize: 12 },
         },
         label: {
           formatter: "{GeneSymbol}",
@@ -723,12 +706,8 @@ const ScatterPlot = ({
         tooltip: {
           extraCssText: "width:auto; white-space:pre-wrap; max-width: 400px; line-height: 1.4;",
           confine: true,
-          backgroundColor: "#ffffff",
-          borderColor: "#e0e0e0",
-          borderWidth: 1,
           textStyle: {
             fontSize: 13,
-            color: "#333333",
             lineHeight: 1.4,
           },
           formatter: createGeneTooltipFormatter({
@@ -781,7 +760,7 @@ const ScatterPlot = ({
             mark: { show: true },
             dataView: { show: true, readOnly: false },
             restore: { show: true },
-            saveAsImage: { show: true },
+            saveAsImage: saveImageFeature(p, "genesetr-embedding"),
             mySvg: svgToolboxFeature("genesetr-embedding"),
             myPdf: pdfToolboxFeature("genesetr-embedding"),
           },
@@ -801,6 +780,12 @@ const ScatterPlot = ({
               show: true,
               fontSize: scatterplotSettings.labelSize,
               position: scatterplotSettings.labelLoc,
+              textStyle: {
+                color: p.text,
+                fontSize: scatterplotSettings.labelSize,
+                borderColor: p.bg,
+                borderWidth: 2,
+              },
               formatter: function (params) {
                 const name = params.data[3];
                 if (
@@ -814,7 +799,7 @@ const ScatterPlot = ({
             },
             emphasis: {
               itemStyle: {
-                color: "red",
+                color: p.accent,
               },
             },
           },
@@ -822,7 +807,7 @@ const ScatterPlot = ({
       });
     }
     //}
-  }, [coreSettings.graphType, coreSettings.currentModule, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData, focus, genesTolabel]);
+  }, [coreSettings.graphType, coreSettings.currentModule, scatterplotSettings, graphData, shouldColorByCellLine, data, pieces, minandmax, clusterData, focus, genesTolabel, p]);
 
   // Search a gene: zoom the axes around it and emphasise its point/label.
   // The zoom window and the highlighted gene live in state so they survive
@@ -919,25 +904,22 @@ const ScatterPlot = ({
   }, [focus, options]);
 
   return (
-    /*<EchartsReact
-        option={options}
-        style={{ height: '100%', width: '100%' }}
-    />*/
-
-    <>
-      <div style={{ width: "100%", height: "100%" }}>
-        {/* Gene Search Box */}
-        <div style={{ 
-          padding: "10px", 
-          backgroundColor: "#f5f5f5", 
-          borderBottom: "1px solid #ddd",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px"
-        }}>
-          <label style={{ fontWeight: "bold", marginRight: "5px" }}>Search Gene:</label>
+    <div className={styles.wrap}>
+      <Panel
+        flush
+        title="Embedding"
+        subtitle={`${Math.max(0, data.length - 1).toLocaleString()} points`}
+        actions={<PlotHelp kind="embedding" />}
+      >
+        {/* Gene search */}
+        <Toolbar className={styles.searchBar}>
+          <label className={styles.searchLabel} htmlFor="embedding-gene-search">
+            Search gene
+          </label>
           <input
+            id="embedding-gene-search"
             type="text"
+            className={styles.searchInput}
             value={searchGene}
             onChange={(e) => setSearchGene(e.target.value)}
             onKeyPress={(e) => {
@@ -946,25 +928,12 @@ const ScatterPlot = ({
               }
             }}
             placeholder="Enter gene symbol (e.g., TP53)"
-            style={{
-              padding: "6px 12px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              fontSize: "14px",
-              flex: "1",
-              maxWidth: "300px"
-            }}
           />
-          <PlotHelp kind="embedding" />
-          <ToolbarButton variant="primary"
-            onClick={handleSearchGene}
-          >
+          <ToolbarButton variant="primary" onClick={handleSearchGene}>
             Search & Zoom
           </ToolbarButton>
           {focus && (
-            <ToolbarButton
-              onClick={() => setFocus(null)}
-            >
+            <ToolbarButton onClick={() => setFocus(null)}>
               Reset view
             </ToolbarButton>
           )}
@@ -975,10 +944,11 @@ const ScatterPlot = ({
               defaultName="Embedding selection"
             />
           )}
-        </div>
-        <Row spacing={0} width="100%" height="80vh">
+        </Toolbar>
+        <div className={styles.chart}>
           <ReactEChartsCore
             echarts={echarts}
+            theme={chartTheme.theme}
             option={options}
             style={{ height: "100%", width: "100%" }}
             notMerge={true}
@@ -997,19 +967,18 @@ const ScatterPlot = ({
                 );
               },
             }}
-            onChartReady={(chart) => {
-              chartInstanceRef.current = chart;
+            onChartReady={(instance) => {
+              chartInstanceRef.current = instance;
             }}
           />
-        </Row>
-        <Spacer height="2em" />
-        {Object.keys(clusters).length > 0 && (
-          <Row spacing={-100} width="100%" height="90%">
-            <GeneSetEnrichmentTable genesets={clusters} />
-          </Row>
-        )}
-      </div>
-    </>
+        </div>
+      </Panel>
+      {Object.keys(clusters).length > 0 && (
+        <div className={styles.enrichment}>
+          <GeneSetEnrichmentTable genesets={clusters} />
+        </div>
+      )}
+    </div>
   );
 };
 

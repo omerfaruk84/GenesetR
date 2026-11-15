@@ -77,7 +77,7 @@ const buttonStyle = {
   border: 0,
   borderRadius: 4,
   background: "none",
-  color: "#1565c0",
+  color: "var(--gs-link)",
   fontFamily: "inherit",
   fontSize: 12.5,
   cursor: "pointer",
@@ -100,7 +100,7 @@ const PlotHelp = ({ kind, label = "How to read this" }) => {
         onClose={() => setAnchor(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
-        <div style={{ maxWidth: 380, padding: "12px 16px", color: "#1f2733" }}>
+        <div style={{ maxWidth: 380, padding: "12px 16px", color: "var(--gs-text)" }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>{help.title}</div>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.5 }}>
             {help.points.map((point) => (

@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { ROUTES } from "../../common/routes";
 import { getLastRequest } from "../../store/api";
 import { ModulePathNames } from "../../store/results/enums";
+import { Badge } from "../ui";
 
 // Request fields shown as badges, with a readable label
 const PARAMETER_LABELS = {
@@ -28,22 +29,7 @@ const PARAMETER_LABELS = {
 const LIST_FIELDS = { geneList: "perturbations", targetList: "genes", perturbation_list: "perturbations" };
 const DATA_TYPE_NAMES = { 1: "perturbations", 2: "gene expression", pert: "perturbations", genes: "gene expression" };
 
-const wrap = { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, margin: "0 0 10px" };
-const badge = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  padding: "2px 9px",
-  border: "1px solid #d5dae1",
-  borderRadius: 999,
-  background: "#f6f7f9",
-  color: "#2b3440",
-  fontSize: 12,
-  lineHeight: 1.5,
-  whiteSpace: "nowrap",
-};
-const datasetBadge = { ...badge, borderColor: "#a63648", background: "#fbeef0", color: "#7c2233", fontWeight: 600 };
-const key = { color: "#5d6877" };
+const wrap = { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, margin: "0 0 12px" };
 
 const countItems = (value) => String(value || "").split(/[;\n,]+/).filter(Boolean).length;
 
@@ -84,14 +70,14 @@ const ResultBadges = () => {
   return (
     <div style={wrap} aria-label="Dataset and parameters of this result">
       {names.map((name) => (
-        <span key={name} style={datasetBadge} title="Dataset">
+        <Badge key={name} tone="accent" title="Dataset">
           {name}
-        </span>
+        </Badge>
       ))}
       {parameters.map(([label, value]) => (
-        <span key={label} style={badge}>
-          <span style={key}>{label}:</span> {value}
-        </span>
+        <Badge key={label} label={label}>
+          {value}
+        </Badge>
       ))}
     </div>
   );

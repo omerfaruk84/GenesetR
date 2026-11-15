@@ -1,4 +1,4 @@
-import { Field, Select, toast } from "@oliasoft-open-source/react-ui-library";
+import { Select, toast } from "@oliasoft-open-source/react-ui-library";
 import React, {
   useEffect,
   useState,
@@ -27,14 +27,15 @@ import {
   GeneSignatureSettingsTypes,
   PathFinderSettingsTypes,
 } from "../side-bar/settings/enums";
-import styles from "./AccordionMenu.scss";
+import styles from "./dataset-selector.module.scss";
 import { Link } from "react-router-dom";
 import { DATASET_KINDS, datasetMatches } from "../../utils/datasetFilters";
 import { ROUTES } from "../../common/routes";
 import { useLocation } from "react-router-dom";
 import { updateGeneLists, deleteUserDataset as deleteUserDatasetAPI } from "../../store/api";
-import { Text } from "@oliasoft-open-source/react-ui-library";
 import { datasetKindMeta, firstGeneticDataset, isDrugChildTable, isDrugDataset } from "../../utils/perturbationKind";
+
+const cx = (...names) => names.filter(Boolean).join(" ");
 
 // A dataset with more child tables than this starts collapsed (the drug
 // collection has one table per cell line); DR results stay expanded.
@@ -57,90 +58,32 @@ const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset, expandAll
   }, [holdsActive]);
 
   return (
-    <div style={{ marginLeft: level > 0 ? "12px" : "0", borderLeft: level > 0 ? "1px solid #eee" : "none" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginBottom: "2px",
-          paddingLeft: level > 0 ? "8px" : "0"
-        }}
-      >
+    <div className={level > 0 ? styles.treeNodeNested : styles.treeNode}>
+      <div className={cx(styles.treeLine, level > 0 && styles.treeLineNested)}>
         {hasChildren ? (
           <span
+            className={styles.treeToggle}
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            style={{
-              cursor: "pointer",
-              marginRight: "4px",
-              width: "14px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#666",
-              fontSize: "10px"
-            }}
           >
-            {isExpanded ? "▼" : "▶"}
+            {isExpanded ? "\u25BC" : "\u25B6"}
           </span>
         ) : (
-          <span style={{ width: "18px" }}></span>
+          <span className={styles.treeSpacer}></span>
         )}
 
-        <div
-          onClick={item.onClick}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            backgroundColor: isActive ? "#e3f2fd" : "transparent",
-            border: isActive ? "1px solid #90caf9" : "1px solid transparent",
-            transition: "all 0.2s ease",
-            flex: 1,
-            minHeight: "28px",
-          }}
-          onMouseEnter={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.backgroundColor = "#f5f5f5";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }
-          }}
-        >
-          <Text size="small" style={{
-            color: isActive ? "#1976d2" : "#333",
-            fontWeight: isActive ? "500" : "normal",
-            flex: 1,
-            lineHeight: "1.3",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}>
+        <div onClick={item.onClick} className={cx(styles.row, isActive && styles.rowActive)}>
+          <span className={styles.rowName}>
             {item.name} {item.isDrResult === true ? "(DR Result)" : ""}
             {hasChildren && !isExpanded && (
-              <span style={{ color: "#777", fontWeight: "normal", fontSize: "11px" }}>
-                +{item.children.length} tables
-              </span>
+              <span className={styles.rowExtra}>+{item.children.length} tables</span>
             )}
             {item.isUserUploaded && (
-              <FaUser
-                style={{
-                  color: "#1976d2",
-                  fontSize: "10px",
-                  flexShrink: 0,
-                }}
-                title="User uploaded dataset"
-              />
+              <FaUser className={styles.userIcon} title="User uploaded dataset" />
             )}
-          </Text>
+          </span>
         </div>
 
         {item.isUserUploaded && onDeleteDataset && (
@@ -150,33 +93,16 @@ const DatasetTreeItem = ({ item, level = 0, activeId, onDeleteDataset, expandAll
               e.stopPropagation();
               onDeleteDataset(item.id, e);
             }}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              color: "#d32f2f",
-              opacity: 0.7,
-              transition: "opacity 0.2s",
-              marginLeft: "4px",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "0.7";
-            }}
+            className={styles.deleteButton}
             title="Delete dataset"
           >
-            <FaTrash style={{ fontSize: "12px" }} />
+            <FaTrash />
           </button>
         )}
       </div>
-      
+
       {hasChildren && isExpanded && (
-        <div style={{ marginTop: "2px" }}>
+        <div className={styles.treeChildren}>
           {item.children.map(child => (
             <DatasetTreeItem
               key={child.id}
@@ -631,13 +557,8 @@ const DatasetSelector = forwardRef(
 
     if (loading) {
       return (
-        <div
-          className={styles._itemHeader_1fhdv_401}
-          style={{ border: "1px solid black", height: "250px", overflow: "auto", scrollbarWidth: "thin" }}
-        >
-          <div style={{ padding: "20px", textAlign: "center" }}>
-            Loading datasets...
-          </div>
+        <div className={styles.box}>
+          <div className={styles.status}>Loading datasets...</div>
         </div>
       );
     }
@@ -646,37 +567,12 @@ const DatasetSelector = forwardRef(
     // of showing an empty list that looks like "no datasets exist".
     if (coreSettings?.datasetsError && datasetList.length === 0) {
       return (
-        <div
-          role="alert"
-          style={{
-            border: "1px solid #f0b4b4",
-            borderRadius: "8px",
-            background: "#fff5f5",
-            padding: "16px",
-            textAlign: "center",
-            fontSize: "13px",
-            color: "#7a1f1f",
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: "6px" }}>
-            The dataset list could not be loaded
-          </div>
-          <div style={{ marginBottom: "12px", color: "#555" }}>
+        <div role="alert" className={styles.error}>
+          <div className={styles.errorTitle}>The dataset list could not be loaded</div>
+          <div className={styles.errorText}>
             The server did not answer. Check your connection and try again.
           </div>
-          <button
-            type="button"
-            onClick={() => fetchDatasetsFromBackend(sessionId)}
-            style={{
-              padding: "6px 16px",
-              border: "1px solid #1976d2",
-              borderRadius: "4px",
-              background: "#1976d2",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
+          <button type="button" className={styles.retry} onClick={() => fetchDatasetsFromBackend(sessionId)}>
             Retry
           </button>
         </div>
@@ -694,24 +590,16 @@ const DatasetSelector = forwardRef(
     const isFiltering = filterText.trim().length > 0;
 
     const filterBar = (
-      <div style={{ marginBottom: "6px" }} data-tour="datasets">
+      <div className={styles.filterBar} data-tour="datasets">
         <input
           type="search"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           placeholder="Filter datasets (name, cell line, organ, CRISPRi...)"
           aria-label="Filter datasets"
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            height: "26px",
-            padding: "0 8px",
-            border: "1px solid #c4c9d0",
-            borderRadius: "4px",
-            fontSize: "12px",
-          }}
+          className={styles.filterInput}
         />
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+        <div className={styles.kinds}>
           {DATASET_KINDS.filter(
             (kind) =>
               (kind.id !== "mine" || hasOwnUploads) &&
@@ -722,41 +610,21 @@ const DatasetSelector = forwardRef(
               type="button"
               aria-pressed={filterKind === kind.id}
               onClick={() => setFilterKind(kind.id)}
-              style={{
-                padding: "1px 8px",
-                border: "1px solid " + (filterKind === kind.id ? "#a63648" : "#c4c9d0"),
-                borderRadius: "999px",
-                background: filterKind === kind.id ? "#a63648" : "#fff",
-                color: filterKind === kind.id ? "#fff" : "#333",
-                fontSize: "11px",
-                cursor: "pointer",
-              }}
+              className={cx(styles.kind, filterKind === kind.id && styles.kindActive)}
             >
               {kind.label}
             </button>
           ))}
           <Link
             to={ROUTES.DATASETS}
-            style={{ marginLeft: "auto", fontSize: "11px", color: "#1565c0" }}
+            className={styles.aboutLink}
             title="Descriptions, sizes, citations and licences of all datasets"
           >
             About the datasets
           </Link>
         </div>
         {switchNote && (
-          <div
-            role="status"
-            style={{
-              marginTop: "6px",
-              padding: "6px 8px",
-              border: "1px solid #ffc107",
-              borderRadius: "4px",
-              background: "#fff3cd",
-              color: "#856404",
-              fontSize: "11px",
-              lineHeight: 1.35,
-            }}
-          >
+          <div role="status" className={cx(styles.note, styles.noteWarning)}>
             {switchNote}
           </div>
         )}
@@ -778,69 +646,32 @@ const DatasetSelector = forwardRef(
     // For multi-select modules with checkboxes, render custom checkbox list
     if (isMultiSelectMode) {
       let selectedCount = 0;
-      let changeHandler = null;
       if (isCorrelationModule) {
         selectedCount = correlationSettings?.selectedDatasets?.length || 0;
-        changeHandler = correlationSettingsChanged;
       } else if (isPathFinderModule) {
         selectedCount = pathfinderSettings?.selectedDatasets?.length || 0;
-        changeHandler = pathfinderSettingsChanged;
       } else if (isDeregulatedModule) {
         selectedCount = deregulatedGenesSettings?.selectedDatasets?.length || 0;
-        changeHandler = deregulatedGenesSettingsChanged;
       } else if (isGeneSignatureModule) {
         selectedCount = genesignatureSettings?.selectedDatasets?.length || 0;
-        changeHandler = genesignatureSettingsChanged;
       }
-      
+
       return (
         <>
           {filterBar}
-          <div
-            className={styles._itemHeader_1fhdv_401}
-            style={{ 
-              border: "1px solid #e0e0e0", 
-              borderRadius: "8px",
-              height: "250px", 
-              overflow: "auto", 
-              scrollbarWidth: "thin",
-              scrollbarColor: "#c0c0c0 #f5f5f5",
-              padding: "12px",
-              backgroundColor: "#fafafa",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
-            }}
-          >
-            <div style={{ 
-              marginBottom: "12px", 
-              fontWeight: "600", 
-              fontSize: "14px",
-              color: "#333",
-              paddingBottom: "8px",
-              borderBottom: "1px solid #e0e0e0"
-            }}>
-              Dataset Selection
-              {selectedCount > 0 && (
-                <span style={{ 
-                  marginLeft: "8px", 
-                  fontSize: "12px", 
-                  fontWeight: "normal", 
-                  color: "#666" 
-                }}>
-                  ({selectedCount} selected)
-                </span>
-              )}
+          <div className={styles.box}>
+            <div className={styles.boxHeader}>
+              <span>
+                Dataset Selection
+                {selectedCount > 0 && (
+                  <span className={styles.boxCount}>({selectedCount} selected)</span>
+                )}
+              </span>
             </div>
             {filteredDatasets.length === 0 ? (
-              <div style={{ 
-                padding: "20px", 
-                textAlign: "center",
-                color: "#999",
-                fontStyle: "italic"
-              }}>
-                No datasets match.
-              </div>
+              <div className={styles.status}>No datasets match.</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+              <div className={styles.list}>
                 {filteredDatasets.map((dataset) => {
                   let isSelected = false;
                   if (isCorrelationModule) isSelected = correlationSettings?.selectedDatasets?.includes(dataset.id);
@@ -859,31 +690,7 @@ const DatasetSelector = forwardRef(
                   return (
                     <React.Fragment key={dataset.id}>
                     <label
-                      style={{
-                        marginLeft: isChild ? "14px" : 0,
-                        width: isChild ? "calc(100% - 14px)" : "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        cursor: "pointer",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                        border: isSelected ? "1px solid #90caf9" : "1px solid transparent",
-                        transition: "all 0.2s ease",
-                        minHeight: "28px",
-                        boxSizing: "border-box"
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = "#f5f5f5";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }
-                      }}
+                      className={cx(styles.row, isSelected && styles.rowActive, isChild && styles.rowChild)}
                     >
                       <input
                         type="checkbox"
@@ -891,35 +698,14 @@ const DatasetSelector = forwardRef(
                         onChange={(e) => {
                           handleCheckboxChange(dataset.id, e.target.checked);
                         }}
-                        style={{
-                          cursor: "pointer",
-                          width: "14px",
-                          height: "14px",
-                          accentColor: "#1976d2",
-                          flexShrink: 0,
-                        }}
+                        className={styles.checkbox}
                       />
-                      <Text size="small" style={{
-                        color: isSelected ? "#1976d2" : "#333",
-                        fontWeight: isSelected ? "500" : "normal",
-                        flex: 1,
-                        lineHeight: "1.3",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}>
+                      <span className={styles.rowName}>
                         {dataset.name}
                         {dataset.isUserUploaded && (
-                          <FaUser
-                            style={{
-                              color: "#1976d2",
-                              fontSize: "10px",
-                              flexShrink: 0,
-                            }}
-                            title="User uploaded dataset"
-                          />
+                          <FaUser className={styles.userIcon} title="User uploaded dataset" />
                         )}
-                      </Text>
+                      </span>
                       {dataset.isUserUploaded && (
                         <button
                           onClick={(e) => {
@@ -927,26 +713,10 @@ const DatasetSelector = forwardRef(
                             e.stopPropagation();
                             handleDeleteUserDataset(dataset.id, e);
                           }}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "4px",
-                            display: "flex",
-                            alignItems: "center",
-                            color: "#d32f2f",
-                            opacity: 0.7,
-                            transition: "opacity 0.2s",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = "1";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = "0.7";
-                          }}
+                          className={styles.deleteButton}
                           title="Delete dataset"
                         >
-                          <FaTrash style={{ fontSize: "12px" }} />
+                          <FaTrash />
                         </button>
                       )}
                     </label>
@@ -962,16 +732,7 @@ const DatasetSelector = forwardRef(
                             return next;
                           })
                         }
-                        style={{
-                          alignSelf: "flex-start",
-                          marginLeft: "30px",
-                          padding: 0,
-                          border: "none",
-                          background: "transparent",
-                          color: "#1565c0",
-                          fontSize: "11px",
-                          cursor: "pointer",
-                        }}
+                        className={styles.groupToggle}
                       >
                         {groupOpen ? "Hide" : "Show"} {childCount} dose and cell-line tables
                       </button>
@@ -980,195 +741,67 @@ const DatasetSelector = forwardRef(
                   );
                 })}
                 {selectedCount === 0 && (
-                  <div style={{ 
-                    marginTop: "8px",
-                    padding: "8px",
-                    backgroundColor: "#fff3cd",
-                    borderRadius: "4px",
-                    border: "1px solid #ffc107"
-                  }}>
-                    <Text size="small" style={{ color: "#856404", fontStyle: "italic" }}>
-                      No datasets selected. Select at least one dataset to calculate.
-                    </Text>
+                  <div className={cx(styles.note, styles.noteWarning)}>
+                    No datasets selected. Select at least one dataset to calculate.
                   </div>
                 )}
               </div>
             )}
           </div>
-          
-          {/* Selected count badge/notification */}
+
+          {/* Selected count */}
           {selectedCount > 0 && (
-            <div style={{
-              marginTop: "12px",
-              padding: "10px 12px",
-              backgroundColor: selectedCount > 1 ? "#e3f2fd" : "#f5f5f5",
-              borderRadius: "6px",
-              border: selectedCount > 1 ? "1px solid #90caf9" : "1px solid #e0e0e0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: "24px",
-                  height: "24px",
-                  padding: "0 8px",
-                  backgroundColor: selectedCount > 1 ? "#1976d2" : "#757575",
-                  color: "white",
-                  borderRadius: "12px",
-                  fontSize: "12px",
-                  fontWeight: "600"
-                }}>
-                  {selectedCount}
-                </span>
-                <Text size="small" style={{ 
-                  color: selectedCount > 1 ? "#1976d2" : "#666",
-                  fontWeight: "500"
-                }}>
-                  {selectedCount === 1 ? "dataset selected" : "datasets selected"}
-                </Text>
-              </div>
+            <div className={styles.summary}>
+              <span className={styles.count}>{selectedCount}</span>
+              {selectedCount === 1 ? "dataset selected" : "datasets selected"}
             </div>
           )}
 
           {/* Combine Method setting - shown when multiple datasets are selected */}
           {isCorrelationModule && selectedCount > 1 && (
-            <div style={{ 
-              marginTop: "12px",
-              padding: "12px",
-              backgroundColor: "#fff3e0",
-              borderRadius: "6px",
-              border: "2px solid #ff9800",
-              boxShadow: "0 2px 4px rgba(255, 152, 0, 0.15)"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px"
-              }}>
-                <span style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "20px",
-                  height: "20px",
-                  backgroundColor: "#ff9800",
-                  color: "white",
-                  borderRadius: "50%",
-                  fontSize: "12px",
-                  fontWeight: "bold"
-                }}>
-                  ⚙
-                </span>
-                <Text size="small" style={{ 
-                  color: "#e65100",
-                  fontWeight: "600",
-                  fontSize: "13px"
-                }}>
-                  Combine Method for Multiple Datasets
-                </Text>
+            <div className={styles.option}>
+              <div className={styles.optionTitle}>Combine Method for Multiple Datasets</div>
+              <Select
+                small
+                onChange={({ target: { value } }) =>
+                  correlationSettingsChanged({
+                    settingName: CorrelationSettingsTypes.COMBINE_METHOD,
+                    newValue: value,
+                  })
+                }
+                options={[
+                  { label: "Average", value: "average" },
+                  { label: "Max", value: "max" },
+                ]}
+                value={correlationSettings?.combineMethod || "average"}
+              />
+              <div className={styles.optionHelp}>
+                Method to combine correlation scores across multiple datasets. <strong>'Average'</strong> calculates the mean correlation value across all selected datasets, providing a balanced representation. <strong>'Max'</strong> selects the correlation value with the maximum absolute magnitude, emphasizing the strongest relationship found in any dataset. Use Average for more conservative, consensus-based results, or Max to highlight the strongest correlations.
               </div>
-              <div style={{ marginBottom: "8px" }}>
-                <Select
-                  small
-                  onChange={({ target: { value } }) =>
-                    correlationSettingsChanged({
-                      settingName: CorrelationSettingsTypes.COMBINE_METHOD,
-                      newValue: value,
-                    })
-                  }
-                  options={[
-                    { label: "Average", value: "average" },
-                    { label: "Max", value: "max" },
-                  ]}
-                  value={correlationSettings?.combineMethod || "average"}
-                />
-              </div>
-              <Text size="small" style={{ 
-                color: "#856404",
-                fontSize: "11px",
-                lineHeight: "1.4",
-                marginTop: "8px",
-                padding: "8px",
-                backgroundColor: "#fffbf0",
-                borderRadius: "4px",
-                border: "1px solid #ffd54f"
-              }}>
-                <strong>Help:</strong> Method to combine correlation scores across multiple datasets. <strong>'Average'</strong> calculates the mean correlation value across all selected datasets, providing a balanced representation. <strong>'Max'</strong> selects the correlation value with the maximum absolute magnitude, emphasizing the strongest relationship found in any dataset. Use Average for more conservative, consensus-based results, or Max to highlight the strongest correlations.
-              </Text>
             </div>
           )}
 
           {/* Combination Strategy setting for PathFinder - shown when multiple datasets are selected */}
           {isPathFinderModule && selectedCount > 1 && (
-            <div style={{ 
-              marginTop: "12px",
-              padding: "12px",
-              backgroundColor: "#e8f5e9",
-              borderRadius: "6px",
-              border: "2px solid #4caf50",
-              boxShadow: "0 2px 4px rgba(76, 175, 80, 0.15)"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px"
-              }}>
-                <span style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "20px",
-                  height: "20px",
-                  backgroundColor: "#4caf50",
-                  color: "white",
-                  borderRadius: "50%",
-                  fontSize: "12px",
-                  fontWeight: "bold"
-                }}>
-                  ⚙
-                </span>
-                <Text size="small" style={{ 
-                  color: "#2e7d32",
-                  fontWeight: "600",
-                  fontSize: "13px"
-                }}>
-                  Combination Strategy for Multiple Datasets
-                </Text>
+            <div className={styles.option}>
+              <div className={styles.optionTitle}>Combination Strategy for Multiple Datasets</div>
+              <Select
+                small
+                onChange={({ target: { value } }) =>
+                  pathfinderSettingsChanged({
+                    settingName: PathFinderSettingsTypes.COMBINATION_STRATEGY,
+                    newValue: value,
+                  })
+                }
+                options={[
+                  { label: "Strict Intersection (AND)", value: "intersection" },
+                  { label: "Union (OR)", value: "union" },
+                ]}
+                value={pathfinderSettings?.combinationStrategy || "intersection"}
+              />
+              <div className={styles.optionHelp}>
+                Strategy to combine network edges and nodes across multiple datasets. <strong>'Strict Intersection (AND)'</strong> keeps only edges and nodes that appear in ALL selected datasets, providing high-confidence results with reduced false positives but potentially fewer findings. <strong>'Union (OR)'</strong> includes edges and nodes found in ANY selected dataset, providing more comprehensive networks but may include dataset-specific artifacts. Use Intersection for conservative, highly reliable networks, or Union for exploratory analysis with broader coverage.
               </div>
-              <div style={{ marginBottom: "8px" }}>
-                <Select
-                  small
-                  onChange={({ target: { value } }) =>
-                    pathfinderSettingsChanged({
-                      settingName: PathFinderSettingsTypes.COMBINATION_STRATEGY,
-                      newValue: value,
-                    })
-                  }
-                  options={[
-                    { label: "Strict Intersection (AND)", value: "intersection" },
-                    { label: "Union (OR)", value: "union" },
-                  ]}
-                  value={pathfinderSettings?.combinationStrategy || "intersection"}
-                />
-              </div>
-              <Text size="small" style={{ 
-                color: "#2e7d32",
-                fontSize: "11px",
-                lineHeight: "1.4",
-                marginTop: "8px",
-                padding: "8px",
-                backgroundColor: "#f1f8f4",
-                borderRadius: "4px",
-                border: "1px solid #81c784"
-              }}>
-                <strong>Help:</strong> Strategy to combine network edges and nodes across multiple datasets. <strong>'Strict Intersection (AND)'</strong> keeps only edges and nodes that appear in ALL selected datasets, providing high-confidence results with reduced false positives but potentially fewer findings. <strong>'Union (OR)'</strong> includes edges and nodes found in ANY selected dataset, providing more comprehensive networks but may include dataset-specific artifacts. Use Intersection for conservative, highly reliable networks, or Union for exploratory analysis with broader coverage.
-              </Text>
             </div>
           )}
         </>
@@ -1205,62 +838,20 @@ const DatasetSelector = forwardRef(
     return (
       <>
         {filterBar}
-        <div
-          className={styles._itemHeader_1fhdv_401}
-          style={{
-            border: "1px solid #e0e0e0",
-            borderRadius: "8px",
-            height: "250px",
-            overflow: "auto",
-            scrollbarWidth: "thin",
-            scrollbarColor: "#c0c0c0 #f5f5f5",
-            padding: "12px",
-            backgroundColor: "#fafafa",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
-          }}
-        >
-          <div style={{
-            marginBottom: "12px",
-            fontWeight: "600",
-            fontSize: "14px",
-            color: "#333",
-            paddingBottom: "8px",
-            borderBottom: "1px solid #e0e0e0",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
+        <div className={styles.box}>
+          <div className={styles.boxHeader}>
             <span>Dataset Selection</span>
-            <div 
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "18px",
-                height: "18px",
-                borderRadius: "50%",
-                backgroundColor: "#e0e0e0",
-                color: "#666",
-                fontSize: "11px",
-                cursor: "help",
-                marginLeft: "8px"
-              }}
+            <span
+              className={styles.helpDot}
               title="Select a dataset to analyze. Expand a dataset to see its tables (doses and cell lines of a drug collection) or previous DR results for chaining (e.g. run UMAP on PCA result)."
             >
               ?
-            </div>
+            </span>
           </div>
           {filteredDatasets.length === 0 ? (
-            <div style={{
-              padding: "20px",
-              textAlign: "center",
-              color: "#999",
-              fontStyle: "italic"
-            }}>
-              No datasets match.
-            </div>
+            <div className={styles.status}>No datasets match.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <div className={styles.list}>
               {treeRoots.map(root => (
                 <DatasetTreeItem
                   key={isFiltering ? `${root.id}:filtered` : root.id}
@@ -1276,16 +867,8 @@ const DatasetSelector = forwardRef(
 
         {/* For DR module, show chaining hint when DR results are available */}
         {location.pathname === ROUTES.DR && filteredDatasets.some(d => d.isDrResult === true) && (
-          <div style={{
-            marginTop: "12px",
-            padding: "10px 12px",
-            backgroundColor: "#fff3cd",
-            borderRadius: "6px",
-            border: "1px solid #ffc107",
-            fontSize: "12px",
-            color: "#856404"
-          }}>
-            💡 <strong>DR Chaining:</strong> Select a previous DR result (child node) above to run another DR method on it.
+          <div className={styles.note}>
+            <strong>DR Chaining:</strong> Select a previous DR result (child node) above to run another DR method on it.
           </div>
         )}
       </>

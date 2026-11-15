@@ -6,7 +6,6 @@ import {
   Tabs,
   Card,
   Text,
-  Badge,
   Toggle,
   Flex,
   Select,
@@ -24,7 +23,11 @@ import {
 import { GeneSetEnrichmentTable } from "../enrichment";
 import { withErrorBoundary } from "../error-boundary";
 import styles from "./multidataset-comparison.module.scss";
-import { ToolbarButton } from "../ui";
+import { EmptyState, ToolbarButton } from "../ui";
+import { mrtLook, numericColumn } from "../../utils/tableStyle";
+
+// Table look shared with the other result tables (no pagination: rows are virtualised)
+const TABLE_LOOK = mrtLook({ maxHeight: "50vh" });
 
 // Enrichment gene lists of the comparison table. Always derived from the
 // "average" score column, never from the order the rows are displayed in.
@@ -389,8 +392,9 @@ const MultiDatasetComparison = ({ data }) => {
             style={{ 
               cursor: 'help',
               textDecoration: 'underline dotted',
-              color: '#1976d2'
-            }}            
+              color: 'var(--gs-link)',
+              fontWeight: 600,
+            }}
             onMouseEnter={async (e) => {
               try {
                 // Clean up any existing tooltip first
@@ -413,11 +417,12 @@ const MultiDatasetComparison = ({ data }) => {
                 tooltipDiv.innerHTML = tooltip;
                 tooltipDiv.style.cssText = `
                   position: fixed;
-                  background: white;
-                  border: 1px solid #ccc;
-                  border-radius: 4px;
-                  padding: 8px;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  background: var(--gs-surface);
+                  color: var(--gs-text);
+                  border: 1px solid var(--gs-border-strong);
+                  border-radius: 6px;
+                  padding: 8px 10px;
+                  box-shadow: var(--gs-shadow-pop);
                   z-index: 10000;
                   max-width: 300px;
                   font-size: 12px;
@@ -478,6 +483,7 @@ const MultiDatasetComparison = ({ data }) => {
         header: datasetName,
         size: showRanks ? 70 : 50, // Reduced width
         enableColumnActions: false, // Disable three dots menu
+        ...numericColumn,
         Cell: ({ cell }) => {
           const value = cell.getValue();
           if (showRanks) {
@@ -539,13 +545,11 @@ const MultiDatasetComparison = ({ data }) => {
           header: showRanks ? "Avg Rank" : "Average",
           size: 100,
           enableColumnActions: false, // Disable three dots menu
+          ...numericColumn,
           Cell: ({ cell }) => {
             const value = cell.getValue();
-            if (showRanks) {
-              return typeof value === 'number' ? value.toFixed(1) : '';
-            } else {
-              return typeof value === 'number' ? value.toFixed(3) : '';
-            }
+            const text = typeof value === 'number' ? value.toFixed(showRanks ? 1 : 3) : '';
+            return <strong>{text}</strong>;
           },
           sortingFn: (rowA, rowB, columnId) => {
             const aValue = rowA.getValue(columnId);
@@ -770,7 +774,7 @@ const MultiDatasetComparison = ({ data }) => {
   );
 
   if (!parsedData) {
-    return <div>No data available</div>;
+    return <EmptyState title="No data available" />;
   }
 
   // Get description based on current selection
@@ -839,14 +843,7 @@ const MultiDatasetComparison = ({ data }) => {
                 const newValue = Number(e.target.value);
                 setMinDatasets(newValue);
               }}
-              style={{ 
-                minWidth: '60px', 
-                width: '60px',
-                padding: '4px 8px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
+              className={styles.countSelect}
             >
               {minDatasetOptions.map((option) => (
                 <option key={option} value={option}>
@@ -939,12 +936,12 @@ const MultiDatasetComparison = ({ data }) => {
                 >
                   {rankOrder === 'asc' ? (
                     <>
-                      <FaSortAmountUpAlt style={{ color: '#28a745' }} />
+                      <FaSortAmountUpAlt aria-hidden="true" />
                       <span>Low → High</span>
                     </>
                   ) : (
                     <>
-                      <FaSortAmountDownAlt style={{ color: '#dc3545' }} />
+                      <FaSortAmountDownAlt aria-hidden="true" />
                       <span>High → Low</span>
                     </>
                   )}
@@ -960,7 +957,7 @@ const MultiDatasetComparison = ({ data }) => {
               disabled={!tableData.data || tableData.data.length === 0}
               title="Download table data as CSV"
             >
-              <FaDownload style={{ color: '#28a745', fontSize: '12px' }} />
+              <FaDownload size={11} aria-hidden="true" />
               <span>CSV</span>
             </ToolbarButton>
           </Flex>
@@ -968,10 +965,11 @@ const MultiDatasetComparison = ({ data }) => {
 
         {tableData.data.length > 0 ? (
           <>
-            <div style={{ maxHeight: '50vh', overflow: 'auto' }}>
+            <div>
               <MaterialReactTable
                 columns={tableData.columns}
                 data={tableData.data}
+                {...TABLE_LOOK}
                 enableSorting
                 enableFilters
                 enablePagination={false}  // Disable pagination in favor of virtualization
@@ -987,23 +985,14 @@ const MultiDatasetComparison = ({ data }) => {
                 onSortingChange={setSorting}
                 onColumnFiltersChange={setColumnFilters}
                 onGlobalFilterChange={setGlobalFilter}
-                muiTableContainerProps={{
-                  sx: { maxHeight: '50vh' }  // Set fixed height for virtualization
-                }}
                 initialState={{
+                  density: "compact",
                   showGlobalFilter: true,
                   sorting: showRanks ? [{ id: 'average_rank', desc: false }] : [{ id: 'average', desc: true }],
                 }}
-                muiTableProps={{
-                  sx: {
-                    '& .MuiTableCell-root': {
-                      fontSize: '0.875rem',
-                    },
-                  },
-                }}
               />
             </div>
-            <Spacer height={10} />
+            <Spacer height={16} />
             {activeGeneLists && Object.keys(activeGeneLists).length > 0 && (
               <>
                 <Tabs
@@ -1025,9 +1014,7 @@ const MultiDatasetComparison = ({ data }) => {
             )}
           </>
         ) : (
-          <div className={styles.noData}>
-            <Text muted>No data available for this combination</Text>
-          </div>
+          <EmptyState title="No data available for this combination" />
         )}
       </Card>
 

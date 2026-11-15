@@ -2,28 +2,18 @@ import React from "react";
 import { toast } from "@oliasoft-open-source/react-ui-library";
 import { FaDownload } from "react-icons/fa";
 import { downloadNetwork, downloadTable } from "../../utils/exporters";
-
-const buttonStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  height: 28,
-  padding: "0 10px",
-  border: "1px solid #c4c9d0",
-  borderRadius: 4,
-  background: "#fff",
-  color: "#2b3440",
-  fontFamily: "inherit",
-  fontSize: 12.5,
-  fontWeight: 500,
-  whiteSpace: "nowrap",
-  cursor: "pointer",
-};
+import { ToolbarButton } from "../ui";
 
 const nothing = () =>
   toast({ message: { type: "Warning", icon: true, content: "There is nothing to export yet" }, autoClose: 2500 });
 
 const wrapStyle = { display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" };
+
+const DownloadButton = ({ children, ...rest }) => (
+  <ToolbarButton size="sm" icon={<FaDownload size={11} aria-hidden="true" />} {...rest}>
+    {children}
+  </ToolbarButton>
+);
 
 /**
  * CSV, TSV and Excel download for a table.
@@ -38,15 +28,15 @@ export const TableExportButtons = ({ rows, columns, filename = "genesetr-table",
   };
   return (
     <span style={{ ...wrapStyle, ...style }}>
-      <button type="button" style={buttonStyle} onClick={() => run("csv")} title="Comma separated; opens in Excel">
-        <FaDownload size={11} aria-hidden="true" /> CSV
-      </button>
-      <button type="button" style={buttonStyle} onClick={() => run("tsv")} title="Tab separated; for R, Python and spreadsheets">
-        <FaDownload size={11} aria-hidden="true" /> TSV
-      </button>
-      <button type="button" style={buttonStyle} onClick={() => run("xlsx")} title="Excel workbook; numbers stay numbers">
-        <FaDownload size={11} aria-hidden="true" /> Excel
-      </button>
+      <DownloadButton onClick={() => run("csv")} title="Comma separated; opens in Excel">
+        CSV
+      </DownloadButton>
+      <DownloadButton onClick={() => run("tsv")} title="Tab separated; for R, Python and spreadsheets">
+        TSV
+      </DownloadButton>
+      <DownloadButton onClick={() => run("xlsx")} title="Excel workbook; numbers stay numbers">
+        Excel
+      </DownloadButton>
     </span>
   );
 };
@@ -62,12 +52,12 @@ export const NetworkExportButtons = ({ network, filename = "genesetr-network", s
   };
   return (
     <span style={{ ...wrapStyle, ...style }}>
-      <button type="button" style={buttonStyle} onClick={() => run("graphml")} title="GraphML: opens in Cytoscape, Gephi, yEd">
-        <FaDownload size={11} aria-hidden="true" /> GraphML
-      </button>
-      <button type="button" style={buttonStyle} onClick={() => run("cyjs")} title="Cytoscape JSON (.cyjs)">
-        <FaDownload size={11} aria-hidden="true" /> Cytoscape
-      </button>
+      <DownloadButton onClick={() => run("graphml")} title="GraphML: opens in Cytoscape, Gephi, yEd">
+        GraphML
+      </DownloadButton>
+      <DownloadButton onClick={() => run("cyjs")} title="Cytoscape JSON (.cyjs)">
+        Cytoscape
+      </DownloadButton>
     </span>
   );
 };

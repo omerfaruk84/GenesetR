@@ -11,8 +11,7 @@ import { ModulePathNames } from "../../store/results/enums";
 import VideoHelpPage from "../../components/video-help";
 import helpVideo from "../../common/videos/1.webm";
 import corrhelpVideo from "../../common/videos/Correlation.mp4";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { EmptyState, ModuleIntro, Notice } from "../../components/ui";
 import { LoadingPage } from "../../components/loading-page";
 
 
@@ -320,101 +319,44 @@ const CorrelationPage = ({
   return (
     <div className={styles.mainView}>
       {/* Module Description */}
-      <Accordion 
+      <ModuleIntro
+        title={moduleDescription.title}
+        description={moduleDescription.description}
+        features={moduleDescription.features}
         expanded={isDescriptionExpanded}
-        onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
-       sx={{
-         marginBottom: '14px',
-         backgroundColor: '#f8f9fa', 
-         border: '1px solid #e9ecef',
-         borderRadius: '8px',
-         '&:before': {
-           display: 'none',
-         },
-         '& .MuiAccordionSummary-root': {
-           minHeight: '30px',
-           height: '30px',
-         },
-         '& .MuiAccordionSummary-root.Mui-expanded': {
-           minHeight: '30px',
-           height: '30px',
-         }
-       }}
+        onChange={setIsDescriptionExpanded}
       >
-        <AccordionSummary 
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ backgroundColor: '#fafafa', padding: '16px' }}>
-          <div style={{ marginBottom: '0px' }}>
-            <p style={{ marginBottom: '10px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
-            <h4 style={{ marginBottom: '6px', color: '#424242' }}>Key Features:</h4>
-            <ul style={{ marginBottom: '16px', paddingLeft: '20px' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '3px' }}>{feature}</li>
-              ))}
-            </ul>
-            {!corrResults && (
-            <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#e3f2fd', 
-              borderLeft: '4px solid #1976d2',
-              borderRadius: '4px',
-              color: '#1565c0'
-            }}>
-              💡 To start, please add genes to the input list from the left menu select at least one dataset and click "Calculate Correlation" to generate the correlation map.
-            </div>
-            )}
-           
-          </div>
-        </AccordionDetails>
-      </Accordion>
- {corrResults && correlationSettings?.trimEnabled && isFilteringInProgress && (
-            <div style={{ 
-              padding: '10px', 
-              backgroundColor: '#fff3cd', 
-              borderLeft: '4px solid #ffc107',
-              borderRadius: '4px',
-              color: '#856404',
-              marginTop: '10px',
-              fontSize: '14px'
-            }}>
-              ⏳ <strong>Filtering in progress...</strong> Recalculating correlation matrix for significant genes.
-            </div>
-            )}
-            
-            {corrResults && correlationSettings?.trimEnabled && trimStats && !isFilteringInProgress && (
-            <div style={{ 
-              padding: '10px', 
-              backgroundColor: filteredCorrResults !== corrResults ? '#e8f4f8' : '#fff3cd', 
-              borderLeft: filteredCorrResults !== corrResults ? '4px solid #17a2b8' : '4px solid #ffc107',
-              borderRadius: '4px',
-              color: filteredCorrResults !== corrResults ? '#0c5460' : '#856404',
-              marginTop: '10px',
-              fontSize: '14px'
-            }}>
-              {filteredCorrResults !== corrResults ? (
-                <>
-                  ✂️ <strong>Trimming Active:</strong> Showing genes with correlations ≥ {correlationSettings.trimThreshold} (excluding ±1 values).
-                  <br />
-                  📊 <strong>Filtered:</strong> {trimStats.filteredRows} genes (from {trimStats.originalRows} total), displaying {trimStats.filteredRows} × {trimStats.filteredCols} matrix
-                </>
-              ) : (
-                <>
-                  ⚠️ <strong>Filtering Failed:</strong> Server request failed, but would filter to {trimStats.filteredRows} genes (from {trimStats.originalRows} total) with correlations ≥ {correlationSettings.trimThreshold}.
-                  <br />
-                  📊 <strong>Would Show:</strong> {trimStats.filteredRows} × {trimStats.filteredCols} matrix (currently showing original {trimStats.originalRows} × {trimStats.originalCols})
-                </>
-              )}
-            </div>
-            )}
-      
+        {!corrResults && (
+          <Notice kind="info" style={{ margin: "12px 0 0" }}>
+            To start, add genes to the input list in the left menu, select at least one dataset and click
+            "Calculate Correlation" to generate the correlation map.
+          </Notice>
+        )}
+      </ModuleIntro>
+
+      {corrResults && correlationSettings?.trimEnabled && isFilteringInProgress && (
+        <Notice kind="warning" title="Filtering in progress.">
+          Recalculating the correlation matrix for the significant genes.
+        </Notice>
+      )}
+
+      {corrResults && correlationSettings?.trimEnabled && trimStats && !isFilteringInProgress && (
+        filteredCorrResults !== corrResults ? (
+          <Notice kind="info" title="Trimming active.">
+            Showing genes with correlations ≥ {correlationSettings.trimThreshold} (excluding ±1 values):{" "}
+            {trimStats.filteredRows} of {trimStats.originalRows} genes, displayed as a {trimStats.filteredRows} ×{" "}
+            {trimStats.filteredCols} matrix.
+          </Notice>
+        ) : (
+          <Notice kind="warning" title="Filtering failed.">
+            The server request failed. Trimming would keep {trimStats.filteredRows} of {trimStats.originalRows} genes
+            with correlations ≥ {correlationSettings.trimThreshold} ({trimStats.filteredRows} ×{" "}
+            {trimStats.filteredCols} matrix); the original {trimStats.originalRows} × {trimStats.originalCols} matrix
+            is shown.
+          </Notice>
+        )
+      )}
+
       {isCalculationRunning && (
         <LoadingPage 
           progressMessage={progressMessage}
@@ -425,9 +367,7 @@ const CorrelationPage = ({
       {!isCalculationRunning && (
         <>
       {isFilteringInProgress ? (
-        <div style={{ textAlign: 'center', padding: '50px', fontSize: '16px' }}>
-          ⏳ Filtering correlation data...
-        </div>
+        <EmptyState title="Filtering correlation data…" />
       ) : (filteredCorrResults || corrResults) ? (
         <>
           {(() => {
@@ -477,17 +417,10 @@ const CorrelationPage = ({
                 isMultiDataset={isMultiDataset}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
-                ⚠️ Invalid data structure - cannot render heatmap
-                <br />
-                <small>
-                  Missing: {!hasNodes ? 'nodes ' : ''}{!hasFeatureNames ? 'feature_names' : ''}
-                  <br />
-                  Data type: {typeof dataToRender}
-                  <br />
-                  Has data: {!!dataToRender?.data}
-                </small>
-              </div>
+              <Notice kind="danger" title="Invalid data structure: the heatmap cannot be drawn.">
+                Missing: {!hasNodes ? 'nodes ' : ''}{!hasFeatureNames ? 'feature_names' : ''}. Data type:{" "}
+                {typeof dataToRender}. Has data: {String(!!dataToRender?.data)}.
+              </Notice>
             );
           })()}
         </>
@@ -495,9 +428,7 @@ const CorrelationPage = ({
         <div>
           <VideoHelpPage videoFile={helpVideo} />
 
-          <h1 style={{ marginTop: "40px", textAlign: "center" }}>
-            New demonstration video
-          </h1>
+          <h2 className={styles.videoTitle}>Demonstration video</h2>
 
           <div className={styles.newvideo}>
             <video
@@ -507,11 +438,10 @@ const CorrelationPage = ({
               style={{
                 objectPosition: "left top",
                 objectFit: "cover",
-                backgroundColor: "#fff",
               }}
               preload="auto"
               
-              playsinline
+              playsInline
               controls
             >
               <source src={corrhelpVideo} type="video/mp4" />

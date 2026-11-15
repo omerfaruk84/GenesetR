@@ -10,26 +10,20 @@
   width: 100%;
   min-height: calc(100vh - 60px);
   height: 100%;
-  background:
-    radial-gradient(1200px 600px at 10% 10%, rgba(76, 171, 247, 0.10), transparent 55%),
-    radial-gradient(900px 520px at 85% 15%, rgba(177, 151, 252, 0.10), transparent 55%),
-    radial-gradient(900px 620px at 40% 95%, rgba(6, 214, 160, 0.08), transparent 60%),
-    rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--gs-bg) 88%, transparent);
+  backdrop-filter: blur(4px);
   z-index: 1000;
   overflow: hidden;
 }
 
 .card {
-  --accent: #a63648;
-  width: min(760px, 92vw);
-  border-radius: 16px;
-  padding: 18px 18px 16px 18px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 20px 70px rgba(0, 0, 0, 0.18),
-    0 6px 18px rgba(0, 0, 0, 0.10);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  --accent: var(--gs-accent);
+  width: min(640px, 92vw);
+  border-radius: 12px;
+  padding: 20px 22px 18px;
+  background: var(--gs-surface);
+  box-shadow: var(--gs-shadow-pop);
+  border: 1px solid var(--gs-border);
   animation: popIn 220ms cubic-bezier(0.2, 1, 0.2, 1);
 }
 
@@ -44,10 +38,7 @@
   width: 74px;
   height: 74px;
   border-radius: 999px;
-  background: conic-gradient(var(--accent) calc(var(--p) * 1%), rgba(166, 54, 72, 0.14) 0);
-  box-shadow:
-    0 10px 26px rgba(166, 54, 72, 0.20),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--gs-accent-soft) 0);
   position: relative;
   flex: 0 0 auto;
 }
@@ -55,10 +46,10 @@
 .ringIndeterminate {
   background: conic-gradient(
     from 0deg,
-    rgba(166, 54, 72, 0.15) 0deg,
+    var(--gs-accent-soft) 0deg,
     var(--accent) 50deg,
-    rgba(166, 54, 72, 0.15) 120deg,
-    rgba(166, 54, 72, 0.08) 360deg
+    var(--gs-accent-soft) 120deg,
+    var(--gs-accent-soft) 360deg
   );
   animation: spin 900ms linear infinite;
 }
@@ -67,16 +58,16 @@
   position: absolute;
   inset: 8px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 245, 245, 0.95));
+  background: var(--gs-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .ringValueText {
-  font-weight: 900;
-  color: rgba(11, 16, 34, 0.9);
+  font-weight: 700;
+  color: var(--gs-text);
+  font-variant-numeric: tabular-nums;
   font-size: 0.95rem;
   letter-spacing: 0.02em;
 }
@@ -87,8 +78,8 @@
 
 .title {
   font-size: 1.05rem;
-  font-weight: 800;
-  color: rgba(11, 16, 34, 0.92);
+  font-weight: 600;
+  color: var(--gs-text);
   line-height: 1.2;
 }
 
@@ -99,17 +90,16 @@
   justify-content: center;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: rgba(11, 16, 34, 0.82);
-  background: rgba(11, 94, 215, 0.08);
-  border: 1px solid rgba(11, 94, 215, 0.12);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gs-info);
+  background: var(--gs-info-soft);
 }
 
 .caption {
   margin-top: 8px;
   font-size: 0.92rem;
-  color: rgba(11, 16, 34, 0.72);
+  color: var(--gs-muted);
 }
 
 .progressBlock {
@@ -117,27 +107,25 @@
 }
 
 .barTrack {
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--gs-hover);
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .barFill {
   height: 100%;
   width: calc(var(--p) * 1%);
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(6, 214, 160, 0.92), rgba(76, 171, 247, 0.92), rgba(166, 54, 72, 0.92));
+  background: var(--accent);
   transition: width 220ms ease;
 }
 
 .barIndeterminate {
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--gs-hover);
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.06);
   position: relative;
 }
 
@@ -148,7 +136,7 @@
   bottom: 0;
   width: 35%;
   left: -35%;
-  background: linear-gradient(90deg, transparent, rgba(166, 54, 72, 0.65), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
   animation: shimmer 900ms ease-in-out infinite;
 }
 
@@ -162,13 +150,14 @@
 
 .metaLeft {
   font-size: 0.88rem;
-  font-weight: 700;
-  color: rgba(11, 16, 34, 0.72);
+  font-weight: 600;
+  color: var(--gs-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .elapsed {
-  font-weight: 600;
-  color: rgba(11, 16, 34, 0.55);
+  font-weight: 400;
+  color: var(--gs-muted);
 }
 
 .actions {
@@ -179,20 +168,22 @@
 
 .cancelButton {
   appearance: none;
-  border: 1px solid rgba(166, 54, 72, 0.45);
-  background: #fff;
-  color: #a63648;
-  font-weight: 700;
-  font-size: 0.9rem;
+  border: 1px solid var(--gs-border-strong);
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 13px;
   padding: 7px 18px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 
   &:hover:not(:disabled),
   &:focus-visible {
-    background: #a63648;
-    color: #fff;
+    border-color: var(--gs-accent);
+    background: var(--gs-accent);
+    color: var(--gs-on-accent);
     outline: none;
   }
 
@@ -212,7 +203,7 @@
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(11, 16, 34, 0.35);
+  background: var(--gs-faint);
   animation: dotPulse 900ms ease-in-out infinite;
 }
 
@@ -226,7 +217,7 @@
 
 .skeleton {
   margin-top: 14px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.10);
+  border-top: 1px solid var(--gs-border);
   padding-top: 12px;
   display: grid;
   gap: 10px;
@@ -236,12 +227,7 @@
 .skeletonLineShort {
   height: 10px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.06),
-    rgba(0, 0, 0, 0.10),
-    rgba(0, 0, 0, 0.06)
-  );
+  background: linear-gradient(90deg, var(--gs-surface-alt), var(--gs-hover), var(--gs-surface-alt));
   background-size: 220% 100%;
   animation: skeleton 1200ms ease-in-out infinite;
 }

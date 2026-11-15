@@ -8,7 +8,9 @@ import ForceGraph3D from "react-force-graph-3d";
 import { getGeneInfo } from "../../utils/geneFunctionUtils";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { ErrorBoundary } from "../error-boundary";
-import { ChartLegend } from "../ui";
+import { ChartLegend, Toolbar } from "../ui";
+import { usePalette } from "../../utils/theme";
+import { networkColors } from "./networkColors";
 import { NetworkExportButtons } from "../export-buttons";
 
 // ---- Optional libraries (try to load, but keep app running if missing) ----
@@ -79,18 +81,114 @@ try {
 }
 
 // ------------------ Shared utilities ------------------
-const CATEGORY_COLORS = {
-  0: "#7c3aed", // UPR
-  1: "#0ea5e9", // UNR
-  2: "#22c55e", // DPR
-  3: "#eab308", // DNR
-  default: "#94a3b8",
-};
+const EDGE_WIDTHS = { Exp: 1.6, Corr: 1.1 };
 
-const EDGE_STYLES = {
-  Exp: { color: "#64748b", width: 1.8, dash: false },
-  Corr: { color: "#ef4444", width: 1.2, dash: true },
+/**
+ * Everything the renderers draw with, for one theme: node colours by group,
+ * edge colours by class, label and background colours. Built from the palette
+ * in the main component and handed to every renderer, so a theme switch
+ * redraws them and the legend always shows the colours on screen.
+ */
+function graphLook(p) {
+  const c = networkColors(p);
+  return {
+    mode: p.mode,
+    categories: {
+      0: c.upstreamPositive, // UPR
+      1: c.upstreamNegative, // UNR
+      2: c.downstreamPositive, // DPR
+      3: c.downstreamNegative, // DNR
+      default: c.neutral,
+    },
+    edges: { Exp: c.neutral, Corr: c.correlation },
+    label: p.text,
+    halo: p.bg,
+    background: p.bg,
+    surface: p.surface,
+    border: p.borderStrong,
+    hover: p.link,
+    hoverSoft: p.mode === "dark" ? "rgba(122, 184, 255, 0.25)" : "rgba(21, 101, 192, 0.18)",
+  };
+}
+
+// Chrome drawn over the graphs (control panels, tooltips, cards): CSS tokens,
+// so it follows the theme without code.
+const floatPanelStyle = {
+  position: "absolute",
+  top: 12,
+  right: 12,
+  zIndex: 10,
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "flex-end",
+  gap: 10,
+  padding: "8px 12px",
+  border: "1px solid var(--gs-border)",
+  borderRadius: 8,
+  background: "var(--gs-surface)",
+  color: "var(--gs-text)",
+  boxShadow: "var(--gs-shadow)",
 };
+const controlLabelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 3,
+  fontSize: 11,
+  fontWeight: 600,
+  color: "var(--gs-muted)",
+};
+const checkLabelStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 5,
+  fontSize: 12,
+  color: "var(--gs-text)",
+};
+const selectStyle = {
+  height: 28,
+  padding: "0 6px",
+  border: "1px solid var(--gs-border-strong)",
+  borderRadius: 6,
+  background: "var(--gs-surface)",
+  color: "var(--gs-text)",
+  fontFamily: "inherit",
+  fontSize: 12.5,
+};
+const canvasFrame = (look, height) => ({
+  position: "relative",
+  width: "100%",
+  height,
+  border: "1px solid var(--gs-border)",
+  borderRadius: 8,
+  background: look.background,
+  overflow: "hidden",
+});
+const TOOLTIP_CSS = `
+  position: fixed;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  border: 1px solid var(--gs-border-strong);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+  max-width: 350px;
+  line-height: 1.4;
+  box-shadow: var(--gs-shadow-pop);
+`;
+const fallbackStyle = (height) => ({
+  width: "100%",
+  height,
+  border: "2px dashed var(--gs-border-strong)",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  color: "var(--gs-muted)",
+});
 
 function normalizeGraph(graph) {
   if (!graph) return { nodes: [], edges: [] };
@@ -196,19 +294,17 @@ function settingsKeyForType(t) {
   return t ? t.replace(/\s+/g, "_").toLowerCase() : null;
 }
 
-function nodeColor(n, settings) {
+function nodeColor(n, look) {
   const cat = n?.category;
-  return CATEGORY_COLORS[cat ?? "default"] || CATEGORY_COLORS.default;
+  return look.categories[cat ?? "default"] || look.categories.default;
 }
 
-function edgeColor(e) {
-  const style = EDGE_STYLES[e.Type2] || EDGE_STYLES.Exp;
-  return style.color;
+function edgeColor(e, look) {
+  return look.edges[e.Type2] || look.edges.Exp;
 }
 
 function edgeWidth(e) {
-  const style = EDGE_STYLES[e.Type2] || EDGE_STYLES.Exp;
-  return style.width;
+  return EDGE_WIDTHS[e.Type2] || EDGE_WIDTHS.Exp;
 }
 
 // Largest degree in the graph. Computed once per graph and passed to nodeSize
@@ -275,6 +371,8 @@ export default function NetworkGraphAlternatives({
   initialRenderer = "Cytoscape",
 }) {
   const [renderer, setRenderer] = useState(initialRenderer);
+  const palette = usePalette();
+  const look = useMemo(() => graphLook(palette), [palette]);
   const g = useMemo(() => normalizeGraph(graph), [graph]);
   const filteredEdges = useMemo(
     () => filterEdgesBySettings(g.edges, settings),
@@ -338,27 +436,29 @@ export default function NetworkGraphAlternatives({
     settings,
     nodeById,
     maxDegree,
+    look,
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
+    <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 8 }}>
       <div>
-        <Header renderer={renderer} setRenderer={setRenderer} />
-        <NetworkExportButtons
-          network={() => ({ nodes: filteredNodes, edges: filteredEdges })}
-          filename="genesetr-gene-regulation"
-          style={{ margin: "6px 0" }}
-        />
+        <Toolbar style={{ marginBottom: 8, justifyContent: "space-between" }}>
+          <Header renderer={renderer} setRenderer={setRenderer} />
+          <NetworkExportButtons
+            network={() => ({ nodes: filteredNodes, edges: filteredEdges })}
+            filename="genesetr-gene-regulation"
+          />
+        </Toolbar>
         <ChartLegend
           label="Network legend"
           items={[
-            { label: "Upstream positive regulator", color: CATEGORY_COLORS[0] },
-            { label: "Upstream negative regulator", color: CATEGORY_COLORS[1] },
-            { label: "Downstream, positively regulated", color: CATEGORY_COLORS[2] },
-            { label: "Downstream, negatively regulated", color: CATEGORY_COLORS[3] },
-            { label: "Gene of interest / other", color: CATEGORY_COLORS.default },
-            { label: "Expression effect", color: EDGE_STYLES.Exp.color, line: "solid" },
-            { label: "Correlation", color: EDGE_STYLES.Corr.color, line: "dashed" },
+            { label: "Upstream positive regulator", color: look.categories[0] },
+            { label: "Upstream negative regulator", color: look.categories[1] },
+            { label: "Downstream, positively regulated", color: look.categories[2] },
+            { label: "Downstream, negatively regulated", color: look.categories[3] },
+            { label: "Gene of interest / other", color: look.categories.default },
+            { label: "Expression effect", color: look.edges.Exp, line: "solid" },
+            { label: "Correlation", color: look.edges.Corr, line: "dashed" },
           ]}
         />
       </div>
@@ -412,34 +512,33 @@ function Header({ renderer, setRenderer }) {
   ];
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <strong style={{ fontSize: 16 }}>Renderer:</strong>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--gs-text)" }}>
+      <label htmlFor="network-renderer" style={{ fontSize: 13, fontWeight: 600 }}>
+        Renderer
+      </label>
       <select
+        id="network-renderer"
         value={renderer}
         onChange={(e) => setRenderer(e.target.value)}
-        style={{ padding: 6 }}
+        style={selectStyle}
       >
         {renderers.map((r) => (
-          <option
-            key={r.value}
-            value={r.value}
-            style={{ color: r.available ? "black" : "gray" }}
-          >
+          <option key={r.value} value={r.value} disabled={!r.available}>
             {r.label}
           </option>
         ))}
       </select>
-      <span style={{ opacity: 0.7, marginLeft: 8 }}>
-        {CytoscapeComponent || SigmaContainer
-          ? "Advanced renderers available!"
-          : "Install renderers: npm i react-cytoscapejs cytoscape @react-sigma/core graphology"}
-      </span>
+      {!(CytoscapeComponent || SigmaContainer) && (
+        <span style={{ fontSize: 12, color: "var(--gs-muted)" }}>
+          Install renderers: npm i react-cytoscapejs cytoscape @react-sigma/core graphology
+        </span>
+      )}
     </div>
   );
 }
 
 // ------------------ Cytoscape renderer (stable layout + rich tooltips) ------------------
-function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree }) {
+function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree, look }) {
   const [layoutName, setLayoutName] = useState(settings?.cyLayout || "cose");
   const [colorMode, setColorMode] = useState(
     settings?.cyColorMode ||
@@ -496,6 +595,11 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
     };
   }, [nodes]);
 
+  // Networks with many nodes get a wider layout. The view is then zoomed out
+  // to fit, so circles and labels are drawn larger to stay legible.
+  const crowded = nodes.length > 120;
+  const crowdScale = crowded ? 1.5 : 1;
+
   const layoutOptions = useMemo(() => {
     // animate:false to prevent easing on hover-triggered renders
     const base = { animate: false, fit: true, padding: 20 };
@@ -527,9 +631,19 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
         };
       case "cose":
       default:
-        return { ...base, name: "cose", nodeOverlap: 10, idealEdgeLength: 80 };
+        // Large networks need more room between nodes, or they collapse into
+        // one blob of overlapping circles.
+        return {
+          ...base,
+          name: "cose",
+          nodeOverlap: 20,
+          idealEdgeLength: () => (crowded ? 90 : 80),
+          nodeRepulsion: () => (crowded ? 900000 : 400000),
+          gravity: crowded ? 60 : 80,
+          numIter: crowded ? 1500 : 1000,
+        };
     }
-  }, [layoutName]);
+  }, [layoutName, crowded]);
 
   const colorForNode = useMemo(() => {
     const clamp = (val) => Math.max(0, Math.min(1, val));
@@ -563,13 +677,17 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
     };
 
     return (node) => {
-      if (!node) return CATEGORY_COLORS.default;
+      if (!node) return look.categories.default;
       if (colorMode === "degree") {
         const val = deg[node.id] || 0;
         const { min, max } = degreeStats;
         const denom = max - min || 1;
         const t = clamp((val - min) / denom);
-        return blend(["#c7d2fe", "#6366f1", "#312e81"], t);
+        // pale to strong, ending on the shade that stands out on the background
+        return blend(
+          look.mode === "dark" ? ["#3a4374", "#7c86f2", "#e0e4ff"] : ["#c7d2fe", "#6366f1", "#312e81"],
+          t
+        );
       }
       if (colorMode === "kd") {
         const kdValue = Number.isFinite(node.kd)
@@ -582,9 +700,9 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
         const t = clamp((kdValue - min) / denom);
         return blend(["#f87171", "#facc15", "#34d399"], t);
       }
-      return nodeColor(node, settings);
+      return nodeColor(node, look);
     };
-  }, [colorMode, degreeStats, kdStats, deg, settings]);
+  }, [colorMode, degreeStats, kdStats, deg, look]);
 
   const stylesheet = useMemo(
     () => [
@@ -594,31 +712,48 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
           label: showLabels ? "data(label)" : "",
           "background-color": (ele) => colorForNode(nodeById.get(ele.id())),
           width: (ele) =>
-            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2,
+            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2 * crowdScale,
           height: (ele) =>
-            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2,
-          color: "#0f172a",
-          "font-size": 10,
-          "text-valign": "center",
+            nodeSize(nodeById.get(ele.id()) || {}, deg, settings, maxDegree) * 2 * crowdScale,
+          color: look.label,
+          "font-size": crowded ? 20 : 10,
+          "min-zoomed-font-size": 5,
+          "font-weight": 600,
+          "text-valign": "bottom",
           "text-halign": "center",
-          "border-width": 1,
-          "border-color": "#e2e8f0",
+          "text-margin-y": 3,
+          // halo in the background colour: labels stay readable over edges
+          "text-outline-color": look.halo,
+          "text-outline-width": 2,
+          "text-outline-opacity": 1,
+          "border-width": 1.5,
+          "border-color": look.halo,
         },
+      },
+      {
+        selector: "node:selected",
+        style: { "border-width": 3, "border-color": look.hover },
       },
       {
         selector: "edge",
         style: {
           width: (ele) => edgeWidth({ Type2: ele.data("Type2") }),
-          "line-color": (ele) => edgeColor({ Type2: ele.data("Type2") }),
-          "target-arrow-color": (ele) => edgeColor({ Type2: ele.data("Type2") }),
+          "line-color": (ele) => edgeColor({ Type2: ele.data("Type2") }, look),
+          "target-arrow-color": (ele) => edgeColor({ Type2: ele.data("Type2") }, look),
           "curve-style": "bezier",
           "target-arrow-shape": "triangle",
+          "arrow-scale": crowded ? 1.2 : 0.9,
+          opacity: edges.length > 600 ? 0.35 : 0.75,
           "line-style": (ele) =>
             ele.data("Type2") === "Corr" ? "dashed" : "solid",
         },
       },
+      {
+        selector: "edge:selected",
+        style: { "line-color": look.hover, "target-arrow-color": look.hover, opacity: 1 },
+      },
     ],
-    [nodeById, deg, settings, maxDegree, colorForNode, showLabels]
+    [nodeById, deg, settings, maxDegree, colorForNode, showLabels, look, crowded, crowdScale, edges.length]
   );
 
   // Run layout ONLY when the node set, the number of edges or layoutName
@@ -645,20 +780,7 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
 
     const tooltip = document.createElement("div");
     tooltip.setAttribute("data-cy-tooltip", "true");
-    tooltip.style.cssText = `
-      position: fixed;
-      background: rgba(0,0,0,0.85);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      pointer-events: none;
-      z-index: 9999;
-      display: none;
-      max-width: 350px;
-      line-height: 1.4;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    `;
+    tooltip.style.cssText = TOOLTIP_CSS;
     document.body.appendChild(tooltip);
 
     // Id of the element the pointer is currently over (null when none).
@@ -686,9 +808,9 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
       html += `<div>Degree: ${escapeHtml(node.data("degree"))}</div>`;
       if (Number.isFinite(kd)) html += `<div>Knockdown: ${(+kd).toFixed(3)}</div>`;
       if (loading) {
-        html += `<div style="font-style:italic;color:#ccc;margin-top:4px;">Loading gene info...</div>`;
+        html += `<div style="font-style:italic;color:var(--gs-muted);margin-top:4px;">Loading gene info...</div>`;
       } else if (geneInfo?.description) {
-        html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2);">${escapeHtml(geneInfo.description)}</div>`;
+        html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--gs-border);color:var(--gs-muted);">${escapeHtml(geneInfo.description)}</div>`;
       }
       return html;
     };
@@ -735,28 +857,14 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
   }, []);
 
   return (
-    <div style={{ position: "relative", width: "100%", height }}>
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 10,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          background: "rgba(255,255,255,0.92)",
-          padding: "8px 12px",
-          borderRadius: 8,
-          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
-        }}
-      >
-        <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937" }}>
+    <div style={canvasFrame(look, height)}>
+      <div style={floatPanelStyle}>
+        <label style={controlLabelStyle}>
           Layout
           <select
             value={layoutName}
             onChange={(e) => setLayoutName(e.target.value)}
-            style={{ marginTop: 4, padding: "4px 6px", fontSize: 12 }}
+            style={selectStyle}
           >
             <option value="cose">CoSE (force)</option>
             <option value="concentric">Concentric</option>
@@ -765,19 +873,19 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
             <option value="grid">Grid</option>
           </select>
         </label>
-        <label style={{ display: "flex", flexDirection: "column", fontSize: 11, color: "#1f2937" }}>
+        <label style={controlLabelStyle}>
           Color
           <select
             value={colorMode}
             onChange={(e) => setColorMode(e.target.value)}
-            style={{ marginTop: 4, padding: "4px 6px", fontSize: 12 }}
+            style={selectStyle}
           >
             <option value="category">Category</option>
             <option value="degree">Degree</option>
             <option value="kd">Knockdown</option>
           </select>
         </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#1f2937" }}>
+        <label style={{ ...checkLabelStyle, height: 28 }}>
           <input
             type="checkbox"
             checked={showLabels}
@@ -800,7 +908,7 @@ function CytoscapeRenderer({ nodes, edges, deg, height, settings, nodeById, maxD
 }
 
 // ------------------ Enhanced Sigma.js renderer with full interactivity ------------------
-function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
+function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById, look }) {
   const [sigmaLayout, setSigmaLayout] = useState("fa2");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -866,7 +974,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
           y,
           size,
           label: id,
-          color: nodeColor(n, settings),
+          color: nodeColor(n, look),
           category: n.category,
           kd: n.kd,
           degree: deg[n.id] || 0,
@@ -886,7 +994,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
 
         g.addEdge(s, t, {
           size: edgeWidth(e),
-          color: edgeColor(e),
+          color: edgeColor(e, look),
           Type2: e.Type2,
           Type: e.Type,
           value: e.value,
@@ -932,7 +1040,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
       console.error("Sigma graph could not be built:", err);
       return null;
     }
-  }, [nodes, edges, deg, settings, sigmaLayout, nodeSizeMode]);
+  }, [nodes, edges, deg, settings, sigmaLayout, nodeSizeMode, look]);
 
   // Tooltip: shown immediately, completed when the (cached) gene info arrives.
   // Stable identity, so the Sigma event listeners are registered only once.
@@ -970,33 +1078,41 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
     return <SigmaFallback nodes={nodes} edges={edges} height={height} />;
   }
 
-  return (
-    <div style={{ width: "100%", height, position: "relative", background: "#fff", borderRadius: 8, overflow: "hidden" }}>
-      {/* Enhanced Control Panel */}
-      <div style={{
-        position: "absolute",
-        top: 12,
-        right: 12,
-        zIndex: 10,
-        background: "rgba(255,255,255,0.95)",
-        padding: "12px",
-        borderRadius: 8,
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        minWidth: "200px"
-      }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Controls</div>
+  // Hover label in the theme's colours (the library default is a white box)
+  const drawThemedHover = (context, data, sigmaSettings) => {
+    const size = sigmaSettings.labelSize;
+    context.font = `${sigmaSettings.labelWeight} ${size}px ${sigmaSettings.labelFont}`;
+    const label = typeof data.label === "string" ? data.label : "";
+    const pad = 4;
+    const textWidth = label ? context.measureText(label).width : 0;
+    context.beginPath();
+    context.arc(data.x, data.y, data.size + 3, 0, Math.PI * 2);
+    context.fillStyle = look.hoverSoft;
+    context.fill();
+    if (!label) return;
+    const x = data.x + data.size + 4;
+    const boxHeight = size + pad * 2;
+    context.fillStyle = look.surface;
+    context.strokeStyle = look.border;
+    context.lineWidth = 1;
+    context.beginPath();
+    context.rect(x, data.y - boxHeight / 2, textWidth + pad * 2, boxHeight);
+    context.fill();
+    context.stroke();
+    context.fillStyle = look.label;
+    context.fillText(label, x + pad, data.y + size / 3);
+  };
 
-        {/* Layout Selection */}
-        <div>
-          <label style={{ fontSize: 11, color: "#666", display: "block", marginBottom: 2 }}>Layout</label>
+  return (
+    <div style={canvasFrame(look, height)}>
+      {/* Control panel */}
+      <div style={{ ...floatPanelStyle, flexDirection: "column", alignItems: "stretch", minWidth: 180 }}>
+        <label style={controlLabelStyle}>
+          Layout
           <select
             value={sigmaLayout}
             onChange={(e) => setSigmaLayout(e.target.value)}
-            style={{ fontSize: 11, padding: "4px 6px", width: "100%" }}
+            style={selectStyle}
           >
             <option value="fa2">ForceAtlas2</option>
             <option value="circular">Circular</option>
@@ -1004,15 +1120,14 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
             <option value="radial">Radial (by category)</option>
             <option value="random+noverlap">Random + Noverlap</option>
           </select>
-        </div>
+        </label>
 
-        {/* Node Size Mode */}
-        <div>
-          <label style={{ fontSize: 11, color: "#666", display: "block", marginBottom: 2 }}>Node Size</label>
+        <label style={controlLabelStyle}>
+          Node Size
           <select
             value={nodeSizeMode}
             onChange={(e) => setNodeSizeMode(e.target.value)}
-            style={{ fontSize: 11, padding: "4px 6px", width: "100%" }}
+            style={selectStyle}
           >
             <option value="degree">By Degree</option>
             <option value="knockdown">By Knockdown</option>
@@ -1020,10 +1135,9 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
             <option value="neighbourCount">By Neighbor Count</option>
             <option value="fixed">Fixed</option>
           </select>
-        </div>
+        </label>
 
-        {/* Toggle Labels */}
-        <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+        <label style={checkLabelStyle}>
           <input
             type="checkbox"
             checked={showLabels}
@@ -1039,19 +1153,21 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
           position: "absolute",
           left: "12px",
           top: "12px",
-          background: "rgba(0,0,0,0.9)",
-          color: "white",
-          padding: "12px",
+          background: "var(--gs-surface)",
+          color: "var(--gs-text)",
+          border: "1px solid var(--gs-border-strong)",
+          padding: "10px 12px",
           borderRadius: 8,
           fontSize: 12,
+          lineHeight: 1.45,
           maxWidth: "300px",
           zIndex: 15,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          boxShadow: "var(--gs-shadow-pop)",
         }}>
           <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
             {tooltip.nodeId}
             {tooltip.geneInfo?.name && (
-              <span style={{ fontWeight: 400, color: "#ccc", marginLeft: 4 }}>
+              <span style={{ fontWeight: 400, color: "var(--gs-muted)", marginLeft: 4 }}>
                 ({tooltip.geneInfo.name})
               </span>
             )}
@@ -1061,7 +1177,7 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
           <div>Neighbor Count: {tooltip.neighbourCount}</div>
           {Number.isFinite(tooltip.kd) && <div>Knockdown: {(+tooltip.kd).toFixed(3)}</div>}
           {tooltip.geneInfo?.description && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.2)", fontSize: 11, lineHeight: 1.4 }}>
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--gs-border)", color: "var(--gs-muted)", fontSize: 11, lineHeight: 1.4 }}>
               {tooltip.geneInfo.description}
             </div>
           )}
@@ -1069,7 +1185,9 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
       )}
 
       <SigmaContainer
-        style={{ width: "100%", height: "100%", background: "#fafafa" }}
+        // remounted on a theme switch: label and hover colours are settings
+        key={look.mode}
+        style={{ width: "100%", height: "100%", background: look.background }}
         graph={graph}
         settings={{
           allowInvalidContainer: true,
@@ -1078,9 +1196,10 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
           renderEdgeLabels: false,
           labelRenderedSizeThreshold: 8,
           labelSize: 12,
-          labelFont: 'Arial, sans-serif',
-          labelWeight: 'normal',
-          labelColor: { color: '#000' },
+          labelFont: 'Inter, "Segoe UI", Arial, sans-serif',
+          labelWeight: '600',
+          labelColor: { color: look.label },
+          defaultEdgeColor: look.edges.Exp,
           labelDensity: 0.5,
           labelGridCellSize: 100,
           minCameraRatio: 0.1,
@@ -1090,7 +1209,8 @@ function SigmaRenderer({ nodes, edges, deg, height, settings, nodeById }) {
           zIndex: true,
           // Provide the label renderer if available
           ...(drawLabel && { labelRenderer: drawLabel }),
-          ...(drawHover && { hoverRenderer: drawHover }),
+          defaultDrawNodeHover: drawThemedHover,
+          ...(drawHover && { hoverRenderer: drawThemedHover }),
         }}
       >
         <SigmaAutoFit />
@@ -1186,7 +1306,7 @@ function SigmaAutoFit() {
 }
 
 // ------------------ ForceGraph2D renderer (layouts + drag + details) ------------------
-function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree }) {
+function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, maxDegree, look }) {
   const [layout, setLayout] = useState("force"); // 'force' | 'circular' | 'grid' | 'radialByCategory' | 'layersByDegree'
   const [hoverNode, setHoverNode] = useState(null);
   const [hoverLink, setHoverLink] = useState(null);
@@ -1308,22 +1428,25 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, m
   );
 
   return (
-    <div style={{ position: "relative", width: "100%", height }}>
-      <div style={{ position: "absolute", right: 12, top: 12, zIndex: 5, background: "#fff", padding: 6, borderRadius: 6, border: "1px solid #e5e7eb" }}>
-        <label style={{ fontSize: 12, marginRight: 6 }}>Layout</label>
-        <select value={layout} onChange={(e) => setLayout(e.target.value)} style={{ fontSize: 12 }}>
-          <option value="force">Force</option>
-          <option value="circular">Circular</option>
-          <option value="grid">Grid</option>
-          <option value="radialByCategory">Radial by Category</option>
-          <option value="layersByDegree">Layers by Degree</option>
-        </select>
+    <div style={canvasFrame(look, height)}>
+      <div style={{ ...floatPanelStyle, zIndex: 5 }}>
+        <label style={controlLabelStyle}>
+          Layout
+          <select value={layout} onChange={(e) => setLayout(e.target.value)} style={selectStyle}>
+            <option value="force">Force</option>
+            <option value="circular">Circular</option>
+            <option value="grid">Grid</option>
+            <option value="radialByCategory">Radial by Category</option>
+            <option value="layersByDegree">Layers by Degree</option>
+          </select>
+        </label>
       </div>
 
       <ForceGraph2D
         ref={fgRef}
         graphData={data}
         height={height}
+        backgroundColor={look.background}
         cooldownTicks={layout === "force" ? 100 : 0}
         nodeRelSize={1}
         // The library's hit area and arrow offset follow nodeVal (area), not the
@@ -1346,22 +1469,20 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, m
         }
         linkDirectionalArrowLength={6}
         linkDirectionalArrowRelPos={1}
-        linkWidth={(l) => (l === hoverLink ? 3 : l.t2 === "Corr" ? 1.2 : 1.8)}
-        linkColor={(l) =>
-          l === hoverLink ? "#2563eb" : l.t2 === "Corr" ? EDGE_STYLES.Corr.color : EDGE_STYLES.Exp.color
-        }
+        linkWidth={(l) => (l === hoverLink ? 3 : l.t2 === "Corr" ? EDGE_WIDTHS.Corr : EDGE_WIDTHS.Exp)}
+        linkColor={(l) => (l === hoverLink ? look.hover : edgeColor({ Type2: l.t2 }, look))}
         linkLineDash={(l) => (l.t2 === "Corr" ? [4, 2] : null)}
         linkDirectionalParticles={(l) => (l === hoverLink ? 4 : 0)}
         linkDirectionalParticleSpeed={0.006}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const ndata = getNode(node.id) || {};
           const size = nodeSize(ndata, deg, settings, maxDegree);
-          const color = nodeColor(ndata, settings);
+          const color = nodeColor(ndata, look);
 
           if (hoverNode?.id === node.id || selNode?.id === node.id) {
             ctx.beginPath();
             ctx.arc(node.x, node.y, size + 6, 0, 2 * Math.PI, false);
-            ctx.fillStyle = "rgba(37, 99, 235, 0.18)";
+            ctx.fillStyle = look.hoverSoft;
             ctx.fill();
           }
 
@@ -1369,15 +1490,20 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, m
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
           ctx.fillStyle = color;
           ctx.fill();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = look.halo;
+          ctx.lineWidth = 1.5;
           ctx.stroke();
 
+          // label with a halo in the background colour
           const fontSize = Math.max(8, 10 / Math.sqrt(globalScale));
-          ctx.font = `${fontSize}px sans-serif`;
-          ctx.fillStyle = "#0f172a";
+          ctx.font = `600 ${fontSize}px Inter, "Segoe UI", sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
+          ctx.lineJoin = "round";
+          ctx.lineWidth = Math.max(2, fontSize / 4);
+          ctx.strokeStyle = look.halo;
+          ctx.strokeText(node.id, node.x, node.y + size + 3);
+          ctx.fillStyle = look.label;
           ctx.fillText(node.id, node.x, node.y + size + 3);
         }}
       />
@@ -1394,7 +1520,7 @@ function ForceGraph2DRenderer({ nodes, edges, deg, height, settings, nodeById, m
 }
 
 // ------------------ ForceGraph3D renderer (layouts + drag + details) ------------------
-function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
+function ForceGraph3DRenderer({ nodes, edges, deg, height, settings, look }) {
   const [layout, setLayout] = useState("force"); // 'force' | 'circular' | 'grid' | 'radialByCategory' | 'layersByDegree'
   const [hoverNode, setHoverNode] = useState(null);
   const [hoverLink, setHoverLink] = useState(null);
@@ -1521,22 +1647,25 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
   );
 
   return (
-    <div style={{ position: "relative", width: "100%", height }}>
-      <div style={{ position: "absolute", right: 12, top: 12, zIndex: 5, background: "#fff", padding: 6, borderRadius: 6, border: "1px solid #e5e7eb" }}>
-        <label style={{ fontSize: 12, marginRight: 6 }}>Layout</label>
-        <select value={layout} onChange={(e) => setLayout(e.target.value)} style={{ fontSize: 12 }}>
-          <option value="force">Force</option>
-          <option value="circular">Circular</option>
-          <option value="grid">Grid</option>
-          <option value="radialByCategory">Radial by Category</option>
-          <option value="layersByDegree">Layers by Degree</option>
-        </select>
+    <div style={canvasFrame(look, height)}>
+      <div style={{ ...floatPanelStyle, zIndex: 5 }}>
+        <label style={controlLabelStyle}>
+          Layout
+          <select value={layout} onChange={(e) => setLayout(e.target.value)} style={selectStyle}>
+            <option value="force">Force</option>
+            <option value="circular">Circular</option>
+            <option value="grid">Grid</option>
+            <option value="radialByCategory">Radial by Category</option>
+            <option value="layersByDegree">Layers by Degree</option>
+          </select>
+        </label>
       </div>
 
       <ForceGraph3D
         ref={fgRef}
         graphData={data}
         height={height}
+        backgroundColor={look.background}
         cooldownTicks={layout === "force" ? 100 : 0}
         nodeRelSize={4}
         enableNodeDrag={true}
@@ -1556,13 +1685,13 @@ function ForceGraph3DRenderer({ nodes, edges, deg, height, settings }) {
         linkDirectionalArrowLength={4}
         linkDirectionalArrowRelPos={1}
         linkWidth={(l) => (l === hoverLink ? 2.5 : l.t2 === "Corr" ? 1 : 1.4)}
-        linkColor={(l) =>
-          l === hoverLink ? "#2563eb" : l.t2 === "Corr" ? EDGE_STYLES.Corr.color : EDGE_STYLES.Exp.color
-        }
+        linkColor={(l) => (l === hoverLink ? look.hover : edgeColor({ Type2: l.t2 }, look))}
+        linkOpacity={0.6}
         linkDirectionalParticles={(l) => (l === hoverLink ? 6 : 0)}
         linkDirectionalParticleSpeed={0.01}
         // Default 3D node (sphere) color:
-        nodeColor={(n) => CATEGORY_COLORS[n.category ?? "default"] || CATEGORY_COLORS.default}
+        nodeColor={(n) => nodeColor(n, look)}
+        nodeOpacity={0.95}
       />
 
       {selNode && (
@@ -1583,22 +1712,25 @@ function DetailsCard({ node, info, onClose }) {
       style={{
         position: "absolute",
         right: 12,
-        top: 12,
-        background: "rgba(255,255,255,0.95)",
-        border: "1px solid #e5e7eb",
+        top: 70,
+        zIndex: 6,
+        background: "var(--gs-surface)",
+        color: "var(--gs-text)",
+        border: "1px solid var(--gs-border-strong)",
         padding: "10px 12px",
-        borderRadius: 10,
-        boxShadow: "0 10px 24px rgba(15,23,42,.12)",
+        borderRadius: 8,
+        boxShadow: "var(--gs-shadow-pop)",
         minWidth: 220,
         maxWidth: 350,
         fontSize: 12,
+        lineHeight: 1.45,
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
         <strong>
           {node.id}
           {info?.name && (
-            <span style={{ fontWeight: "normal", fontSize: 11, color: "#666" }}>
+            <span style={{ fontWeight: "normal", fontSize: 11, color: "var(--gs-muted)" }}>
               {" "}
               ({info.name})
             </span>
@@ -1606,7 +1738,7 @@ function DetailsCard({ node, info, onClose }) {
         </strong>
         <button
           onClick={onClose}
-          style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: 16 }}
+          style={{ border: 0, background: "transparent", color: "var(--gs-muted)", cursor: "pointer", fontSize: 16 }}
           aria-label="Close details"
           title="Close"
         >
@@ -1621,10 +1753,10 @@ function DetailsCard({ node, info, onClose }) {
           style={{
             marginTop: 8,
             paddingTop: 8,
-            borderTop: "1px solid #e5e7eb",
+            borderTop: "1px solid var(--gs-border)",
             fontSize: 11,
             lineHeight: 1.4,
-            color: "#555",
+            color: "var(--gs-muted)",
           }}
         >
           {info.description}
@@ -1740,7 +1872,7 @@ function seedLayersByDegree3D(arr, getDeg = (n) => n.degree, gap = 120) {
 }
 
 // ------------------ Direct Sigma renderer (using direct sigma library) ------------------
-function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
+function DirectSigmaRenderer({ nodes, edges, deg, height, settings, look }) {
   const containerRef = useRef(null);
   const sigmaRef = useRef(null);
 
@@ -1766,7 +1898,7 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
           y,
           size,
           label: String(n.id),
-          color: nodeColor(n, settings),
+          color: nodeColor(n, look),
           category: n.category,
           kd: n.kd,
           degree: deg[n.id] || 0,
@@ -1781,7 +1913,7 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
         
         g.addEdge(s, t, {
           size: edgeWidth(e),
-          color: edgeColor(e),
+          color: edgeColor(e, look),
           Type2: e.Type2,
           Type: e.Type,
           value: e.value,
@@ -1822,7 +1954,10 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
       }
 
       // Create Sigma instance
-      const sigma = new DirectSigma(g, containerRef.current);
+      const sigma = new DirectSigma(g, containerRef.current, {
+        labelColor: { color: look.label },
+        defaultEdgeColor: look.edges.Exp,
+      });
       sigmaRef.current = sigma;
 
       return () => {
@@ -1835,19 +1970,19 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
     } catch (err) {
       console.error("DirectSigmaRenderer error:", err);
     }
-  }, [nodes, edges, deg, settings]);
+  }, [nodes, edges, deg, settings, look]);
 
   return (
-    <div style={{ width: "100%", height, position: "relative", background: "#fff", borderRadius: 8, overflow: "hidden" }}>
-      <div style={{ position: "absolute", right: 12, top: 12, zIndex: 5, background: "#fff", padding: 6, borderRadius: 6, border: "1px solid #e5e7eb" }}>
-        <label style={{ fontSize: 12, marginRight: 6 }}>Layout</label>
+    <div style={canvasFrame(look, height)}>
+      <div style={{ ...floatPanelStyle, zIndex: 5 }}>
+        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gs-muted)" }}>Layout</label>
         <select 
           value={settings?.sigmaLayout || "fa2"} 
           onChange={(e) => {
             // This would need to be handled by parent component
             console.log("Layout change:", e.target.value);
           }} 
-          style={{ fontSize: 12 }}
+          style={selectStyle}
         >
           <option value="fa2">ForceAtlas2</option>
           <option value="circular">Circular</option>
@@ -1865,17 +2000,7 @@ function DirectSigmaRenderer({ nodes, edges, deg, height, settings }) {
 function CytoscapeFallback({ nodes, edges, height }) {
   return (
     <div
-      style={{
-        width: "100%",
-        height,
-        border: "2px dashed #e2e8f0",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        color: "#6c757d",
-      }}
+      style={fallbackStyle(height)}
     >
       <div>
         <h3>Cytoscape Not Available</h3>
@@ -1893,17 +2018,7 @@ function CytoscapeFallback({ nodes, edges, height }) {
 function SigmaFallback({ nodes, edges, height }) {
   return (
     <div
-      style={{
-        width: "100%",
-        height,
-        border: "2px dashed #e2e8f0",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        color: "#6c757d",
-      }}
+      style={fallbackStyle(height)}
     >
       <div>
         <h3>Sigma.js Not Available</h3>
@@ -1918,61 +2033,3 @@ function SigmaFallback({ nodes, edges, height }) {
     </div>
   );
 }
-
-// Note: ForceGraph2DFallback is defined but not currently used
-// function ForceGraph2DFallback({ nodes, edges, height }) {
-//   return (
-//     <div
-//       style={{
-//         width: "100%",
-//         height,
-//         border: "2px dashed #e2e8f0",
-//         borderRadius: "8px",
-//         display: "flex",
-//         alignItems: "center",
-//         justifyContent: "center",
-//         textAlign: "center",
-//         color: "#6c757d",
-//       }}
-//     >
-//       <div>
-//         <h3>ForceGraph2D Not Available</h3>
-//         <p>
-//           Install: <code>npm i react-force-graph-2d</code>
-//         </p>
-//         <p>
-//           {nodes.length} nodes, {edges.length} edges ready to render
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }
-
-// Note: ForceGraph3DFallback is defined but not currently used
-// function ForceGraph3DFallback({ nodes, edges, height }) {
-//   return (
-//     <div
-//       style={{
-//         width: "100%",
-//         height,
-//         border: "2px dashed #e2e8f0",
-//         borderRadius: "8px",
-//         display: "flex",
-//         alignItems: "center",
-//         justifyContent: "center",
-//         textAlign: "center",
-//         color: "#6c757d",
-//       }}
-//     >
-//       <div>
-//         <h3>ForceGraph3D Not Available</h3>
-//         <p>
-//           Install: <code>npm i react-force-graph-3d</code>
-//         </p>
-//         <p>
-//           {nodes.length} nodes, {edges.length} edges ready to render
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }

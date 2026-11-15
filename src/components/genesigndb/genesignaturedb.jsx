@@ -5,6 +5,7 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
+import { mrtLook } from "../../utils/tableStyle";
 import { 
   Box, 
   Rating, 
@@ -312,7 +313,6 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
       {
         accessorKey: "name",
         header: "Gene Signature",
-        muiTableHeadCellProps: { style: { color: "green" } },
         enableHiding: false,
         enablePinning: true,
         maxSize: 300,
@@ -346,7 +346,6 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
         enableColumnFilter: false,
         accessorKey: "source",
         header: "Source",
-        muiTableHeadCellProps: { style: { color: "green" } },
         enableHiding: false,
         maxSize: 250,
         minSize: 120,
@@ -388,15 +387,16 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
   );
 
   const table = useMaterialReactTable({
+    ...mrtLook(),
     columns,
     data: geneSignatures || [],
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => handleRowClick(row),
       sx: {
         cursor: 'pointer',
-        backgroundColor: selectedGeneSignature?.id === row.original.id ? '#e3f2fd' : 'inherit',
-        '&:hover': {
-          backgroundColor: selectedGeneSignature?.id === row.original.id ? '#bbdefb' : '#f5f5f5',
+        backgroundColor: selectedGeneSignature?.id === row.original.id ? 'var(--gs-selected)' : 'var(--gs-surface)',
+        '&:hover > td': {
+          backgroundColor: selectedGeneSignature?.id === row.original.id ? 'var(--gs-selected)' : 'var(--gs-hover)',
         },
       },
     }),
@@ -418,6 +418,7 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
         minHeight: 0, // Allow flexbox to shrink
       },
     },
+    enableStickyHeader: true,
     initialState: {
       showGlobalFilter: true,
       density: "compact",
@@ -471,13 +472,6 @@ const GeneSignatureSearchPopup = ({ open, onClose, onGeneListSelect, onSelectAnd
               <Button
                 variant="contained"
                 onClick={() => setShowSuggestionForm(true)}
-                sx={{ 
-                  backgroundColor: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: '#45a049',
-                  },
-                  color: 'white'
-                }}
                 size="small"
               >
                 Suggest Gene Signature

@@ -1,4 +1,7 @@
-/* Shared look for chart/table toolbars, legends and empty states. */
+/* Shared look of the analysis pages: toolbars, buttons, legends, notices,
+   panels, the module introduction and plain tables. Colours are the tokens of
+   global.scss, so everything follows the light/dark theme. */
+@use "../../common/page" as page;
 
 .toolbar {
   display: flex;
@@ -14,10 +17,10 @@
   gap: 6px;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #c4c9d0;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #2b3440;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -27,12 +30,11 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: #f1f3f5;
-    border-color: #9aa1ab;
+    background: var(--gs-hover);
   }
 
   &:focus-visible {
-    outline: 2px solid #1976d2;
+    outline: 2px solid var(--gs-focus);
     outline-offset: 1px;
   }
 
@@ -43,33 +45,47 @@
 }
 
 .primary {
-  border-color: #1976d2;
-  background: #1976d2;
-  color: #ffffff;
+  border-color: var(--gs-accent);
+  background: var(--gs-accent);
+  color: var(--gs-on-accent);
 
   &:hover:not(:disabled) {
-    background: #145ea8;
-    border-color: #145ea8;
+    border-color: var(--gs-accent-hover);
+    background: var(--gs-accent-hover);
   }
 }
 
 .small {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
 }
+
+.ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--gs-link);
+}
+
+.active {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent-soft);
+  color: var(--gs-accent);
+}
+
+/* ---- legend ---- */
 
 .legend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 18px;
-  padding: 6px 10px;
-  margin-bottom: 6px;
-  border: 1px solid #e0e0e0;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--gs-border);
   border-radius: 6px;
-  background: #fafafa;
-  color: #424242;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
   font-size: 12px;
 }
 
@@ -84,7 +100,7 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--gs-border-strong);
   flex: none;
 }
 
@@ -95,8 +111,10 @@
 }
 
 .legendNote {
-  color: #757575;
+  color: var(--gs-muted);
 }
+
+/* ---- empty state ---- */
 
 .empty {
   display: flex;
@@ -104,19 +122,305 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 32px 16px;
-  color: #5f6b7a;
+  padding: 36px 16px;
+  color: var(--gs-muted);
   text-align: center;
 }
 
 .emptyTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #2b3440;
+  color: var(--gs-text);
 }
 
 .emptyHint {
   font-size: 13px;
   max-width: 460px;
   line-height: 1.5;
+}
+
+/* ---- notice: a coloured box for a tip, warning or error ---- */
+
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--gs-text);
+
+  strong {
+    font-weight: 600;
+  }
+}
+
+.noticeIcon {
+  flex: none;
+  margin-top: 3px;
+}
+
+.noticeBody {
+  min-width: 0;
+}
+
+.info {
+  background: var(--gs-info-soft);
+  border-left-color: var(--gs-info);
+
+  .noticeIcon {
+    color: var(--gs-info);
+  }
+}
+
+.success {
+  background: var(--gs-success-soft);
+  border-left-color: var(--gs-success);
+
+  .noticeIcon {
+    color: var(--gs-success);
+  }
+}
+
+.warning {
+  background: var(--gs-warning-soft);
+  border-left-color: var(--gs-warning);
+
+  .noticeIcon {
+    color: var(--gs-warning);
+  }
+}
+
+.danger {
+  background: var(--gs-danger-soft);
+  border-left-color: var(--gs-danger);
+
+  .noticeIcon {
+    color: var(--gs-danger);
+  }
+}
+
+/* ---- panel: a bordered surface for a chart, table or group of controls ---- */
+
+.panel {
+  margin: 0 0 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+}
+
+.panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--gs-border);
+  border-radius: 8px 8px 0 0;
+  background: var(--gs-surface-alt);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gs-text);
+}
+
+.panelSubtitle {
+  margin-left: 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--gs-muted);
+}
+
+.panelBody {
+  padding: 12px 14px;
+}
+
+.panelFlush {
+  padding: 0;
+}
+
+/* ---- module introduction ---- */
+
+.intro {
+  margin: 0 0 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  overflow: hidden;
+}
+
+.introHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gs-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-focus);
+    outline-offset: -2px;
+  }
+}
+
+.introTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gs-text);
+}
+
+.introChevron {
+  flex: none;
+  color: var(--gs-muted);
+  transition: transform 0.15s ease;
+}
+
+.introChevronOpen {
+  transform: rotate(180deg);
+}
+
+.introBody {
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--gs-border);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--gs-text);
+
+  p {
+    max-width: 980px;
+    margin: 0 0 10px;
+    color: var(--gs-text);
+  }
+}
+
+.introFeaturesTitle {
+  margin: 4px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gs-muted);
+}
+
+.introFeatures {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 13.5px;
+  color: var(--gs-text);
+
+  li {
+    margin-bottom: 2px;
+    color: var(--gs-text);
+  }
+}
+
+/* ---- plain table ---- */
+
+.tableScroll {
+  overflow: auto;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+}
+
+.table {
+  @include page.table;
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.num {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- small pieces ---- */
+
+.sectionTitle {
+  margin: 18px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gs-text);
+}
+
+.muted {
+  color: var(--gs-muted);
+  font-size: 13px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border: 1px solid var(--gs-border);
+  border-radius: 999px;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.badgeKey {
+  color: var(--gs-muted);
+}
+
+.badgeAccent {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent-soft);
+  color: var(--gs-accent);
+  font-weight: 600;
+}
+
+.badgeUp {
+  border-color: transparent;
+  background: var(--gs-up-soft);
+  color: var(--gs-up);
+  font-weight: 600;
+}
+
+.badgeDown {
+  border-color: transparent;
+  background: var(--gs-down-soft);
+  color: var(--gs-down);
+  font-weight: 600;
+}
+
+/* Frame for a chart: the surface it is drawn on */
+.chartFrame {
+  position: relative;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg);
+  overflow: hidden;
 }

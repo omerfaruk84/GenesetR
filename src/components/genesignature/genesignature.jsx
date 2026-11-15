@@ -6,17 +6,12 @@ import {
   ButtonGroup,
   Tabs,
   Toggle,
-  Flex,
-  Text,
-  Button,
 } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable, FaSortAmountUpAlt, FaSortAmountDownAlt } from "react-icons/fa";
 import styles from "../../pages/genesignature/gene-signature-page.module.scss";
 import { connect } from "react-redux";
 import { useEffect } from "react";
 import * as echarts from "echarts/core";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 //import GraphChart from 'echarts/charts';
 import { ScatterChart } from "echarts/charts";
 import EnrichmentTable from "../enrichment-table-new";
@@ -44,16 +39,9 @@ import { createGeneTooltipFormatter, buildGeneScoreTooltip } from "../../utils/g
 import { formulaSymbolSet, toggleGeneInFormula } from "../../utils/geneFormula";
 import { buildTopBottomGeneLists, splitGenesByScore } from "../../utils/geneListUtils";
 import { withErrorBoundary } from "../error-boundary";
-import { ToolbarButton, ChartLegend } from "../ui";
-import {
-  UP_RGB,
-  DOWN_RGB,
-  HIGHLIGHT_RGB,
-  CONTROL_RGB,
-  OTHER_RGB,
-  rgba,
-  stableUnit,
-} from "../../utils/chartStyle";
+import { Toolbar, ToolbarButton, ChartLegend, EmptyState, ModuleIntro, Notice } from "../ui";
+import { rgba, stableUnit } from "../../utils/chartStyle";
+import { useChartTheme, haloLabel, saveImageFeature } from "../../utils/chartTheme";
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 
@@ -121,7 +109,7 @@ const buildSignatureTableLists = (rows) => {
 const formatScore = (value) =>
   typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : undefined;
 
-const signatureTooltipFormatter = createGeneTooltipFormatter({
+const createSignatureTooltipFormatter = (p) => createGeneTooltipFormatter({
   parseData: (params) => ({
     geneSymbol: params?.data?.[2],
     zScore: params?.data?.[0],
@@ -132,10 +120,10 @@ const signatureTooltipFormatter = createGeneTooltipFormatter({
     const z = parsed.zScore;
     const effect =
       z > 2
-        ? { label: "Increases Signature", color: rgba(UP_RGB) }
+        ? { label: "Increases Signature", color: rgba(p.upRgb) }
         : z < -2
-          ? { label: "Decreases Signature", color: rgba(DOWN_RGB) }
-          : { label: "No Significant Effect", color: "#9e9e9e" };
+          ? { label: "Decreases Signature", color: rgba(p.downRgb) }
+          : { label: "No Significant Effect", color: p.muted };
     return buildGeneScoreTooltip({
       geneSymbol,
       geneInfo,
@@ -149,6 +137,13 @@ const signatureTooltipFormatter = createGeneTooltipFormatter({
     });
   },
 });
+
+// One formatter per palette: it keeps a cache of gene descriptions
+const tooltipFormatters = new Map();
+const signatureTooltipFormatterFor = (p) => {
+  if (!tooltipFormatters.has(p)) tooltipFormatters.set(p, createSignatureTooltipFormatter(p));
+  return tooltipFormatters.get(p);
+};
 
 echarts.use([
   TitleComponent,
@@ -193,6 +188,7 @@ const moduleDescription = {
 };
 
 const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache, multiDatasetRunning, data, similarData, multiDatasetData, similarLoading, blacklistData, blacklistLoading, dispatch, coreSettingsChanged }) => {
+  const chart = useChartTheme();
   // Use sessionStorage to persist selectedView across data updates and component remounts
   const getInitialSelectedView = () => {
     const saved = sessionStorage.getItem('geneSignatureSelectedView');
@@ -618,16 +614,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           const isIncluded = isInSignature(gene);
           return (
             <button
+              type="button"
+              className={isIncluded ? styles.removeButton : styles.addButton}
               onClick={() => toggleGeneInSignature(gene)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: isIncluded ? '#ffecec' : '#e8f5e9',
-                color: isIncluded ? '#c0392b' : '#2e7d32',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
             >
               {isIncluded ? 'Remove' : 'Add'}
             </button>
@@ -838,16 +827,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           const isIncluded = isInSignature(gene);
           return (
             <button
+              type="button"
+              className={isIncluded ? styles.removeButton : styles.addButton}
               onClick={() => toggleGeneInSignature(gene)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: isIncluded ? '#ffecec' : '#e8f5e9',
-                color: isIncluded ? '#c0392b' : '#2e7d32',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
             >
               {isIncluded ? 'Remove' : 'Add'}
             </button>
@@ -1652,50 +1634,32 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       return;
     }
 
+    const p = chart.p;
     setOptions({
       tooltip: {
-        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
+        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5; border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,0.18);",
         confine: true,
-        backgroundColor: "#ffffff",
-        borderColor: "#e0e0e0",
-        borderWidth: 1,
         // Shared formatter: cached gene info, escaped HTML, and it never
         // stays on "Loading..." when Harmonizome has no entry for a gene.
-        formatter: signatureTooltipFormatter,
+        formatter: signatureTooltipFormatterFor(p),
       },
       xAxis: [
         {
           type: "value",
-          //max:pointData.length>0?Math.ceil(pointData[0][0] + 0.1):2,
-          //min:pointData.length>0?Math.floor(pointData[pointData.length-1][0] - 0.1):-2
-          axisLine: {
-            lineStyle: {
-              color: "black",
-            },
-          },
-          axisLabel: {
-            color: "black",
-            fontSize: 16,
-          },
-          axisTick: {
-            lineStyle: {
-              color: "black",
-            },
-          },
+          axisLabel: { fontSize: 13 },
           name: "Z-score of the signature score",
-          nameTextStyle: {
-            fontSize: 16,
-            color: "black",
-          },
-          nameGap: 38,
+          nameTextStyle: { fontSize: 14 },
+          nameGap: 34,
           nameLocation: "middle",
+          splitLine: { show: true, lineStyle: { color: p.grid } },
         },
       ],
       grid: [
         {
-          left: 50,
-          top: 20,
-          bottom: 100,
+          left: 28,
+          right: 28,
+          top: 36,
+          bottom: 104,
         },
       ],
       yAxis: {
@@ -1710,16 +1674,20 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           // startValue: 10,  // Increase this value
           // endValue: 90,     // Decrease this value
           xAxisIndex: [0],
+          height: 18,
+          bottom: 14,
           //  filterMode: 'empty'
         },
       ],
       toolbox: {
+        right: 12,
+        top: 4,
         feature: {
           dataZoom: {
             yAxisIndex: "none",
           },
           restore: {},
-          saveAsImage: { name: "genesetr_gene_signature", pixelRatio: 2 },
+          saveAsImage: saveImageFeature(p, "genesetr_gene_signature"),
           mySvg: svgToolboxFeature("genesetr-gene-signature"),
           myPdf: pdfToolboxFeature("genesetr-gene-signature"),
         },
@@ -1746,23 +1714,32 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return rgba(CONTROL_RGB, 0.5);
+                return rgba(p.controlRgb, 0.6);
               else if (params.data[4] === true) {
-                return rgba(HIGHLIGHT_RGB, 0.7);
+                return rgba(p.highlightRgb, 0.8);
               } else if (params.data[0] > 2) {
-                return rgba(UP_RGB, 0.75);
+                return rgba(p.upRgb, 0.8);
               } else if (params.data[0] < -2) {
-                return rgba(DOWN_RGB, 0.75);
+                return rgba(p.downRgb, 0.8);
               } else {
-                return rgba(OTHER_RGB, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
+                return rgba(p.otherRgb, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
               }
             },
           },
+          // Quiet guides at z = 2 and z = -2, the limits of a clear effect
+          markLine: {
+            silent: true,
+            symbol: "none",
+            animation: false,
+            label: { show: false },
+            lineStyle: { color: p.axis, type: "dashed", width: 1 },
+            data: [{ xAxis: 2 }, { xAxis: -2 }],
+          },
           label: {
+            ...haloLabel(p),
             show: true,
-            color: "black",
             position: "top",
-            fontSize: 14,
+            fontSize: 12,
             formatter: function (params) {
               if (params.data[4] === true) {
                 return params.data[2];
@@ -1784,7 +1761,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         },
       ],
     });
-  }, [pointData, pointDistribution]);
+  }, [pointData, pointDistribution, chart.p]);
 
 
 
@@ -1792,103 +1769,53 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     <>
     
      
-      <Accordion defaultExpanded={true}
-            sx={{
-              marginBottom: '14px',
-              backgroundColor: '#f8f9fa', 
-              border: '1px solid #e9ecef',
-
-              borderRadius: '8px',
-              '&:before': {
-                display: 'none',
-              },
-              '& .MuiAccordionSummary-root': {
-      minHeight: '30px',
-      height: '30px',
-    }
-    , '& .MuiAccordionSummary-root.Mui-expanded': {
-      minHeight:  '30px',
-      height: '30px',
-    }}}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-               sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-            >
-              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-            </AccordionSummary>
-            <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
-              <p style={{ margin: '0 0 0px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-                {moduleDescription.description}
-              </p>    
-               <br/>
-         <p style={{ margin: '0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-        {selectedView === 0 ?        
-            moduleDescription.tabs.chart: 
-         selectedView === 1 ? moduleDescription.tabs.table : 
-         selectedView === 2 ? moduleDescription.tabs.similarGenes :
-         selectedView === 3 ? moduleDescription.tabs.multiDataset :
-         moduleDescription.tabs.multiDatasetSimilar
-        }
-         </p>        
-             
-            </AccordionDetails>
-          </Accordion>
-
-      <ButtonGroup
-        items={availableTabs}
-        onSelected={handleTabSelection}
-        value={selectedView}
+      <ModuleIntro
+        title={moduleDescription.title}
+        description={[
+          moduleDescription.description,
+          selectedView === 0 ? moduleDescription.tabs.chart :
+          selectedView === 1 ? moduleDescription.tabs.table :
+          selectedView === 2 ? moduleDescription.tabs.similarGenes :
+          selectedView === 3 ? moduleDescription.tabs.multiDataset :
+          moduleDescription.tabs.multiDatasetSimilar,
+        ]}
+        defaultExpanded={false}
       />
-      <PlotHelp kind="signature" />
+
+      <Toolbar>
+        <ButtonGroup
+          items={availableTabs}
+          onSelected={handleTabSelection}
+          value={selectedView}
+        />
+        <PlotHelp kind="signature" />
+      </Toolbar>
       {signatureDirty && (
-        <div style={{
-          marginTop: '8px',
-          padding: '10px 12px',
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffeeba',
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px'
-        }}>
-          <Text muted style={{ color: '#8a6d3b' }}>
+        <Notice kind="warning" style={{ marginTop: 10, marginBottom: 0 }}>
+          <span className={styles.dirtyRow}>
             Gene signature changed. Re-run analysis to update results.
-          </Text>
-          <Button
-            small
-            colored="success"
-            label="Re-run analysis"
-            onClick={() => {
-              setSignatureDirty(false);
-              dispatch(runCalculation(ROUTES.GENESIGNATURE));
-            }}
-          />
-        </div>
+            <ToolbarButton
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                setSignatureDirty(false);
+                dispatch(runCalculation(ROUTES.GENESIGNATURE));
+              }}
+            >
+              Re-run analysis
+            </ToolbarButton>
+          </span>
+        </Notice>
       )}
       {blacklistLoading && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#e8f5e8', 
-          borderLeft: '4px solid #4caf50',
-          borderRadius: '4px',
-          color: '#2e7d32',
-          marginBottom: '8px'
-        }}>
-          🔄 Loading blacklist data for filtering...
-        </div>
+        <Notice kind="info" style={{ marginTop: 10, marginBottom: 0 }}>
+          Loading blacklist data for filtering...
+        </Notice>
       )}
       <Spacer height={5} />
       {keyedData && selectedView === 1 && !hasMultiDatasetSelection && (
         <>
-          <div style={{ height: "60vh", overflow: "auto" }}>
+          <div className={styles.tableArea}>
             <EnrichmentTable data={keyedData} columns={columns} onSortedDataChange={handleTableDataChange} />
           </div>
           <Spacer height={10} />
@@ -1907,7 +1834,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
               {enrichmentTabTable.value === "gsea" ? (
                 <GeneSetEnrichmentTable genesets={genelistsTable} />
               ) : (
-                <span> Will be available soon! </span>
+                <span className={styles.viewNote}>Will be available soon.</span>
               )}
             </>
           )}
@@ -1916,7 +1843,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
       {keyedData2 && selectedView === 2 && !hasMultiDatasetSelection && (
         <>
-          <div style={{ height: "60vh", overflow: "auto" }}>
+          <div className={styles.tableArea}>
             <EnrichmentTable data={keyedData2} columns={columns2} onSortedDataChange={handleSimilarDataChange} />
           </div>
           <Spacer height={10} />
@@ -1935,7 +1862,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
               {enrichmentTabSimilar.value === "gsea" ? (
                 <GeneSetEnrichmentTable genesets={genelistsSimilar} />
               ) : (
-                <span> Will be available soon! </span>
+                <span className={styles.viewNote}>Will be available soon.</span>
               )}
             </>
           )}
@@ -1944,86 +1871,67 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
       {selectedView === 3 && hasMultiDatasetSelection && (
         <>
-          
+                    <p className={styles.viewNote}>
+            Gene signature analysis across whole-genome datasets. Rankings show relative positions within each dataset.
+            {genesignatureSettings?.filter && ' Blacklisted sgRNAs are filtered based on sidebar settings.'}
+          </p>
 
           {/* Controls for ranks and ordering */}
-          <Flex justifyContent="flex-start" alignItems="left" gap="10px" style={{ marginBottom: '10px' }}>
-            {/* Toggle for showing ranks */}
-                       <Text muted style={{ marginBottom: '10px' }}>
-             Gene signature analysis across whole-genome datasets. Rankings show relative positions within each dataset. 
-             {genesignatureSettings?.filter && 'Blacklisted sgRNAs are filtered based on sidebar settings.'}
-           </Text>
-            <Flex justifyContent="flex-end" alignItems="center" gap="16px" style={{ flexWrap: "wrap" }}>
-              <Flex alignItems="center" gap="10px">
-                <Text size="small">Rank based average:</Text>
-                <Toggle
-                  checked={showRanks}
-                  onChange={(e) => {
-                    setShowRanks(e.target.checked);
-                  }}
-                />
-                {showRanks && (
-                  <Flex alignItems="center" gap="8px">
-                    <Text size="small">Rank order:</Text>
-                    <ToolbarButton
-                      onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
-                      title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
-                    >
-                      {rankOrder === 'asc' ? (
-                        <>
-                          <FaSortAmountUpAlt style={{ color: '#28a745' }} />
-                          <span>Low → High</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaSortAmountDownAlt style={{ color: '#dc3545' }} />
-                          <span>High → Low</span>
-                        </>
-                      )}
-                    </ToolbarButton>
-                  </Flex>
-                )}
-              </Flex>
-              <Flex alignItems="center" gap="8px">
-                <Text size="small">Show genes in at least</Text>
-                <select
-                  value={minDatasetsAtLeast}
-                  onChange={(e) => {
-                    minDatasetsTouchedRef.current = true;
-                    const next = Number(e.target.value);
-                    setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
-                  }}
-                  style={{
-                    minWidth: "60px",
-                    width: "60px",
-                    padding: "4px 8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    backgroundColor: "#fff",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
+          <div className={styles.controls}>
+            <label className={styles.control}>
+              <span>Rank based average</span>
+              <Toggle
+                checked={showRanks}
+                onChange={(e) => {
+                  setShowRanks(e.target.checked);
+                }}
+              />
+            </label>
+            {showRanks && (
+              <span className={styles.control}>
+                <span>Rank order</span>
+                <ToolbarButton
+                  size="sm"
+                  onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
+                  title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
                 >
-                  {minDatasetOptions.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <Text size="small">datasets.</Text>
-              </Flex>
-            </Flex>
-          </Flex>
+                  {rankOrder === 'asc' ? (
+                    <>
+                      <FaSortAmountUpAlt aria-hidden="true" />
+                      <span>Low → High</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaSortAmountDownAlt aria-hidden="true" />
+                      <span>High → Low</span>
+                    </>
+                  )}
+                </ToolbarButton>
+              </span>
+            )}
+            <label className={styles.control}>
+              <span>Show genes in at least</span>
+              <select
+                className={styles.select}
+                value={minDatasetsAtLeast}
+                onChange={(e) => {
+                  minDatasetsTouchedRef.current = true;
+                  const next = Number(e.target.value);
+                  setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
+                }}
+              >
+                {minDatasetOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span>datasets</span>
+            </label>
+          </div>
 
           {(hasMultiDatasetSelection && (multiMissingDatasets.length > 0 || multiErroredDatasets.length > 0 || multiResultDatasets.length < 2)) && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#f8f9fa',
-              borderLeft: '4px solid #6c757d',
-              borderRadius: '4px',
-              color: '#495057',
-              marginBottom: '12px'
-            }}>
+            <Notice kind={multiErroredDatasets.length > 0 ? "warning" : "info"}>
               {multiResultDatasets.length < 2 && (
                 <div>
                   Computed {multiResultDatasets.length}/{normalizedSelectedDatasets.length} datasets for this signature.
@@ -2044,12 +1952,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   Updating...
                 </div>
               )}
-            </div>
+            </Notice>
           )}
 
           {Array.isArray(keyedDataMulti) && keyedDataMulti.length > 0 && keyedDataMulti[0]?.gene && (
             <>
-              <div style={{ height: "60vh", overflow: "auto" }}>
+              <div className={styles.tableArea}>
                 <EnrichmentTable 
                   data={keyedDataMulti} 
                   columns={columnsMulti} 
@@ -2074,7 +1982,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   {enrichmentTabMulti.value === "gsea" ? (
                     <GeneSetEnrichmentTable genesets={genelistsMulti} />
                   ) : (
-                    <span> Will be available soon! </span>
+                    <span className={styles.viewNote}>Will be available soon.</span>
                   )}
                 </>
               )}
@@ -2082,95 +1990,80 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           )}
 
           {(!Array.isArray(keyedDataMulti) || keyedDataMulti.length === 0 || !keyedDataMulti[0]?.gene) && !multiDatasetRunning && (
-            <Text muted>
-              {Object.keys(cacheForFormula || {}).length === 0
-                ? "Click Calculate to compute gene signature for the selected datasets."
-                : "No multi-dataset rows match the current filters/settings."}
-            </Text>
+            <EmptyState
+              title={
+                Object.keys(cacheForFormula || {}).length === 0
+                  ? "Click Calculate to compute gene signature for the selected datasets."
+                  : "No multi-dataset rows match the current filters/settings."
+              }
+            />
           )}
         </>
       )}
 
       {selectedView === 4 && hasMultiDatasetSelection && (
         <>
-          <Text muted style={{ marginBottom: '10px' }}>
-            Genes that correlate with your signature across multiple whole-genome datasets. 
-            {genesignatureSettings?.filter && 'Blacklisted sgRNAs are filtered based on sidebar settings.'}
-          </Text>
-          
+          <p className={styles.viewNote}>
+            Genes that correlate with your signature across multiple whole-genome datasets.
+            {genesignatureSettings?.filter && ' Blacklisted sgRNAs are filtered based on sidebar settings.'}
+          </p>
+
           {/* Controls for ranks and ordering */}
-          <Flex justifyContent="flex-start" alignItems="left" gap="10px" style={{ marginBottom: '10px' }}>
-            <Flex justifyContent="flex-end" alignItems="center" gap="16px" style={{ flexWrap: "wrap" }}>
-              <Flex alignItems="center" gap="10px">
-                <Text size="small">Rank based average:</Text>
-                <Toggle
-                  checked={showRanks}
-                  onChange={(e) => {
-                    setShowRanks(e.target.checked);
-                  }}
-                />
-                {showRanks && (
-                  <Flex alignItems="center" gap="8px">
-                    <Text size="small">Rank order:</Text>
-                    <ToolbarButton
-                      onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
-                      title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
-                    >
-                      {rankOrder === 'asc' ? (
-                        <>
-                          <FaSortAmountUpAlt style={{ color: '#28a745' }} />
-                          <span>Low → High</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaSortAmountDownAlt style={{ color: '#dc3545' }} />
-                          <span>High → Low</span>
-                        </>
-                      )}
-                    </ToolbarButton>
-                  </Flex>
-                )}
-              </Flex>
-              <Flex alignItems="center" gap="8px">
-                <Text size="small">Show genes in at least</Text>
-                <select
-                  value={minDatasetsAtLeast}
-                  onChange={(e) => {
-                    minDatasetsTouchedRef.current = true;
-                    const next = Number(e.target.value);
-                    setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
-                  }}
-                  style={{
-                    minWidth: "60px",
-                    width: "60px",
-                    padding: "4px 8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    backgroundColor: "#fff",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
+          <div className={styles.controls}>
+            <label className={styles.control}>
+              <span>Rank based average</span>
+              <Toggle
+                checked={showRanks}
+                onChange={(e) => {
+                  setShowRanks(e.target.checked);
+                }}
+              />
+            </label>
+            {showRanks && (
+              <span className={styles.control}>
+                <span>Rank order</span>
+                <ToolbarButton
+                  size="sm"
+                  onClick={() => setRankOrder(rankOrder === 'asc' ? 'desc' : 'asc')}
+                  title={rankOrder === 'asc' ? 'Click to change to: High → Low (1st = highest)' : 'Click to change to: Low → High (1st = lowest)'}
                 >
-                  {minDatasetOptions.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <Text size="small">datasets.</Text>
-              </Flex>
-            </Flex>
-          </Flex>
+                  {rankOrder === 'asc' ? (
+                    <>
+                      <FaSortAmountUpAlt aria-hidden="true" />
+                      <span>Low → High</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaSortAmountDownAlt aria-hidden="true" />
+                      <span>High → Low</span>
+                    </>
+                  )}
+                </ToolbarButton>
+              </span>
+            )}
+            <label className={styles.control}>
+              <span>Show genes in at least</span>
+              <select
+                className={styles.select}
+                value={minDatasetsAtLeast}
+                onChange={(e) => {
+                  minDatasetsTouchedRef.current = true;
+                  const next = Number(e.target.value);
+                  setMinDatasetsAtLeast(Number.isFinite(next) ? next : 1);
+                }}
+              >
+                {minDatasetOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span>datasets</span>
+            </label>
+          </div>
 
           {(hasMultiDatasetSelection && (multiMissingDatasets.length > 0 || multiErroredDatasets.length > 0 || multiSimilarResultDatasets.length < 2)) && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#f8f9fa',
-              borderLeft: '4px solid #6c757d',
-              borderRadius: '4px',
-              color: '#495057',
-              marginBottom: '12px'
-            }}>
+            <Notice kind={multiErroredDatasets.length > 0 ? "warning" : "info"}>
               {multiSimilarResultDatasets.length < 2 && (
                 <div>
                   Computed {multiSimilarResultDatasets.length}/{normalizedSelectedDatasets.length} datasets for this signature.
@@ -2191,12 +2084,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   Updating...
                 </div>
               )}
-            </div>
+            </Notice>
           )}
 
           {Array.isArray(keyedDataMultiSimilar) && keyedDataMultiSimilar.length > 0 && (
             <>
-              <div style={{ height: "60vh", overflow: "auto" }}>
+              <div className={styles.tableArea}>
                 <EnrichmentTable 
                   data={keyedDataMultiSimilar} 
                   columns={columnsMultiSimilar} 
@@ -2221,7 +2114,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
                   {enrichmentTabMultiSimilar.value === "gsea" ? (
                     <GeneSetEnrichmentTable genesets={genelistsMultiSimilar} />
                   ) : (
-                    <span> Will be available soon! </span>
+                    <span className={styles.viewNote}>Will be available soon.</span>
                   )}
                 </>
               )}
@@ -2229,11 +2122,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           )}
           
           {(!Array.isArray(keyedDataMultiSimilar) || keyedDataMultiSimilar.length === 0) && !multiDatasetRunning && Object.keys(cacheForFormula || {}).length > 0 && (
-            <Text muted>No similar genes found after filtering. Try adjusting your gene signature or filter settings.</Text>
+            <EmptyState title="No similar genes found after filtering" hint="Try adjusting your gene signature or filter settings." />
           )}
 
           {(!Array.isArray(keyedDataMultiSimilar) || keyedDataMultiSimilar.length === 0) && !multiDatasetRunning && Object.keys(cacheForFormula || {}).length === 0 && (
-            <Text muted>Click Calculate to compute gene signature for the selected datasets.</Text>
+            <EmptyState title="Click Calculate to compute gene signature for the selected datasets." />
           )}
         </>
       )}
@@ -2243,22 +2136,18 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           <ChartLegend
             label="Signature score legend"
             items={[
-              { label: "Z-score above 2", color: rgba(UP_RGB, 0.75) },
-              { label: "Z-score below -2", color: rgba(DOWN_RGB, 0.75) },
-              { label: "Highlighted perturbation", color: rgba(HIGHLIGHT_RGB, 0.7) },
-              { label: "Non-targeting control", color: rgba(CONTROL_RGB, 0.8) },
-              { label: "Other perturbations", color: rgba(OTHER_RGB, 0.6) },
+              { label: "Z-score above 2", color: rgba(chart.p.upRgb, 0.8) },
+              { label: "Z-score below -2", color: rgba(chart.p.downRgb, 0.8) },
+              { label: "Highlighted perturbation", color: rgba(chart.p.highlightRgb, 0.8) },
+              { label: "Non-targeting control", color: rgba(chart.p.controlRgb, 0.8) },
+              { label: "Other perturbations", color: rgba(chart.p.otherRgb, 0.6) },
             ]}
             note="Each point is one perturbation; larger points have stronger scores"
           />
-          <div style={{ 
-            height: "350px", 
-            width: "100%", 
-            marginBottom: "0px",
-            minHeight: "350px"
-          }}>
+          <div className={styles.chartArea}>
             <ReactEChartsCore
               echarts={echarts}
+              theme={chart.theme}
               option={options}
               style={{ height: "100%", width: "100%" }}
               notMerge={false}
@@ -2284,7 +2173,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
           {selectedTab.value === "gsea" ? (
             <GeneSetEnrichmentTable genesets={genelists} />
           ) : (
-            <span> Will be available soon! </span>
+            <span className={styles.viewNote}>Will be available soon.</span>
           )}
         </>
       )}

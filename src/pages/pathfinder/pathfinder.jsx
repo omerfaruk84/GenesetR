@@ -5,8 +5,7 @@ import { ModulePathNames } from '../../store/results/enums';
 import styles from './pathfinder-page.module.scss';
 import VideoHelpPage from '../../components/video-help';
 import helpVideo from '../../common/videos/5.webm';
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ModuleIntro, Notice } from '../../components/ui';
 import { LoadingPage } from '../../components/loading-page';
 import { fetchBlacklistData } from '../../store/blacklist';
 import { coreSettingsChanged } from '../../store/settings/core-settings';
@@ -108,70 +107,18 @@ const PathFinderPage = ({ pathfinderResults, calcResults, blacklistData, blackli
       {pathfinderResults ? (
         <PathFinder pathFinderGraph={pathfinderResults} blacklistData={blacklistData} pathfinderSettings={pathfinderSettings} /> 
       ) : (
-        <div>  
-          <Accordion 
+        <div>
+          <ModuleIntro
+            title={moduleDescription.title}
+            description={[moduleDescription.description, moduleDescription.description2]}
+            features={moduleDescription.features}
             expanded={isDescriptionExpanded}
-            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
-        sx={{
-          marginBottom: '14px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #e9ecef',
-          borderRadius: '8px',
-          '&:before': {
-            display: 'none',
-          },
-              '& .MuiAccordionSummary-root': {
-        minHeight: '30px',
-        height: '30px',
-      }
-      , '& .MuiAccordionSummary-root.Mui-expanded': {
-        minHeight:  '30px',
-        height: '30px',
-      }
-        }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ padding: '6px 14px 5px' }}>
-          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-            {moduleDescription.description}
-          </p>
-          <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-            {moduleDescription.description2}
-          </p>
-          <div style={{ fontSize: '13px', color: '#424242' }}>
-            <strong>Key Features:</strong>
-            <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '2px' }}>{feature}</li>
-              ))}
-            </ul>
-          </div>
-        </AccordionDetails>
-      </Accordion>
-       <div style={{ 
-    padding: '12px', 
-    backgroundColor: '#e3f2fd', 
-    borderLeft: '4px solid #1976d2',
-    borderRadius: '4px',
-    color: '#1565c0',
-    marginBottom: '8px'
-  }}>
-    Tip: Select a dataset from the left sidebar, then enter your gene list in the perturbations field to begin.
-  </div>
-       
-        <VideoHelpPage videoFile={helpVideo}/>
+            onChange={setIsDescriptionExpanded}
+          />
+          <Notice kind="info">
+            Select a dataset from the left sidebar, then enter your gene list in the perturbations field to begin.
+          </Notice>
+          <VideoHelpPage videoFile={helpVideo}/>
         </div>
 
       )}

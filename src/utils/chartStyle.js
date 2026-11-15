@@ -4,7 +4,13 @@
  * and stable pseudo-random numbers.
  */
 
-/** "r, g, b" of the two directions (orange = up / positive, purple = down / negative). */
+/**
+ * "r, g, b" of the two directions (orange = up / positive, purple = down /
+ * negative) on a light background. Charts take the values of the current theme
+ * from the palette instead (`useChartTheme().p.upRgb`, `.downRgb`,
+ * `.highlightRgb`, `.controlRgb`, `.otherRgb`); these constants remain for code
+ * that draws on a fixed light background.
+ */
 export const UP_RGB = "230, 97, 1";
 export const DOWN_RGB = "94, 60, 153";
 export const HIGHLIGHT_RGB = "39, 96, 245";

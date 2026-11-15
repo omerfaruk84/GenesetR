@@ -1,0 +1,388 @@
+// Dataset list of the settings sidebar: filter, kind chips, tree / checkbox
+// list and the notes below it. Colours are the tokens of global.scss.
+
+.filterBar {
+  margin-bottom: 6px;
+}
+
+.filterInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 12px;
+
+  &::placeholder {
+    color: var(--gs-faint);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-focus);
+    outline-offset: -1px;
+  }
+}
+
+.kinds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.kind {
+  padding: 1px 8px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 999px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gs-hover);
+  }
+}
+
+.kindActive {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent);
+  color: var(--gs-on-accent);
+
+  &:hover {
+    background: var(--gs-accent);
+  }
+}
+
+.aboutLink {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--gs-link);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ---- notes ----
+
+.note {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-left: 3px solid var(--gs-info);
+  border-radius: 6px;
+  background: var(--gs-info-soft);
+  color: var(--gs-text);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.noteWarning {
+  border-left-color: var(--gs-warning);
+  background: var(--gs-warning-soft);
+}
+
+// ---- list box ----
+
+.box {
+  box-sizing: border-box;
+  height: 250px;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+}
+
+.boxHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gs-border);
+  color: var(--gs-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.boxCount {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.helpDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 50%;
+  color: var(--gs-muted);
+  font-size: 10px;
+  letter-spacing: 0;
+  cursor: help;
+}
+
+.status {
+  padding: 20px;
+  color: var(--gs-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// ---- rows ----
+
+.row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--gs-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: var(--gs-hover);
+  }
+}
+
+.rowActive {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent-soft);
+
+  &:hover {
+    background: var(--gs-accent-soft);
+  }
+
+  .rowName {
+    color: var(--gs-accent);
+    font-weight: 600;
+  }
+}
+
+.rowChild {
+  width: calc(100% - 14px);
+  margin-left: 14px;
+}
+
+.rowName {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--gs-text);
+  font-size: 12.5px;
+  line-height: 1.3;
+}
+
+.rowExtra {
+  color: var(--gs-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.userIcon {
+  flex-shrink: 0;
+  color: var(--gs-link);
+  font-size: 10px;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--gs-accent);
+  cursor: pointer;
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: var(--gs-danger);
+  font-size: 12px;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.groupToggle {
+  align-self: flex-start;
+  margin-left: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-link);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ---- tree ----
+
+.treeNode {
+  margin-left: 0;
+}
+
+.treeNodeNested {
+  margin-left: 12px;
+  border-left: 1px solid var(--gs-border);
+}
+
+.treeLine {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.treeLineNested {
+  padding-left: 8px;
+}
+
+.treeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  margin-right: 4px;
+  color: var(--gs-muted);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.treeSpacer {
+  width: 18px;
+}
+
+.treeChildren {
+  margin-top: 2px;
+}
+
+// ---- below the list ----
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--gs-muted);
+  font-size: 12px;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--gs-accent);
+  color: var(--gs-on-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.option {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface-alt);
+}
+
+.optionTitle {
+  margin-bottom: 8px;
+  color: var(--gs-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.optionHelp {
+  margin-top: 8px;
+  color: var(--gs-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+
+  strong {
+    color: var(--gs-text);
+    font-weight: 600;
+  }
+}
+
+// ---- load error ----
+
+.error {
+  padding: 16px;
+  border: 1px solid var(--gs-danger);
+  border-radius: 8px;
+  background: var(--gs-danger-soft);
+  color: var(--gs-text);
+  font-size: 13px;
+  text-align: center;
+}
+
+.errorTitle {
+  margin-bottom: 6px;
+  color: var(--gs-danger);
+  font-weight: 600;
+}
+
+.errorText {
+  margin-bottom: 12px;
+  color: var(--gs-muted);
+}
+
+.retry {
+  padding: 6px 16px;
+  border: 1px solid var(--gs-accent);
+  border-radius: 6px;
+  background: var(--gs-accent);
+  color: var(--gs-on-accent);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--gs-accent-hover);
+    background: var(--gs-accent-hover);
+  }
+}

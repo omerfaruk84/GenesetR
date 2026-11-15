@@ -5,8 +5,7 @@ import styles from './gene-signature-page.module.scss';
 import { ModulePathNames } from '../../store/results/enums';
 import VideoHelpPage from '../../components/video-help';
 import helpVideo from '../../common/videos/6.webm';
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ModuleIntro } from '../../components/ui';
 import { LoadingPage } from '../../components/loading-page';
 
 const normalizeGeneSignatureFormula = (value = "") =>
@@ -119,47 +118,12 @@ const GeneSignaturePage = ({
         />
         ) : (
             <div>  
-            <Accordion 
+            <ModuleIntro
+              title={moduleDescription.title}
+              description={moduleDescription.description}
               expanded={isDescriptionExpanded}
-              onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
-            sx={{
-              marginBottom: '14px',
-              backgroundColor: '#f8f9fa', 
-              border: '1px solid #e9ecef',
-
-              borderRadius: '8px',
-              '&:before': {
-                display: 'none',
-              },
-              '& .MuiAccordionSummary-root': {
-      minHeight: '30px',
-      height: '30px',
-    }
-    , '& .MuiAccordionSummary-root.Mui-expanded': {
-      minHeight:  '30px',
-      height: '30px',
-    }}}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-            >
-              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-            </AccordionSummary>
-            <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
-              <p style={{ margin: '0 0 0px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-                {moduleDescription.description}
-              </p>    
-              
-             
-            </AccordionDetails>
-          </Accordion>
+              onChange={setIsDescriptionExpanded}
+            />
             <VideoHelpPage videoFile={helpVideo}/>
             </div>
           )}

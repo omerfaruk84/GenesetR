@@ -1,12 +1,13 @@
 /**
  * Light / dark theme.
  *
- * The colour tokens in global.scss switch on `data-gs-theme` of <html>. The
- * top bar and the token-based pages (gene page, dataset catalog, ...) follow
- * the theme. The analysis pages draw their charts with fixed light colours, so
- * their sidebar and result area stay on a light "paper" in dark mode.
+ * The colour tokens in global.scss switch on `data-gs-theme` of <html>; the UI
+ * library switches its own variables on `data-theme`, so both are set. Code
+ * that needs colour values (charts, canvas, the MUI theme) reads them from
+ * utils/palette.js through usePalette() / useChartTheme().
  */
 import { useSyncExternalStore } from "react";
+import { paletteOf } from "./palette";
 
 const STORAGE_KEY = "genesetr_theme";
 const listeners = new Set();
@@ -23,8 +24,14 @@ let current = readStored();
 
 const apply = () => {
   if (typeof document === "undefined") return;
-  if (current === "dark") document.documentElement.setAttribute("data-gs-theme", "dark");
-  else document.documentElement.removeAttribute("data-gs-theme");
+  const root = document.documentElement;
+  if (current === "dark") {
+    root.setAttribute("data-gs-theme", "dark");
+    root.setAttribute("data-theme", "dark");
+  } else {
+    root.removeAttribute("data-gs-theme");
+    root.removeAttribute("data-theme");
+  }
 };
 
 // Applied as soon as this module loads, so the page does not flash light first
@@ -50,3 +57,6 @@ const subscribe = (listener) => {
 
 /** Current theme ("light" | "dark"); re-renders the component when it changes. */
 export const useTheme = () => useSyncExternalStore(subscribe, getTheme, getTheme);
+
+/** Colour values of the current theme (see utils/palette.js). */
+export const usePalette = () => paletteOf(useTheme());

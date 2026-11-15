@@ -24,7 +24,7 @@
 
 .scrollArea {
   scrollbar-width: thin;
-  scrollbar-color: #c0c0c0 transparent;
+  scrollbar-color: var(--gs-border-strong) transparent;
 }
 
 div.edgeArea div[class*="labelLeft"] {

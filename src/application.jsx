@@ -4,6 +4,9 @@ import { MainView } from './components/main-view';
 import { Toaster } from '@oliasoft-open-source/react-ui-library';
 import { fetchBlacklistData } from './store/blacklist';
 import { fetchDatasetsFromBackend, setSessionId } from './store/settings/core-settings';
+import { ThemeProvider } from '@mui/material/styles';
+import { useTheme } from './utils/theme';
+import { muiThemeOf } from './utils/muiTheme';
 import './global.scss';
 
 const SESSION_STORAGE_KEY = 'genesetr_session_id';
@@ -78,12 +81,15 @@ const Application = () => {
     dispatch(fetchDatasetsFromBackend(sessionId));
   }, [dispatch]);
 
-  return (
-    <div className='application'>
-      <MainView />
-      <Toaster />
-    </div>
+  const theme = useTheme();
 
+  return (
+    <ThemeProvider theme={muiThemeOf(theme)}>
+      <div className='application'>
+        <MainView />
+        <Toaster />
+      </div>
+    </ThemeProvider>
   );
 };
 

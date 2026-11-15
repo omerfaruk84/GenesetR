@@ -1,33 +1,20 @@
 import { PlotHelp } from "../plot-help";
-import { ChartLegend, EmptyState } from "../ui";
-import {
-  UP_RGB,
-  DOWN_RGB,
-  HIGHLIGHT_RGB,
-  CONTROL_RGB,
-  OTHER_RGB,
-  rgba,
-  stableUnit,
-} from "../../utils/chartStyle";
+import { ChartLegend, EmptyState, ModuleIntro, Notice, Panel, Toolbar } from "../ui";
+import { rgba, stableUnit } from "../../utils/chartStyle";
+import { useChartTheme, haloLabel, saveImageFeature } from "../../utils/chartTheme";
 
 import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import React, { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { safeJsonParse } from "../../utils/jsonUtils";
 import {
-  Table,
   Spacer,
   ButtonGroup,
   Tabs,
   Field,
-  Label,
-  Card,
-  Text,
   Select,
 } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable } from "react-icons/fa";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import styles from "../../pages/expressionanalyzer/expression-analyzer.module.scss";
 import { connect } from "react-redux";
 import { useEffect } from "react";
@@ -62,14 +49,26 @@ import { CoreSettingsTypes } from "../side-bar/settings/enums";
 import { fetchCellCycleComparisonV2 } from "../../store/api/v2";
 
 // Export buttons of the cell-cycle charts (the main scatter has its own)
-const cellCycleToolbox = {
+const cellCycleToolbox = (p) => ({
   right: 8,
+  top: 2,
+  itemSize: 13,
   feature: {
-    saveAsImage: { name: "genesetr_cell_cycle", pixelRatio: 2 },
+    saveAsImage: saveImageFeature(p, "genesetr_cell_cycle"),
     mySvg: svgToolboxFeature("genesetr-cell-cycle"),
     myPdf: pdfToolboxFeature("genesetr-cell-cycle"),
   },
-};
+});
+
+// Shared furniture of the small cell-cycle charts
+const cellCycleTitle = (text) => ({
+  text,
+  left: 12,
+  top: 6,
+  textStyle: { fontSize: 13, fontWeight: 600 },
+});
+const cellCycleLegend = { top: 30, left: 12, itemWidth: 14, itemHeight: 9, icon: "roundRect" };
+const cellCycleGrid = { top: 66, left: 14, right: 22, bottom: 30, containLabel: true };
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 // Development-only logging.
@@ -85,7 +84,7 @@ const formatScore = (value) =>
 
 // Tooltip of the expression / correlation scatter.
 // Point data: [score, jitterY, gene, rawScore, highlighted]
-const createAnalyzerTooltipFormatter = (isCorrelationMode) =>
+const createAnalyzerTooltipFormatter = (isCorrelationMode, p) =>
   createGeneTooltipFormatter({
     parseData: (params) => ({
       geneSymbol: params?.data?.[2],
@@ -96,28 +95,30 @@ const createAnalyzerTooltipFormatter = (isCorrelationMode) =>
     renderTooltip: (geneSymbol, geneInfo, parsed, state) => {
       const score = parsed.score;
       let analysis;
+      const up = rgba(p.upRgb);
+      const down = rgba(p.downRgb);
       if (isCorrelationMode) {
         analysis =
           score > 0.5
-            ? { label: "Strong Positive Correlation", color: rgba(UP_RGB) }
+            ? { label: "Strong Positive Correlation", color: up }
             : score < -0.5
-              ? { label: "Strong Negative Correlation", color: rgba(DOWN_RGB) }
+              ? { label: "Strong Negative Correlation", color: down }
               : score > 0.15
-                ? { label: "Moderate Positive Correlation", color: rgba(UP_RGB, 0.75) }
+                ? { label: "Moderate Positive Correlation", color: up }
                 : score < -0.15
-                  ? { label: "Moderate Negative Correlation", color: rgba(DOWN_RGB, 0.75) }
-                  : { label: "Weak Correlation", color: "#9e9e9e" };
+                  ? { label: "Moderate Negative Correlation", color: down }
+                  : { label: "Weak Correlation", color: p.muted };
       } else {
         analysis =
           score > 2
-            ? { label: "Strong Upregulation", color: rgba(UP_RGB) }
+            ? { label: "Strong Upregulation", color: up }
             : score < -2
-              ? { label: "Strong Downregulation", color: rgba(DOWN_RGB) }
+              ? { label: "Strong Downregulation", color: down }
               : score > 0.5
-                ? { label: "Moderate Upregulation", color: rgba(UP_RGB, 0.75) }
+                ? { label: "Moderate Upregulation", color: up }
                 : score < -0.5
-                  ? { label: "Moderate Downregulation", color: rgba(DOWN_RGB, 0.75) }
-                  : { label: "No Significant Change", color: "#9e9e9e" };
+                  ? { label: "Moderate Downregulation", color: down }
+                  : { label: "No Significant Change", color: p.muted };
       }
       const rows = [
         { label: "Analysis", value: analysis.label, color: analysis.color, bold: true },
@@ -180,6 +181,7 @@ const ExpressionAnalyzer = ({
   blacklistData,
   blacklistLoading,
 }) => {
+  const chart = useChartTheme();
   const [selectedView, setSelectedView] = useState(0);
   const [options, setOptions] = useState({});
   const [pointData, setPointData] = useState([]);
@@ -865,44 +867,28 @@ const ExpressionAnalyzer = ({
   const chartOptions = useMemo(() => {
     if (!data || !pointData.length) return {};
     
+    const p = chart.p;
+    const isCorrelation = selectedInnerTab.value === 1;
+    // z beyond 2, or r beyond 0.5, counts as a strong effect
+    const strongLimit = isCorrelation ? 0.5 : 2;
+
     return {
       tooltip: {
-        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5;",
+        extraCssText: "width:auto; white-space:normal; max-width: 400px; z-index: 9999; padding: 12px; line-height: 1.5; border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,0.18);",
         confine: true,
-        backgroundColor: "#ffffff",
-        borderColor: "#e0e0e0",
-        borderWidth: 1,
         // Shared formatter: cached gene info, escaped HTML, and it never
         // stays on "Loading..." when Harmonizome has no entry for a gene.
-        formatter: createAnalyzerTooltipFormatter(selectedInnerTab.value === 1),
+        formatter: createAnalyzerTooltipFormatter(isCorrelation, p),
       },
       xAxis: [
         {
           type: "value",
-          axisLine: {
-            lineStyle: {
-              color: "black",
-            },
-          },
-          axisLabel: {
-            color: "black",
-            fontSize: 16,
-          },
-          axisTick: {
-            lineStyle: {
-              color: "black",
-            },
-          },
-          name:
-            selectedInnerTab.value === 0
-              ? "Z-Score"
-              : "Correlation Coefficient",
-          nameTextStyle: {
-            fontSize: 16,
-            color: "black",
-          },
-          nameGap: 38,
+          axisLabel: { fontSize: 13 },
+          name: isCorrelation ? "Correlation coefficient (r)" : "Z-score",
+          nameTextStyle: { fontSize: 14 },
+          nameGap: 34,
           nameLocation: "middle",
+          splitLine: { show: true, lineStyle: { color: p.grid } },
         },
       ],
       yAxis: {
@@ -914,25 +900,30 @@ const ExpressionAnalyzer = ({
           show: true,
           realtime: true,
           xAxisIndex: [0],
+          height: 18,
+          bottom: 14,
         },
       ],
       toolbox: {
+        right: 12,
+        top: 4,
         feature: {
           dataZoom: {
             yAxisIndex: "none",
             slider: { endValue: 0.5 },
           },
           restore: {},
-          saveAsImage: {},
+          saveAsImage: saveImageFeature(p, "genesetr-expression"),
           mySvg: svgToolboxFeature("genesetr-expression"),
           myPdf: pdfToolboxFeature("genesetr-expression"),
         },
       },
       grid: [
         {
-          left: 50,
-          top: 20,
-          bottom: 100,
+          left: 28,
+          right: 28,
+          top: 36,
+          bottom: 104,
         },
       ],
       series: [
@@ -955,41 +946,38 @@ const ExpressionAnalyzer = ({
           itemStyle: {
             color: function (params) {
               if (params.data[2].startsWith("non-targeting"))
-                return rgba(CONTROL_RGB, 0.5);
+                return rgba(p.controlRgb, 0.6);
               else if (params.data[4] === true) {
-                return rgba(HIGHLIGHT_RGB, 0.7);
+                return rgba(p.highlightRgb, 0.8);
               }
-              else if (
-                (selectedInnerTab.value === 0 && params.data[0] > 2) ||
-                (selectedInnerTab.value === 1 && params.data[0] > 0.5)
-              ) {
-                return rgba(UP_RGB, 0.75);
-              } else if (
-                (selectedInnerTab.value === 0 && params.data[0] < -2) ||
-                (selectedInnerTab.value === 1 && params.data[0] < -0.5)
-              ) {
-                return rgba(DOWN_RGB, 0.75);
-              } else if (
-                selectedInnerTab.value === 1 &&
-                params.data[0] > 0.15
-              ) {
-                return rgba(UP_RGB, 0.4);
-              } else if (
-                selectedInnerTab.value === 1 &&
-                params.data[0] < -0.15
-              ) {
+              else if (params.data[0] > strongLimit) {
+                return rgba(p.upRgb, 0.8);
+              } else if (params.data[0] < -strongLimit) {
+                return rgba(p.downRgb, 0.8);
+              } else if (isCorrelation && params.data[0] > 0.15) {
+                return rgba(p.upRgb, 0.4);
+              } else if (isCorrelation && params.data[0] < -0.15) {
                 // moderate negative correlation (mirror of the > 0.15 branch)
-                return rgba(DOWN_RGB, 0.4);
+                return rgba(p.downRgb, 0.4);
               } else {
-                return rgba(OTHER_RGB, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
+                return rgba(p.otherRgb, (Math.abs(params.data[0]) + 0.1) * 0.15 + 0.185);
               }
             },
           },
+          // Quiet guides at the limits of a strong effect
+          markLine: {
+            silent: true,
+            symbol: "none",
+            animation: false,
+            label: { show: false },
+            lineStyle: { color: p.axis, type: "dashed", width: 1 },
+            data: [{ xAxis: strongLimit }, { xAxis: -strongLimit }],
+          },
           label: {
+            ...haloLabel(p),
             show: true,
-            color: "black",
             position: "top",
-            fontSize: 14,
+            fontSize: 12,
             formatter: function (params) {
               // Highlighted genes and strong effects (z beyond 2, or r beyond 0.5)
               const strong = selectedInnerTab.value === 1 ? 0.5 : 2;
@@ -1024,6 +1012,7 @@ const ExpressionAnalyzer = ({
     pointDistribution,
     selectedInnerTab.value,
     selectedTab.value,
+    chart.p,
   ]);
 
   useEffect(() => {
@@ -1036,21 +1025,18 @@ const ExpressionAnalyzer = ({
     const pct = (x) => Math.round((x || 0) * 1000) / 10;
     const c = cellCycleData.control.phase_pct;
     const t = cellCycleData.target.phase_pct;
+    const p = chart.p;
 
     return {
-      title: {
-        text: "Cell-cycle phase composition (%, Control vs Perturbation)",
-        left: "center",
-        textStyle: { fontSize: 14, fontWeight: 600 },
-      },
+      title: cellCycleTitle("Phase composition, control vs perturbation"),
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
         valueFormatter: (v) => `${v}%`,
       },
-      legend: { top: 28 },
-      toolbox: cellCycleToolbox,
-      grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
+      legend: cellCycleLegend,
+      toolbox: cellCycleToolbox(p),
+      grid: cellCycleGrid,
       xAxis: { type: "category", data: ["Control", "Perturbation"] },
       yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
       series: [
@@ -1059,25 +1045,26 @@ const ExpressionAnalyzer = ({
           type: "bar",
           stack: "total",
           data: [pct(c.g1), pct(t.g1)],
-          itemStyle: { color: "#4e79a7" },
+          itemStyle: { color: p.series[0], borderRadius: 0 },
+          barWidth: "46%",
         },
         {
           name: "S",
           type: "bar",
           stack: "total",
           data: [pct(c.s), pct(t.s)],
-          itemStyle: { color: "#59a14f" },
+          itemStyle: { color: p.series[2], borderRadius: 0 },
         },
         {
           name: "G2M",
           type: "bar",
           stack: "total",
           data: [pct(c.g2m), pct(t.g2m)],
-          itemStyle: { color: "#e15759" },
+          itemStyle: { color: p.series[1], borderRadius: 0 },
         },
       ],
     };
-  }, [cellCycleData]);
+  }, [cellCycleData, chart.p]);
 
   const cellCyclePhaseGroupedOption = useMemo(() => {
     if (!cellCycleData?.target?.phase_pct || !cellCycleData?.control?.phase_pct) return null;
@@ -1085,21 +1072,21 @@ const ExpressionAnalyzer = ({
     const pct = (x) => Math.round((x || 0) * 1000) / 10;
     const c = cellCycleData.control.phase_pct;
     const t = cellCycleData.target.phase_pct;
+    const p = chart.p;
+
+    const controlColor = p.faint;
+    const targetColor = p.series[0];
 
     return {
-      title: {
-        text: "Cell-cycle phase composition (%, grouped)",
-        left: "center",
-        textStyle: { fontSize: 14, fontWeight: 600 },
-      },
+      title: cellCycleTitle("Phase composition (% of cells)"),
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
         valueFormatter: (v) => `${v}%`,
       },
-      legend: { top: 28 },
-      toolbox: cellCycleToolbox,
-      grid: { top: 64, left: 40, right: 20, bottom: 32, containLabel: true },
+      legend: cellCycleLegend,
+      toolbox: cellCycleToolbox(p),
+      grid: cellCycleGrid,
       xAxis: { type: "category", data: ["G1", "S", "G2M"] },
       yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
       series: [
@@ -1107,22 +1094,27 @@ const ExpressionAnalyzer = ({
           name: "Control",
           type: "bar",
           data: [pct(c.g1), pct(c.s), pct(c.g2m)],
-          itemStyle: { color: "#9aa0a6" },
-          barWidth: "35%",
+          itemStyle: { color: controlColor, borderRadius: [2, 2, 0, 0] },
+          barWidth: "32%",
+          barGap: "8%",
         },
         {
           name: "Perturbation",
           type: "bar",
           data: [pct(t.g1), pct(t.s), pct(t.g2m)],
-          itemStyle: { color: "#1a73e8" },
-          barWidth: "35%",
+          itemStyle: { color: targetColor, borderRadius: [2, 2, 0, 0] },
+          barWidth: "32%",
         },
       ],
     };
-  }, [cellCycleData]);
+  }, [cellCycleData, chart.p]);
 
   const cellCycleScoreOption = useMemo(() => {
     if (!cellCycleData?.bins?.s?.x?.length || !cellCycleData?.bins?.g2m?.x?.length) return null;
+
+    const p = chart.p;
+    const controlColor = p.faint;
+    const targetColor = p.series[0];
 
     const makeOption = (scoreKey, title) => {
       const x = cellCycleData.bins[scoreKey].x;
@@ -1140,17 +1132,17 @@ const ExpressionAnalyzer = ({
       const toPairs = (xs, ys) => xs.map((v, i) => [v, ys[i] ?? 0]);
 
       return {
-        title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 600 } },
+        title: cellCycleTitle(title),
         tooltip: {
           trigger: "axis",
           valueFormatter: (value) =>
             typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : value,
         },
-        legend: { top: 28 },
-        toolbox: cellCycleToolbox,
-        grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
-        xAxis: { type: "value", name: "Score" },
-        yAxis: { type: "value", name: "Density" },
+        legend: cellCycleLegend,
+        toolbox: cellCycleToolbox(p),
+        grid: { ...cellCycleGrid, bottom: 36 },
+        xAxis: { type: "value", name: "Score", nameLocation: "middle", nameGap: 26, splitLine: { show: false } },
+        yAxis: { type: "value", name: "Density", nameLocation: "middle", nameGap: 44 },
         series: [
           {
             name: "Control",
@@ -1158,15 +1150,16 @@ const ExpressionAnalyzer = ({
             smooth: true,
             showSymbol: false,
             data: toPairs(x, yC),
-            lineStyle: { width: 2, color: "#9aa0a6" },
-            areaStyle: { opacity: 0.12, color: "#9aa0a6" },
+            lineStyle: { width: 2, color: controlColor },
+            itemStyle: { color: controlColor },
+            areaStyle: { opacity: 0.12, color: controlColor },
             markLine: {
               symbol: ["none", "none"],
               data: [
                 { xAxis: meanC, name: "mean (ctrl)" },
                 { xAxis: medC, name: "median (ctrl)" },
               ],
-              lineStyle: { color: "#9aa0a6", type: "dashed" },
+              lineStyle: { color: controlColor, type: "dashed" },
               label: { formatter: "{b}" },
             },
           },
@@ -1176,15 +1169,16 @@ const ExpressionAnalyzer = ({
             smooth: true,
             showSymbol: false,
             data: toPairs(x, yT),
-            lineStyle: { width: 2, color: "#1a73e8" },
-            areaStyle: { opacity: 0.12, color: "#1a73e8" },
+            lineStyle: { width: 2, color: targetColor },
+            itemStyle: { color: targetColor },
+            areaStyle: { opacity: 0.12, color: targetColor },
             markLine: {
               symbol: ["none", "none"],
               data: [
                 { xAxis: meanT, name: "mean (pert)" },
                 { xAxis: medT, name: "median (pert)" },
               ],
-              lineStyle: { color: "#1a73e8", type: "dashed" },
+              lineStyle: { color: targetColor, type: "dashed" },
               label: { formatter: "{b}" },
             },
           },
@@ -1193,15 +1187,19 @@ const ExpressionAnalyzer = ({
     };
 
     return {
-      s: makeOption("s", "S score distribution (density)"),
-      g2m: makeOption("g2m", "G2M score distribution (density)"),
+      s: makeOption("s", "S score distribution"),
+      g2m: makeOption("g2m", "G2M score distribution"),
     };
-  }, [cellCycleData]);
+  }, [cellCycleData, chart.p]);
 
   const cellCycleViolinOption = useMemo(() => {
     if (!cellCycleData?.bins?.s?.x?.length || !cellCycleData?.bins?.g2m?.x?.length) return null;
 
     const toPairs = (xs, ys, sign = 1) => xs.map((v, i) => [v, sign * (ys?.[i] ?? 0)]);
+
+    const p = chart.p;
+    const controlColor = p.faint;
+    const targetColor = p.series[0];
 
     const makeHalfViolin = (scoreKey, title) => {
       const x = cellCycleData.bins[scoreKey].x;
@@ -1221,22 +1219,25 @@ const ExpressionAnalyzer = ({
       const meanC = scoreKey === "s" ? c.mean_s : c.mean_g2m;
 
       return {
-        title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 600 } },
+        title: cellCycleTitle(title),
         tooltip: {
           trigger: "axis",
           valueFormatter: (v) => Math.abs(v).toExponential(2),
         },
-        legend: { top: 28 },
-        toolbox: cellCycleToolbox,
-        grid: { top: 64, left: 46, right: 18, bottom: 32, containLabel: true },
-        xAxis: { type: "value", name: "Score" },
+        legend: cellCycleLegend,
+        toolbox: cellCycleToolbox(p),
+        grid: { ...cellCycleGrid, bottom: 36 },
+        xAxis: { type: "value", name: "Score", nameLocation: "middle", nameGap: 26, splitLine: { show: false } },
         yAxis: {
           type: "value",
           min: -yMax,
           max: yMax,
           name: "Density",
+          nameLocation: "middle",
+          nameGap: 12,
           axisLabel: { show: false },
-          splitLine: { lineStyle: { color: "#eef1f4" } },
+          axisTick: { show: false },
+          splitLine: { show: false },
         },
         series: [
           {
@@ -1245,8 +1246,9 @@ const ExpressionAnalyzer = ({
             smooth: true,
             showSymbol: false,
             data: toPairs(x, yC, -1),
-            lineStyle: { width: 1.5, color: "#9aa0a6" },
-            areaStyle: { opacity: 0.25, color: "#9aa0a6" },
+            lineStyle: { width: 1.5, color: controlColor },
+            itemStyle: { color: controlColor },
+            areaStyle: { opacity: 0.25, color: controlColor },
           },
           {
             name: "Perturbation",
@@ -1254,27 +1256,28 @@ const ExpressionAnalyzer = ({
             smooth: true,
             showSymbol: false,
             data: toPairs(x, yT, 1),
-            lineStyle: { width: 1.5, color: "#1a73e8" },
-            areaStyle: { opacity: 0.25, color: "#1a73e8" },
+            lineStyle: { width: 1.5, color: targetColor },
+            itemStyle: { color: targetColor },
+            areaStyle: { opacity: 0.25, color: targetColor },
             markLine: {
               symbol: ["none", "none"],
               data: [
                 {
                   xAxis: meanC,
                   name: "mean (ctrl)",
-                  lineStyle: { color: "#9aa0a6", type: "dashed" },
+                  lineStyle: { color: controlColor, type: "dashed" },
                   label: { formatter: "{b}" },
                 },
                 {
                   xAxis: meanT,
                   name: "mean (pert)",
-                  lineStyle: { color: "#1a73e8", type: "dashed" },
+                  lineStyle: { color: targetColor, type: "dashed" },
                   label: { formatter: "{b}" },
                 },
                 {
                   yAxis: 0,
                   name: "",
-                  lineStyle: { color: "#cfd4da", type: "solid" },
+                  lineStyle: { color: p.grid, type: "solid" },
                   label: { show: false },
                 },
               ],
@@ -1285,10 +1288,10 @@ const ExpressionAnalyzer = ({
     };
 
     return {
-      s: makeHalfViolin("s", "S score half-violin (Control ↔ Perturbation)"),
-      g2m: makeHalfViolin("g2m", "G2M score half-violin (Control ↔ Perturbation)"),
+      s: makeHalfViolin("s", "S score, control (below) vs perturbation (above)"),
+      g2m: makeHalfViolin("g2m", "G2M score, control (below) vs perturbation (above)"),
     };
-  }, [cellCycleData]);
+  }, [cellCycleData, chart.p]);
 
   // Get progress state
   const progressMessage = calcResults?.[ModulePathNames["/expressionanalyzer"]]?.progressMessage;
@@ -1304,73 +1307,29 @@ const ExpressionAnalyzer = ({
       )}
       {!isCalcRunning && (
         <>
-          <Accordion defaultExpanded={true}
-            sx={{
-              marginBottom: '14px',
-              backgroundColor: '#f8f9fa', 
-              border: '1px solid #e9ecef',
-
-              borderRadius: '8px',
-              '&:before': {
-                display: 'none',
-              },
-              '& .MuiAccordionSummary-root': {
-      minHeight: '30px',
-      height: '30px',
-    }
-    , '& .MuiAccordionSummary-root.Mui-expanded': {
-      minHeight:  '30px',
-      height: '30px',
-    }
-            }}
+          <ModuleIntro
+            title={moduleDescription.title}
+            description={moduleDescription.description}
+            features={moduleDescription.capabilities}
+            defaultExpanded={false}
           >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-               sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-            >
-              <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-            </AccordionSummary>
-            <AccordionDetails sx={{ padding: '5px 14px 5px' }}>
-              <p style={{ margin: '0 0 12px 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
-                {moduleDescription.description}
-              </p>
-              <div style={{ fontSize: '13px', color: '#424242' }}>
-                <strong>Analysis Capabilities:</strong>
-                <ul style={{ margin: '4px 0 0 20px', padding: '0' }}>
-                  {moduleDescription.capabilities.map((capability, index) => (
-                    <li key={index} style={{ marginBottom: '2px' }}>{capability}</li>
-                  ))}
-                </ul>
-              </div>
-              <p style={{ margin: '10px 0 0 0', color: '#424242', fontSize: '14px', lineHeight: '1.4' }}>
+            <p style={{ marginTop: 10, marginBottom: 0 }}>
+              <strong>Perturbation Effects: </strong> {moduleDescription.tabs.perturbationEffects}
+              <br />
+              <strong>Perturbed By: </strong> {moduleDescription.tabs.perturbedBy}
+            </p>
+          </ModuleIntro>
 
-                
-                <strong>Perturbation Effects: </strong> {moduleDescription.tabs.perturbationEffects}
-                <br/>
-                <strong>Perturbed By: </strong> {moduleDescription.tabs.perturbedBy}
-              </p>
-            </AccordionDetails>
-          </Accordion>
-
-          <Card bordered className={styles.cellCyclePanel}>
-            <div className={styles.cellCycleHeader}>
-              <div>
-                <div className={styles.cellCycleTitle}>Cell-cycle impact</div>
-                <div className={styles.cellCycleSubtitle}>
-                  {coreSettings?.cellLine?.id ? `Dataset: ${coreSettings.cellLine.id}` : ""}
-                  {expressionanalyzerSettings?.selectedGene ? ` • Perturbation: ${expressionanalyzerSettings.selectedGene}` : ""}
-                  {cellCycleData?.control?.gene_target ? ` • Control: ${cellCycleData.control.gene_target}` : ""}
-                </div>
-              </div>
-              <div className={styles.cellCycleHeaderRight}>
-                <div className={styles.cellCycleHeaderControlLabel}>View</div>
+          <Panel
+            title="Cell-cycle impact"
+            subtitle={[
+              coreSettings?.cellLine?.id ? `Dataset: ${coreSettings.cellLine.id}` : "",
+              expressionanalyzerSettings?.selectedGene ? `Perturbation: ${expressionanalyzerSettings.selectedGene}` : "",
+              cellCycleData?.control?.gene_target ? `Control: ${cellCycleData.control.gene_target}` : "",
+            ].filter(Boolean).join(" · ")}
+            actions={
+              <>
+                <span className={styles.cellCycleHeaderControlLabel}>View</span>
                 <Select
                   width={240}
                   options={[
@@ -1380,23 +1339,23 @@ const ExpressionAnalyzer = ({
                   value={cellCycleView}
                   onChange={({ target: { value } }) => setCellCycleView(value)}
                 />
-              </div>
-            </div>
-
+              </>
+            }
+          >
             {cellCycleLoading && (
-              <Text className={styles.cellCycleStatus}>Loading cell-cycle summaries…</Text>
+              <div className={styles.cellCycleStatus} role="status">Loading cell-cycle summaries…</div>
             )}
 
             {!cellCycleLoading && cellCycleError && (
-              <Text className={styles.cellCycleStatusError}>
+              <div className={styles.cellCycleStatusError} role="status">
                 Cell-cycle data unavailable: {cellCycleError}
-              </Text>
+              </div>
             )}
 
             {!cellCycleLoading && !cellCycleError && !cellCycleData && (
-              <Text className={styles.cellCycleStatus}>
+              <div className={styles.cellCycleStatus} role="status">
                 Select a dataset and perturbation to view cell-cycle effects.
-              </Text>
+              </div>
             )}
 
             {!cellCycleLoading && !cellCycleError && cellCycleData && (
@@ -1435,6 +1394,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChart}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCyclePhaseGroupedOption}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1447,6 +1407,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChart}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCycleViolinOption.s}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1459,6 +1420,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChart}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCycleViolinOption.g2m}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1475,6 +1437,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChartWide}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCyclePhaseOption}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1487,6 +1450,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChart}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCycleScoreOption.s}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1499,6 +1463,7 @@ const ExpressionAnalyzer = ({
                         <div className={styles.cellCycleChart}>
                           <ReactEChartsCore
                             echarts={echarts}
+                            theme={chart.theme}
                             option={cellCycleScoreOption.g2m}
                             notMerge={true}
                             lazyUpdate={true}
@@ -1511,7 +1476,7 @@ const ExpressionAnalyzer = ({
                 </div>
               </>
             )}
-          </Card>
+          </Panel>
 
           {probes.length > 1 && (
             <>
@@ -1545,7 +1510,7 @@ const ExpressionAnalyzer = ({
               setSelectedTab({ value, label });
             }}
           />
-          <Card bordered>
+          <div className={styles.resultCard}>
             <Tabs
               name="innertabs"
               value={selectedInnerTab}
@@ -1555,92 +1520,73 @@ const ExpressionAnalyzer = ({
                 setSelectedInnerTab({ value, label });
               }}
             />
-            {selectedInnerTab.value === 1 && selectedTab.value === 0 && (
-              <>
-                <Text success>
+            <p className={styles.question}>
+              {selectedInnerTab.value === 1 && selectedTab.value === 0 && (
+                <>
                   Which perturbations show similar effects to
                   {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
                     : " perturbation "}
                   of
                   {" " + expressionanalyzerSettings.selectedGene}?
-                </Text>
-                <Spacer height={5} />
-              </>
-            )}
-            {selectedInnerTab.value === 0 && selectedTab.value === 0 && (
-              <>
-                <Text success>
-                  Which genes are up or down regulated upon{" "}
+                </>
+              )}
+              {selectedInnerTab.value === 0 && selectedTab.value === 0 && (
+                <>
+                  Which genes are up or down regulated upon
                   {coreSettings.cellLine.id === "TFAtlas"
                     ? " overexpression "
-                    : " perturbation "}{" "}
+                    : " perturbation "}
                   of
                   {" " + expressionanalyzerSettings.selectedGene}?
-                
-                </Text>
-                <Spacer height={5} />
-              </>
-            )}
-            {selectedInnerTab.value === 0 && selectedTab.value === 1 && (
-              <>
-                <Text success>
+                </>
+              )}
+              {selectedInnerTab.value === 0 && selectedTab.value === 1 && (
+                <>
                   {coreSettings.cellLine.id === "TFAtlas"
-                    ? " Overexpression "
-                    : " Perturbation "}{" "}
+                    ? "Overexpression"
+                    : "Perturbation"}{" "}
                   of which{" "}
                   {coreSettings.cellLine.id === "TFAtlas"
-                    ? " transcription factors "
-                    : " genes "}{" "}
+                    ? "transcription factors"
+                    : "genes"}{" "}
                   up or down regulate
                   {" " +
                     expressionanalyzerSettings.selectedGene +
                     " expression"}
                   ?
-                </Text>
-                <Spacer height={5} />
-              </>
-            )}
-            {selectedInnerTab.value === 1 && selectedTab.value === 1 && (
-              <>
-                <Text success>
+                </>
+              )}
+              {selectedInnerTab.value === 1 && selectedTab.value === 1 && (
+                <>
                   Expression of which genes show similar pattern to
                   {" " +
                     expressionanalyzerSettings.selectedGene +
                     " expression upon perturbation of genome?"}
-                  ?
-                </Text>
-                <Spacer height={5} />
-              </>
-            )}
-            <ButtonGroup
-              items={[
-                {
-                  icon: <FaChartBar />,
-                  key: 0,
-                  label: "Graph",
-                },
-                {
-                  icon: <FaTable />,
-                  key: 1,
-                  label: "Table",
-                },
-              ]}
-              onSelected={(key) => setSelectedView(key)}
-              value={selectedView}
-            />
-      <PlotHelp kind="expressionAnalyzer" />
+                </>
+              )}
+            </p>
+            <Toolbar className={styles.viewBar}>
+              <ButtonGroup
+                items={[
+                  {
+                    icon: <FaChartBar />,
+                    key: 0,
+                    label: "Graph",
+                  },
+                  {
+                    icon: <FaTable />,
+                    key: 1,
+                    label: "Table",
+                  },
+                ]}
+                onSelected={(key) => setSelectedView(key)}
+                value={selectedView}
+              />
+              <PlotHelp kind="expressionAnalyzer" />
+            </Toolbar>
             {blacklistLoading && (
-              <div style={{ 
-                padding: '12px', 
-                backgroundColor: '#e8f5e8', 
-                borderLeft: '4px solid #4caf50',
-                borderRadius: '4px',
-                color: '#2e7d32',
-                marginBottom: '8px'
-              }}>
-                🔄 Loading blacklist data for filtering...
-              </div>
+              <Notice kind="info">Loading blacklist data for filtering...</Notice>
             )}
             {keyedData && selectedView === 1 && (
               <>
@@ -1659,26 +1605,27 @@ const ExpressionAnalyzer = ({
                       items={
                         selectedInnerTab.value === 1
                           ? [
-                              { label: "r above 0.5", color: rgba(UP_RGB, 0.75) },
-                              { label: "r 0.15 to 0.5", color: rgba(UP_RGB, 0.4) },
-                              { label: "r -0.15 to -0.5", color: rgba(DOWN_RGB, 0.4) },
-                              { label: "r below -0.5", color: rgba(DOWN_RGB, 0.75) },
-                              { label: "Highlighted", color: rgba(HIGHLIGHT_RGB, 0.7) },
-                              { label: "Other", color: rgba(OTHER_RGB, 0.6) },
+                              { label: "r above 0.5", color: rgba(chart.p.upRgb, 0.8) },
+                              { label: "r 0.15 to 0.5", color: rgba(chart.p.upRgb, 0.4) },
+                              { label: "r -0.15 to -0.5", color: rgba(chart.p.downRgb, 0.4) },
+                              { label: "r below -0.5", color: rgba(chart.p.downRgb, 0.8) },
+                              { label: "Highlighted", color: rgba(chart.p.highlightRgb, 0.8) },
+                              { label: "Other", color: rgba(chart.p.otherRgb, 0.6) },
                             ]
                           : [
-                              { label: "Up (z above 2)", color: rgba(UP_RGB, 0.75) },
-                              { label: "Down (z below -2)", color: rgba(DOWN_RGB, 0.75) },
-                              { label: "Highlighted", color: rgba(HIGHLIGHT_RGB, 0.7) },
-                              { label: "Non-targeting control", color: rgba(CONTROL_RGB, 0.8) },
-                              { label: "Other", color: rgba(OTHER_RGB, 0.6) },
+                              { label: "Up (z above 2)", color: rgba(chart.p.upRgb, 0.8) },
+                              { label: "Down (z below -2)", color: rgba(chart.p.downRgb, 0.8) },
+                              { label: "Highlighted", color: rgba(chart.p.highlightRgb, 0.8) },
+                              { label: "Non-targeting control", color: rgba(chart.p.controlRgb, 0.8) },
+                              { label: "Other", color: rgba(chart.p.otherRgb, 0.6) },
                             ]
                       }
                       note="Non-significant points are thinned out in the chart; the table has every row"
                     />
-                    <div className={styles.mainView}>
+                    <div className={styles.chartArea}>
                       <ReactEChartsCore
                         echarts={echarts}
+                        theme={chart.theme}
                         option={options}
                         style={{ height: "100%", width: "100%" }}
                         notMerge={true}
@@ -1701,7 +1648,7 @@ const ExpressionAnalyzer = ({
                 <GeneSetEnrichmentTable genesets={genelists} />
               </>
             )}
-          </Card>
+          </div>
         </>
       )}
     </>

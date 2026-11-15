@@ -1,0 +1,51 @@
+.wrap {
+  width: 100%;
+}
+
+.searchBar {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gs-border);
+}
+
+.searchLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gs-text);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 160px;
+  max-width: 300px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: inherit;
+  font-size: 13px;
+
+  &::placeholder {
+    color: var(--gs-faint);
+  }
+
+  &:focus {
+    outline: 2px solid var(--gs-focus);
+    outline-offset: -1px;
+  }
+}
+
+.chart {
+  width: 100%;
+  height: 76vh;
+  min-height: 420px;
+  // the chart is drawn on the page colour, so exported images match the screen
+  background: var(--gs-bg);
+  border-radius: 0 0 8px 8px;
+}
+
+.enrichment {
+  width: 100%;
+  margin-top: 16px;
+}

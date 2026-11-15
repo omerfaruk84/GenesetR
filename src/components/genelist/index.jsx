@@ -681,7 +681,7 @@ const Genelist = ({
                   placeholder="Add a drug: name, target or mechanism"
                   onSelect={addDrug}
                 />
-                <div style={{ marginTop: 3, fontSize: 11, color: "#666" }}>
+                <div style={{ marginTop: 3, fontSize: 11, color: "var(--gs-muted)" }}>
                   {hasDoseLabels(drugDataset)
                     ? "Adding a drug adds its three doses (0.05, 0.5 and 5 µM)."
                     : "Entries are drug ids, e.g. BORTEZOMIB."}

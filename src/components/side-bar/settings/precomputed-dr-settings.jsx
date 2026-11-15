@@ -11,6 +11,7 @@ import {
   useMaterialReactTable,
   MRT_ColumnDef,
 } from "material-react-table";
+import { mrtLook } from "../../../utils/tableStyle";
 import { precomputedDrSettingsChanged } from "../../../store/settings/precomputed-dr-settings";
 import { coreSettingsChanged } from "../../../store/settings/core-settings";
 import { PrecomputedDrSettingsTypes, CoreSettingsTypes } from "./enums";
@@ -86,6 +87,7 @@ const PrecomputedDrSettings = ({
 
   // Table configuration (must be at top level - Rules of Hooks)
   const table = useMaterialReactTable({
+    ...mrtLook({ maxHeight: "300px" }),
     columns,
     data: availableResults,
     enableRowSelection: true,
@@ -124,10 +126,9 @@ const PrecomputedDrSettings = ({
       rowSelection: selectedResultIndex >= 0 ? { [selectedResultIndex]: true } : {},
     },
     initialState: {
+      density: "compact",
       sorting: [{ id: "computation_date", desc: true }], // Sort by date descending (newest first)
     },
-    enableStickyHeader: true,
-    enableDensityToggle: false,
     enableFullScreenToggle: false,
     muiTableContainerProps: {
       sx: { maxHeight: "300px" },
@@ -164,9 +165,9 @@ const PrecomputedDrSettings = ({
         onClick: handleRowClick,
         sx: {
           cursor: "pointer",
-          backgroundColor: row.index === selectedResultIndex ? "#e3f2fd" : undefined,
-          "&:hover": {
-            backgroundColor: row.index === selectedResultIndex ? "#e3f2fd" : "#f5f5f5",
+          backgroundColor: row.index === selectedResultIndex ? "var(--gs-selected)" : "var(--gs-surface)",
+          "&:hover > td": {
+            backgroundColor: row.index === selectedResultIndex ? "var(--gs-selected)" : "var(--gs-hover)",
           },
         },
       };
@@ -285,7 +286,7 @@ const PrecomputedDrSettings = ({
   // If no whole genome datasets available, show a message
   if (wholeGenomeDatasets.length === 0) {
     return (
-      <div style={{ padding: "16px", color: "#666" }}>
+      <div style={{ padding: "16px", color: "var(--gs-muted)" }}>
         <Text size="small">
           No whole genome datasets available. Please ensure whole genome datasets are loaded.
         </Text>
@@ -611,17 +612,17 @@ const PrecomputedDrSettings = ({
   return (
     <>
       {/* Available Results Table at the Top */}
-      <div style={{ marginBottom: "20px", padding: "12px", backgroundColor: "#f9f9f9", borderRadius: "4px" }}>
+      <div style={{ marginBottom: "20px", padding: "12px", backgroundColor: "var(--gs-surface-alt)", border: "1px solid var(--gs-border)", borderRadius: "8px" }}>
         <Text size="small" style={{ fontWeight: "bold", marginBottom: "8px", display: "block" }}>
           Available Pre-computed Results ({availableResults.length}):
         </Text>
         
         {loadingResults ? (
-          <Text size="small" style={{ color: "#666", fontStyle: "italic" }}>
+          <Text size="small" style={{ color: "var(--gs-muted)" }}>
             Loading results...
           </Text>
         ) : availableResults.length === 0 ? (
-          <Text size="small" style={{ color: "#666", fontStyle: "italic" }}>
+          <Text size="small" style={{ color: "var(--gs-muted)" }}>
             No pre-computed results found. Click "Compute New Data" to generate results.
           </Text>
         ) : (
@@ -636,12 +637,8 @@ const PrecomputedDrSettings = ({
               label={loading ? "Loading..." : "Load Selected Result"}
               onClick={handleLoadData}
               disabled={loading || computing || availableResults.length === 0 || selectedResultIndex < 0}
-              style={{ 
-                width: "100%", 
-                marginTop: "8px",
-                backgroundColor: "#1976d2",
-                color: "#fff"
-              }}
+              colored
+              width="100%"
             />
           </>
         )}
@@ -702,7 +699,9 @@ const PrecomputedDrSettings = ({
           style={{
             width: "100%",
             padding: "8px",
-            border: "1px solid #ccc",
+            border: "1px solid var(--gs-border-strong)",
+            background: "var(--gs-surface)",
+            color: "var(--gs-text)",
             borderRadius: "4px",
             opacity: (computing || loading || loadingResults) ? 0.6 : 1,
             cursor: (computing || loading || loadingResults) ? "not-allowed" : "text",
@@ -946,7 +945,9 @@ const PrecomputedDrSettings = ({
               style={{
                 width: "100%",
                 padding: "8px",
-                border: "1px solid #ccc",
+                border: "1px solid var(--gs-border-strong)",
+                background: "var(--gs-surface)",
+                color: "var(--gs-text)",
                 borderRadius: "4px",
                 opacity: (computing || loading || loadingResults) ? 0.6 : 1,
                 cursor: (computing || loading || loadingResults) ? "not-allowed" : "text",
@@ -1027,7 +1028,9 @@ const PrecomputedDrSettings = ({
                   style={{
                     width: "100%",
                     padding: "8px",
-                    border: "1px solid #ccc",
+                    border: "1px solid var(--gs-border-strong)",
+                    background: "var(--gs-surface)",
+                    color: "var(--gs-text)",
                     borderRadius: "4px",
                     opacity: (computing || loading || loadingResults) ? 0.6 : 1,
                     cursor: (computing || loading || loadingResults) ? "not-allowed" : "text",
@@ -1062,7 +1065,9 @@ const PrecomputedDrSettings = ({
                   style={{
                     width: "100%",
                     padding: "8px",
-                    border: "1px solid #ccc",
+                    border: "1px solid var(--gs-border-strong)",
+                    background: "var(--gs-surface)",
+                    color: "var(--gs-text)",
                     borderRadius: "4px",
                     opacity: (computing || loading || loadingResults) ? 0.6 : 1,
                     cursor: (computing || loading || loadingResults) ? "not-allowed" : "text",
@@ -1080,12 +1085,13 @@ const PrecomputedDrSettings = ({
           label={computing ? "Computing..." : "Compute New Data"}
           onClick={handleComputeData}
           disabled={computing || loading}
-          style={{ width: "100%", backgroundColor: "#4CAF50", color: "#fff" }}
+          colored="success"
+          width="100%"
         />
       </div>
 
       {precomputedDrSettings?.selectedCellLines?.length === 0 && (
-        <Text size="small" muted style={{ marginTop: "8px", color: "#dc3545" }}>
+        <Text size="small" muted style={{ marginTop: "8px", color: "var(--gs-danger)" }}>
           Please select at least one cell line
         </Text>
       )}

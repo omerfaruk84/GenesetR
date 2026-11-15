@@ -352,7 +352,7 @@ const SettingsSelector = ({ pathname }) => {
   return (
     <div>
       {settingsForPath.length === 0 && process.env.NODE_ENV !== "production" && (
-        <div style={{ padding: "16px", color: "#ff6b6b" }}>
+        <div style={{ padding: "16px", color: "var(--gs-danger)" }}>
           No settings found for pathname: {pathname}
         </div>
       )}

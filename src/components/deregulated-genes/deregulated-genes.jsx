@@ -1,25 +1,46 @@
 import { pdfToolboxFeature, svgToolboxFeature } from "../../utils/exporters";
 import { TableExportButtons } from "../export-buttons";
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tabs, Tab, Box, Typography, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Tabs, Tab, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import Axios from "axios";
 import { waitForTaskCompletion } from "../../store/api/websocket";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { MAX_GENES_IN_ADDRESS, tfRegulatorsPath } from "../../utils/regulators";
 import { fetchBlacklistData } from "../../store/blacklist";
 import { GeneSetEnrichmentTable } from "../enrichment";
 import { MaterialReactTable } from 'material-react-table';
 import ReactECharts from 'echarts-for-react';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import styles from './deregulated-genes.module.scss';
 import { SERVER_ADDRESS } from "../../store/api/config";
 import { escapeHtml } from "../../utils/escapeHtml";
 import { withErrorBoundary } from "../error-boundary";
+import { useChartTheme, saveImageFeature } from "../../utils/chartTheme";
+import { mrtLook, numericColumn } from "../../utils/tableStyle";
+import { EmptyState, Panel, ToolbarButton, uiStyles } from "../ui";
 
 const formatZ = (value) =>
   typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "";
 
+// Diverging colour scales for the heatmap: purple = down, orange = up (the
+// direction colours of the other charts), through the page background.
+const HEATMAP_COLORS = {
+  light: ["#40196d", "#5e3c99", "#8f78c4", "#c3b7e0", "#ebe7f3", "#f7f7f7", "#fde6cb", "#fdb863", "#e66101", "#b35806", "#7f3b08"],
+  dark: ["#d9cdf7", "#b39ae8", "#8a70c9", "#5c4a8c", "#3a3354", "#232a33", "#4d3a25", "#8a5a26", "#c97f33", "#f6a04d", "#ffd0a0"],
+};
+
+// Colour of a direction label ("Upstream Positive", "Downstream Up-regulated", ...)
+const directionTone = (label) => {
+  const text = String(label || "").toLowerCase();
+  if (text.includes("down-") || text.endsWith("down") || text.includes("negative")) return "down";
+  if (text.includes("up-") || text.endsWith("up") || text.includes("positive")) return "up";
+  return null;
+};
+
 const DeregulatedGenes = ({ data, multiDatasetData }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const chart = useChartTheme();
   const blacklistData = useSelector((state) => state.blacklist?.data);
   const blacklistLoading = useSelector((state) => state.blacklist?.loading);
   const deregulatedSettings = useSelector((state) => state.settings?.deregulatedGenes);
@@ -149,7 +170,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
 
       // If current single-dataset payload matches selection and has heatmap, reuse it
       if (data?.metadata?.dataset === tableDataset && data?.heatmap_data) {
-        setHeatmapData(buildHeatmapOption(data.heatmap_data));
+        setHeatmapData(usableHeatmap(data.heatmap_data));
         return;
       }
 
@@ -196,7 +217,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         });
         if (cancelled) return;
         const parsed = typeof taskResult === "string" ? JSON.parse(taskResult) : taskResult;
-        setHeatmapData(buildHeatmapOption(parsed?.heatmap_data));
+        setHeatmapData(usableHeatmap(parsed?.heatmap_data));
         setHeatmapStatus("ready");
       } catch (e) {
         if (!cancelled) {
@@ -214,11 +235,14 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, multiDatasetData, tableDataset]);
 
-  // ECharts option for a heatmap payload, or null when the payload is unusable
-  const buildHeatmapOption = (heatmapData) => {
-    if (!heatmapData || !heatmapData.genes || !heatmapData.perturbations || !heatmapData.matrix) {
-      return null;
-    }
+  // The heatmap payload, or null when it is unusable
+  const usableHeatmap = (payload) =>
+    payload && payload.genes && payload.perturbations && payload.matrix ? payload : null;
+
+  // ECharts option of the heatmap; rebuilt when the theme changes
+  const heatmapOption = useMemo(() => {
+    if (!heatmapData) return null;
+    const p = chart.p;
 
     // Symmetric colour scale that follows the data (a fixed -5..5 range
     // washed out datasets with small z-scores and saturated large ones).
@@ -233,36 +257,43 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
     const manyColumns = heatmapData.perturbations.length > 40;
     const manyRows = heatmapData.genes.length > 40;
 
-    const option = {
+    return {
       tooltip: {
         position: 'top',
         formatter: (params) => {
           const perturbation = heatmapData.perturbations[params.value[0]];
           const gene = heatmapData.genes[params.value[1]];
           const zScore = params.value[2];
-          return `Gene: ${escapeHtml(gene)}<br/>Perturbation: ${escapeHtml(perturbation)}<br/>Z-Score: ${formatZ(zScore) || "n/a"}`;
+          return `<b>${escapeHtml(gene)}</b><br/>Perturbation: ${escapeHtml(perturbation)}<br/>Z-score: ${formatZ(zScore) || "n/a"}`;
         }
       },
       grid: {
-        left: 120,
-        right: 50,
-        top: 100,
-        bottom: 50
+        left: 16,
+        right: manyRows ? 40 : 24,
+        top: 64,
+        bottom: manyColumns ? 34 : 12,
+        containLabel: true,
       },
       xAxis: {
         type: 'category',
         data: heatmapData.perturbations,
+        axisTick: { show: false },
+        axisLine: { show: false },
+        splitLine: { show: false },
         axisLabel: {
           interval: manyColumns ? 'auto' : 0,
           rotate: 45,
-          fontSize: 10
+          fontSize: 11
         }
       },
       yAxis: {
         type: 'category',
         data: heatmapData.genes,
+        axisTick: { show: false },
+        axisLine: { show: false },
+        splitLine: { show: false },
         axisLabel: {
-          fontSize: 10
+          fontSize: 11
         }
       },
       visualMap: {
@@ -272,22 +303,25 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         calculable: true,
         orient: 'horizontal',
         left: 'center',
-        top: 20,
+        top: 8,
+        itemWidth: 12,
+        itemHeight: 160,
+        precision: 1,
         inRange: {
-          color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+          color: chart.isDark ? HEATMAP_COLORS.dark : HEATMAP_COLORS.light
         }
       },
       toolbox: {
         right: 10,
-        top: 10,
+        top: 6,
         feature: {
-          saveAsImage: { name: 'genesetr_deregulated_genes_heatmap', pixelRatio: 2 },
+          saveAsImage: saveImageFeature(p, 'genesetr_deregulated_genes_heatmap'),
           mySvg: svgToolboxFeature("genesetr-deregulated-genes"),
           myPdf: pdfToolboxFeature("genesetr-deregulated-genes"),
         },
       },
       dataZoom: [
-        ...(manyColumns ? [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 14, bottom: 4 }] : []),
+        ...(manyColumns ? [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 14, bottom: 6 }] : []),
         ...(manyRows ? [{ type: 'inside', yAxisIndex: 0 }, { type: 'slider', yAxisIndex: 0, width: 14, right: 8 }] : []),
       ],
       series: [{
@@ -296,17 +330,16 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
         data: heatmapData.matrix.flatMap((row, i) =>
           row.map((value, j) => [j, i, value])
         ),
+        itemStyle: { borderColor: p.bg, borderWidth: manyColumns || manyRows ? 0 : 1 },
         emphasis: {
           itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            borderColor: p.text,
+            borderWidth: 1,
           }
         }
       }]
     };
-
-    return option;
-  };
+  }, [heatmapData, chart.p, chart.isDark]);
 
   const enrichmentGeneLists = useMemo(() => {
     if (!tableData || tableData.length === 0) return null;
@@ -353,33 +386,65 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
     return Object.keys(lists).length ? lists : null;
   }, [tableData]);
 
+  // Genes the perturbations raise and lower, for the "TF regulators" page.
+  // Only for downstream results: upstream rows are regulators, not targets.
+  const signatureLists = useMemo(() => {
+    const up = [];
+    const down = [];
+    [...tableData]
+      .sort((a, b) => (b.perturbationCount || 0) - (a.perturbationCount || 0))
+      .forEach((row) => {
+        const label = String(row.direction || "").toLowerCase();
+        if (!label.includes("downstream")) return;
+        if (label.includes("down-") || label.endsWith("down")) down.push(row.gene);
+        else if (label.includes("up")) up.push(row.gene);
+      });
+    return { up, down };
+  }, [tableData]);
+
   const baseColumns = [
     {
       accessorKey: 'gene',
       header: 'Gene Symbol',
       size: 150,
+      Cell: ({ cell }) => <span style={{ fontWeight: 600 }}>{cell.getValue()}</span>,
     },
     {
       accessorKey: 'avgZScore',
       header: 'Avg Z-Score',
       size: 120,
       sortingFn: 'basic', // numeric
-      Cell: ({ cell }) => formatZ(cell.getValue()),
+      ...numericColumn,
+      Cell: ({ cell }) => {
+        const value = cell.getValue();
+        const color = value > 0 ? "var(--gs-up)" : value < 0 ? "var(--gs-down)" : undefined;
+        return <span style={{ color, fontWeight: 600 }}>{formatZ(value)}</span>;
+      },
     },
     {
       accessorKey: 'frequency',
       header: 'Frequency',
       size: 100,
+      ...numericColumn,
     },
     {
       accessorKey: 'direction',
       header: 'Direction',
-      size: 100,
+      size: 160,
+      Cell: ({ cell }) => {
+        const tone = directionTone(cell.getValue());
+        return (
+          <span className={tone === "up" ? styles.directionUp : tone === "down" ? styles.directionDown : undefined}>
+            {cell.getValue()}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'perturbationCount',
       header: 'Perturbation Count',
       size: 150,
+      ...numericColumn,
     },
   ];
 
@@ -390,6 +455,7 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
           accessorKey: 'datasetCount',
           header: '#Datasets',
           size: 100,
+          ...numericColumn,
         },
       ]
     : baseColumns;
@@ -443,28 +509,35 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
     setDetailOpen(true);
   };
 
+  const look = mrtLook({
+    pageSize: 50,
+    maxHeight: 'calc(100vh - 330px)',
+    initialState: {
+      sorting: [{ id: tableDataset === "MULTI" ? 'datasetCount' : 'perturbationCount', desc: true }],
+    },
+  });
+
   return (
     <div className={styles.container}>
-      <div className={styles.explainer}>
-        <div className={styles.explainerTitle}>How these metrics are calculated</div>
+      <details className={styles.explainer}>
+        <summary className={styles.explainerTitle}>How these metrics are calculated</summary>
         <ul>
           {explainer.map((line, idx) => (
             <li key={idx}>{line}</li>
           ))}
         </ul>
-      
-      </div>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+      </details>
+
+      <div className={styles.tabRow}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 0 }}>
           <Tab value="table" label="Table" />
           {showHeatmap && <Tab value="heatmap" label="Heatmap" />}
         </Tabs>
-      </Box>
-
-      <Box sx={{ padding: 2, height: 'calc(100% - 48px)', overflow: 'auto' }}>
         {(activeTab === "table" || activeTab === "heatmap") && (
           <div className={styles.datasetSelector}>
-            <label htmlFor="datasetSelect">Choose dataset for table view (select "Multi" for common genes):</label>
+            <label htmlFor="datasetSelect" title='Choose the dataset to show; select "Multi" for genes common to all datasets'>
+              Dataset
+            </label>
             <select
               id="datasetSelect"
               value={tableDataset || ""}
@@ -481,11 +554,13 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
             </select>
           </div>
         )}
+      </div>
 
+      <div className={styles.tabBody}>
         {activeTab === "table" && (
           <div className={styles.tableContainer}>
             {multiDatasetData?.datasets && (
-              <div className={styles.datasetBadge}>Showing results for: {tableDatasetLabel}</div>
+              <div className={styles.datasetBadge}>Showing results for: <strong>{tableDatasetLabel}</strong></div>
             )}
             {tableData.length > 0 ? (
               <>
@@ -495,88 +570,119 @@ const DeregulatedGenes = ({ data, multiDatasetData }) => {
                   key={tableDataset}
                   columns={tableColumns}
                   data={tableData}
+                  {...look}
                   renderTopToolbarCustomActions={({ table }) => (
-                    <TableExportButtons
-                      filename="genesetr-deregulated-genes"
-                      columns={tableColumns}
-                      rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
-                    />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <TableExportButtons
+                        filename="genesetr-deregulated-genes"
+                        columns={tableColumns}
+                        rows={() => table.getPrePaginationRowModel().rows.map((row) => row.original)}
+                      />
+                      {signatureLists.up.length + signatureLists.down.length >= 3 && (
+                        <ToolbarButton
+                          size="sm"
+                          title={`Find transcription factors that switch these genes on or off (${Math.min(signatureLists.up.length, MAX_GENES_IN_ADDRESS)} up, ${Math.min(signatureLists.down.length, MAX_GENES_IN_ADDRESS)} down; of longer lists the genes shared by most perturbations)`}
+                          onClick={() => navigate(tfRegulatorsPath({ ...signatureLists, run: true }))}
+                        >
+                          TF regulators of these genes
+                        </ToolbarButton>
+                      )}
+                    </span>
                   )}
                   enableSorting
                   enablePagination
-                  initialState={{
-                    pagination: {
-                      pageSize: 50,
-                      pageIndex: 0,
-                    },
-                    sorting: [{ id: tableDataset === "MULTI" ? 'datasetCount' : 'perturbationCount', desc: true }],
-                  }}
-                  muiTableContainerProps={{
-                    sx: { maxHeight: 'calc(100vh - 300px)' }
-                  }}
                   muiTableBodyRowProps={({ row }) => ({
                     onClick: () => openDetailForGene(row.original.gene),
-                    sx: { cursor: 'pointer' },
+                    title: "Show the perturbations behind this gene",
+                    sx: { ...look.muiTableBodyRowProps.sx, cursor: 'pointer' },
                   })}
                 />
                 {enrichmentGeneLists && Object.keys(enrichmentGeneLists).length > 0 && (
-                  <div style={{ marginTop: "12px" }}>
+                  <div style={{ marginTop: "14px" }}>
                     <GeneSetEnrichmentTable genesets={enrichmentGeneLists} />
                   </div>
                 )}
               </>
             ) : (
-              <div className={styles.noData}>No results available</div>
+              <EmptyState
+                title="No results available"
+                hint="No gene passed the thresholds. Lower the z-score threshold or the minimum number of perturbations in the sidebar."
+              />
             )}
           </div>
         )}
 
         {activeTab === "heatmap" && showHeatmap && (
-          <div className={styles.heatmapContainer}>
-            {heatmapData ? (
+          <Panel
+            title="Z-scores of the deregulated genes"
+            subtitle={tableDatasetLabel}
+            flush
+          >
+            {heatmapOption ? (
               <ReactECharts
-                option={heatmapData}
+                option={heatmapOption}
+                theme={chart.theme}
                 // A smaller heatmap must not inherit the sliders of the previous one
                 notMerge={true}
-                style={{ height: 'calc(100vh - 250px)', width: '100%' }}
+                style={{ height: 'calc(100vh - 300px)', minHeight: 420, width: '100%' }}
                 opts={{ renderer: 'canvas' }}
               />
             ) : (
-              <div className={styles.noData} role="status">
-                {heatmapStatus === "loading"
-                  ? "Computing the heatmap for this dataset…"
-                  : heatmapStatus === "error"
-                  ? "The heatmap for this dataset could not be computed. Try again or pick another dataset."
-                  : "No heatmap data available"}
-              </div>
+              <EmptyState
+                title={
+                  heatmapStatus === "loading"
+                    ? "Computing the heatmap for this dataset…"
+                    : heatmapStatus === "error"
+                    ? "The heatmap for this dataset could not be computed. Try again or pick another dataset."
+                    : "No heatmap data available"
+                }
+              />
             )}
-          </div>
+          </Panel>
         )}
-
-      </Box>
+      </div>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>
           {detailData.gene ? `Contributing perturbations for ${detailData.gene}` : "No gene selected"}
         </DialogTitle>
         <DialogContent dividers>
           {detailData.entries.length === 0 && (
-            <Typography variant="body2">No contributing perturbations were recorded for this gene.</Typography>
+            <p className={uiStyles.muted}>No contributing perturbations were recorded for this gene.</p>
           )}
           {detailData.entries.length > 0 && (
-            <List dense>
-              {detailData.entries.map((entry, idx) => (
-                <React.Fragment key={`${entry.dataset}-${entry.perturbation}-${idx}`}>
-                  <ListItem>
-                    <ListItemText
-                      primary={`${idx + 1}. ${entry.perturbation} (${entry.dataset})`}
-                      secondary={`Direction: ${entry.direction} | Z-Score: ${entry.z_score?.toFixed ? entry.z_score.toFixed(3) : entry.z_score}`}
-                    />
-                  </ListItem>
-                  {idx < detailData.entries.length - 1 && <Divider component="li" />}
-                </React.Fragment>
-              ))}
-            </List>
+            <div className={uiStyles.tableScroll} style={{ maxHeight: "60vh" }}>
+              <table className={uiStyles.table}>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Perturbation</th>
+                    <th>Dataset</th>
+                    <th>Direction</th>
+                    <th className={uiStyles.num}>Z-Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailData.entries.map((entry, idx) => {
+                    const z = Number(entry.z_score);
+                    return (
+                      <tr key={`${entry.dataset}-${entry.perturbation}-${idx}`}>
+                        <td>{idx + 1}</td>
+                        <td style={{ fontWeight: 600 }}>{entry.perturbation}</td>
+                        <td>{entry.dataset}</td>
+                        <td>{entry.direction}</td>
+                        <td
+                          className={uiStyles.num}
+                          style={{ color: z > 0 ? "var(--gs-up)" : z < 0 ? "var(--gs-down)" : undefined, fontWeight: 600 }}
+                        >
+                          {entry.z_score?.toFixed ? entry.z_score.toFixed(3) : entry.z_score}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </DialogContent>
       </Dialog>

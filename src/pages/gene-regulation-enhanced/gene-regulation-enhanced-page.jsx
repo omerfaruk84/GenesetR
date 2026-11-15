@@ -4,11 +4,10 @@ import styles from "../gene-regulation/gene-regulation-page.module.scss";
 import { ModulePathNames } from "../../store/results/enums";
 import VideoHelpPage from "../../components/video-help";
 import helpVideo from "../../common/videos/3.webm";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { ModuleIntro, Notice, Toolbar, uiStyles } from "../../components/ui";
 import { LoadingPage } from "../../components/loading-page";
 import NetworkGraphAlternatives from "../../components/NetworkGraphAlternatives";
-import { ButtonGroup, Spacer } from "@oliasoft-open-source/react-ui-library";
+import { ButtonGroup } from "@oliasoft-open-source/react-ui-library";
 import { FaChartBar, FaTable } from "react-icons/fa";
 import EnrichmentTable from "../../components/enrichment-table-new/index.jsx";
 
@@ -407,24 +406,27 @@ const GeneRegulationEnhancedPage = ({
       {geneRegulationResults ? (
         <div>
           {/* View Toggle */}
-          <ButtonGroup
-            items={[
-              {
-                icon: <FaChartBar />,
-                key: 0,
-                label: "Network Graph",
-              },
-              {
-                icon: <FaTable />,
-                key: 1,
-                label: "Link Table",
-              },
-            ]}
-            onSelected={(key) => setSelectedView(key)}
-            value={selectedView}
-          />
-          
-          <Spacer height={10} />
+          <Toolbar className={styles.viewBar}>
+            <ButtonGroup
+              items={[
+                {
+                  icon: <FaChartBar />,
+                  key: 0,
+                  label: "Network Graph",
+                },
+                {
+                  icon: <FaTable />,
+                  key: 1,
+                  label: "Link Table",
+                },
+              ]}
+              onSelected={(key) => setSelectedView(key)}
+              value={selectedView}
+            />
+            <span className={uiStyles.muted}>
+              {geneRegulationResults.nodes.length} genes, {geneRegulationResults.edges.length} links
+            </span>
+          </Toolbar>
 
           {/* Table View */}
           {selectedView === 1 && processedTableData.length > 0 && (
@@ -442,114 +444,48 @@ const GeneRegulationEnhancedPage = ({
               />
 
               {/* Summary Stats */}
-              <div style={{
-                marginTop: "16px",
-                padding: "12px",
-                backgroundColor: "#e8f5e8",
-                borderLeft: "4px solid #28a745",
-                borderRadius: "4px",
-                color: "#155724"
-              }}>
-                ✅ <strong>Analysis Complete:</strong> Successfully generated network with {geneRegulationResults.nodes.length} nodes and {geneRegulationResults.edges.length} edges from {geneRegulationEnhancedSettings?.selectedExperiments?.length || 1} experiment(s) using {geneRegulationEnhancedSettings?.combineMethod || "weighted_mean"} aggregation.
-              </div>
+              <Notice kind="success" title="Analysis complete." className={styles.summary}>
+                Network with {geneRegulationResults.nodes.length} nodes and {geneRegulationResults.edges.length} edges from {geneRegulationEnhancedSettings?.selectedExperiments?.length || 1} experiment(s) using {geneRegulationEnhancedSettings?.combineMethod || "weighted_mean"} aggregation.
+              </Notice>
             </>
           )}
 
           {/* No data message for table view */}
           {selectedView === 1 && processedTableData.length === 0 && (
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#fff3cd",
-              borderLeft: "4px solid #ffc107",
-              borderRadius: "4px",
-              color: "#856404",
-              marginBottom: "8px"
-            }}>
-              ⚠️ No table data available. The network may not contain any valid edges.
-            </div>
+            <Notice kind="warning">
+              No table data available. The network may not contain any valid edges.
+            </Notice>
           )}
         </div>
       ) : (
         <div>
-          <Accordion 
+          <ModuleIntro
+            title={moduleDescription.title}
+            description={moduleDescription.description}
+            features={moduleDescription.features}
             expanded={isDescriptionExpanded}
-            onChange={(event, expanded) => setIsDescriptionExpanded(expanded)}
-            sx={{
-              marginBottom: "14px",
-              backgroundColor: "#f8f9fa",
-              border: "1px solid #e9ecef",
-              borderRadius: "8px",
-              "&:before": { display: "none" },
-              "& .MuiAccordionSummary-root": { minHeight: "30px", height: "30px" },
-              "& .MuiAccordionSummary-root.Mui-expanded": { minHeight: "30px", height: "30px" }
-            }}
+            onChange={setIsDescriptionExpanded}
           >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              sx={{
-                backgroundColor: "#f5f5f5",
-                borderBottom: "1px solid #e0e0e0",
-                minHeight: "30px",
-              }}
-            >
-              <h3 style={{ margin: 0, color: "#495057", fontSize: "16px" }}>{moduleDescription.title}</h3>
-            </AccordionSummary>
-            <AccordionDetails sx={{ backgroundColor: "#fafafa", padding: "16px" }}>
-              <div style={{ marginBottom: "0px" }}>
-                <p style={{ marginBottom: "10px", lineHeight: "1.6" }}>{moduleDescription.description}</p>
-
-                <h4 style={{ marginBottom: "6px", color: "#424242" }}>Key Features:</h4>
-                <ul style={{ marginBottom: "12px", paddingLeft: "20px" }}>
-                  {moduleDescription.features.map((feature, index) => (
-                    <li key={index} style={{ marginBottom: "3px" }}>{feature}</li>
-                  ))}
-                </ul>
-
-                <h4 style={{ marginBottom: "6px", color: "#424242" }}>Enhancements over Standard Module:</h4>
-                <ul style={{ marginBottom: "0px", paddingLeft: "20px" }}>
-                  {moduleDescription.differences.map((diff, index) => (
-                    <li key={index} style={{ marginBottom: "3px" }}>{diff}</li>
-                  ))}
-                </ul>
-              </div>
-            </AccordionDetails>
-          </Accordion>
+            <div className={styles.introListTitle}>Enhancements over the standard module</div>
+            <ul className={styles.introList}>
+              {moduleDescription.differences.map((diff, index) => (
+                <li key={index}>{diff}</li>
+              ))}
+            </ul>
+          </ModuleIntro>
 
           {rawResult && !geneRegulationResults && (
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#f8d7da",
-              borderLeft: "4px solid #dc3545",
-              borderRadius: "4px",
-              color: "#721c24",
-              marginBottom: "8px"
-            }}>
-              <strong>No network to show.</strong> The analysis finished, but no links between different genes
+            <Notice kind="danger" title="No network to show.">
+              The analysis finished, but no links between different genes
               passed the current thresholds. Try a lower cutoff or a longer gene list.
-            </div>
+            </Notice>
           )}
 
-          <div style={{
-            padding: "12px",
-            backgroundColor: "#fff3cd",
-            borderLeft: "4px solid #ffc107",
-            borderRadius: "4px",
-            color: "#856404",
-            marginBottom: "8px"
-          }}>
-            🚀 <strong>Enhanced Module:</strong> This module combines multiple experiments for more robust gene regulation analysis. Configure experiment selection and weights in the settings panel.
-          </div>
-
-          <div style={{
-            padding: "12px",
-            backgroundColor: "#e3f2fd",
-            borderLeft: "4px solid #1976d2",
-            borderRadius: "4px",
-            color: "#1565c0",
-            marginBottom: "8px"
-          }}>
-            💡 To start, select experiments from the left sidebar, configure their weights and visualization preferences, then choose a gene from the enhanced gene regulation settings.
-          </div>
+          <Notice kind="info" title="Enhanced module:">
+            This module combines multiple experiments for more robust gene regulation analysis. To start, select
+            experiments from the left sidebar, configure their weights and visualization preferences, then choose a
+            gene from the enhanced gene regulation settings.
+          </Notice>
 
           <VideoHelpPage videoFile={helpVideo} />
         </div>

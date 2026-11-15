@@ -277,26 +277,29 @@ export const buildGeneScoreTooltip = ({
   highlighted = false,
   state = "ready",
 }) => {
-  let html = `<div style="line-height:1.4;font-weight:600;color:#1976d2;font-size:14px;margin:0 0 8px 0;padding:0;">${escapeHtml(geneSymbol)}${
+  let html = `<div style="line-height:1.4;font-weight:600;color:var(--gs-link);font-size:14px;margin:0 0 8px 0;padding:0;">${escapeHtml(geneSymbol)}${
     geneInfo?.name ? ` (${escapeHtml(geneInfo.name)})` : ""
   }</div>`;
 
   rows.forEach((row) => {
     if (!row || row.value === undefined || row.value === null || row.value === "") return;
-    const color = /^#[0-9a-fA-F]{3,8}$/.test(String(row.color || "")) ? row.color : "#555";
+    // a row colour is a hex value or one of the theme tokens ("var(--gs-up)")
+    const color = /^(#[0-9a-fA-F]{3,8}|var\(--gs-[a-z-]+\))$/.test(String(row.color || ""))
+      ? row.color
+      : "var(--gs-muted)";
     html += `<div style="font-size:12px;color:${color};margin:4px 0;padding:0;${
       row.bold ? "font-weight:500;" : ""
     }"><strong>${escapeHtml(row.label)}:</strong> ${escapeHtml(row.value)}</div>`;
   });
 
   if (highlighted) {
-    html += `<div style="font-size:11px;color:#ff9800;margin:4px 0;padding:0;"><strong>★ Highlighted Gene</strong></div>`;
+    html += `<div style="font-size:11px;color:var(--gs-warning);margin:4px 0;padding:0;"><strong>★ Highlighted Gene</strong></div>`;
   }
 
   if (state === "loading") {
-    html += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
+    html += `<div style="font-size:11px;color:var(--gs-faint);font-style:italic;margin:6px 0 0 0;padding:0;">Loading gene information...</div>`;
   } else if (geneInfo?.description) {
-    html += `<div style="font-size:11px;color:#444;margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${escapeHtml(geneInfo.description)}</div>`;
+    html += `<div style="font-size:11px;color:var(--gs-muted);margin:8px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:350px;">${escapeHtml(geneInfo.description)}</div>`;
   }
 
   return html;
@@ -310,20 +313,22 @@ export const buildGeneScoreTooltip = ({
  * @returns {string} - Formatted HTML string for tooltip (all values HTML-escaped)
  */
 export const formatGeneTooltip = (geneSymbol, geneInfo, additionalInfo = {}) => {
-  const { cluster, clusterProb, geneType, knockdown, neighbourCount, cellLine } = additionalInfo;
+  // `effectLabel` names the value in `knockdown`: "Overexpression" for a
+  // gain-of-function dataset (see utils/perturbationKind.js)
+  const { cluster, clusterProb, geneType, knockdown, effectLabel = "Knockdown", neighbourCount, cellLine } = additionalInfo;
 
   // Compact tooltip optimized for ECharts container
-  let tooltipContent = `<div style="line-height:1.0;font-weight:600;color:#1976d2;font-size:13px;margin:0 0 3px 0;padding:0;">${escapeHtml(cleanGeneSymbol(geneSymbol))}${geneInfo?.name ? ` (${escapeHtml(geneInfo.name)})` : ''}</div>`;
+  let tooltipContent = `<div style="line-height:1.0;font-weight:600;color:var(--gs-link);font-size:13px;margin:0 0 3px 0;padding:0;">${escapeHtml(cleanGeneSymbol(geneSymbol))}${geneInfo?.name ? ` (${escapeHtml(geneInfo.name)})` : ''}</div>`;
 
   // Add cell line information if available
   if (cellLine !== undefined) {
-    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Cell Line:</strong> ${escapeHtml(cellLine)}</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:2px 0;padding:0;"><strong>Cell Line:</strong> ${escapeHtml(cellLine)}</div>`;
   }
 
   // Add cluster information if available
   if (cluster !== undefined) {
     const clusterNumber = Number(cluster);
-    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Cluster:</strong> ${Number.isFinite(clusterNumber) && clusterNumber >= 0 ? `Cluster ${clusterNumber + 1}` : 'Unclustered'}`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:2px 0;padding:0;"><strong>Cluster:</strong> ${Number.isFinite(clusterNumber) && clusterNumber >= 0 ? `Cluster ${clusterNumber + 1}` : 'Unclustered'}`;
     const probability = Number(clusterProb);
     if (clusterProb !== undefined && clusterProb !== null && Number.isFinite(probability)) {
       tooltipContent += ` | <strong>Probability:</strong> ${(probability * 100).toFixed(1)}%`;
@@ -333,24 +338,24 @@ export const formatGeneTooltip = (geneSymbol, geneInfo, additionalInfo = {}) => 
 
   // Add gene type information if available
   if (geneType) {
-    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Type:</strong> ${escapeHtml(geneType)}</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:2px 0;padding:0;"><strong>Type:</strong> ${escapeHtml(geneType)}</div>`;
   }
 
   // Add knockdown information if available
   if (knockdown) {
-    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Knockdown:</strong> ${escapeHtml(knockdown)}</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:2px 0;padding:0;"><strong>${escapeHtml(effectLabel)}:</strong> ${escapeHtml(knockdown)}</div>`;
   }
 
   // Add neighbour count if available
   if (neighbourCount !== undefined) {
-    tooltipContent += `<div style="font-size:11px;color:#555;margin:2px 0;padding:0;"><strong>Neighbours:</strong> ${escapeHtml(neighbourCount)}</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:2px 0;padding:0;"><strong>Neighbours:</strong> ${escapeHtml(neighbourCount)}</div>`;
   }
 
   // Add gene description
   if (geneInfo?.description) {
-    tooltipContent += `<div style="font-size:11px;color:#444;margin:6px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:320px;">${escapeHtml(geneInfo.description)}</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-muted);margin:6px 0 0 0;padding:0;line-height:1.3;word-wrap:break-word;max-width:320px;">${escapeHtml(geneInfo.description)}</div>`;
   } else {
-    tooltipContent += `<div style="font-size:11px;color:#999;font-style:italic;margin:6px 0 0 0;padding:0;">Gene information not available</div>`;
+    tooltipContent += `<div style="font-size:11px;color:var(--gs-faint);font-style:italic;margin:6px 0 0 0;padding:0;">Gene information not available</div>`;
   }
 
   return tooltipContent;
@@ -377,7 +382,7 @@ export const createGeneTooltipFormatter = (options = {}) => {
       return renderTooltip(geneSymbol, geneInfo, parsed, state);
     }
     if (state === "loading") {
-      return `<div style="text-align: center; color: #666;">
+      return `<div style="text-align: center; color: var(--gs-muted);">
       <div style="margin-bottom: 8px;">Loading gene information...</div>
       <div style="font-size: 12px;">${escapeHtml(geneSymbol)}</div>
     </div>`;
