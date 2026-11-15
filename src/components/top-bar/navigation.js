@@ -22,6 +22,7 @@ export const NAV_GROUPS = [
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Regulation network combined over several datasets" },
       { name: TabNames.EXPRESSIONANALYZER, to: ROUTES.EXPRESSIONANALYZER, about: "What changes a gene's expression, and what it changes" },
       { name: TabNames.CELL_CYCLE, to: ROUTES.CELL_CYCLE, about: "Cell-cycle phase shifts caused by a perturbation" },
+      { name: "Integrated analysis", to: ROUTES.INTEGRATED, about: "Consensus targets and regulators of a gene over all knock-down datasets", secondary: true },
     ],
   },
   {
@@ -34,6 +35,7 @@ export const NAV_GROUPS = [
       { name: TabNames.HEATMAP, to: ROUTES.HEATMAP, about: "Expression of chosen genes under chosen perturbations" },
       { name: TabNames.GENESIGNATURE, to: ROUTES.GENESIGNATURE, about: "Perturbations that switch a gene signature on or off" },
       { name: TabNames.DEREGULATED_GENES, to: ROUTES.DEREGULATED_GENES, about: "Genes that a set of perturbations changes in common" },
+      { name: "TF regulators", to: ROUTES.TF_REGULATORS, about: "Transcription factors that switch a gene set on or off, from overexpression and knock-down" },
       { name: TabNames.GENELISTCOMPARE, to: ROUTES.GENELISTCOMPARE, about: "Saved gene lists and their overlaps" },
     ],
   },
@@ -42,6 +44,7 @@ export const NAV_GROUPS = [
     title: "Compare contexts",
     question: "Is an effect the same in other cell types?",
     items: [
+      { name: "Integrated analysis", to: ROUTES.INTEGRATED, about: "Effects that reproduce across cell contexts: all knock-down datasets combined, for a gene, a signature or a gene list" },
       { name: TabNames.MULTIDATASET_COMPARISON, to: ROUTES.MULTIDATASET_COMPARISON, about: "One gene's effects side by side in the genome-wide datasets" },
       { name: "Gene page: conservation", to: ROUTES.GENE, about: "How well a knock-down profile is conserved between datasets", secondary: true },
       { name: TabNames.DATASETS, to: ROUTES.DATASETS, about: "Cell lines, perturbation types and sizes of all datasets", secondary: true },
@@ -53,6 +56,7 @@ export const NAV_GROUPS = [
     question: "How are these genes connected?",
     items: [
       { name: TabNames.PATHFINDER, to: ROUTES.PATHFINDER, about: "Regulatory paths that connect the genes of a list" },
+      { name: "TF regulators", to: ROUTES.TF_REGULATORS, about: "Activators and repressors of a gene set, supported by overexpression and knock-down", secondary: true },
       { name: "Drug and gene connectivity", to: ROUTES.DRUG, about: "Knock-downs whose profile mimics or reverses a drug", secondary: true },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Upstream and downstream network of one gene", secondary: true },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Network with evidence from several datasets", secondary: true },

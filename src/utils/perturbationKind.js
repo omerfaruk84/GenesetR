@@ -26,9 +26,32 @@ export const perturbationTitle = (dataset) => (isDrugDataset(dataset) ? "Drugs" 
 /** Label of the perturbation count of a dataset: "Treatments" / "Perturbations" */
 export const perturbationCountLabel = (dataset) => (isDrugDataset(dataset) ? "Treatments" : "Perturbations");
 
+/**
+ * Gain or loss of function? Overexpression (ORF) and CRISPRa datasets carry
+ * `perturbationEffect: "gain"` in the registry; every other genetic dataset
+ * knocks its genes down or out. Objects without the field (rows of the gene
+ * summary) are recognised by their perturbation type.
+ */
+export const isGainDataset = (dataset) => {
+  if (!dataset || isDrugDataset(dataset)) return false;
+  if (dataset.perturbationEffect !== undefined && dataset.perturbationEffect !== null) {
+    return dataset.perturbationEffect === "gain";
+  }
+  return /overexpression|CRISPRa|activation/i.test(String(dataset.perturbationType ?? dataset.perturbation_type ?? ""));
+};
+
+/** What a genetic dataset does to its genes: "overexpression" / "knock-down" */
+export const effectNoun = (dataset) => (isGainDataset(dataset) ? "overexpression" : "knock-down");
+
+/** "overexpressed" / "knocked down" */
+export const effectParticiple = (dataset) => (isGainDataset(dataset) ? "overexpressed" : "knocked down");
+
+/** Label of the effect in tooltips: "Overexpression" / "Knockdown" */
+export const effectLabel = (dataset) => (isGainDataset(dataset) ? "Overexpression" : "Knockdown");
+
 // Registry fields that travel with the selected dataset (`core.cellLine`).
 // Note: `cellLine` here is the registry's cell-line name of the dataset.
-const META_FIELDS = ["perturbationKind", "collection", "drugTable", "organ", "doses", "doseUnit", "cellLine", "parent"];
+const META_FIELDS = ["perturbationKind", "perturbationEffect", "collection", "drugTable", "organ", "doses", "doseUnit", "cellLine", "parent"];
 
 /** The kind-related registry fields of `dataset` that are set. */
 export const datasetKindMeta = (dataset) => {

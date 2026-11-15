@@ -1,0 +1,145 @@
+@use "../../common/page" as page;
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  @include page.table;
+
+  th,
+  td {
+    padding: 5px 8px;
+  }
+}
+
+.compact {
+  th,
+  td {
+    padding: 4px 5px;
+  }
+
+  .value {
+    min-width: 42px;
+    padding: 1px 4px;
+  }
+
+  .call {
+    padding: 1px 6px;
+    font-size: 11.5px;
+  }
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tf {
+  white-space: nowrap;
+}
+
+.rank {
+  width: 30px;
+  color: var(--gs-muted) !important;
+}
+
+.muted,
+.empty {
+  color: var(--gs-muted);
+  font-size: 13px;
+}
+
+.value {
+  display: inline-block;
+  min-width: 52px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.geneLink {
+  color: var(--gs-link);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.secondaryLink {
+  margin-left: 8px;
+  color: var(--gs-muted);
+  font-size: 11.5px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--gs-link);
+    text-decoration: underline;
+  }
+}
+
+.toggle {
+  width: 20px;
+  margin-right: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.call {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.activator {
+  border-color: rgba(200, 55, 60, 0.6);
+}
+
+.repressor {
+  border-color: rgba(45, 105, 190, 0.7);
+}
+
+.conflicting {
+  border-style: dashed;
+}
+
+.none {
+  color: var(--gs-muted);
+}
+
+.rowOpen {
+  background: var(--gs-selected) !important;
+}
+
+.detailRow td {
+  background: var(--gs-surface-alt) !important;
+}
+
+.detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 2px 0 2px 22px;
+  font-size: 12px;
+}
+
+.detailItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detailName {
+  color: var(--gs-muted);
+}

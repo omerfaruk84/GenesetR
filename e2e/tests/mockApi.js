@@ -16,6 +16,24 @@ const FIXTURES = {
   drugCollection: fixture("drug_collection"),
   drugBortezomib: fixture("drug_BORTEZOMIB"),
   drugsForATF4: fixture("drug_for_gene_ATF4"),
+  // TF regulators: answers of the API's /api/v1/regulators endpoints
+  // (the gene set is the "MYC targets" example of the page)
+  regulatorSources: fixture("regulators_sources"),
+  regulatorsLDHA: fixture("regulators_gene_LDHA"),
+  regulatorsATF4: fixture("regulators_gene_ATF4"),
+  regulatorsGeneSet: fixture("regulators_gene_set_myc"),
+  // Integrated analysis: answers of the API's /api/v1/integrated endpoints
+  // (the signature is the cholesterol example, the set the proteasome example)
+  integratedSummary: fixture("integrated_summary"),
+  integratedPerturbationATF4: fixture("integrated_perturbation_ATF4"),
+  integratedPathwaysATF4: fixture("integrated_pathways_ATF4"),
+  integratedGeneATF4: fixture("integrated_gene_ATF4"),
+  integratedGeneSQLE: fixture("integrated_gene_SQLE"),
+  integratedSignature: fixture("integrated_signature_cholesterol"),
+  integratedSet: fixture("integrated_set_proteasome"),
+  // Local enrichment and the CORUM benchmark
+  enrichment: fixture("enrichment_isr"),
+  benchmarkCorum: fixture("benchmark_corum"),
   // Output of the backend's clusterData() for 60 K562 perturbations
   corrCluster: fixture("corr_cluster"),
 };
@@ -50,6 +68,15 @@ const mockApi = async (page) => {
   const requests = [];
   const unmocked = [];
   const taskRequests = []; // request types posted to /getData
+  const regulatorRequests = []; // bodies posted to /api/v1/regulators/gene-set
+  const integratedRequests = []; // { path, body } posted to /api/v1/integrated/* and /api/v1/enrichment
+  const postBody = (request) => {
+    try {
+      return JSON.parse(request.postData() || "{}");
+    } catch (error) {
+      return {};
+    }
+  };
 
   await page.route(/mygene\.info/, (route) =>
     json(route, {
@@ -77,6 +104,11 @@ const mockApi = async (page) => {
         `[2,"Proteasome (fixture)",0.004, 12.5, 40.1, ["PSMA1"],0.01, 0, 0 ]]}`
     );
   });
+
+  // Task updates normally arrive over a WebSocket. With a real API running on the same port
+  // (a developer machine), that socket would answer for the mocked task ids ("Task not found").
+  // Closing it makes the client fall back to polling /tasks/{id}, which is mocked below.
+  await page.routeWebSocket(/\/ws\/tasks\//, (ws) => ws.close());
 
   await page.route(API_HOSTS, (route) => {
     const request = route.request();
@@ -107,6 +139,58 @@ const mockApi = async (page) => {
     if (/^\/api\/v1\/drugs\//.test(pathname)) {
       return json(route, { error: { code: "NOT_FOUND", message: "Drug not found", details: {} } }, 404);
     }
+    if (pathname === "/api/v1/regulators/sources") return json(route, FIXTURES.regulatorSources);
+    if (/^\/api\/v1\/regulators\/gene\/LDHA$/i.test(pathname)) return json(route, FIXTURES.regulatorsLDHA);
+    if (/^\/api\/v1\/regulators\/gene\/ATF4$/i.test(pathname)) return json(route, FIXTURES.regulatorsATF4);
+    if (/^\/api\/v1\/regulators\/gene\//.test(pathname)) {
+      return json(route, { error: { code: "NOT_FOUND", message: "Gene not found", details: {} } }, 404);
+    }
+    if (request.method() === "POST" && pathname === "/api/v1/regulators/gene-set") {
+      let body = {};
+      try {
+        body = JSON.parse(request.postData() || "{}");
+      } catch (error) {
+        body = {};
+      }
+      regulatorRequests.push(body);
+      if ((body.up || []).length + (body.down || []).length < 3) {
+        return json(route, { error: { code: "VALIDATION_ERROR", message: "Give at least 3 genes in total", details: {} } }, 400);
+      }
+      return json(route, FIXTURES.regulatorsGeneSet);
+    }
+    if (pathname === "/api/v1/integrated/summary") return json(route, FIXTURES.integratedSummary);
+    if (/^\/api\/v1\/integrated\/perturbation\/ATF4\/pathways$/i.test(pathname)) return json(route, FIXTURES.integratedPathwaysATF4);
+    if (/^\/api\/v1\/integrated\/perturbation\/ATF4$/i.test(pathname)) return json(route, FIXTURES.integratedPerturbationATF4);
+    if (/^\/api\/v1\/integrated\/gene\/ATF4$/i.test(pathname)) return json(route, FIXTURES.integratedGeneATF4);
+    if (/^\/api\/v1\/integrated\/gene\/SQLE$/i.test(pathname)) return json(route, FIXTURES.integratedGeneSQLE);
+    if (/^\/api\/v1\/integrated\/(perturbation|gene)\//.test(pathname)) {
+      return json(route, { error: { code: "NOT_FOUND", message: "Not found in the integrated datasets", details: {} } }, 404);
+    }
+    if (request.method() === "POST" && pathname === "/api/v1/integrated/signature") {
+      const body = postBody(request);
+      integratedRequests.push({ path: pathname, body });
+      if ((body.up || []).length + (body.down || []).length < 3) {
+        return json(route, { error: { code: "VALIDATION_ERROR", message: "Give at least 3 genes in total", details: {} } }, 400);
+      }
+      return json(route, FIXTURES.integratedSignature);
+    }
+    if (request.method() === "POST" && pathname === "/api/v1/integrated/perturbation-set") {
+      const body = postBody(request);
+      integratedRequests.push({ path: pathname, body });
+      if ((body.perturbations || []).length < 2) {
+        return json(
+          route,
+          { error: { code: "VALIDATION_ERROR", message: "Fewer than 2 of these genes are perturbed in the integrated datasets", details: {} } },
+          400
+        );
+      }
+      return json(route, FIXTURES.integratedSet);
+    }
+    if (request.method() === "POST" && pathname === "/api/v1/enrichment") {
+      integratedRequests.push({ path: pathname, body: postBody(request) });
+      return json(route, FIXTURES.enrichment);
+    }
+    if (pathname === "/api/v1/benchmark/corum") return json(route, FIXTURES.benchmarkCorum);
     if (pathname.startsWith("/health")) return json(route, { status: "healthy" });
     // An analysis run: the task is created and is finished on the first poll.
     if (request.method() === "POST" && pathname === "/getData") {
@@ -131,7 +215,7 @@ const mockApi = async (page) => {
     return notFound(route);
   });
 
-  return { requests, unmocked, enrichr, taskRequests };
+  return { requests, unmocked, enrichr, taskRequests, regulatorRequests, integratedRequests };
 };
 
 /**

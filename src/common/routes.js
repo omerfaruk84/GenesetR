@@ -4,6 +4,8 @@ const ROUTES = Object.freeze({
   DRUG: "/drug",
   DATASETS: "/datasets",
   PROJECT_SIGNATURE: "/project-signature",
+  TF_REGULATORS: "/tf-regulators",
+  INTEGRATED: "/integrated",
   PERMALINK: "/r",
   CORRELATION: "/correlation",
   DR: "/dr",

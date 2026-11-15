@@ -5,8 +5,10 @@ import { ROUTES } from "../../common/routes";
 import { coreSettingsChanged, fetchDatasetsFromBackend } from "../../store/settings/core-settings";
 import { DATASET_KINDS, datasetHasKind, datasetKind, datasetMatches, facetValues } from "../../utils/datasetFilters";
 import { fetchDrugCollection } from "../../store/api/drugs";
+import { fetchCorumBenchmark } from "../../store/api/enrichment";
+import { complexRecovery } from "../../utils/integrated";
 import { genePagePath } from "../../utils/geneLinks";
-import { isDrugDataset, perturbationCountLabel } from "../../utils/perturbationKind";
+import { isDrugDataset, isGainDataset, perturbationCountLabel } from "../../utils/perturbationKind";
 import styles from "./datasets-page.module.scss";
 
 const formatCount = (value) => (typeof value === "number" ? value.toLocaleString("en-US") : "–");
@@ -16,6 +18,9 @@ const doiLink = (citation) => {
   const match = /doi:\s*(10\.[^\s)]+)/i.exec(citation || "");
   return match ? `https://doi.org/${match[1]}` : null;
 };
+
+const RECOVERY_HELP =
+  "Do knock-downs of genes in the same CORUM complex have similar profiles? AUROC 0.5 = chance.";
 
 const KIND_LABEL = { genome: "Genome-wide", focused: "Focused", mine: "My upload", chemical: "Chemical" };
 
@@ -168,6 +173,18 @@ const DatasetsPage = () => {
     return () => controller.abort();
   }, [hasDrugDatasets]);
 
+  // CORUM benchmark of the API: shown per dataset where it exists
+  const [benchmark, setBenchmark] = useState(null);
+  useEffect(() => {
+    let current = true;
+    fetchCorumBenchmark().then((data) => {
+      if (current) setBenchmark(data);
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
+
   const hasUploads = datasets.some((d) => d.isUserUploaded);
   const kindOptions = DATASET_KINDS.filter(
     (k) => (k.id !== "mine" || hasUploads) && ((k.id !== "genetic" && k.id !== "chemical") || hasDrugDatasets)
@@ -195,7 +212,7 @@ const DatasetsPage = () => {
       <div className={styles.inner}>
         <h1>Datasets</h1>
         <p className={styles.lead}>
-          The datasets available in GeneSetR: Perturb-seq screens, in which genes are knocked down, and a drug
+          The datasets available in GeneSetR: Perturb-seq screens, in which genes are knocked down, knocked out or overexpressed, and a drug
           screen, in which cells are treated with small molecules. Each holds z-scored expression changes for every
           perturbation, plus precomputed correlations. The same list is available to programs at{" "}
           <code>/api/v1/datasets</code>.
@@ -248,6 +265,7 @@ const DatasetsPage = () => {
             const selected = core.cellLine?.id === dataset.id;
             const drug = isDrugDataset(dataset);
             const ownLines = drug ? lineTables.filter((d) => d.parent === dataset.id) : [];
+            const recovery = complexRecovery(benchmark?.datasets?.[dataset.id]);
             return (
               <article key={dataset.id} className={`${styles.card} ${selected ? styles.cardSelected : ""}`}>
                 <header className={styles.cardHeader}>
@@ -264,7 +282,12 @@ const DatasetsPage = () => {
                   </div>
                   <div>
                     <dt>Perturbation</dt>
-                    <dd>{dataset.perturbationType || "–"}</dd>
+                    <dd>
+                      {dataset.perturbationType || "–"}
+                      {isGainDataset(dataset) && (
+                        <span title="Genes are switched on or overexpressed here, not knocked down"> (gain of function)</span>
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>{perturbationCountLabel(dataset)}</dt>
@@ -282,6 +305,12 @@ const DatasetsPage = () => {
                     <dt>Licence</dt>
                     <dd>{dataset.license || "–"}</dd>
                   </div>
+                  {recovery && (
+                    <div className={styles.factWide} data-testid="complex-recovery" title={RECOVERY_HELP}>
+                      <dt>Complex recovery</dt>
+                      <dd>{recovery.text}</dd>
+                    </div>
+                  )}
                 </dl>
 
                 <p className={styles.citation}>

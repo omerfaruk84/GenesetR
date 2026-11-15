@@ -289,3 +289,7 @@
     background: var(--gs-hover);
   }
 }
+
+.factWide {
+  grid-column: 1 / -1;
+}

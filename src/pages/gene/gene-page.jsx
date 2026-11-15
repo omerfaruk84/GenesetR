@@ -7,7 +7,10 @@ import { fetchGeneInfo, fetchGeneSummary, resolveGeneAlias } from "../../store/a
 import { baseSymbol, geneLinks, genePagePath } from "../../utils/geneLinks";
 import { sendGenesTo } from "../../utils/sendTo";
 import { SendToMenu } from "../../components/send-to";
+import { effectNoun, isGainDataset } from "../../utils/perturbationKind";
+import { GeneConsensus } from "./gene-consensus";
 import { GeneDrugs } from "./gene-drugs";
+import { GeneRegulators } from "./gene-regulators";
 import styles from "./gene-page.module.scss";
 
 const EXAMPLES = ["ATF4", "MED12", "HSPA5", "TP53", "MYC", "EIF2AK4"];
@@ -50,9 +53,10 @@ const RankedList = ({ title, rows, labelKey, valueKey, limit, empty = "None" }) 
   </div>
 );
 
-const Conservation = ({ conservation, names }) => {
+const Conservation = ({ conservation, names, gainIds = [] }) => {
   if (!conservation) return null;
   const { datasets, pearson, shared_genes: shared } = conservation;
+  const gain = datasets.filter((id) => gainIds.includes(id));
   return (
     <section className={styles.section}>
       <h2>Is the knock-down effect conserved between datasets?</h2>
@@ -60,6 +64,8 @@ const Conservation = ({ conservation, names }) => {
         Pearson correlation between the knock-down profiles of this gene in each pair of datasets, over the genes
         both measure (z-scores clipped at ±{conservation.z_clip}). Empty cells share fewer than{" "}
         {conservation.min_shared_genes} genes. Values near 1 mean the same genes respond in both contexts.
+        {gain.length > 0 &&
+          ` In ${gain.map((id) => names[id] || id).join(" and ")} the gene is overexpressed, not knocked down: there a negative correlation with a knock-down dataset is the expected agreement.`}
       </p>
       <div className={styles.tableScroll}>
         <table className={styles.matrix}>
@@ -258,11 +264,15 @@ const GenePage = () => {
               </p>
             </header>
 
+            <GeneConsensus symbol={summary.symbol} datasetNames={names} />
+
             <section className={styles.section}>
               <h2>Across datasets</h2>
               <p className={styles.help}>
                 “Own expression” is the z-score of {summary.symbol} itself when it is perturbed (strongly negative
-                means an efficient knock-down). “Genes changed” counts measured genes with |z| ≥{" "}
+                means an efficient knock-down
+                {summary.datasets.some(isGainDataset) ? "; in an overexpression or CRISPRa dataset it should be positive" : ""}
+                ). “Genes changed” counts measured genes with |z| ≥{" "}
                 {summary.strong_effect_z} under the perturbation; “regulators” counts perturbations that move{" "}
                 {summary.symbol} by the same amount. Click a row for the details below.
               </p>
@@ -298,6 +308,7 @@ const GenePage = () => {
                             <span
                               className={styles.value}
                               style={{ background: divergingColor(d.as_perturbation.self_z, 5) }}
+                              title={`z-score of ${summary.symbol} under its own ${effectNoun(d)}`}
                             >
                               {fmt(d.as_perturbation.self_z)}
                             </span>
@@ -332,9 +343,15 @@ const GenePage = () => {
               </div>
             </section>
 
-            <Conservation conservation={summary.conservation} names={names} />
+            <Conservation
+              conservation={summary.conservation}
+              names={names}
+              gainIds={summary.datasets.filter(isGainDataset).map((d) => d.dataset)}
+            />
 
             <GeneDrugs symbol={summary.symbol} datasetNames={names} />
+
+            <GeneRegulators symbol={summary.symbol} datasetNames={names} />
 
             {current && (
               <section className={styles.section}>
@@ -394,7 +411,7 @@ const GenePage = () => {
 
                 <div className={styles.columns}>
                   <div className={styles.card}>
-                    <h3>When {symbol} is perturbed</h3>
+                    <h3>When {symbol} is {isGainDataset(current) ? "overexpressed" : "perturbed"}</h3>
                     {current.as_perturbation ? (
                       <>
                         <p className={styles.help}>Genes whose expression changes most (z-score).</p>
@@ -412,7 +429,9 @@ const GenePage = () => {
                         </div>
                       </>
                     ) : (
-                      <p className={styles.muted}>{symbol} is not perturbed in this dataset.</p>
+                      <p className={styles.muted}>
+                        {symbol} is not {isGainDataset(current) ? "overexpressed" : "perturbed"} in this dataset.
+                      </p>
                     )}
                   </div>
 
@@ -444,7 +463,7 @@ const GenePage = () => {
                     {current.neighbours ? (
                       <>
                         <p className={styles.help}>
-                          Correlation of knock-down profiles ({current.neighbours.method}). Similar profiles suggest a
+                          Correlation of {effectNoun(current)} profiles ({current.neighbours.method}). Similar profiles suggest a
                           shared complex or pathway.
                         </p>
                         <div className={styles.cardActions}>

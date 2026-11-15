@@ -5,6 +5,8 @@ import { expressionanalyzerSettingsChanged } from "../store/settings/expression-
 import { multidatasetComparisonSettingsChanged } from "../store/settings/multidataset-comparison-settings";
 import { baseSymbol, genePagePath } from "./geneLinks";
 import { drugPagePath } from "./perturbationKind";
+import { integratedPath } from "./integrated";
+import { tfRegulatorsPath } from "./regulators";
 
 /**
  * Modules a gene or a gene list can be sent to.
@@ -12,6 +14,7 @@ import { drugPagePath } from "./perturbationKind";
  *   kind "target": the genes become the second (gene / signature) list
  *   kind "gene":   the module works on a single gene (the first one is used)
  *   kind "drug":   the drug page (the first drug is used); only for drug lists
+ *   kind "page":   a page that takes the whole list in its address
  * `min` is the smallest list the module accepts.
  * `geneOnly` targets work on genes: they are not offered for a list of drugs.
  */
@@ -25,6 +28,9 @@ export const SEND_TARGETS = [
   { id: "geneRegulation", label: "Gene Regulation", route: ROUTES.GENE_REGULATION, kind: "gene", min: 1, geneOnly: true },
   { id: "expressionAnalyzer", label: "Expression Analyzer", route: ROUTES.EXPRESSIONANALYZER, kind: "gene", min: 1, geneOnly: true },
   { id: "multidataset", label: "Multi-Dataset Comparison", route: ROUTES.MULTIDATASET_COMPARISON, kind: "gene", min: 1, geneOnly: true },
+  { id: "tfRegulators", label: "TF regulators", route: ROUTES.TF_REGULATORS, kind: "page", min: 3, geneOnly: true },
+  { id: "integratedSet", label: "Common effects (integrated)", route: ROUTES.INTEGRATED, kind: "page", min: 2, geneOnly: true },
+  { id: "integratedSignature", label: "Integrated signature", route: ROUTES.INTEGRATED, kind: "page", min: 3, geneOnly: true },
   { id: "genePage", label: "Gene page", route: ROUTES.GENE, kind: "gene", min: 1, geneOnly: true },
   { id: "drugPage", label: "Drug page", route: ROUTES.DRUG, kind: "drug", min: 1, drugOnly: true },
 ];
@@ -81,6 +87,11 @@ export const sendGenesTo = (targetId, genes, { datasetId } = {}) => (dispatch, g
   }
 
   if (target.id === "drugPage") return drugPagePath(list[0]);
+  // The list becomes the "genes that go up" of the TF regulators page
+  if (target.id === "tfRegulators") return tfRegulatorsPath({ up: list.map(baseSymbol), run: true });
+  // Integrated analysis: the list as perturbed genes, or as the "genes that go up" of a signature
+  if (target.id === "integratedSet") return integratedPath({ mode: "set", genes: list.map(baseSymbol), run: true });
+  if (target.id === "integratedSignature") return integratedPath({ mode: "signature", up: list.map(baseSymbol), run: true });
 
   const first = baseSymbol(list[0]);
   switch (target.id) {

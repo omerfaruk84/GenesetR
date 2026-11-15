@@ -79,3 +79,81 @@ export const EXAMPLE_SIGNATURES = [
     formula: "HMGCR+HMGCS1+LDLR+INSIG1+SQLE+FDFT1+IDI1+MVD+LSS+DHCR7+SC5D+FDPS+ACAT2",
   },
 ];
+
+/**
+ * Signatures for the "TF regulators" page: genes that go up and genes that go
+ * down, with the transcription factor the analysis is expected to find.
+ */
+export const EXAMPLE_REGULATOR_SETS = [
+  {
+    id: "myc-targets",
+    name: "MYC targets",
+    about: "Nucleolar and metabolic genes induced by MYC; MYC and MAX come first",
+    up: ["NCL", "NPM1", "LDHA", "PPA1", "SNRPD1", "EBNA1BP2", "NOP56", "FBL", "CDK4", "ODC1"],
+    down: [],
+  },
+  {
+    id: "p53-targets",
+    name: "p53 targets",
+    about: "Genes induced by p53; TP53 comes first",
+    up: ["CDKN1A", "MDM2", "BAX", "FAS", "RRM2B", "SESN1", "TP53I3", "ZMAT3", "BTG2", "PLK3", "GDF15", "TNFRSF10B"],
+    down: [],
+  },
+  {
+    id: "upr",
+    name: "Unfolded protein response (up and down)",
+    about: "ER chaperones and ERAD genes up, housekeeping genes down; XBP1 comes first",
+    up: ["HSPA5", "DDIT3", "EDEM1", "PPP1R15A", "HERPUD1", "DNAJC3", "DNAJB9", "DNAJB11", "MANF", "SDF2L1", "HSP90B1", "SELENOK", "CALR"],
+    down: ["TUBB", "SLC25A3", "PTMA", "PRDX1", "PPIA", "TUBB4B", "HSPE1", "CD59"],
+  },
+];
+
+/**
+ * Signatures for the signature mode of the "Integrated analysis" page, with the
+ * perturbed genes the analysis is expected to find.
+ */
+export const EXAMPLE_INTEGRATED_SIGNATURES = [
+  {
+    id: "cholesterol",
+    name: "Cholesterol synthesis",
+    about: "Sterol synthesis and uptake genes; the SREBP pathway (MBTPS1, SCAP, MBTPS2, SREBF2) is needed for them",
+    up: ["HMGCS1", "HMGCR", "LDLR", "INSIG1", "SQLE", "FDFT1", "IDI1", "MVD", "DHCR7", "SC5D", "FDPS", "LSS", "ACAT2", "STARD4"],
+    down: [],
+  },
+  {
+    id: "isr",
+    name: "ATF4 targets",
+    about: "Amino-acid synthesis and transport genes of the integrated stress response",
+    up: ["DDIT3", "ASNS", "TRIB3", "CHAC1", "SESN2", "SLC7A11", "PSAT1", "PHGDH", "SHMT2", "MTHFD2", "ATF3", "DDIT4"],
+    down: [],
+  },
+  {
+    id: "upr",
+    name: "Unfolded protein response (up and down)",
+    about: "ER chaperones and ERAD genes up, housekeeping genes down",
+    up: ["HSPA5", "DDIT3", "EDEM1", "PPP1R15A", "HERPUD1", "DNAJC3", "DNAJB9", "DNAJB11", "MANF", "SDF2L1", "HSP90B1", "SELENOK", "CALR"],
+    down: ["TUBB", "SLC25A3", "PTMA", "PRDX1", "PPIA", "TUBB4B", "HSPE1", "CD59"],
+  },
+];
+
+/** Lists of perturbed genes for the "common effects" mode of the "Integrated analysis" page. */
+export const EXAMPLE_PERTURBATION_SETS = [
+  {
+    id: "proteasome",
+    name: "Proteasome subunits",
+    about: "Their loss raises heat-shock and ubiquitin genes (HSPA1A, UBC, SQSTM1)",
+    genes: ["PSMA1", "PSMB3", "PSMD4", "PSMC3", "PSMA6", "POMP"],
+  },
+  {
+    id: "srebp",
+    name: "SREBP pathway",
+    about: "Site-1 and site-2 proteases, SCAP and SREBF2",
+    genes: ["MBTPS1", "MBTPS2", "SCAP", "SREBF2"],
+  },
+  {
+    id: "mediator",
+    name: "Mediator subunits",
+    about: "Subunits of the Mediator co-activator",
+    genes: ["MED12", "MED14", "MED17", "MED20", "MED23", "MED24", "MED30"],
+  },
+];
