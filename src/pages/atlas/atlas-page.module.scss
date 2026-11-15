@@ -184,6 +184,13 @@
   min-width: 220px;
 }
 
+// a search box in a row of controls takes the room that is left on a narrow screen
+.toolbar > .input,
+.controls > .input {
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
 // --- search box with suggestions -------------------------------------------
 
 .typeahead {
@@ -286,9 +293,10 @@
   align-items: start;
 }
 
+// one column: minmax(0, ...) keeps a long module name from widening the page
 @media (max-width: 1000px) {
   .mapLayout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -308,6 +316,17 @@
 
 .mapNote {
   padding: 4px 8px 2px;
+}
+
+// the map takes the wheel and the finger: on a small screen it leaves room to scroll past it
+.mapFrame {
+  height: 600px;
+}
+
+@media (max-width: 700px) {
+  .mapFrame {
+    height: min(600px, 62vh);
+  }
 }
 
 .moduleList {
@@ -387,7 +406,7 @@
 
 .pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr));
   gap: 16px;
   margin-top: 16px;
   align-items: start;
@@ -395,7 +414,7 @@
 
 @media (max-width: 560px) {
   .pair {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -430,7 +449,7 @@
 // partners and predictions of a gene: side by side when the panel is wide
 .sections {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
   gap: 0 28px;
   align-items: start;
 
@@ -506,7 +525,7 @@
 
 @media (max-width: 1000px) {
   .modulesLayout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -520,6 +539,14 @@
   border-radius: 8px;
   background: var(--gs-surface);
   list-style: none;
+}
+
+// in one column the chosen module opens below the list: keep the list short enough to reach it
+@media (max-width: 1000px) {
+  .moduleCards {
+    max-height: 46vh;
+    min-height: 200px;
+  }
 }
 
 .moduleCard {
@@ -554,6 +581,29 @@
   font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// stability and context of a module: in its card and under its name in the panel
+.moduleFacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 3px;
+  color: var(--gs-muted);
+  font-size: 12.5px;
+}
+
+.unstable {
+  color: var(--gs-warning);
+}
+
+.contextTable {
+  max-width: 460px;
+}
+
+.contextFew td {
+  color: var(--gs-muted) !important;
 }
 
 // --- tables -----------------------------------------------------------------
@@ -606,6 +656,7 @@
   color: var(--gs-muted);
   font-size: 12px;
   text-decoration: none;
+  white-space: nowrap;
 
   &:hover {
     color: var(--gs-link);
@@ -626,7 +677,7 @@
   }
 }
 
-// "this gene is itself a member", "same chromosome band"
+// "this gene is itself a member", "promoter within 5 kb"
 .mark {
   display: inline-block;
   margin-left: 6px;
@@ -691,4 +742,146 @@
 
 .below {
   margin-top: 10px;
+}
+
+// --- highlighted genes on the map -------------------------------------------
+
+.mapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0 0 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 6px;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+  font-size: 12.5px;
+  line-height: 1.45;
+
+  > span {
+    min-width: 0;
+  }
+
+  .dot,
+  .ring {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+
+  a {
+    margin-left: 10px;
+    white-space: nowrap;
+  }
+}
+
+// a ring around a point, as drawn on the map
+.ring {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--gs-text);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+// --- gene list tab ----------------------------------------------------------
+
+.listLayout {
+  display: grid;
+  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .listLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.listResult {
+  min-width: 0;
+}
+
+.listHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+
+  label {
+    color: var(--gs-text);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  height: 170px;
+  margin: 4px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--gs-accent);
+    outline: 0;
+    box-shadow: 0 0 0 2px var(--gs-accent-soft);
+  }
+}
+
+.primary {
+  width: 100%;
+  height: 38px;
+  margin: 12px 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--gs-accent);
+  color: var(--gs-on-accent);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--gs-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+// the heatmap keeps a readable square size: a long list scrolls inside this frame
+.heatScroll {
+  overflow-x: auto;
+}
+
+.heatNote {
+  margin: 8px 0 0;
+}
+
+.swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.swatchEmpty {
+  border-style: dashed;
+  background: transparent;
 }

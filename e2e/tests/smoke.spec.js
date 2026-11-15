@@ -31,7 +31,7 @@ const ANALYSIS_ROUTES = [
   "/genelists",
 ];
 
-const OTHER_ROUTES = ["/", "/datasets", "/drug", "/project-signature", "/tf-regulators", "/integrated", "/atlas", "/upload-dataset", "/about"];
+const OTHER_ROUTES = ["/", "/datasets", "/drug", "/project-signature", "/tf-regulators", "/integrated", "/atlas", "/interactions", "/ask", "/upload-dataset", "/about"];
 
 test("start page shows the five question groups", async ({ page }) => {
   await mockApi(page);
@@ -306,7 +306,7 @@ test("integrated analysis: ATF4 as a perturbation shows PHGDH among the down tar
   await expect(page.getByTestId("integrated-context-specific")).toContainText("hESC");
   await expect(page.getByTestId("integrated-partners").locator('a[href*="symbol=EIF4G1"]')).toBeVisible();
   await expect(page.getByTestId("integrated-strength")).toContainText("K562 Whole Genome");
-  await expect(page.getByTestId("integrated-pathways")).toContainText("E2F Targets");
+  await expect(page.getByTestId("integrated-pathways")).toContainText("mTORC1 Signaling");
   await expect(page.getByTestId("integrated-pathways")).toContainText("q-values are optimistic");
 
   // a row opens to the values per dataset, with the dataset name and its cell context
@@ -439,7 +439,7 @@ test("function atlas: the map finds a gene, shows its panel and the module it is
   await expect(members.locator('a[data-no-go="true"]', { hasText: "INTS15" })).toBeVisible();
   await expect(members.locator('a[data-placeholder="true"]')).toHaveText(["C11ORF68"]);
   await expect(module.getByTestId("atlas-module-down")).toContainText("RPS18");
-  await expect(module.getByTestId("atlas-module-up")).toContainText("GTF3C6");
+  await expect(module.getByTestId("atlas-module-up")).toContainText("GADD45GIP1");
   await expect(module.getByRole("button", { name: /Send the genes to/ })).toBeVisible();
   await expect(page.getByTestId("atlas-module-list").locator('a[aria-current="true"]')).toContainText("M47");
 
@@ -485,7 +485,7 @@ test("function atlas: predictions that rest on a chromosomal neighbour are hidde
   await page.goto("/atlas?gene=KIAA0586");
   const panel = page.getByTestId("atlas-gene-panel");
   await expect(panel).toContainText("placeholder name");
-  // TIMM9 is in the same chromosome band
+  // the promoter of TIMM9 lies within 5 kb of that of KIAA0586
   const partners = panel.getByTestId("atlas-gene-partners");
   await expect(partners.getByTestId("neighbour-mark")).toHaveCount(1);
   await expect(partners.locator("tr", { hasText: "TIMM9" }).getByTestId("neighbour-mark")).toBeVisible();
@@ -532,7 +532,7 @@ test("function atlas: the modules are searchable and open in the module panel", 
   await expect(panel.getByRole("heading", { level: 3, name: "P26: Cholesterol Homeostasis" })).toBeVisible();
   await expect(panel.getByTestId("atlas-module-terms")).toContainText("Cholesterol Biosynthesis");
   await expect(panel.getByTestId("atlas-module-down")).toContainText("MBTPS1");
-  await expect(panel.getByTestId("atlas-module-up").getByTestId("member-mark")).toHaveCount(7);
+  await expect(panel.getByTestId("atlas-module-up").getByTestId("member-mark")).toHaveCount(8);
   expect(await errors()).toEqual([]);
 });
 
@@ -642,3 +642,457 @@ test("gene page has a Function atlas block that opens the gene in the atlas", as
   await expect(page.getByTestId("atlas-gene-panel").getByRole("heading", { level: 3, name: "ATF4" })).toBeVisible();
   expect(await errors()).toEqual([]);
 });
+
+// ---------------------------------------------------------------------------
+// Function atlas: gene list tab, highlights on the map, every export button
+// and every "Send to" menu, narrow screens
+// ---------------------------------------------------------------------------
+
+const fs = require("fs");
+
+const ATLAS_EXAMPLE_LIST =
+  "INTS1,INTS2,INTS3,INTS4,INTS5,INTS6,INTS7,INTS8,INTS9,INTS10,INTS11,INTS12,INTS13,INTS14,INTS15,MED12,MED14,MED17,MED20,MED23,MED24,MED30," +
+  "EXOSC2,EXOSC3,EXOSC4,EXOSC5,EXOSC6,EXOSC7,EXOSC8,EXOSC9,EXOSC10,DIS3";
+
+const downloadFrom = async (page, button) => {
+  const [file] = await Promise.all([page.waitForEvent("download"), button.click()]);
+  return file;
+};
+
+/**
+ * Click CSV, TSV and Excel of one group of export buttons (the `index`-th
+ * group inside `scope`) and check the three files. Returns the lines of the CSV.
+ */
+const expectTableExports = async (page, scope, name, index = 0) => {
+  const button = (label) => scope.getByRole("button", { name: label, exact: true }).nth(index);
+  const csv = await downloadFrom(page, button("CSV"));
+  expect(csv.suggestedFilename()).toMatch(new RegExp(`^${name}-[\\d-]+\\.csv$`));
+  const lines = fs.readFileSync(await csv.path(), "utf-8").replace(/^﻿/, "").trim().split(/\r?\n/);
+  expect(lines.length).toBeGreaterThan(1);
+  const tsv = await downloadFrom(page, button("TSV"));
+  expect(tsv.suggestedFilename()).toMatch(new RegExp(`^${name}-[\\d-]+\\.tsv$`));
+  const tsvLines = fs.readFileSync(await tsv.path(), "utf-8").trim().split(/\r?\n/);
+  expect(tsvLines).toHaveLength(lines.length);
+  const xlsx = await downloadFrom(page, button("Excel"));
+  expect(xlsx.suggestedFilename()).toMatch(new RegExp(`^${name}-[\\d-]+\\.xlsx$`));
+  // an .xlsx file is a zip archive
+  expect(fs.readFileSync(await xlsx.path()).subarray(0, 2).toString()).toBe("PK");
+  return lines;
+};
+
+/** Open a "Send to" menu and choose a module. */
+const sendTo = async (page, button, target) => {
+  await button.click();
+  await page.getByRole("menuitem", { name: target }).click();
+};
+
+test("function atlas: the understudied genes and a gene list are highlighted on the map", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas");
+  await expect(page.getByTestId("atlas-map").locator("canvas")).toBeVisible();
+  await expect(page.getByTestId("atlas-map-legend")).toHaveCount(0);
+
+  // the switch is in the address; the legend counts both kinds of understudied genes
+  await page.getByLabel("Highlight understudied genes").check();
+  await expect(page).toHaveURL(/\/atlas\?understudied=1$/);
+  const legend = page.getByTestId("atlas-map-legend");
+  await expect(legend.getByTestId("atlas-map-no-go")).toContainText("No GO term: 27 genes");
+  await expect(legend.getByTestId("atlas-map-placeholder")).toContainText("Placeholder name (open reading frame, FAM, KIAA): 4 genes");
+  await expect(legend).toContainText("The other genes are faded");
+
+  // it stays on when a gene is chosen and on the other map
+  await page.getByRole("combobox", { name: "Find a gene on the map" }).fill("ints1");
+  await page.getByRole("option", { name: /^INTS15/ }).click();
+  await expect(page).toHaveURL(/\/atlas\?gene=INTS15&understudied=1$/);
+  await page.getByRole("link", { name: "Co-regulated genes" }).click();
+  await expect(page).toHaveURL(/\/atlas\?axis=genes&gene=INTS15&understudied=1$/);
+  await expect(legend.getByTestId("atlas-map-no-go")).toContainText("39 genes");
+  await expect(legend.getByTestId("atlas-map-placeholder")).toContainText("2 genes");
+  await page.getByLabel("Highlight understudied genes").uncheck();
+  await expect(page).toHaveURL(/\/atlas\?axis=genes&gene=INTS15$/);
+  await expect(legend).toHaveCount(0);
+
+  // a gene list in the address: how many of its genes are on the map, and which are not
+  await page.goto("/atlas?genes=INTS1,INTS2,INTS13,NOTAGENE1");
+  await expect(page.getByTestId("atlas-map").locator("canvas")).toBeVisible();
+  const list = page.getByTestId("atlas-map-list");
+  await expect(list).toContainText("Your gene list: 3 of 4 genes on this map");
+  await expect(list).toContainText("not on it: NOTAGENE1");
+  await expect(page.getByTestId("atlas-map-no-go")).toHaveCount(0);
+  // both highlights together
+  await page.getByLabel("Highlight understudied genes").check();
+  await expect(page).toHaveURL(/\/atlas\?understudied=1&genes=INTS1,INTS2,INTS13,NOTAGENE1$/);
+  await expect(page.getByTestId("atlas-map-no-go")).toBeVisible();
+  // the list opens as a heatmap, and can be removed
+  await expect(list.getByRole("link", { name: "Heatmap of the list" })).toHaveAttribute("href", /\/atlas\?tab=list&genes=INTS1,INTS2,INTS13,NOTAGENE1$/);
+  await list.getByRole("link", { name: "Remove the list" }).click();
+  await expect(page).toHaveURL(/\/atlas\?understudied=1$/);
+  await expect(page.getByTestId("atlas-map-list")).toHaveCount(0);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: a gene list gives a clustered heatmap of its similarity", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  const similarity = () => api.atlasRequests.filter((request) => request.path === "similarity");
+  await page.goto("/atlas");
+  await page.getByRole("tab", { name: "Gene list" }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=list$/);
+  await expect(page.getByTestId("atlas-list-explain")).toContainText("Which genes of a list act together?");
+  await expect(page.getByRole("button", { name: "Show the heatmap" })).toBeDisabled();
+
+  // the example: the list is in the address and in the box, and is asked for with the knock-down evidence
+  await page.getByRole("link", { name: "Integrator, Mediator and exosome" }).click();
+  await expect(page).toHaveURL(new RegExp(`/atlas\\?tab=list&genes=${ATLAS_EXAMPLE_LIST}$`));
+  await expect(page.getByLabel("Gene list")).toHaveValue(/^INTS1\nINTS2\nINTS3\n/);
+  const result = page.getByTestId("atlas-similarity");
+  await expect(result.getByRole("heading", { level: 2, name: "Knock-down similarity among 32 genes" })).toBeVisible();
+  await expect(result.getByTestId("atlas-similarity-summary")).toContainText("32 of 32 genes shown.");
+  await expect(result.getByTestId("atlas-similarity-missing")).toHaveCount(0);
+  expect(similarity()[0].body).toMatchObject({ axis: "pert", genes: expect.arrayContaining(["INTS1", "DIS3"]) });
+  expect(similarity()[0].body.genes).toHaveLength(32);
+
+  // clustered in the browser: the complexes are blocks, and Integrator splits into its modules
+  const heatmap = result.getByTestId("atlas-similarity-heatmap");
+  await expect(heatmap.locator("canvas")).toBeVisible();
+  const order = (await heatmap.getAttribute("data-genes")).split(",");
+  expect(order).toHaveLength(32);
+  const span = (genes) => {
+    const positions = genes.map((gene) => order.indexOf(gene));
+    return Math.max(...positions) - Math.min(...positions) + 1;
+  };
+  expect(span(["INTS10", "INTS13", "INTS14", "INTS15"])).toBe(4);
+  expect(span(["EXOSC2", "EXOSC3", "EXOSC4", "EXOSC5", "EXOSC6", "EXOSC7", "EXOSC8", "EXOSC9"])).toBe(8);
+  expect(span(["MED12", "MED23", "MED24"])).toBe(3);
+  await expect(result.getByTestId("atlas-similarity-key")).toContainText("The strongest colour stands for a mean correlation of 0.70 or more");
+
+  // a square says which pair it is, with r, the evidence score and the number of datasets
+  const box = await heatmap.locator("canvas").first().boundingBox();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.25);
+  await page.mouse.move(box.x + box.width * 0.5 + 2, box.y + box.height * 0.25 + 2);
+  await expect(heatmap).toContainText("Evidence score:");
+  await expect(heatmap).toContainText("Datasets with both:");
+  await expect(heatmap).toContainText("Mean correlation of the knock-downs:");
+
+  // a typed list: genes the atlas does not have are named; the other evidence is in the address
+  await page.getByLabel("Gene list").fill("ints1 INTS2, MED12;\nNOTAGENE1");
+  await page.getByRole("button", { name: "Show the heatmap" }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=list&genes=INTS1,INTS2,MED12,NOTAGENE1$/);
+  await expect(result.getByTestId("atlas-similarity-summary")).toContainText("3 of 4 genes shown, 1 not in the atlas.");
+  await expect(result.getByTestId("atlas-similarity-missing")).toContainText("Not among the knock-downs of the atlas: NOTAGENE1.");
+  await page.getByRole("link", { name: "Co-regulation", exact: true }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=list&axis=genes&genes=INTS1,INTS2,MED12,NOTAGENE1$/);
+  await expect(result.getByRole("heading", { level: 2, name: "Co-regulation among 3 genes" })).toBeVisible();
+  await expect(result.getByTestId("atlas-similarity-missing")).toContainText("Not among the measured genes of the atlas: NOTAGENE1.");
+  expect(similarity().some((request) => request.body.axis === "genes" && request.body.genes.length === 4)).toBe(true);
+
+  // "Show on the map" highlights the genes that were found, on the map of the same evidence
+  await result.getByRole("link", { name: "Show on the map" }).click();
+  await expect(page).toHaveURL(/\/atlas\?axis=genes&genes=[A-Z0-9]+,[A-Z0-9]+,[A-Z0-9]+$/);
+  await expect(page.getByTestId("atlas-map-list")).toContainText("Your gene list: 0 of 3 genes on this map");
+
+  // the message of the API is shown when the list cannot be used
+  await page.goto("/atlas?tab=list&genes=NOTAGENE1,NOTAGENE2");
+  await expect(page.getByTestId("atlas-similarity-error")).toContainText("Fewer than 2 of these genes are on this map");
+  await page.goto("/atlas?tab=list&genes=INTS1");
+  await expect(page.getByRole("button", { name: "Show the heatmap" })).toBeDisabled();
+  await expect(page.locator("body")).toContainText("One gene is not enough");
+  expect(api.unmocked.filter((request) => request.includes("/atlas"))).toEqual([]);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: the heatmap of a gene list can be saved as a table and as a picture", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto(`/atlas?tab=list&genes=${ATLAS_EXAMPLE_LIST}`);
+  const result = page.getByTestId("atlas-similarity");
+  const heatmap = result.getByTestId("atlas-similarity-heatmap");
+  await expect(heatmap.locator("canvas")).toBeVisible();
+  const order = (await heatmap.getAttribute("data-genes")).split(",");
+
+  // the matrix: one row and one column per gene, in the order of the picture, the diagonal empty
+  const lines = await expectTableExports(page, result, "genesetr-atlas-similarity-knock-downs");
+  expect(lines).toHaveLength(33);
+  expect(lines[0]).toBe(`Gene,${order.join(",")}`);
+  const first = lines[1].split(",");
+  expect(first[0]).toBe(order[0]);
+  expect(first[1]).toBe("");
+  expect(Math.abs(Number(first[2]))).toBeLessThan(1);
+  const ints8 = lines.find((line) => line.startsWith("INTS8,")).split(",");
+  expect(Number(ints8[1 + order.indexOf("INTS2")])).toBeCloseTo(0.654, 3);
+
+  // the picture
+  const picture = page.getByTestId("atlas-similarity-picture");
+  const png = await downloadFrom(page, picture.getByRole("button", { name: "PNG" }));
+  expect(png.suggestedFilename()).toMatch(/^genesetr-atlas-similarity-knock-downs-[\d-]+\.png$/);
+  expect(fs.readFileSync(await png.path()).subarray(1, 4).toString()).toBe("PNG");
+  const svg = await downloadFrom(page, picture.getByRole("button", { name: "SVG" }));
+  expect(svg.suggestedFilename()).toMatch(/^genesetr-atlas-similarity-knock-downs-[\d-]+\.svg$/);
+  const svgText = fs.readFileSync(await svg.path(), "utf-8");
+  expect(svgText).toMatch(/^<svg/);
+  expect(svgText).toContain("EXOSC10");
+  const pdf = await downloadFrom(page, picture.getByRole("button", { name: "PDF" }));
+  expect(pdf.suggestedFilename()).toMatch(/^genesetr-atlas-similarity-knock-downs-[\d-]+\.pdf$/);
+  expect(fs.readFileSync(await pdf.path()).subarray(0, 5).toString()).toBe("%PDF-");
+
+  // the other evidence gets its own file name
+  await page.getByRole("link", { name: "Co-regulation", exact: true }).click();
+  await expect(result.getByRole("heading", { level: 2, name: "Co-regulation among 32 genes" })).toBeVisible();
+  const csv = await downloadFrom(page, result.getByRole("button", { name: "CSV", exact: true }));
+  expect(csv.suggestedFilename()).toMatch(/^genesetr-atlas-similarity-co-regulation-[\d-]+\.csv$/);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: every table export of the gene, module, prediction and pathway views downloads its file", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+
+  // map tab: the gene panel (partners, predictions) and the module panel (gene sets, members, consequence)
+  await page.goto("/atlas?gene=INTS15&module=47");
+  const gene = page.getByTestId("atlas-gene-panel");
+  await expect(gene.getByTestId("atlas-gene-partners")).toBeVisible();
+  const partners = await expectTableExports(page, gene, "genesetr-atlas-partners-INTS15-pert", 0);
+  expect(partners[0]).toBe("Partner,Evidence score,Mean correlation,Datasets,Promoter within 5 kb");
+  expect(partners).toHaveLength(16);
+  expect(partners[1]).toMatch(/^INTS13,[\d.]+,[\d.]+,\d+,(yes|no)$/);
+  const genePredictions = await expectTableExports(page, gene, "genesetr-atlas-predictions-INTS15", 1);
+  expect(genePredictions[0]).toMatch(/^Gene,Full name,Predicted function,Library,Evidence,Confidence,/);
+  expect(genePredictions.slice(1).every((line) => line.startsWith("INTS15,"))).toBe(true);
+
+  const module = page.getByTestId("atlas-module-panel");
+  await expect(module.getByTestId("atlas-module-terms")).toBeVisible();
+  const terms = await expectTableExports(page, module, "genesetr-atlas-module-47-gene-sets", 0);
+  expect(terms[0]).toBe("Library,Gene set,Overlap,Set size,q,Genes");
+  expect(terms).toHaveLength(3);
+  const members = await expectTableExports(page, module, "genesetr-atlas-module-47-members", 2);
+  expect(members[0]).toBe("Gene,GO BP terms,Placeholder name");
+  expect(members).toHaveLength(37);
+  expect(members).toContain("INTS15,0,no");
+  expect(members.filter((line) => line.endsWith(",yes"))).toEqual([expect.stringMatching(/^C11ORF68,/)]);
+  const consequence = await expectTableExports(page, module, "genesetr-atlas-module-47-consequence", 3);
+  expect(consequence[0]).toBe("Direction,Measured gene,Mean z,Share agreeing,Member of the module");
+  expect(consequence).toHaveLength(26);
+  expect(consequence.filter((line) => line.startsWith("up,"))).toHaveLength(10);
+
+  // a co-regulation programme: its own file names and headings
+  await page.goto("/atlas?tab=modules&axis=genes&module=26");
+  await expect(module.getByTestId("atlas-module-terms")).toBeVisible();
+  const programme = await expectTableExports(page, module, "genesetr-atlas-programme-26-consequence", 2);
+  expect(programme[0]).toBe("Direction,Perturbed gene,Mean z,Share agreeing,Member of the module");
+
+  // predicted functions: the rows of the page
+  await page.goto("/atlas?tab=predictions");
+  await expect(page.getByTestId("atlas-predictions")).toBeVisible();
+  const predictions = await expectTableExports(page, page.locator("body"), "genesetr-atlas-predictions");
+  expect(predictions).toHaveLength(21);
+  expect(predictions[1]).toMatch(/^PSMG3,/);
+
+  // pathways: one gene set (both directions together, and each table), and one perturbed gene
+  await page.goto("/atlas?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis");
+  const pathway = page.getByTestId("atlas-pathway");
+  await expect(page.getByTestId("atlas-pathway-down").locator("tbody tr").first()).toBeVisible();
+  const both = await expectTableExports(page, pathway, "genesetr-atlas-cholesterol-homeostasis-knock-downs", 0);
+  expect(both[0]).toBe("Direction,Perturbed gene,Meta z,Datasets,Contexts,Member of the gene set");
+  expect(both).toHaveLength(51);
+  expect(both[1]).toMatch(/^lowers,MBTPS1,/);
+  expect(both).toContainEqual(expect.stringMatching(/^lowers,SREBF2,.*,yes$/));
+  const lowers = await expectTableExports(page, page.getByTestId("atlas-pathway-down"), "genesetr-atlas-cholesterol-homeostasis-knock-downs-that-lower-it");
+  expect(lowers[0]).toBe("Perturbed gene,Meta z,Datasets,Contexts,Member of the gene set");
+  expect(lowers).toHaveLength(26);
+  const raises = await expectTableExports(page, page.getByTestId("atlas-pathway-up"), "genesetr-atlas-cholesterol-homeostasis-knock-downs-that-raise-it");
+  expect(raises[1]).toMatch(/^ATP6V1A,/);
+
+  await page.goto("/atlas?tab=pathways&by=gene&pert=SCAP");
+  const sets = page.getByTestId("atlas-perturbation-pathways");
+  await expect(page.getByTestId("atlas-perturbation-down").locator("tbody tr").first()).toBeVisible();
+  const moved = await expectTableExports(page, sets, "genesetr-atlas-gene-sets-SCAP");
+  expect(moved[0]).toBe("Direction,Gene set,Library,Set size,Meta z,Datasets,Contexts");
+  expect(moved).toHaveLength(31);
+  expect(moved[1]).toMatch(/^lowers,P26: Cholesterol Homeostasis,programs,66,/);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: every Send to menu opens its genes in the chosen module", async ({ page, context }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+  // gene panel: the gene and its partners become the perturbation list of an analysis page
+  await page.goto("/atlas?gene=INTS15&module=47");
+  const gene = page.getByTestId("atlas-gene-panel");
+  await gene.getByRole("button", { name: /Send the genes to/ }).click();
+  await expect(page.getByRole("menuitem", { name: "16 genes" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Correlation" }).click();
+  await expect(page).toHaveURL(/\/correlation/);
+  await expect(page.locator("textarea").first()).toHaveValue(/^INTS15\s+INTS13\s+INTS10\s+INTS14\s/);
+
+  // module panel: the members go to the gene list tab of the atlas itself
+  await page.goto("/atlas?gene=INTS15&module=47");
+  const module = page.getByTestId("atlas-module-panel");
+  await sendTo(page, module.getByRole("button", { name: "Send the genes to…" }), "Function atlas (similarity)");
+  await expect(page).toHaveURL(/\/atlas\?tab=list&genes=INTS10,INTS14,INTS13,INTS15,SLC24A1,/);
+  await expect(page.getByRole("tab", { name: "Gene list" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Gene list")).toHaveValue(/^INTS10\nINTS14\nINTS13\nINTS15\n/);
+  await expect(page.getByTestId("atlas-similarity").getByRole("heading", { level: 2 })).toHaveText("Knock-down similarity among 4 genes");
+  await expect(page.getByTestId("atlas-similarity-summary")).toContainText("4 of 36 genes shown, 32 not in the atlas.");
+  expect(api.atlasRequests.find((request) => request.path === "similarity").body.genes).toHaveLength(36);
+
+  // module panel: the genes that change go to the common effects of the integrated page
+  await page.goto("/atlas?gene=INTS15&module=47");
+  await sendTo(page, module.getByRole("button", { name: "Send these genes to…" }), "Common effects (integrated)");
+  await expect(page).toHaveURL(/\/integrated\?mode=set&genes=GADD45GIP1,UFC1,RPS27,.*&run=1$/);
+  await expect(page.getByLabel("Perturbed genes")).toHaveValue(/^GADD45GIP1\nUFC1\n/);
+
+  // a programme: the perturbed genes that move it
+  await page.goto("/atlas?tab=modules&axis=genes&module=26");
+  await sendTo(page, module.getByRole("button", { name: "Send the perturbed genes to…" }), "TF regulators");
+  await expect(page).toHaveURL(/\/tf-regulators\?up=[A-Z0-9]+,.*MBTPS1.*&run=1$/);
+
+  // pathways: the genes of the set, and the knock-downs of each table
+  await page.goto("/atlas?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis");
+  await sendTo(page, page.getByRole("button", { name: "Send the genes of the set to…" }), "Integrated signature");
+  await expect(page).toHaveURL(/\/integrated\?mode=signature&up=ABCA2,ACAT2,ACSS2,.*&run=1$/);
+  await expect(page.getByLabel("Genes that go up")).toHaveValue(/^ABCA2\nACAT2\n/);
+
+  await page.goto("/atlas?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis");
+  const down = page.getByTestId("atlas-pathway-down");
+  await down.getByRole("button", { name: /Send the genes to/ }).click();
+  await expect(page.getByRole("menuitem", { name: "25 genes" })).toBeVisible();
+  // a module for one gene takes the first of the list
+  await page.getByRole("menuitem", { name: "Gene page (MBTPS1 only)" }).click();
+  await expect(page).toHaveURL(/\/gene\?symbol=MBTPS1$/);
+
+  await page.goto("/atlas?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis");
+  await sendTo(page, page.getByTestId("atlas-pathway-up").getByRole("button", { name: /Send the genes to/ }), "Heatmap");
+  await expect(page).toHaveURL(/\/heatmap/);
+  await expect(page.locator("textarea").first()).toHaveValue(/^ATP6V1A\s+ATP6V1B2\s/);
+
+  // gene list tab: the menu leaves out the tab itself; a list that is too short for a module is not sent; copy and save work
+  await page.goto("/atlas?tab=list&genes=INTS10,INTS13,INTS14,INTS15");
+  const result = page.getByTestId("atlas-similarity");
+  const order = (await result.getByTestId("atlas-similarity-heatmap").getAttribute("data-genes")).split(",");
+  const menu = result.getByRole("button", { name: /Send the genes to/ });
+  await menu.click();
+  await expect(page.getByRole("menuitem", { name: "4 genes" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Function atlas (similarity)" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "DR & Clustering (needs 10+)" })).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("menuitem", { name: "Copy genes" }).click();
+  await expect(page.locator("body")).toContainText("4 genes copied");
+  // (the clipboard of Windows returns its own line ends)
+  expect((await page.evaluate(() => navigator.clipboard.readText())).split(/\r?\n/)).toEqual(order);
+  page.once("dialog", (dialog) => dialog.accept("Integrator tail module"));
+  await sendTo(page, menu, "Save to my gene lists…");
+  await expect(page.locator("body")).toContainText("Saved to your lists");
+  await sendTo(page, menu, "Common effects (integrated)");
+  await expect(page).toHaveURL(new RegExp(`/integrated\\?mode=set&genes=${order.join(",")}&run=1$`));
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: a gene list of another page can be sent to the atlas", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/integrated?mode=set&genes=PSMA1,PSMB3,PSMD4,PSMC3,PSMA6,POMP&run=1");
+  const card = page.getByTestId("integrated-set-up");
+  await expect(card.locator("tbody tr").first()).toBeVisible();
+  await sendTo(page, card.getByRole("button", { name: /Send the genes to/ }), "Function atlas (similarity)");
+  await expect(page).toHaveURL(/\/atlas\?tab=list&genes=HSPA1A,UBC,HSPA1B,/);
+  await expect(page.getByRole("heading", { level: 1, name: "Function atlas" })).toBeVisible();
+  await expect(page.getByLabel("Gene list")).toHaveValue(/^HSPA1A\nUBC\nHSPA1B\n/);
+  await expect.poll(() => api.atlasRequests.some((request) => request.path === "similarity" && request.body.genes.includes("HSPA1A"))).toBe(true);
+  // none of these genes is in the fixture: the page shows what the API says
+  await expect(page.getByTestId("atlas-similarity-error")).toContainText("Fewer than 2 of these genes are on this map");
+  expect(await errors()).toEqual([]);
+});
+
+// Narrow screens: no tab may make the page scroll sideways; wide content scrolls inside its own frame.
+const ATLAS_NARROW_PAGES = [
+  { url: "/atlas?gene=INTS15&module=47&understudied=1&genes=INTS1,INTS2,INTS13,NOTAGENE1", ready: ["atlas-gene-partners", "atlas-module-members", "atlas-map-legend"] },
+  { url: "/atlas?axis=genes&module=26", ready: ["atlas-module-members"] },
+  { url: "/atlas?tab=modules&module=47", ready: ["atlas-modules", "atlas-module-members"] },
+  { url: "/atlas?tab=predictions", ready: ["atlas-predictions", "atlas-calibration"] },
+  { url: "/atlas?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis", ready: ["atlas-pathway-down", "atlas-pathway-up"] },
+  { url: "/atlas?tab=pathways&by=gene&pert=SCAP", ready: ["atlas-perturbation-down"] },
+  { url: `/atlas?tab=list&genes=${ATLAS_EXAMPLE_LIST},NOTAGENE1`, ready: ["atlas-similarity-missing", "atlas-similarity-picture"] },
+  { url: "/atlas?tab=list", ready: ["atlas-list-explain"] },
+];
+
+/**
+ * Width of the page against the width of its content, and the elements that
+ * stick out of the screen without being inside a frame that scrolls sideways.
+ */
+const sidewaysOverflow = () => {
+  const width = document.documentElement.clientWidth;
+  const scrolls = (node) => {
+    const style = getComputedStyle(node);
+    return /auto|scroll|hidden/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
+  };
+  let shell = document.querySelector("h1");
+  while (shell && !/auto|scroll/.test(getComputedStyle(shell).overflowY)) shell = shell.parentElement;
+  const inFrame = (node) => {
+    for (let parent = node.parentElement; parent && parent !== shell && parent !== document.body; parent = parent.parentElement) {
+      if (scrolls(parent)) return true;
+    }
+    return false;
+  };
+  const sticking = [];
+  (shell || document.body).querySelectorAll("*").forEach((node) => {
+    const box = node.getBoundingClientRect();
+    if (box.width > 0 && box.height > 0 && box.right > width + 1 && !inFrame(node)) {
+      sticking.push(`${node.tagName.toLowerCase()}.${String(node.className).slice(0, 40)} (right edge ${Math.round(box.right)})`);
+    }
+  });
+  return {
+    width,
+    document: document.documentElement.scrollWidth,
+    shell: shell ? shell.scrollWidth - shell.clientWidth : 0,
+    sticking: sticking.slice(0, 8),
+  };
+};
+
+for (const [width, height] of [
+  [375, 812],
+  [768, 1024],
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`function atlas: no tab scrolls sideways at ${width} px (${theme} theme)`, async ({ page }) => {
+      test.setTimeout(120000);
+      await mockApi(page);
+      const errors = watchErrors(page);
+      await page.setViewportSize({ width, height });
+      await page.addInitScript((value) => {
+        try {
+          window.localStorage.setItem("genesetr_theme", value);
+        } catch (error) {
+          // storage not available: the light theme is tested
+        }
+      }, theme);
+      for (const entry of ATLAS_NARROW_PAGES) {
+        await page.goto(entry.url);
+        for (const id of entry.ready) await expect(page.getByTestId(id).first(), `${entry.url}: ${id}`).toBeVisible();
+        if (theme === "dark") await expect(page.locator("html")).toHaveAttribute("data-gs-theme", "dark");
+        const measured = await page.evaluate(sidewaysOverflow);
+        expect(measured, entry.url).toMatchObject({ document: measured.width, shell: 0, sticking: [] });
+        expect(measured.width, entry.url).toBeLessThanOrEqual(width);
+        // the tabs stay on the screen
+        for (const tab of await page.getByRole("tab").all()) {
+          const box = await tab.boundingBox();
+          expect(box.x + box.width, entry.url).toBeLessThanOrEqual(width);
+        }
+      }
+      // a wide heatmap scrolls inside its own frame on a phone, and its buttons stay on the screen
+      await page.goto(`/atlas?tab=list&genes=${ATLAS_EXAMPLE_LIST}`);
+      const frame = page.getByTestId("atlas-similarity-heatmap");
+      await expect(frame.locator("canvas")).toBeVisible();
+      const sizes = await frame.evaluate((node) => [node.scrollWidth, node.clientWidth]);
+      if (width === 375) expect(sizes[0]).toBeGreaterThan(sizes[1]);
+      else expect(sizes[0]).toBe(sizes[1]);
+      for (const name of ["PNG", "SVG", "PDF", "CSV", "TSV", "Excel", "Show the heatmap"]) {
+        const box = await page.getByRole("button", { name, exact: true }).first().boundingBox();
+        expect(box.x, name).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, name).toBeLessThanOrEqual(width);
+      }
+      expect(await errors()).toEqual([]);
+    });
+  }
+}

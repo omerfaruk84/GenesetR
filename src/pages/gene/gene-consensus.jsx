@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ConsensusTable } from "../../components/regulator-table/consensus-table";
 import { fetchIntegratedGene, fetchIntegratedPerturbation, fetchIntegratedSummary } from "../../store/api/integrated";
-import { coverageText, datasetContexts, integratedPath } from "../../utils/integrated";
+import { coverageText, datasetContexts, fdrCountText, integratedPath } from "../../utils/integrated";
 import styles from "./gene-page.module.scss";
 
 const TOP = 5;
@@ -16,6 +16,7 @@ const TOP = 5;
 const GeneConsensus = ({ symbol, datasetNames = {} }) => {
   const [data, setData] = useState(null);
   const [contextOf, setContextOf] = useState({});
+  const [fdr, setFdr] = useState(undefined);
 
   useEffect(() => {
     setData(null);
@@ -26,6 +27,7 @@ const GeneConsensus = ({ symbol, datasetNames = {} }) => {
       .then(([perturbation, measured, summary]) => {
         if (controller.signal.aborted) return;
         setContextOf(datasetContexts(summary));
+        setFdr(summary?.fdr);
         setData({
           perturbation: perturbation.status === "found" ? perturbation.data : null,
           measured: measured.status === "found" ? measured.data : null,
@@ -51,8 +53,21 @@ const GeneConsensus = ({ symbol, datasetNames = {} }) => {
         {[perturbation && coverageText("Perturbed", perturbation), measured && coverageText("measured", measured)]
           .filter(Boolean)
           .join("; ")}
-        . Open a row for the value in each dataset.
+        . Open a row for the value in each dataset. The values are corrected for technical variation and rescaled per
+        dataset, so they can differ slightly from the per-dataset numbers above; q is the false discovery rate of a
+        meta z.
       </p>
+      {(fdrCountText(perturbation?.targets) || fdrCountText(measured?.regulators)) && (
+        <p className={styles.help} data-testid="gene-consensus-fdr">
+          {[
+            fdrCountText(perturbation?.targets, "genes", fdr) && `${fdrCountText(perturbation?.targets, "genes", fdr)} when ${symbol} is knocked down`,
+            fdrCountText(measured?.regulators, "perturbed genes", fdr) && `${fdrCountText(measured?.regulators, "perturbed genes", fdr)} change ${symbol}`,
+          ]
+            .filter(Boolean)
+            .join("; ")}
+          .
+        </p>
+      )}
       <div className={styles.openIn}>
         <Link className={styles.action} to={integratedPath({ mode: "gene", symbol, view: perturbation ? "perturbation" : "measured" })}>
           Open the integrated view

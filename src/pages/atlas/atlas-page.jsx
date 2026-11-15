@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { fetchAtlasSummary } from "../../store/api/atlas";
 import { atlasPath, readAtlasQuery } from "../../utils/atlas";
+import { ListTab } from "./list-tab";
 import { MapTab } from "./map-tab";
 import { ModulesTab } from "./modules-tab";
 import { PathwaysTab } from "./pathways-tab";
@@ -13,6 +14,7 @@ const TABS = [
   { id: "modules", label: "Modules", about: "Groups of genes on a map, with their enriched gene sets and consequences" },
   { id: "predictions", label: "Predicted functions", about: "What a gene probably does, from its partners, with a measured confidence" },
   { id: "pathways", label: "Pathways", about: "Knock-downs that raise or lower a gene set, and the gene sets a knock-down moves" },
+  { id: "list", label: "Gene list", about: "Which genes of your list act together: a heatmap of their similarity over all datasets" },
 ];
 
 /**
@@ -49,7 +51,7 @@ const AtlasPage = () => {
         <p className={styles.lead}>
           What a gene does, read from all knock-down datasets at once. Genes are placed on two maps, by what their
           knock-down does and by how they are regulated; the modules of the maps, the predicted functions and the
-          pathway activity are derived from them.
+          pathway activity are derived from them. A gene list of your own can be compared in the same way.
         </p>
         <div className={styles.tabs} role="tablist" aria-label="Part of the atlas">
           {TABS.map((tab) => (
@@ -69,6 +71,7 @@ const AtlasPage = () => {
         {query.tab === "modules" && <ModulesTab {...shared} />}
         {query.tab === "predictions" && <PredictionsTab {...shared} />}
         {query.tab === "pathways" && <PathwaysTab {...shared} />}
+        {query.tab === "list" && <ListTab {...shared} />}
       </div>
     </div>
   );

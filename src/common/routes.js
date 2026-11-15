@@ -7,6 +7,8 @@ const ROUTES = Object.freeze({
   TF_REGULATORS: "/tf-regulators",
   INTEGRATED: "/integrated",
   ATLAS: "/atlas",
+  INTERACTIONS: "/interactions",
+  ASK: "/ask",
   PERMALINK: "/r",
   CORRELATION: "/correlation",
   DR: "/dr",

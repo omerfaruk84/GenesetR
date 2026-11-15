@@ -32,7 +32,8 @@ export const fetchAtlasSummary = () => {
 const mapPromises = {};
 
 /**
- * One map as column arrays: { axis, name, symbols, x, y, module (0 = none), modules: [{ id, name, size, named }] }.
+ * One map as column arrays: { axis, name, symbols, x, y, module (0 = none), modules: [{ id, name, size, named }],
+ * annotations (GO BP terms per point), placeholder (indices of the points with a placeholder name) }.
  * Asked once per axis and session. Rejects with an Error that carries the API's message.
  */
 export const fetchAtlasMap = (axis) => {
@@ -127,3 +128,19 @@ export const fetchAtlasPerturbationPathways = (symbol, { library = "", topN = 15
     { library: library || undefined, top_n: topN, min_datasets: minDatasets, min_contexts: minContexts },
     signal
   );
+
+/**
+ * Consensus similarity among the genes of a list (2 to 400), by knock-down
+ * similarity (`axis` "pert") or co-regulation ("genes"):
+ * { axis, symbols, missing, r, score, datasets } with one square matrix each.
+ * Rejects with an Error that carries the API's message.
+ */
+export const fetchAtlasSimilarity = async (genes, axis, { signal } = {}) => {
+  try {
+    const response = await Axios.post(`${BASE}/similarity`, { genes, axis }, { signal });
+    return response.data;
+  } catch (error) {
+    if (Axios.isCancel(error)) throw error;
+    throw new Error(errorMessage(error, UNREACHABLE));
+  }
+};

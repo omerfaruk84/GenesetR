@@ -24,7 +24,7 @@ const PARTNER_COLUMNS = [
   { accessorKey: "score", header: "Evidence score" },
   { accessorKey: "r", header: "Mean correlation" },
   { accessorKey: "datasets", header: "Datasets" },
-  { accessorKey: "sameBand", header: "Same chromosome band" },
+  { accessorKey: "neighbour", header: "Promoter within 5 kb" },
 ];
 
 /** Where a gene sits on one map: its module, or why it is not on the map. */
@@ -174,7 +174,7 @@ const GenePanel = ({
                   drugs={false}
                 />
                 <TableExportButtons
-                  rows={() => partners.map((row) => ({ ...row, sameBand: row.sameBand ? "yes" : "no" }))}
+                  rows={() => partners.map((row) => ({ ...row, neighbour: row.neighbour ? "yes" : "no" }))}
                   columns={PARTNER_COLUMNS}
                   filename={`genesetr-atlas-partners-${gene.symbol}-${axis}`}
                 />
@@ -210,7 +210,7 @@ const GenePanel = ({
                         <Link className={styles.geneLink} to={to({ gene: row.symbol })} title={`Show ${row.symbol} on the map`}>
                           {row.symbol}
                         </Link>
-                        {row.sameBand && <NeighbourMark />}
+                        {row.neighbour && <NeighbourMark />}
                       </td>
                       <td className={styles.num}>{fmt(row.score, 1)}</td>
                       <td className={styles.num}>{fmt(row.r, 3)}</td>
@@ -247,7 +247,7 @@ const GenePanel = ({
               </label>
               {predictions.hidden > 0 && (
                 <span className={styles.muted} data-testid="atlas-gene-hidden">
-                  {plural(predictions.hidden, "prediction")} hidden: they rest on a partner in the same chromosome band.
+                  {plural(predictions.hidden, "prediction")} hidden: they rest on a partner whose promoter lies within 5 kb.
                 </span>
               )}
             </div>

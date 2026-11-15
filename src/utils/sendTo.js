@@ -7,6 +7,7 @@ import { baseSymbol, genePagePath } from "./geneLinks";
 import { drugPagePath } from "./perturbationKind";
 import { integratedPath } from "./integrated";
 import { tfRegulatorsPath } from "./regulators";
+import { atlasPath } from "./atlas";
 
 /**
  * Modules a gene or a gene list can be sent to.
@@ -31,6 +32,7 @@ export const SEND_TARGETS = [
   { id: "tfRegulators", label: "TF regulators", route: ROUTES.TF_REGULATORS, kind: "page", min: 3, geneOnly: true },
   { id: "integratedSet", label: "Common effects (integrated)", route: ROUTES.INTEGRATED, kind: "page", min: 2, geneOnly: true },
   { id: "integratedSignature", label: "Integrated signature", route: ROUTES.INTEGRATED, kind: "page", min: 3, geneOnly: true },
+  { id: "atlasList", label: "Function atlas (similarity)", route: ROUTES.ATLAS, kind: "page", min: 2, geneOnly: true },
   { id: "genePage", label: "Gene page", route: ROUTES.GENE, kind: "gene", min: 1, geneOnly: true },
   { id: "drugPage", label: "Drug page", route: ROUTES.DRUG, kind: "drug", min: 1, drugOnly: true },
 ];
@@ -92,6 +94,8 @@ export const sendGenesTo = (targetId, genes, { datasetId } = {}) => (dispatch, g
   // Integrated analysis: the list as perturbed genes, or as the "genes that go up" of a signature
   if (target.id === "integratedSet") return integratedPath({ mode: "set", genes: list.map(baseSymbol), run: true });
   if (target.id === "integratedSignature") return integratedPath({ mode: "signature", up: list.map(baseSymbol), run: true });
+  // Function atlas: the consensus similarity among the genes of the list, as a heatmap
+  if (target.id === "atlasList") return atlasPath({ tab: "list", genes: list.map(baseSymbol) });
 
   const first = baseSymbol(list[0]);
   switch (target.id) {

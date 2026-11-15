@@ -131,7 +131,7 @@ const PredictionsTab = ({ query, summary }) => {
         incomplete, so it is a lower bound. Listed are functions that are not yet an annotation of the gene
         {counts ? ` (${counts.predictions.toLocaleString("en-US")} predictions for ${counts.genes.toLocaleString("en-US")} genes in total)` : ""}.
         CRISPRi can also silence a gene that shares the promoter region, so a knock-down may copy its neighbour (KIAA0586
-        and TIMM9): predictions that rest on a partner in the same chromosome band are hidden unless you include them.
+        and TIMM9): predictions that rest on a partner whose promoter lies within 5 kb of the gene's are hidden unless you include them.
       </p>
       {counts?.calibration && <Calibration calibration={counts.calibration} />}
 
@@ -184,7 +184,7 @@ const PredictionsTab = ({ query, summary }) => {
           <input type="checkbox" checked={placeholder} onChange={() => go({ placeholder: !placeholder })} />
           Only placeholder names
         </label>
-        <label className={styles.check} title="Also list predictions that rest on a partner in the same chromosome band">
+        <label className={styles.check} title="Also list predictions that rest on a partner whose promoter lies within 5 kb of the gene's">
           <input type="checkbox" checked={neighbours} onChange={() => go({ neighbours: !neighbours })} />
           Include possible neighbour effects
         </label>

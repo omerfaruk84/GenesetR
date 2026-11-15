@@ -12,7 +12,8 @@ let summaryPromise = null;
 
 /**
  * What the integrated layer is built from:
- * { datasets: [ids], contexts: { context: [ids] }, perturbations, genes, gain: [ids], supportZ, strongZ }.
+ * { datasets: [ids], contexts: { context: [ids] }, perturbations, genes, gain: [ids], supportZ, strongZ, fdr,
+ *   corrections: { id: { inert, axes, nullSd } | null } }.
  * Asked once per session. Best effort: resolves to null when the request fails.
  */
 export const fetchIntegratedSummary = () => {
@@ -67,6 +68,54 @@ export const fetchIntegratedPathways = async (symbol, { topN = 15, signal } = {}
   } catch (error) {
     return null;
   }
+};
+
+/**
+ * A GET that never rejects (except when aborted):
+ * { status: "found", data } | { status: "notFound" } | { status: "error", message }.
+ */
+const fetchAnswer = async (path, params, signal) => {
+  try {
+    const response = await Axios.get(`${BASE}/${path}`, { params, signal });
+    if (!response.data || response.data.found === false) return { status: "notFound" };
+    return { status: "found", data: response.data };
+  } catch (error) {
+    if (Axios.isCancel(error)) throw error;
+    if (error?.response?.status === 404) return { status: "notFound" };
+    return { status: "error", message: errorMessage(error, UNREACHABLE) };
+  }
+};
+
+/**
+ * One knock-down in one dataset: the genes that change at a false discovery rate of 5 %
+ * ({ genesMeasured, significant, significantUp, significantDown, corrected, expressed, up, down }).
+ */
+export const fetchIntegratedProfile = (symbol, dataset, { topN = 25, signal } = {}) =>
+  fetchAnswer(`perturbation/${encodeURIComponent(symbol)}/profile`, { dataset, top_n: topN }, signal);
+
+/**
+ * Predicted effect of a knock-down in a dataset that did not perturb the gene
+ * ({ measured, reliable, reason, accuracy, basis, neighbours, up, down }).
+ */
+export const fetchIntegratedPrediction = (symbol, dataset, { topN = 20, signal } = {}) =>
+  fetchAnswer(`perturbation/${encodeURIComponent(symbol)}/prediction`, { dataset, top_n: topN }, signal);
+
+let benchmarkPromise = null;
+
+/**
+ * Held-out accuracy of the predictions per dataset ({ settings, datasets: { id: { all, strong, reliable } } }).
+ * Asked once per session. Best effort: resolves to null when the request fails.
+ */
+export const fetchPredictionBenchmark = () => {
+  if (!benchmarkPromise) {
+    benchmarkPromise = Axios.get(`${BASE}/prediction-benchmark`)
+      .then((response) => response.data || null)
+      .catch(() => {
+        benchmarkPromise = null;
+        return null;
+      });
+  }
+  return benchmarkPromise;
 };
 
 const post = async (path, body, signal) => {

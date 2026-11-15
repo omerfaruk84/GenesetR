@@ -1,0 +1,57 @@
+{
+  "answer": "Yes. Activating **CBL** and **CNN1** together does more than the two genes add up to (class: more than additive).\n\n1. The response of the pair is 1.45 times the sum of the two single responses.\n2. 113 genes deviate from the sum at an FDR of 5 %; the haemoglobin genes are amplified:\n   - HBZ (interaction z 50.1)\n   - HBA2 (interaction z 58.4)\n\n<img src=x onerror=\"window.__pwned = true\"> This is an activation experiment, not a knock-down. [A link that must not work](javascript:window.__pwned=true)",
+  "note": "Stopped after 8 rounds of look-ups; the answer may be incomplete.",
+  "sources": [
+    {
+      "tool": "genetic_interaction",
+      "title": "Genetic interaction of two genes",
+      "input": {
+        "gene_a": "CBL",
+        "gene_b": "CNN1",
+        "top_n": 12
+      },
+      "ok": true
+    },
+    {
+      "tool": "gene_function",
+      "title": "Partners and predicted functions of a gene",
+      "input": {
+        "gene": "CNN1"
+      },
+      "ok": true
+    },
+    {
+      "tool": "pathway_perturbations",
+      "title": "Knock-downs that move a pathway",
+      "input": {
+        "pathway": "heme metabolism",
+        "library": "hallmark"
+      },
+      "ok": true
+    },
+    {
+      "tool": "consensus_regulators",
+      "title": "What controls a gene, across datasets",
+      "input": {
+        "gene": "HBZ"
+      },
+      "ok": true
+    },
+    {
+      "tool": "tf_regulators",
+      "title": "Transcription factors behind a gene or a signature",
+      "input": {
+        "gene": "HBZ"
+      },
+      "ok": true
+    }
+  ],
+  "stopReason": "end_turn",
+  "model": "claude-opus-5-5",
+  "usage": {
+    "input": 88013,
+    "output": 640,
+    "cacheRead": 70200
+  },
+  "steps": 8
+}

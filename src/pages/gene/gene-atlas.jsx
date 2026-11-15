@@ -10,7 +10,7 @@ const TOP = 5;
 /**
  * "Function atlas" on the gene page: the module of the gene on the two maps
  * and its strongest predicted functions. Predictions that are already an
- * annotation, or that rest on a partner in the same chromosome band, are left
+ * annotation, or that rest on a partner whose promoter lies within 5 kb, are left
  * out. Renders nothing when the gene is on neither map or the request fails.
  */
 const GeneAtlas = ({ symbol }) => {

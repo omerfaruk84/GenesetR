@@ -11,6 +11,7 @@ import { effectNoun, isGainDataset } from "../../utils/perturbationKind";
 import { GeneAtlas } from "./gene-atlas";
 import { GeneConsensus } from "./gene-consensus";
 import { GeneDrugs } from "./gene-drugs";
+import { GeneInteractions } from "./gene-interactions";
 import { GeneRegulators } from "./gene-regulators";
 import styles from "./gene-page.module.scss";
 
@@ -276,6 +277,8 @@ const GenePage = () => {
             <GeneConsensus symbol={summary.symbol} datasetNames={names} />
 
             <GeneAtlas symbol={summary.symbol} />
+
+            <GeneInteractions symbol={summary.symbol} />
 
             <section className={styles.section}>
               <h2>Across datasets</h2>

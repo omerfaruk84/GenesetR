@@ -11,6 +11,7 @@ import {
   ROW_CHOICES,
   SET_EXPORT_COLUMNS,
   consensusExportRows,
+  correctedCount,
   formatQ,
   integratedPath,
   rowName,
@@ -136,6 +137,7 @@ export const Controls = ({ minContexts, rows, onChange, withContexts = true }) =
 export const Explain = ({ summary, children }) => {
   const datasets = summary?.datasets?.length;
   const contexts = summary ? Object.keys(summary.contexts || {}).length : 0;
+  const corrected = correctedCount(summary);
   return (
     <p className={styles.explain} data-testid="integrated-explain">
       {children}{" "}
@@ -146,7 +148,10 @@ export const Explain = ({ summary, children }) => {
       <strong>Contexts</strong> in how many distinct cell types the supporting datasets are, out of the cell types that
       have the pair. Several datasets share a cell type, so the number of contexts is the honest count of
       reproductions. An effect that is missing in a small screen is not evidence of absence: small screens perturb and
-      measure fewer genes. Open a row for the value in each dataset.
+      measure fewer genes. Open a row for the value in each dataset. The values here are corrected for technical
+      variation{corrected ? ` (${corrected.corrected} of the ${corrected.total} datasets have enough knock-downs of unexpressed genes to estimate it)` : ""} and rescaled per
+      dataset, so they can differ slightly from the per-dataset pages. <strong>q</strong> is the false discovery rate
+      of a meta z.
     </p>
   );
 };

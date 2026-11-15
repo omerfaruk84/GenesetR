@@ -328,3 +328,93 @@ h2.sectionTitle {
     text-decoration: underline;
   }
 }
+
+// "not expressed here", "prediction, not a measurement"
+.mark {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 3px;
+  color: var(--gs-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.markWarn {
+  border-color: var(--gs-warning);
+  background: var(--gs-warning-soft);
+  color: var(--gs-text);
+}
+
+// a table row that opens (strength per dataset)
+.toggle {
+  width: 20px;
+  margin-right: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rowOpen {
+  background: var(--gs-selected) !important;
+}
+
+.detailRow > td {
+  background: var(--gs-surface-alt) !important;
+}
+
+.profile {
+  padding: 4px 0 6px 22px;
+}
+
+@media (max-width: 560px) {
+  .profile {
+    // the table scrolls sideways on a phone: keep the opened genes within the first screen
+    max-width: calc(100vw - 96px);
+    padding-left: 0;
+  }
+}
+
+// the prediction is set apart from everything measured
+.predicted {
+  border-style: dashed;
+  border-color: var(--gs-border-strong);
+}
+
+.sentence {
+  max-width: 1000px;
+  margin: 12px 0 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.groupHead {
+  text-align: center !important;
+}
+
+.details {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gs-border);
+
+  summary {
+    margin-bottom: 8px;
+    color: var(--gs-link);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  // the content of <details> sits in a slot that does not pass `box-sizing: inherit` on,
+  // which made the table rows taller than in the other tables
+  > * {
+    box-sizing: border-box;
+  }
+}

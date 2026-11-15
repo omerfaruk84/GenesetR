@@ -41,6 +41,8 @@ import { buildTopBottomGeneLists, splitGenesByScore } from "../../utils/geneList
 import { withErrorBoundary } from "../error-boundary";
 import { Toolbar, ToolbarButton, ChartLegend, EmptyState, ModuleIntro, Notice } from "../ui";
 import { rgba, stableUnit } from "../../utils/chartStyle";
+import { formatQ } from "../../utils/integrated";
+import { SIGNIFICANCE_NOTE, multiSignificance, significanceAt, significanceTitle } from "../../utils/signatureSignificance";
 import { useChartTheme, haloLabel, saveImageFeature } from "../../utils/chartTheme";
 
 const isDevEnv = process.env.NODE_ENV !== "production";
@@ -406,6 +408,9 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       }
       payload[datasetId] = scoreMap;
     });
+    // { datasetId: { perturbation: z } }, the shape of the multi-dataset result of the API.
+    // Not a dataset: the tables read the dataset ids from `datasets` only.
+    payload.significance = multiSignificance(datasets, cacheForFormula);
 
     return payload;
   }, [hasMultiDatasetSelection, normalizedSelectedDatasets, cacheForFormula]);
@@ -518,6 +523,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
     dispatch,
   ]);
 
+  const hasSignificance = Array.isArray(data?.significance?.z);
   const columns = useMemo(
     () => [
       {
@@ -568,8 +574,32 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         },
         enableResizing: true,
       },
+      // z of the score against random gene sets of the same size, and its q-value
+      ...(hasSignificance
+        ? [
+            {
+              accessorKey: "z vs random sets",
+              header: "z vs random sets",
+              size: 60,
+              filterVariant: "range-slider",
+              muiFilterSliderProps: {
+                size: "small",
+                color: "primary",
+                step: 0.01,
+              },
+              enableResizing: true,
+            },
+            {
+              accessorKey: "q",
+              header: "q",
+              size: 50,
+              enableColumnFilter: false,
+              Cell: ({ cell }) => formatQ(cell.getValue()),
+            },
+          ]
+        : []),
     ],
-    []
+    [hasSignificance]
   );
 
   const columns2 = useMemo(
@@ -673,13 +703,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
               step: 0.01,
             },
         muiFilterTextFieldProps: showRanks ? { placeholder: "Rank", size: "small" } : undefined,
-        Cell: ({ cell }) => {
+        Cell: ({ cell, row }) => {
           const value = cell.getValue();
-          if (showRanks) {
-            return value || '';
-          } else {
-            return typeof value === 'number' ? value.toFixed(3) : (value || '');
-          }
+          const text = showRanks ? (value || '') : (typeof value === 'number' ? value.toFixed(3) : (value || ''));
+          const title = significanceTitle(row?.original?.[`${dataset}_z_random`]);
+          return title && text !== '' ? <span title={title}>{text}</span> : text;
         },
       };
     });
@@ -985,6 +1013,12 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
         }
       });
       
+      // z of the score against random gene sets, per dataset (tooltip of the dataset cells)
+      datasets.forEach(dataset => {
+        const z = data.significance?.[dataset]?.[gene];
+        if (typeof z === 'number') row[`${dataset}_z_random`] = z;
+      });
+
       // Add aggregate columns
       if (values.average !== undefined) {
         row.average = values.average;
@@ -1532,6 +1566,7 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
             zScores[i] > 2 ? "UP" : zScores[i] < -2 ? "DOWN" : "NO CHANGE",
           Score: xValues[i],
           "Z-Score": roundToThree(zScores[i]),
+          ...significanceAt(data.significance, i),
         });
 
         // Only the scatter is thinned: non-significant points are sampled so
@@ -1815,6 +1850,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
       <Spacer height={5} />
       {keyedData && selectedView === 1 && !hasMultiDatasetSelection && (
         <>
+          {hasSignificance && (
+            <p className={styles.viewNote} data-testid="signature-significance-note">
+              {SIGNIFICANCE_NOTE(data.significance.genesUsed)}
+            </p>
+          )}
           <div className={styles.tableArea}>
             <EnrichmentTable data={keyedData} columns={columns} onSortedDataChange={handleTableDataChange} />
           </div>
@@ -1957,6 +1997,11 @@ const GeneSignature = ({ coreSettings, genesignatureSettings, geneSignatureCache
 
           {Array.isArray(keyedDataMulti) && keyedDataMulti.length > 0 && keyedDataMulti[0]?.gene && (
             <>
+              {Object.keys(multiDatasetDataFromCache?.significance || {}).length > 0 && (
+                <p className={styles.viewNote} data-testid="signature-significance-note-multi">
+                  {SIGNIFICANCE_NOTE()} Hover a score for the z in that dataset.
+                </p>
+              )}
               <div className={styles.tableArea}>
                 <EnrichmentTable 
                   data={keyedDataMulti} 

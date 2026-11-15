@@ -5,10 +5,11 @@
  * and the gene page block.
  */
 import { ROUTES } from "../common/routes";
+import { parseSymbols } from "./regulators";
 
 const ATLAS_ROUTE = ROUTES.ATLAS;
 
-export const ATLAS_TABS = ["map", "modules", "predictions", "pathways"];
+export const ATLAS_TABS = ["map", "modules", "predictions", "pathways", "list"];
 export const ATLAS_AXES = ["pert", "genes"];
 
 /** Wording of the two maps. */
@@ -34,6 +35,24 @@ export const EVIDENCE_KINDS = ["knockdown", "coregulation"];
 export const CONFIDENCE_CHOICES = [0.1, 0.3, 0.5, 0.7];
 export const DEFAULT_CONFIDENCE = 0.3;
 export const PAGE_SIZE = 50;
+
+/** The gene list tab: the similarity endpoint takes 2 to 400 genes, and so does the address. */
+export const MIN_LIST_GENES = 2;
+export const MAX_LIST_GENES = 400;
+
+/** Wording of the two kinds of evidence on the gene list tab. */
+export const EVIDENCE_TEXT = {
+  pert: {
+    label: "Knock-down similarity",
+    about: "Two genes are similar when their knock-downs have the same consequences",
+    absent: "Not among the knock-downs of the atlas",
+  },
+  genes: {
+    label: "Co-regulation",
+    about: "Two genes are similar when they respond to the same perturbations",
+    absent: "Not among the measured genes of the atlas",
+  },
+};
 
 export const PATHWAY_VIEWS = ["set", "gene"];
 export const PATHWAY_CONTEXT_CHOICES = [1, 2, 3];
@@ -64,15 +83,20 @@ const positiveInt = (value) => {
   return Number.isInteger(number) && number > 0 ? number : 0;
 };
 const param = (name, value) => `${name}=${encodeURIComponent(value)}`;
+const listParam = (name, list) => `${name}=${list.map(encodeURIComponent).join(",")}`;
+const symbolList = (genes) => parseSymbols(genes).slice(0, MAX_LIST_GENES);
 
 /**
  * In-app address of the atlas. Only what differs from the defaults is written.
- *   map:          ?axis=genes&gene=INTS15&module=47&neighbours=1
+ *   map:          ?axis=genes&gene=INTS15&module=47&neighbours=1&understudied=1&genes=INTS1,INTS2
  *   modules:      ?tab=modules&axis=genes&q=ribosome&module=4
  *   predictions:  ?tab=predictions&term=..&library=corum&evidence=knockdown&conf=0.5&nogo=1&placeholder=1&neighbours=1&page=2
  *   pathways:     ?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis&contexts=3&rows=100
  *                 ?tab=pathways&by=gene&pert=SCAP&library=hallmark
+ *   gene list:    ?tab=list&axis=genes&genes=INTS1,INTS2,MED12
  * `library` is a filter; `lib` and `set` together name one gene set.
+ * `genes` is the list of the gene list tab, and on the map the genes to
+ * highlight; it is cut to MAX_LIST_GENES symbols.
  */
 export const atlasPath = ({
   tab = "map",
@@ -95,6 +119,8 @@ export const atlasPath = ({
   pert = "",
   contexts = DEFAULT_PATHWAY_CONTEXTS,
   rows = DEFAULT_PATHWAY_ROWS,
+  genes = [],
+  understudied = false,
 } = {}) => {
   const chosen = ATLAS_TABS.includes(tab) ? tab : "map";
   const params = [];
@@ -105,6 +131,11 @@ export const atlasPath = ({
     if (chosen === "map" && symbolOf(gene)) params.push(param("gene", symbolOf(gene)));
     if (positiveInt(module)) params.push(`module=${positiveInt(module)}`);
     if (chosen === "map" && neighbours) params.push("neighbours=1");
+    if (chosen === "map" && understudied) params.push("understudied=1");
+    if (chosen === "map" && symbolList(genes).length > 0) params.push(listParam("genes", symbolList(genes)));
+  } else if (chosen === "list") {
+    if (axis === "genes") params.push("axis=genes");
+    if (symbolList(genes).length > 0) params.push(listParam("genes", symbolList(genes)));
   } else if (chosen === "predictions") {
     if (text(term)) params.push(param("term", text(term)));
     if (PREDICTION_LIBRARIES.includes(library)) params.push(`library=${library}`);
@@ -157,6 +188,8 @@ export const readAtlasQuery = (search) => {
     pert: symbolOf(params.get("pert")),
     contexts: PATHWAY_CONTEXT_CHOICES.includes(contexts) ? contexts : DEFAULT_PATHWAY_CONTEXTS,
     rows: PATHWAY_ROW_CHOICES.includes(rows) ? rows : DEFAULT_PATHWAY_ROWS,
+    genes: symbolList(params.get("genes")),
+    understudied: params.get("understudied") === "1",
   };
 };
 
@@ -284,6 +317,45 @@ export const focusWindow = (map, points, share = 0.3) => {
   return { x: side("x", points.map((point) => point[0])), y: side("y", points.map((point) => point[1])) };
 };
 
+/**
+ * The understudied genes of a map, as points [x, y, index]:
+ *   noGo         points without any GO Biological Process term
+ *   placeholder  points whose name is a placeholder (open reading frame, FAM, KIAA)
+ *   known        false when the map carries neither field (an older answer)
+ * A gene can be in both lists.
+ */
+export const understudiedPoints = (map) => {
+  const point = (i) => [map.x[i], map.y[i], i];
+  const annotations = Array.isArray(map?.annotations) ? map.annotations : null;
+  const flagged = Array.isArray(map?.placeholder) ? map.placeholder : null;
+  const noGo = [];
+  (annotations || []).forEach((count, i) => {
+    if (count === 0) noGo.push(point(i));
+  });
+  const size = map?.symbols?.length || 0;
+  const placeholder = (flagged || []).filter((i) => Number.isInteger(i) && i >= 0 && i < size).map(point);
+  return { noGo, placeholder, known: !!(annotations || flagged) };
+};
+
+/** The genes of a list on a map: { points: [[x, y, index]], missing: [symbols not on the map] }. */
+export const listPoints = (map, genes) => {
+  const wanted = parseSymbols(genes);
+  if (wanted.length === 0 || !map?.symbols) return { points: [], missing: wanted };
+  const position = new Map();
+  map.symbols.forEach((name, i) => {
+    const key = String(name).toUpperCase();
+    if (!position.has(key)) position.set(key, i);
+  });
+  const points = [];
+  const missing = [];
+  wanted.forEach((symbol) => {
+    const i = position.get(symbol);
+    if (i === undefined) missing.push(symbol);
+    else points.push([map.x[i], map.y[i], i]);
+  });
+  return { points, missing };
+};
+
 // ---------------------------------------------------------------------------
 // Modules
 // ---------------------------------------------------------------------------
@@ -308,6 +380,44 @@ export const memberRows = (module) => {
     };
   });
 };
+
+/** A module counts as stable from this value of `stability` (0 to 1). */
+export const STABLE_FROM = 0.5;
+
+export const STABILITY_HELP =
+  "How well the group is found again when the map is divided with other settings: 1 = always the same genes; below 0.5 its borders depend on the settings";
+
+/** "stable (0.93)" or "depends on the settings (0.32)"; "" when the module carries no stability. */
+export const stabilityText = (value) =>
+  typeof value === "number" && Number.isFinite(value)
+    ? `${value >= STABLE_FROM ? "stable" : "depends on the settings"} (${value.toFixed(2)})`
+    : "";
+
+/** "specific to CD4 T" for a knock-down module whose genes act in one cell context only; "" otherwise. */
+export const specificText = (module) => (module?.specificTo ? `specific to ${module.specificTo}` : "");
+
+/** A context says something about a module when it perturbed at least this share of the members. */
+export const CONTEXT_COVERED_FROM = 0.5;
+
+/**
+ * The cell contexts of a knock-down module, for the module panel:
+ * [{ context, measured, active, covered, specific }], contexts that perturbed
+ * at least half of the members first, each group by the share of active members.
+ */
+export const moduleContexts = (module) =>
+  (module?.contexts || [])
+    .map((row) => ({
+      ...row,
+      covered: typeof row.measured === "number" && row.measured >= CONTEXT_COVERED_FROM,
+      specific: !!module.specificTo && row.context === module.specificTo,
+    }))
+    .sort((a, b) => Number(b.covered) - Number(a.covered) || (b.active ?? 0) - (a.active ?? 0) || (b.measured ?? 0) - (a.measured ?? 0));
+
+export const CONTEXT_EXPORT_COLUMNS = [
+  { accessorKey: "context", header: "Cell context" },
+  { accessorKey: "measured", header: "Share of the members perturbed" },
+  { accessorKey: "active", header: "Share of those with a clear effect" },
+];
 
 /** "62%": share of the members (or datasets) that agree, from a 0-1 value. */
 export const percent = (value, digits = 0) =>
@@ -354,8 +464,8 @@ export const consequenceExportRows = (consequence) =>
 // ---------------------------------------------------------------------------
 
 /**
- * Predictions to show for one gene. Those that rest on a partner in the same
- * chromosome band are left out unless `includeNeighbours`; `hidden` counts them.
+ * Predictions to show for one gene. Those that rest on a partner whose promoter
+ * lies within 5 kb of the gene's are left out unless `includeNeighbours`; `hidden` counts them.
  * `novelOnly` drops functions that are already an annotation of the gene.
  */
 export const visiblePredictions = (predictions, { includeNeighbours = false, novelOnly = false, limit = Infinity } = {}) => {
@@ -380,7 +490,7 @@ export const PREDICTION_EXPORT_COLUMNS = [
   { accessorKey: "annotations", header: "GO BP terms of the gene" },
   { accessorKey: "uncharacterised", header: "Placeholder name" },
   { accessorKey: "known", header: "Already annotated" },
-  { accessorKey: "neighbours", header: "Partners in the same chromosome band" },
+  { accessorKey: "neighbours", header: "Partners with a promoter within 5 kb" },
 ];
 
 const yesNo = (value) => (value ? "yes" : "no");
@@ -462,3 +572,114 @@ export const pathwayExportRows = (data) =>
 
 /** "hallmark|Cholesterol Homeostasis": key of a gene set in lists. */
 export const setKey = (entry) => `${entry?.library || ""}|${entry?.name ?? entry?.set ?? ""}`;
+
+// ---------------------------------------------------------------------------
+// Gene list: consensus similarity as a clustered heatmap
+// ---------------------------------------------------------------------------
+
+/**
+ * Order of the rows of a square similarity matrix after average-linkage
+ * clustering (distance 1 - similarity): similar rows become neighbours, so the
+ * groups show as blocks along the diagonal. Values that are not numbers count
+ * as 0. Returns the row indices in display order.
+ */
+export const clusterOrder = (matrix) => {
+  const n = Array.isArray(matrix) ? matrix.length : 0;
+  if (n < 3) return Array.from({ length: n }, (_, i) => i);
+  const value = (i, j) => {
+    const number = Number(matrix[i]?.[j]);
+    return Number.isFinite(number) ? number : 0;
+  };
+  const distance = new Float64Array(n * n);
+  for (let i = 0; i < n; i += 1) {
+    for (let j = i + 1; j < n; j += 1) {
+      const d = 1 - (value(i, j) + value(j, i)) / 2;
+      distance[i * n + j] = d;
+      distance[j * n + i] = d;
+    }
+  }
+  const size = new Array(n).fill(1);
+  const leaves = Array.from({ length: n }, (_, i) => [i]);
+  const active = Array.from({ length: n }, (_, i) => i);
+  while (active.length > 1) {
+    let best = Infinity;
+    let a = 0;
+    let b = 1;
+    for (let p = 0; p < active.length; p += 1) {
+      const row = active[p] * n;
+      for (let q = p + 1; q < active.length; q += 1) {
+        const d = distance[row + active[q]];
+        if (d < best) {
+          best = d;
+          a = p;
+          b = q;
+        }
+      }
+    }
+    const i = active[a];
+    const j = active[b];
+    const total = size[i] + size[j];
+    for (const k of active) {
+      if (k !== i && k !== j) {
+        const d = (distance[i * n + k] * size[i] + distance[j * n + k] * size[j]) / total;
+        distance[i * n + k] = d;
+        distance[k * n + i] = d;
+      }
+    }
+    leaves[i] = leaves[i].concat(leaves[j]);
+    size[i] = total;
+    active.splice(b, 1);
+  }
+  return leaves[active[0]];
+};
+
+/** Largest |r| between two different genes, rounded up to 0.05 and at least 0.1: the end of the colour scale. */
+export const similarityLimit = (r) => {
+  let max = 0;
+  (r || []).forEach((row, i) => {
+    (row || []).forEach((value, j) => {
+      if (i !== j && Number.isFinite(value) && Math.abs(value) > max) max = Math.abs(value);
+    });
+  });
+  return Math.max(0.1, Math.ceil(max * 20 - 1e-9) / 20);
+};
+
+/**
+ * The answer of `/atlas/similarity` in display order:
+ *   symbols  the genes, clustered
+ *   order    their indices in the answer
+ *   cells    [column, row, r, score, datasets] for every pair that at least one dataset has
+ *            (the diagonal and the pairs without a common dataset are left out)
+ *   limit    end of the colour scale
+ */
+export const similarityHeatmap = (data) => {
+  const names = data?.symbols || [];
+  const order = clusterOrder(data?.r || []).filter((i) => i < names.length);
+  const cells = [];
+  order.forEach((i, row) => {
+    order.forEach((j, column) => {
+      const datasets = data.datasets?.[i]?.[j] ?? 0;
+      if (i !== j && datasets > 0) cells.push([column, row, data.r[i][j], data.score?.[i]?.[j] ?? null, datasets]);
+    });
+  });
+  return { symbols: order.map((i) => names[i]), order, cells, limit: similarityLimit(data?.r) };
+};
+
+/**
+ * The similarity matrix as a table for export, in display order: one row and
+ * one column per gene, the mean correlation in the cells. The diagonal and the
+ * pairs without a common dataset stay empty.
+ */
+export const similarityExport = (data, order) => {
+  const names = data?.symbols || [];
+  const shown = (order || names.map((_, i) => i)).filter((i) => i < names.length);
+  const columns = [
+    { id: "gene", header: "Gene", accessorFn: (row) => row.gene },
+    ...shown.map((i, position) => ({ id: `gene-${position}`, header: names[i], accessorFn: (row) => row.values[position] })),
+  ];
+  const rows = shown.map((i) => ({
+    gene: names[i],
+    values: shown.map((j) => (i !== j && (data.datasets?.[i]?.[j] ?? 0) > 0 ? data.r[i][j] : "")),
+  }));
+  return { columns, rows };
+};

@@ -5,14 +5,20 @@ import { SendToMenu } from "../../components/send-to";
 import { fetchAtlasModule } from "../../store/api/atlas";
 import {
   AXIS_TEXT,
+  CONTEXT_EXPORT_COLUMNS,
   MEMBER_EXPORT_COLUMNS,
+  STABILITY_HELP,
+  STABLE_FROM,
   TERM_EXPORT_COLUMNS,
   consequenceExportColumns,
   consequenceExportRows,
   consequenceName,
   libraryName,
   memberRows,
+  moduleContexts,
   percent,
+  specificText,
+  stabilityText,
 } from "../../utils/atlas";
 import { genePagePath } from "../../utils/geneLinks";
 import { formatQ, shortSetName } from "../../utils/integrated";
@@ -127,6 +133,9 @@ const ModulePanel = ({ axis, id, geneTo, mapTo, closeTo }) => {
   const noGo = members.filter((row) => row.noAnnotation).length;
   const placeholders = members.filter((row) => row.uncharacterised).length;
   const terms = module.terms || [];
+  const contexts = moduleContexts(module);
+  const stability = stabilityText(module.stability);
+  const specific = specificText(module);
   const up = module.consequence?.up || [];
   const down = module.consequence?.down || [];
   const isPert = axis === "pert";
@@ -142,6 +151,24 @@ const ModulePanel = ({ axis, id, geneTo, mapTo, closeTo }) => {
             {plural(module.size, "gene")} · {percent(module.density)} of the possible links between them exist
             {module.named ? "" : ` · no enriched gene set: named after its most central members`}
           </div>
+          {(stability || specific) && (
+            <div className={styles.moduleFacts}>
+              {stability && (
+                <span className={module.stability < STABLE_FROM ? styles.unstable : undefined} title={STABILITY_HELP} data-testid="atlas-module-stability">
+                  {stability}
+                </span>
+              )}
+              {specific && (
+                <span
+                  className={`${styles.tag} ${styles.tagWarn}`}
+                  data-testid="atlas-module-specific"
+                  title={`The members have a clear effect in ${module.specificTo} and not in the other cell contexts that perturbed them`}
+                >
+                  {specific}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className={styles.headActions}>
           {mapTo && (
@@ -197,6 +224,54 @@ const ModulePanel = ({ axis, id, geneTo, mapTo, closeTo }) => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {contexts.length > 0 && (
+        <>
+          <div className={styles.cardHead} style={{ marginTop: 14 }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Cell contexts in which the members act</h4>
+              <div className={styles.muted}>
+                Per cell context: the share of the members that were perturbed there, and the share of those whose
+                knock-down has a clear effect. Contexts that perturbed fewer than half of the members say little and are
+                listed last.
+              </div>
+            </div>
+            <TableExportButtons rows={() => contexts} columns={CONTEXT_EXPORT_COLUMNS} filename={`${file}-contexts`} />
+          </div>
+          <div className={styles.scroll}>
+            <table className={`${styles.table} ${styles.contextTable}`} data-testid="atlas-module-contexts">
+              <thead>
+                <tr>
+                  <th>Cell context</th>
+                  <th className={styles.num} title="Share of the members that the datasets of this cell context perturb">
+                    Members perturbed
+                  </th>
+                  <th title="Share of the perturbed members whose knock-down changes expression clearly in this cell context">With a clear effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contexts.map((row) => (
+                  <tr key={row.context} className={row.covered ? undefined : styles.contextFew} data-specific={row.specific ? "true" : undefined}>
+                    <td>
+                      {row.context}
+                      {row.specific && <span className={`${styles.mark} ${styles.markWarn}`}>specific</span>}
+                    </td>
+                    <td className={styles.num}>{percent(row.measured)}</td>
+                    <td>
+                      <span className={styles.confidence}>
+                        <span className={styles.confidenceBar} aria-hidden="true">
+                          <span style={{ width: `${Math.round(100 * Math.max(0, Math.min(1, row.active ?? 0)))}%` }} />
+                        </span>
+                        {percent(row.active)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <div className={styles.cardHead} style={{ marginTop: 14 }}>

@@ -20,7 +20,10 @@ const doiLink = (citation) => {
 };
 
 const RECOVERY_HELP =
-  "Do knock-downs of genes in the same CORUM complex have similar profiles? AUROC 0.5 = chance.";
+  "Do knock-downs of genes in the same CORUM complex have similar profiles? AUROC 0.5 = chance. " +
+  "The percentage is the share of same-complex pairs among the most similar pairs (the top 1,000, or the top 5 % in a small screen).";
+const RECOVERY_HELP_CORRECTED =
+  " First line: the profiles as stored. Second line: the same score after removal of technical variation, as the integrated analysis uses them.";
 
 const KIND_LABEL = { genome: "Genome-wide", focused: "Focused", mine: "My upload", chemical: "Chemical" };
 
@@ -306,9 +309,20 @@ const DatasetsPage = () => {
                     <dd>{dataset.license || "–"}</dd>
                   </div>
                   {recovery && (
-                    <div className={styles.factWide} data-testid="complex-recovery" title={RECOVERY_HELP}>
+                    <div
+                      className={styles.factWide}
+                      data-testid="complex-recovery"
+                      title={recovery.corrected ? RECOVERY_HELP + RECOVERY_HELP_CORRECTED : RECOVERY_HELP}
+                    >
                       <dt>Complex recovery</dt>
-                      <dd>{recovery.text}</dd>
+                      <dd>
+                        {recovery.text}
+                        {recovery.corrected && (
+                          <div data-testid="complex-recovery-corrected">
+                            <span className={styles.factNote}>After correction for technical variation:</span> {recovery.corrected.text}
+                          </div>
+                        )}
+                      </dd>
                     </div>
                   )}
                 </dl>

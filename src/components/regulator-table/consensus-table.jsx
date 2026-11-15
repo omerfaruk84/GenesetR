@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { genePagePath } from "../../utils/geneLinks";
-import { contextsText, detailEntries, detailText, rowName } from "../../utils/integrated";
+import { contextsText, detailEntries, detailText, formatQ, rowName } from "../../utils/integrated";
 import { divergingColor } from "../../utils/regulators";
 import styles from "./regulator-table.module.scss";
 
@@ -20,7 +20,7 @@ const Score = ({ value, limit }) => (
  * the cell context of the dataset. Rows of the "common effects" answer
  * (`byPerturbation`) are shown with their own columns.
  *
- *   rows         rows of the integrated API ({ gene | perturbation, metaZ, datasets, support,
+ *   rows         rows of the integrated API ({ gene | perturbation, metaZ, q, datasets, support,
  *                contexts, contextsMeasured, byDataset }) or of its perturbation-set answer
  *                ({ gene, combinedZ, perturbationsMeasured, perturbationsAgreeing, byPerturbation })
  *   nameHeader   header of the name column
@@ -30,7 +30,8 @@ const Score = ({ value, limit }) => (
  *   contextOf    { datasetId: cell context }
  *   limit        meta z at which the colour of a score cell saturates
  *   detailLimit  the same for the per-dataset values
- *   compact      name, meta z and contexts only; no link to the gene page
+ *   compact      name, meta z, q and contexts only; no link to the gene page
+ *   The q column is shown when the rows carry a q-value.
  *   empty        text shown when there are no rows
  */
 const ConsensusTable = ({
@@ -49,7 +50,8 @@ const ConsensusTable = ({
   if (!rows || rows.length === 0) return <div className={styles.empty}>{empty}</div>;
   const options = { names, contextOf };
   const isSet = rows[0].byPerturbation !== undefined;
-  const columns = compact ? 3 : 6;
+  const hasQ = !isSet && rows.some((row) => typeof row.q === "number");
+  const columns = (compact ? 3 : 6) + (hasQ ? 1 : 0);
 
   return (
     <div className={styles.scroll}>
@@ -75,6 +77,14 @@ const ConsensusTable = ({
                 <th className={styles.num} title="Sum of the z-scores of the datasets that have this pair, divided by the square root of their number">
                   Meta z
                 </th>
+                {hasQ && (
+                  <th
+                    className={styles.num}
+                    title="False discovery rate of the meta z (Benjamini-Hochberg over everything measured in at least the minimum number of datasets)"
+                  >
+                    q
+                  </th>
+                )}
                 {!compact && (
                   <th className={styles.num} title="Datasets that have this pair">
                     Datasets
@@ -132,6 +142,7 @@ const ConsensusTable = ({
                       <td className={styles.num}>
                         <Score value={row.metaZ} limit={limit} />
                       </td>
+                      {hasQ && <td className={styles.num}>{formatQ(row.q)}</td>}
                       {!compact && <td className={styles.num}>{row.datasets ?? "–"}</td>}
                       {!compact && <td className={styles.num}>{row.support ?? "–"}</td>}
                       <td className={styles.num}>{contextsText(row)}</td>

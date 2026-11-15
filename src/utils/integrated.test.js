@@ -82,6 +82,7 @@ describe("address of the integrated page", () => {
       run: true,
       minContexts: 1,
       rows: 50,
+      predict: "",
     });
     expect(readIntegratedQuery("?mode=gene&symbol=sqle&view=measured")).toMatchObject({ mode: "gene", symbol: "SQLE", view: "measured" });
   });
@@ -144,6 +145,7 @@ describe("rows of the integrated answers", () => {
       rank: 1,
       name: "PHGDH",
       metaZ: -21.4,
+      q: "",
       datasets: 3,
       support: 3,
       contexts: 2,
@@ -185,6 +187,7 @@ describe("gene sets and the complex benchmark", () => {
       precision: "56%",
       baseline: "0.7%",
       text: "AUROC 0.69 · 56% of the top 1,000 pairs (baseline 0.7%)",
+      corrected: null,
     });
     expect(complexRecovery({ auroc: null, precisionTop: 0.638, baseline: 0.0056, topPairs: 1000 }).text).toBe(
       "64% of the top 1,000 pairs (baseline 0.6%)"

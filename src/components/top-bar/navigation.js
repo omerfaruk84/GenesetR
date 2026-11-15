@@ -17,6 +17,7 @@ export const NAV_GROUPS = [
     question: "What does my gene do, and what controls it?",
     items: [
       { name: "Gene page", to: ROUTES.GENE, about: "Everything about one gene across all datasets" },
+      { name: "Ask GeneSetR", to: ROUTES.ASK, about: "Ask in plain words what a gene does or what controls it; an AI model answers from the tables and lists what it read" },
       { name: "Explore a drug", to: ROUTES.DRUG, about: "One drug in 47 cell lines: response by dose, genes it changes, similar drugs and knock-downs" },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Network of regulators and targets of a gene" },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Regulation network combined over several datasets" },
@@ -58,6 +59,7 @@ export const NAV_GROUPS = [
     items: [
       { name: TabNames.PATHFINDER, to: ROUTES.PATHFINDER, about: "Regulatory paths that connect the genes of a list" },
       { name: "Function atlas", to: ROUTES.ATLAS, about: "Maps of genes that act together, their modules, predicted functions and the knock-downs that move a pathway" },
+      { name: "Genetic interactions", to: ROUTES.INTERACTIONS, about: "What two genes do together beyond the sum of each alone: more, less, one dominates, or something new" },
       { name: "TF regulators", to: ROUTES.TF_REGULATORS, about: "Activators and repressors of a gene set, supported by overexpression and knock-down", secondary: true },
       { name: "Drug and gene connectivity", to: ROUTES.DRUG, about: "Knock-downs whose profile mimics or reverses a drug", secondary: true },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Upstream and downstream network of one gene", secondary: true },

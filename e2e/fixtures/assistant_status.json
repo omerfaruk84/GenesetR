@@ -1,0 +1,58 @@
+{
+  "enabled": true,
+  "model": "claude-opus-5-5",
+  "tools": [
+    {
+      "name": "data_overview",
+      "title": "Integrated data overview"
+    },
+    {
+      "name": "consensus_effects",
+      "title": "What a knock-down does, across datasets"
+    },
+    {
+      "name": "consensus_regulators",
+      "title": "What controls a gene, across datasets"
+    },
+    {
+      "name": "knockdown_profile",
+      "title": "One knock-down in one dataset"
+    },
+    {
+      "name": "signature_perturbations",
+      "title": "Knock-downs behind a signature"
+    },
+    {
+      "name": "common_effects",
+      "title": "Shared effects of several knock-downs"
+    },
+    {
+      "name": "pathway_perturbations",
+      "title": "Knock-downs that move a pathway"
+    },
+    {
+      "name": "perturbation_pathways",
+      "title": "Pathways a knock-down moves"
+    },
+    {
+      "name": "gene_function",
+      "title": "Partners and predicted functions of a gene"
+    },
+    {
+      "name": "gene_set_enrichment",
+      "title": "Enrichment of a gene list"
+    },
+    {
+      "name": "tf_regulators",
+      "title": "Transcription factors behind a gene or a signature"
+    },
+    {
+      "name": "genetic_interaction",
+      "title": "Genetic interaction of two genes"
+    },
+    {
+      "name": "predict_effect",
+      "title": "Predicted effect where a knock-down was not measured"
+    }
+  ]
+}

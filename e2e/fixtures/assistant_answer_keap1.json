@@ -1,0 +1,59 @@
+{
+  "answer": "**Loss of KEAP1 switches on the NRF2 programme** in every cell context that has the knock-down.\n\nThe consensus over 5 datasets (4 cell contexts) puts these genes at the top:\n\n| Gene | Meta z | q | Contexts |\n|:-----|-------:|--:|---------:|\n| NQO1 | 38.2 | 1e-300 | 4 |\n| TXNRD1 | 31.7 | 2e-219 | 4 |\n| SLC7A11 | 27.4 | 4e-164 | 3 |\n\nWhat this means:\n\n- The effect is *reproducible*: every gene above is supported in at least 3 contexts.\n- In the pathway atlas the knock-down raises `Reactive Oxygen Species Pathway` (meta z 14.9).\n- One look-up for a single cell line failed, so there is no per-dataset value here.\n\nBackground: KEAP1 targets NRF2 (NFE2L2) for degradation, see [UniProt](https://www.uniprot.org/uniprotkb/Q14145/entry).",
+  "note": null,
+  "sources": [
+    {
+      "tool": "consensus_effects",
+      "title": "What a knock-down does, across datasets",
+      "input": {
+        "gene": "KEAP1",
+        "top_n": 15
+      },
+      "ok": true
+    },
+    {
+      "tool": "perturbation_pathways",
+      "title": "Pathways a knock-down moves",
+      "input": {
+        "gene": "KEAP1",
+        "library": "hallmark"
+      },
+      "ok": true
+    },
+    {
+      "tool": "knockdown_profile",
+      "title": "One knock-down in one dataset",
+      "input": {
+        "gene": "KEAP1",
+        "dataset": "K562"
+      },
+      "ok": false,
+      "error": "Unknown dataset"
+    },
+    {
+      "tool": "gene_set_enrichment",
+      "title": "Enrichment of a gene list",
+      "input": {
+        "genes": [
+          "NQO1",
+          "TXNRD1",
+          "SLC7A11",
+          "GCLM",
+          "SRXN1",
+          "HMOX1",
+          "G6PD",
+          "TALDO1"
+        ]
+      },
+      "ok": true
+    }
+  ],
+  "stopReason": "end_turn",
+  "model": "claude-opus-5-5",
+  "usage": {
+    "input": 41250,
+    "output": 912,
+    "cacheRead": 30110
+  },
+  "steps": 3
+}

@@ -4,8 +4,10 @@ import { TableExportButtons } from "../../components/export-buttons";
 import { GeneSearch } from "../../components/gene-search";
 import { fetchIntegratedGene, fetchIntegratedPathways, fetchIntegratedPerturbation } from "../../store/api/integrated";
 import { genePagePath } from "../../utils/geneLinks";
-import { coverageText, integratedPath } from "../../utils/integrated";
+import { coverageText, fdrCountText, integratedPath } from "../../utils/integrated";
 import { ContextSpecificCard, Controls, Explain, OverexpressionCards, PathwaysBlock, ResultCard, Score, geneModeLink } from "./parts";
+import { PredictionSection } from "./prediction";
+import { StrengthCard } from "./strength";
 import styles from "./integrated-page.module.scss";
 
 const EXAMPLES = ["ATF4", "HMGCR", "MED12", "SQLE", "LDLR"];
@@ -21,8 +23,22 @@ const Coverage = ({ verb, data }) => (
   </div>
 );
 
+/** "686 of 15,283 genes at FDR 5 %": how many consensus effects pass, of everything measured often enough. */
+const FdrCount = ({ block, noun, rate, minDatasets, children }) => {
+  const text = fdrCountText(block, noun, rate);
+  if (!text) return null;
+  return (
+    <div className={styles.row} data-testid="integrated-fdr">
+      <span className={styles.muted}>
+        <strong>{text}</strong> {children}, up and down together. The q-values are corrected over all {noun} measured in
+        at least {minDatasets ?? 2} datasets.
+      </span>
+    </div>
+  );
+};
+
 /** "What does perturbing X do everywhere?" */
-const PerturbationView = ({ symbol, data, names, contextOf, controls }) => {
+const PerturbationView = ({ symbol, data, summary, names, contextOf, controls, predict }) => {
   const asMeasured = geneModeLink("measured", controls);
   const asPerturbation = geneModeLink("perturbation", controls);
   const tables = { names, contextOf, nameHeader: "Measured gene", linkTo: asMeasured, linkTitle: (name) => `What controls ${name} everywhere?` };
@@ -40,6 +56,9 @@ const PerturbationView = ({ symbol, data, names, contextOf, controls }) => {
   return (
     <>
       <Coverage verb="Perturbed" data={data} />
+      <FdrCount block={data.targets} noun="genes" rate={summary?.fdr} minDatasets={data.minDatasets}>
+        when {symbol} is knocked down
+      </FdrCount>
       <div className={styles.pair}>
         <ResultCard
           {...tables}
@@ -126,74 +145,25 @@ const PerturbationView = ({ symbol, data, names, contextOf, controls }) => {
       </div>
       {strength.length > 0 && (
         <div className={styles.pair}>
-          <div className={styles.tableCard} data-testid="integrated-strength">
-            <div className={styles.tableHead}>
-              <div>
-                <h3>Strength per dataset</h3>
-                <div className={styles.muted}>
-                  On-target z is the z-score of {symbol} itself. Impact is the mean squared z over all measured genes
-                  minus 1: about 0 for a perturbation without effect.
-                </div>
-              </div>
-              <TableExportButtons
-                rows={() => strength.map((row) => ({ ...row, name: names[row.dataset] || row.dataset, context: contextOf[row.dataset] || "" }))}
-                columns={[
-                  { accessorKey: "dataset", header: "Dataset id" },
-                  { accessorKey: "name", header: "Dataset" },
-                  { accessorKey: "context", header: "Context" },
-                  { accessorKey: "cells", header: "Cells" },
-                  { accessorKey: "self_z", header: "On-target z" },
-                  { accessorKey: "genes_strong", header: "Strongly changed genes" },
-                  { accessorKey: "genes_measured", header: "Genes measured" },
-                  { accessorKey: "impact", header: "Impact" },
-                ]}
-                filename={`genesetr-integrated-strength-${symbol}`}
-              />
-            </div>
-            <div className={styles.scroll}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Dataset</th>
-                    <th>Context</th>
-                    <th className={styles.num} title="Cells that carry the perturbation, where the dataset reports it">
-                      Cells
-                    </th>
-                    <th className={styles.num}>On-target z</th>
-                    <th className={styles.num} title="Measured genes with |z| of at least 3">
-                      Strongly changed genes
-                    </th>
-                    <th className={styles.num}>Impact</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {strength.map((row) => (
-                    <tr key={row.dataset}>
-                      <td>{names[row.dataset] || row.dataset}</td>
-                      <td>{contextOf[row.dataset] ? <span className={styles.tag}>{contextOf[row.dataset]}</span> : "–"}</td>
-                      <td className={styles.num}>{typeof row.cells === "number" ? Math.round(row.cells).toLocaleString("en-US") : "–"}</td>
-                      <td className={styles.num}>
-                        {typeof row.self_z === "number" ? <Score value={row.self_z} limit={10} /> : "–"}
-                      </td>
-                      <td className={styles.num}>
-                        {row.genes_strong ?? "–"}
-                        {row.genes_measured ? <span className={styles.muted}> of {row.genes_measured.toLocaleString("en-US")}</span> : ""}
-                      </td>
-                      <td className={styles.num}>{typeof row.impact === "number" ? row.impact.toFixed(3) : "–"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <StrengthCard symbol={symbol} strength={strength} names={names} contextOf={contextOf} linkTo={asMeasured} fdr={summary?.fdr} />
         </div>
       )}
+      <PredictionSection
+        symbol={symbol}
+        data={data}
+        summary={summary}
+        names={names}
+        contextOf={contextOf}
+        predict={predict}
+        to={(dataset) => integratedPath({ mode: "gene", symbol, view: "perturbation", ...controls, predict: dataset })}
+        linkTo={asMeasured}
+      />
     </>
   );
 };
 
 /** "What controls X everywhere?" */
-const MeasuredView = ({ symbol, data, names, contextOf, controls }) => {
+const MeasuredView = ({ symbol, data, summary, names, contextOf, controls }) => {
   const asPerturbation = geneModeLink("perturbation", controls);
   const tables = {
     names,
@@ -206,6 +176,9 @@ const MeasuredView = ({ symbol, data, names, contextOf, controls }) => {
   return (
     <>
       <Coverage verb="Measured" data={data} />
+      <FdrCount block={data.regulators} noun="perturbed genes" rate={summary?.fdr} minDatasets={data.minDatasets}>
+        change {symbol}
+      </FdrCount>
       <div className={styles.pair}>
         <ResultCard
           {...tables}
@@ -255,11 +228,11 @@ const VIEWS = [
 
 /**
  * Gene mode: one symbol, seen as a perturbation and as a measured gene.
- * The symbol, the view and the controls are in the address.
+ * The symbol, the view, the controls and the dataset of the prediction are in the address.
  */
 const GeneMode = ({ query, summary, names, contextOf }) => {
   const navigate = useNavigate();
-  const { symbol, view, minContexts, rows } = query;
+  const { symbol, view, minContexts, rows, predict } = query;
   const controls = { minContexts, rows };
   const [sides, setSides] = useState(null); // { perturbation, measured } once both are answered
 
@@ -332,7 +305,7 @@ const GeneMode = ({ query, summary, names, contextOf }) => {
           <Controls
             minContexts={minContexts}
             rows={rows}
-            onChange={(next) => navigate(integratedPath({ mode: "gene", symbol, view, ...next }))}
+            onChange={(next) => navigate(integratedPath({ mode: "gene", symbol, view, predict, ...next }))}
           />
 
           {!sides && (
@@ -361,10 +334,18 @@ const GeneMode = ({ query, summary, names, contextOf }) => {
             </div>
           )}
           {sides && found(shown) && shown === "perturbation" && (
-            <PerturbationView symbol={symbol} data={sides.perturbation.data} names={names} contextOf={contextOf} controls={controls} />
+            <PerturbationView
+              symbol={symbol}
+              data={sides.perturbation.data}
+              summary={summary}
+              names={names}
+              contextOf={contextOf}
+              controls={controls}
+              predict={predict}
+            />
           )}
           {sides && found(shown) && shown === "measured" && (
-            <MeasuredView symbol={symbol} data={sides.measured.data} names={names} contextOf={contextOf} controls={controls} />
+            <MeasuredView symbol={symbol} data={sides.measured.data} summary={summary} names={names} contextOf={contextOf} controls={controls} />
           )}
         </>
       )}

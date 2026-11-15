@@ -157,3 +157,21 @@ export const EXAMPLE_PERTURBATION_SETS = [
     genes: ["MED12", "MED14", "MED17", "MED20", "MED23", "MED24", "MED30"],
   },
 ];
+
+/**
+ * Gene lists for the "Gene list" tab of the Function atlas: complexes whose
+ * members separate into blocks on the similarity heatmap.
+ */
+export const EXAMPLE_ATLAS_LISTS = [
+  {
+    id: "integrator",
+    name: "Integrator, Mediator and exosome",
+    about: "Three complexes of RNA synthesis and decay; Integrator splits into its modules (INTS10/13/14/15 apart from the core)",
+    genes: [
+      "INTS1", "INTS2", "INTS3", "INTS4", "INTS5", "INTS6", "INTS7", "INTS8", "INTS9", "INTS10",
+      "INTS11", "INTS12", "INTS13", "INTS14", "INTS15", "MED12", "MED14", "MED17", "MED20", "MED23",
+      "MED24", "MED30", "EXOSC2", "EXOSC3", "EXOSC4", "EXOSC5", "EXOSC6", "EXOSC7", "EXOSC8", "EXOSC9",
+      "EXOSC10", "DIS3",
+    ],
+  },
+];

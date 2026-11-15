@@ -14,16 +14,22 @@ echarts.use([ScatterChart, GridComponent, TooltipComponent, DataZoomComponent, C
 /**
  * One map of the atlas as a scatter chart. The points are grouped into one
  * series per colour (the palette repeats over the modules), so no point
- * carries a style of its own; the members of the chosen module and the chosen
- * gene are drawn again on top.
+ * carries a style of its own; the members of the chosen module, the
+ * highlighted genes and the chosen gene are drawn again on top.
  *
  *   map          answer of `/atlas/map/{axis}` (column arrays)
  *   geneIndex    index of the chosen gene, or -1
  *   moduleId     chosen module, or 0
  *   view         { x: [from, to], y: [from, to] } to show; a new object moves the chart there
  *   onPick       (index) => void, a point was clicked
+ *   understudied { noGo, placeholder } (points) to highlight, or null
+ *   listed       points of a gene list to highlight
+ * While genes are highlighted the other points fade.
  */
-const AtlasMap = ({ map, geneIndex = -1, moduleId = 0, view = null, onPick, height = 600 }) => {
+const NO_POINTS = [];
+const LIST_LABELS = 60;
+
+const AtlasMap = ({ map, geneIndex = -1, moduleId = 0, view = null, onPick, height = 600, understudied = null, listed = NO_POINTS }) => {
   const chart = useChartTheme();
   const { p } = chart;
   const chartRef = useRef(null);
@@ -40,16 +46,18 @@ const AtlasMap = ({ map, geneIndex = -1, moduleId = 0, view = null, onPick, heig
     });
     return names;
   }, [map]);
+  const placeholders = useMemo(() => new Set(map.placeholder || []), [map]);
 
   const option = useMemo(() => {
     const none = rgba(p.otherRgb, 1);
-    const dimmed = moduleId > 0;
+    const highlighted = !!understudied || listed.length > 0;
+    const dimmed = moduleId > 0 || highlighted;
     const background = groups.map((data, index) => ({
       id: `colour-${index}`,
       type: "scatter",
       data,
       symbolSize: 5,
-      itemStyle: { color: index === 0 ? none : colors[index - 1], opacity: dimmed ? 0.28 : 0.78 },
+      itemStyle: { color: index === 0 ? none : colors[index - 1], opacity: highlighted ? 0.16 : dimmed ? 0.28 : 0.78 },
       emphasis: { scale: 1.8, itemStyle: { opacity: 1 } },
       // only maps much larger than the present ones switch to the batched renderer
       large: true,
@@ -66,6 +74,42 @@ const AtlasMap = ({ map, geneIndex = -1, moduleId = 0, view = null, onPick, heig
       itemStyle: { color: moduleColor(moduleId, colors, none), borderColor: p.text, borderWidth: 0.6, opacity: 1 },
       emphasis: { scale: 1.4 },
       z: 3,
+    };
+    // understudied genes: a dot for no GO term, a ring for a placeholder name (a gene can have both)
+    const noGo = {
+      id: "no-go",
+      type: "scatter",
+      data: understudied?.noGo || NO_POINTS,
+      symbolSize: 7,
+      itemStyle: { color: rgba(p.upRgb, 1), borderColor: p.bg, borderWidth: 0.6, opacity: 1 },
+      emphasis: { scale: 1.5 },
+      z: 4,
+    };
+    const placeholder = {
+      id: "placeholder",
+      type: "scatter",
+      data: understudied?.placeholder || NO_POINTS,
+      symbolSize: 13,
+      itemStyle: { color: "transparent", borderColor: rgba(p.downRgb, 1), borderWidth: 2.2, opacity: 1 },
+      emphasis: { scale: 1.3 },
+      z: 4,
+    };
+    const list = {
+      id: "list",
+      type: "scatter",
+      data: listed,
+      symbolSize: 10,
+      itemStyle: { color: p.text, borderColor: p.bg, borderWidth: 1.2, opacity: 1 },
+      label: haloLabel(p, {
+        show: listed.length <= LIST_LABELS,
+        position: "top",
+        distance: 4,
+        fontSize: 11,
+        formatter: (params) => map.symbols[params.data[2]],
+      }),
+      labelLayout: { hideOverlap: true },
+      emphasis: { scale: 1.4 },
+      z: 4,
     };
     const gene = {
       id: "gene",
@@ -95,16 +139,23 @@ const AtlasMap = ({ map, geneIndex = -1, moduleId = 0, view = null, onPick, heig
           const index = params.data?.[2];
           if (typeof index !== "number") return "";
           const name = moduleNames[map.module[index]];
-          return `<strong>${escapeHtml(map.symbols[index])}</strong><br/>${escapeHtml(name || "No module")}`;
+          const terms = map.annotations?.[index];
+          const known = [
+            typeof terms === "number" ? (terms === 0 ? "No GO term" : `${terms} GO term${terms === 1 ? "" : "s"}`) : "",
+            placeholders.has(index) ? "placeholder name" : "",
+          ].filter(Boolean);
+          return [`<strong>${escapeHtml(map.symbols[index])}</strong>`, escapeHtml(name || "No module"), known.join(", ")]
+            .filter(Boolean)
+            .join("<br/>");
         },
       },
       dataZoom: [
         { id: "zoom-x", type: "inside", xAxisIndex: 0, filterMode: "none" },
         { id: "zoom-y", type: "inside", yAxisIndex: 0, filterMode: "none" },
       ],
-      series: [...background, members, gene],
+      series: [...background, members, noGo, placeholder, list, gene],
     };
-  }, [map, groups, colors, whole, moduleNames, moduleId, geneIndex, p]);
+  }, [map, groups, colors, whole, moduleNames, placeholders, moduleId, geneIndex, understudied, listed, p]);
 
   // The chart is rebuilt when the events object changes: keep it the same
   const events = useMemo(

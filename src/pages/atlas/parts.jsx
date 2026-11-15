@@ -35,15 +35,15 @@ export const Confidence = ({ value }) => {
   );
 };
 
-/** Marker for a partner in the same chromosome band (a possible neighbour effect of CRISPRi). */
+/** Marker for a partner whose promoter lies within 5 kb of the gene's (a possible neighbour effect of CRISPRi). */
 export const NeighbourMark = ({ genes }) => (
   <span
     className={`${styles.mark} ${styles.markWarn}`}
     data-testid="neighbour-mark"
     title={
       genes && genes.length > 0
-        ? `Rests on ${genes.join(", ")} in the same chromosome band: CRISPRi can silence a neighbouring gene as well, so the knock-down may copy its neighbour`
-        : "Same chromosome band: CRISPRi can silence a neighbouring gene as well, so the similarity may be a neighbour effect"
+        ? `Rests on ${genes.join(", ")}, whose promoter lies within 5 kb of this gene's: CRISPRi may silence both, so the knock-down may copy its neighbour`
+        : "The promoters of the two genes lie within 5 kb of each other: CRISPRi may silence both, so the similarity may be a neighbour effect"
     }
   >
     neighbour

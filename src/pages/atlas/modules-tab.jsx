@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchAtlasModules } from "../../store/api/atlas";
-import { AXIS_TEXT, atlasPath } from "../../utils/atlas";
+import { AXIS_TEXT, STABILITY_HELP, STABLE_FROM, atlasPath, specificText, stabilityText } from "../../utils/atlas";
 import { shortSetName } from "../../utils/integrated";
 import { ModulePanel } from "./module-panel";
 import { AxisToggle, plural, useDebounced } from "./parts";
@@ -49,7 +49,12 @@ const ModulesTab = ({ query }) => {
         A {words.module} is a group of genes on the {words.map.toLowerCase()} that are linked to each other more than to
         the rest. {words.about} It is named after its most significant enriched gene set, or after its three most
         central members when no set is enriched. The borders depend on the resolution of the clustering: neighbouring
-        pathways can share a {words.module} or be split.
+        pathways can share a {words.module} or be split. <strong>Stability</strong> says how well a {words.module} is
+        found again when the map is divided with other settings (1 = always the same genes); below {STABLE_FROM} read
+        it as a neighbourhood, not as a fixed group.
+        {axis === "pert"
+          ? " A module is marked as specific to a cell context when its genes have a clear effect there and not in the other contexts that perturbed them."
+          : ""}
       </p>
       <div className={styles.toolbar}>
         <AxisToggle axis={axis} to={(id) => atlasPath({ tab: "modules", axis: id, q })} />
@@ -94,6 +99,20 @@ const ModulesTab = ({ query }) => {
                     {(entry.members || []).join(", ")}
                     {entry.size > (entry.members || []).length ? ", …" : ""}
                   </div>
+                  {(stabilityText(entry.stability) || specificText(entry)) && (
+                    <div className={styles.moduleFacts}>
+                      {stabilityText(entry.stability) && (
+                        <span className={entry.stability < STABLE_FROM ? styles.unstable : undefined} title={STABILITY_HELP} data-testid="module-stability">
+                          {stabilityText(entry.stability)}
+                        </span>
+                      )}
+                      {specificText(entry) && (
+                        <span className={`${styles.tag} ${styles.tagWarn}`} data-testid="module-specific">
+                          {specificText(entry)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </Link>
               </li>
             );

@@ -29,6 +29,8 @@ import { ProjectSignaturePage } from "../../pages/project-signature/project-sign
 import { TfRegulatorsPage } from "../../pages/tf-regulators/tf-regulators-page";
 import { IntegratedPage } from "../../pages/integrated/integrated-page";
 import { AtlasPage } from "../../pages/atlas/atlas-page";
+import { InteractionsPage } from "../../pages/interactions/interactions-page";
+import { AskPage } from "../../pages/ask/ask-page";
 import { PermalinkPage } from "../../pages/permalink/permalink-page";
 import { UrlStateSync } from "../url-state-sync";
 import { Tour } from "../tour";
@@ -87,6 +89,8 @@ const MainView = () => {
           <Route path={ROUTES.TF_REGULATORS} element={<PageBoundary><TfRegulatorsPage /></PageBoundary>} />
           <Route path={ROUTES.INTEGRATED} element={<PageBoundary><IntegratedPage /></PageBoundary>} />
           <Route path={ROUTES.ATLAS} element={<PageBoundary><AtlasPage /></PageBoundary>} />
+          <Route path={ROUTES.INTERACTIONS} element={<PageBoundary><InteractionsPage /></PageBoundary>} />
+          <Route path={ROUTES.ASK} element={<PageBoundary><AskPage /></PageBoundary>} />
           <Route path={ROUTES.DATASETS} element={<PageBoundary><DatasetsPage /></PageBoundary>} />
           <Route path={ROUTES.CELL_CYCLE} element={<PageBoundary><CellCyclePage /></PageBoundary>} />
           <Route path={ROUTES.UPLOAD_DATASET} element={<PageBoundary><UploadDatasetPage /></PageBoundary>} />
