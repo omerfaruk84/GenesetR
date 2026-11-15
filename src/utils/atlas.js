@@ -199,6 +199,8 @@ export const predictionParams = (query) => {
     novel: true,
     min_confidence: query.confidence ?? DEFAULT_CONFIDENCE,
     include_neighbours: !!query.neighbours,
+    // the same switch also lists predictions that rest on a partner the knock-down itself lowers
+    include_collateral: !!query.neighbours,
     // one row per gene (its strongest prediction) unless every term is asked for
     per_gene: !query.allTerms,
     limit: PAGE_SIZE,
@@ -470,8 +472,11 @@ export const consequenceExportRows = (consequence) =>
  */
 export const visiblePredictions = (predictions, { includeNeighbours = false, novelOnly = false, limit = Infinity } = {}) => {
   const list = (predictions || []).filter((row) => !(novelOnly && row.known));
-  const flagged = list.filter((row) => (row.neighbours || []).length > 0);
-  const rows = includeNeighbours ? list : list.filter((row) => (row.neighbours || []).length === 0);
+  // a prediction is doubtful when it rests on a promoter neighbour or on a partner whose own mRNA
+  // falls under the knock-down (a collateral knock-down)
+  const doubtful = (row) => (row.neighbours || []).length > 0 || (row.collateral || []).length > 0;
+  const flagged = list.filter(doubtful);
+  const rows = includeNeighbours ? list : list.filter((row) => !doubtful(row));
   return { rows: rows.slice(0, limit), hidden: includeNeighbours ? 0 : flagged.length, flagged: flagged.length };
 };
 
@@ -491,6 +496,7 @@ export const PREDICTION_EXPORT_COLUMNS = [
   { accessorKey: "uncharacterised", header: "Placeholder name" },
   { accessorKey: "known", header: "Already annotated" },
   { accessorKey: "neighbours", header: "Partners with a promoter within 5 kb" },
+  { accessorKey: "collateral", header: "Supporting partners lowered by the knock-down" },
 ];
 
 const yesNo = (value) => (value ? "yes" : "no");
@@ -502,6 +508,7 @@ export const predictionExportRows = (rows) =>
     confidence: row.confidence ?? "",
     support: (row.support || []).join(";"),
     neighbours: (row.neighbours || []).join(";"),
+    collateral: (row.collateral || []).join(";"),
     uncharacterised: yesNo(row.uncharacterised),
     known: yesNo(row.known),
   }));

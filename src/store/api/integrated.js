@@ -50,6 +50,21 @@ const fetchSide = async (side, symbol, { topN = 20, minContexts = 2, minDatasets
 /** Consensus effects of perturbing a gene, over all loss-of-function datasets. */
 export const fetchIntegratedPerturbation = (symbol, options) => fetchSide("perturbation", symbol, options);
 
+/**
+ * Second genes whose mRNA falls under a knock-down and whose own loss could explain its profile
+ * ({ suspects: [{ gene, kind, minZ, datasets, score, distance }], reduced }). Best effort: null when
+ * the gene is not perturbed or the request fails.
+ */
+export const fetchCollateral = async (symbol, { signal } = {}) => {
+  try {
+    const response = await Axios.get(`${BASE}/perturbation/${encodeURIComponent(symbol)}/collateral`, { signal });
+    return response.data && response.data.found !== false ? response.data : null;
+  } catch (error) {
+    if (Axios.isCancel(error)) throw error;
+    return null;
+  }
+};
+
 /** Consensus regulators of a measured gene, over all loss-of-function datasets. */
 export const fetchIntegratedGene = (symbol, options) => fetchSide("gene", symbol, options);
 

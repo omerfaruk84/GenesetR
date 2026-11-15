@@ -492,7 +492,7 @@ test("function atlas: predictions that rest on a chromosomal neighbour are hidde
   await expect(panel.getByTestId("atlas-gene-hidden")).toContainText("13 predictions hidden");
   await expect(panel.getByTestId("atlas-gene-predictions").getByTestId("neighbour-mark")).toHaveCount(0);
 
-  await panel.getByLabel("Include possible neighbour effects").check();
+  await panel.getByLabel("Include possible neighbour and collateral effects").check();
   await expect(page).toHaveURL(/\/atlas\?gene=KIAA0586&neighbours=1$/);
   await expect(panel.getByTestId("atlas-gene-predictions")).toContainText("Mitochondrial Protein Import");
   await expect(panel.getByTestId("atlas-gene-predictions").getByTestId("neighbour-mark").first()).toBeVisible();
@@ -567,7 +567,7 @@ test("function atlas: predicted functions follow the filters; the calibration is
   await expect(table).toContainText("family with sequence similarity 153 member C");
   await page.getByLabel("Only placeholder names").uncheck();
 
-  await page.getByLabel("Include possible neighbour effects").check();
+  await page.getByLabel("Include possible neighbour and collateral effects").check();
   await expect(page).toHaveURL(/\/atlas\?tab=predictions&neighbours=1$/);
   await expect(table.getByTestId("neighbour-mark").first()).toBeVisible();
   await expect(table.locator("tr", { hasText: "FTSJ3" }).getByTestId("neighbour-mark")).toHaveAttribute("title", /PSMC5/);
@@ -853,9 +853,9 @@ test("function atlas: every table export of the gene, module, prediction and pat
   const gene = page.getByTestId("atlas-gene-panel");
   await expect(gene.getByTestId("atlas-gene-partners")).toBeVisible();
   const partners = await expectTableExports(page, gene, "genesetr-atlas-partners-INTS15-pert", 0);
-  expect(partners[0]).toBe("Partner,Evidence score,Mean correlation,Datasets,Promoter within 5 kb");
+  expect(partners[0]).toBe("Partner,Evidence score,Mean correlation,Datasets,Promoter within 5 kb,Lowered by the knock-down");
   expect(partners).toHaveLength(16);
-  expect(partners[1]).toMatch(/^INTS13,[\d.]+,[\d.]+,\d+,(yes|no)$/);
+  expect(partners[1]).toMatch(/^INTS13,[\d.]+,[\d.]+,\d+,(yes|no),(yes|no)$/);
   const genePredictions = await expectTableExports(page, gene, "genesetr-atlas-predictions-INTS15", 1);
   expect(genePredictions[0]).toMatch(/^Gene,Full name,Predicted function,Library,Evidence,Confidence,/);
   expect(genePredictions.slice(1).every((line) => line.startsWith("INTS15,"))).toBe(true);

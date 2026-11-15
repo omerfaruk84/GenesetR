@@ -14,7 +14,8 @@ import {
 } from "../../utils/atlas";
 import { genePagePath } from "../../utils/geneLinks";
 import { integratedPath, shortSetName } from "../../utils/integrated";
-import { Confidence, NeighbourMark, fmt, plural } from "./parts";
+import { CollateralNotice } from "../../components/collateral-notice";
+import { CollateralMark, Confidence, NeighbourMark, fmt, plural } from "./parts";
 import styles from "./atlas-page.module.scss";
 
 const PREDICTIONS_SHOWN = 8;
@@ -25,6 +26,7 @@ const PARTNER_COLUMNS = [
   { accessorKey: "r", header: "Mean correlation" },
   { accessorKey: "datasets", header: "Datasets" },
   { accessorKey: "neighbour", header: "Promoter within 5 kb" },
+  { accessorKey: "collateral", header: "Lowered by the knock-down" },
 ];
 
 /** Where a gene sits on one map: its module, or why it is not on the map. */
@@ -149,6 +151,8 @@ const GenePanel = ({
         </div>
       </div>
 
+      {axis === "pert" && gene.maps?.pert?.present && <CollateralNotice symbol={gene.symbol} style={{ margin: "10px 0 0" }} />}
+
       <ul className={styles.facts}>
         <Place axis="pert" side={gene.maps?.pert} current={axis === "pert"} to={to} />
         <Place axis="genes" side={gene.maps?.genes} current={axis === "genes"} to={to} />
@@ -174,7 +178,7 @@ const GenePanel = ({
                   drugs={false}
                 />
                 <TableExportButtons
-                  rows={() => partners.map((row) => ({ ...row, neighbour: row.neighbour ? "yes" : "no" }))}
+                  rows={() => partners.map((row) => ({ ...row, neighbour: row.neighbour ? "yes" : "no", collateral: row.collateral ? "yes" : "no" }))}
                   columns={PARTNER_COLUMNS}
                   filename={`genesetr-atlas-partners-${gene.symbol}-${axis}`}
                 />
@@ -211,6 +215,7 @@ const GenePanel = ({
                           {row.symbol}
                         </Link>
                         {row.neighbour && <NeighbourMark />}
+                        {row.collateral && !row.neighbour && <CollateralMark />}
                       </td>
                       <td className={styles.num}>{fmt(row.score, 1)}</td>
                       <td className={styles.num}>{fmt(row.r, 3)}</td>
@@ -243,11 +248,11 @@ const GenePanel = ({
             <div className={styles.row}>
               <label className={styles.check}>
                 <input type="checkbox" checked={neighbours} onChange={() => navigate(to({ neighbours: !neighbours }), { replace: true })} />
-                Include possible neighbour effects
+                Include possible neighbour and collateral effects
               </label>
               {predictions.hidden > 0 && (
                 <span className={styles.muted} data-testid="atlas-gene-hidden">
-                  {plural(predictions.hidden, "prediction")} hidden: they rest on a partner whose promoter lies within 5 kb.
+                  {plural(predictions.hidden, "prediction")} hidden: they rest on a partner whose promoter lies within 5 kb, or whose own mRNA falls under this knock-down.
                 </span>
               )}
             </div>
@@ -284,6 +289,7 @@ const GenePanel = ({
                           </span>
                         )}
                         {(row.neighbours || []).length > 0 && <NeighbourMark genes={row.neighbours} />}
+                        {(row.collateral || []).length > 0 && <CollateralMark genes={row.collateral} />}
                       </td>
                       <td>{libraryName(row.library)}</td>
                       <td>{evidenceName(row.evidence)}</td>

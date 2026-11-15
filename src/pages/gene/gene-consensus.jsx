@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { CollateralNotice } from "../../components/collateral-notice";
 import { ConsensusTable } from "../../components/regulator-table/consensus-table";
 import { fetchIntegratedGene, fetchIntegratedPerturbation, fetchIntegratedSummary } from "../../store/api/integrated";
 import { coverageText, datasetContexts, fdrCountText, integratedPath } from "../../utils/integrated";
@@ -57,6 +58,7 @@ const GeneConsensus = ({ symbol, datasetNames = {} }) => {
         dataset, so they can differ slightly from the per-dataset numbers above; q is the false discovery rate of a
         meta z.
       </p>
+      {perturbation && <CollateralNotice symbol={symbol} style={{ margin: "0 0 10px" }} />}
       {(fdrCountText(perturbation?.targets) || fdrCountText(measured?.regulators)) && (
         <p className={styles.help} data-testid="gene-consensus-fdr">
           {[

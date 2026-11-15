@@ -146,6 +146,7 @@ describe("request for predicted functions", () => {
       novel: true,
       min_confidence: 0.3,
       include_neighbours: false,
+      include_collateral: false,
       per_gene: true,
       limit: PAGE_SIZE,
       offset: 0,
@@ -158,6 +159,7 @@ describe("request for predicted functions", () => {
       novel: true,
       min_confidence: 0.5,
       include_neighbours: true,
+      include_collateral: true,
       per_gene: false,
       limit: PAGE_SIZE,
       offset: 2 * PAGE_SIZE,
@@ -341,7 +343,7 @@ describe("predicted functions", () => {
     expect(row).toMatchObject({ gene: "INTS15", confidence: 0.512, support: "INTS10;INTS8", neighbours: "", uncharacterised: "no", known: "no" });
     expect(predictionExportRows([{ gene: "X", confidence: null }])[0].confidence).toBe("");
     // every exported column exists in a row of the API
-    const keys = ["gene", "name", "term", "library", "evidence", "confidence", "p", "overlap", "partners", "termSize", "support", "annotations", "uncharacterised", "known", "neighbours"];
+    const keys = ["gene", "name", "term", "library", "evidence", "confidence", "p", "overlap", "partners", "termSize", "support", "annotations", "uncharacterised", "known", "neighbours", "collateral"];
     expect(PREDICTION_EXPORT_COLUMNS.map((column) => column.accessorKey)).toEqual(keys);
   });
 

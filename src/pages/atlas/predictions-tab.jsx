@@ -19,7 +19,7 @@ import {
 } from "../../utils/atlas";
 import { genePagePath } from "../../utils/geneLinks";
 import { shortSetName } from "../../utils/integrated";
-import { Choice, Confidence, NeighbourMark, plural, useDebounced } from "./parts";
+import { Choice, Confidence, CollateralMark, NeighbourMark, plural, useDebounced } from "./parts";
 import styles from "./atlas-page.module.scss";
 
 const SUPPORT_SHOWN = 6;
@@ -131,7 +131,9 @@ const PredictionsTab = ({ query, summary }) => {
         incomplete, so it is a lower bound. Listed are functions that are not yet an annotation of the gene
         {counts ? ` (${counts.predictions.toLocaleString("en-US")} predictions for ${counts.genes.toLocaleString("en-US")} genes in total)` : ""}.
         CRISPRi can also silence a gene that shares the promoter region, so a knock-down may copy its neighbour (KIAA0586
-        and TIMM9): predictions that rest on a partner whose promoter lies within 5 kb of the gene's are hidden unless you include them.
+        and TIMM9), and a guide can lower a gene elsewhere in the genome (TMEM214 guides lower LAMTOR1): predictions that rest on a
+        partner whose promoter lies within 5 kb of the gene's, or whose own mRNA falls under the knock-down, are hidden unless you
+        include them.
       </p>
       {counts?.calibration && <Calibration calibration={counts.calibration} />}
 
@@ -184,9 +186,9 @@ const PredictionsTab = ({ query, summary }) => {
           <input type="checkbox" checked={placeholder} onChange={() => go({ placeholder: !placeholder })} />
           Only placeholder names
         </label>
-        <label className={styles.check} title="Also list predictions that rest on a partner whose promoter lies within 5 kb of the gene's">
+        <label className={styles.check} title="Also list predictions that rest on a partner whose promoter lies within 5 kb of the gene's, or whose own mRNA falls under the knock-down">
           <input type="checkbox" checked={neighbours} onChange={() => go({ neighbours: !neighbours })} />
-          Include possible neighbour effects
+          Include possible neighbour and collateral effects
         </label>
         <label className={styles.check} title="By default each gene is listed once, with its strongest prediction">
           <input type="checkbox" checked={allTerms} onChange={() => go({ allTerms: !allTerms })} />
@@ -268,6 +270,7 @@ const PredictionsTab = ({ query, summary }) => {
                       <td className={styles.wrap} title={row.term}>
                         {shortSetName(row.term)}
                         {(row.neighbours || []).length > 0 && <NeighbourMark genes={row.neighbours} />}
+                        {(row.collateral || []).length > 0 && <CollateralMark genes={row.collateral} />}
                       </td>
                       <td>{libraryName(row.library)}</td>
                       <td>{evidenceName(row.evidence)}</td>

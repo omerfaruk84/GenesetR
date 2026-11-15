@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { TableExportButtons } from "../../components/export-buttons";
+import { CollateralNotice } from "../../components/collateral-notice";
 import { GeneSearch } from "../../components/gene-search";
 import { fetchIntegratedGene, fetchIntegratedPathways, fetchIntegratedPerturbation } from "../../store/api/integrated";
 import { genePagePath } from "../../utils/geneLinks";
@@ -56,6 +57,7 @@ const PerturbationView = ({ symbol, data, summary, names, contextOf, controls, p
   return (
     <>
       <Coverage verb="Perturbed" data={data} />
+      <CollateralNotice symbol={symbol} style={{ margin: "8px 0" }} />
       <FdrCount block={data.targets} noun="genes" rate={summary?.fdr} minDatasets={data.minDatasets}>
         when {symbol} is knocked down
       </FdrCount>

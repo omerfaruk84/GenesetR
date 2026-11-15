@@ -328,21 +328,21 @@ test("function atlas: a neighbour is a partner whose promoter lies within 5 kb",
   const mark = panel.getByTestId("atlas-gene-partners").locator("tr", { hasText: "TIMM9" }).getByTestId("neighbour-mark");
   await expect(mark).toHaveAttribute("title", /promoters of the two genes lie within 5 kb of each other: CRISPRi may silence both/);
   await expect(panel.getByTestId("atlas-gene-partners").getByTestId("neighbour-mark")).toHaveCount(1);
-  await expect(panel.getByTestId("atlas-gene-hidden")).toHaveText("13 predictions hidden: they rest on a partner whose promoter lies within 5 kb.");
+  await expect(panel.getByTestId("atlas-gene-hidden")).toHaveText("13 predictions hidden: they rest on a partner whose promoter lies within 5 kb, or whose own mRNA falls under this knock-down.");
   await expect(page.locator("body")).not.toContainText(/chromosome band/i);
 
-  await panel.getByLabel("Include possible neighbour effects").check();
+  await panel.getByLabel("Include possible neighbour and collateral effects").check();
   await expect(panel.getByTestId("atlas-gene-predictions").getByTestId("neighbour-mark").first()).toHaveAttribute(
     "title",
     /Rests on TIMM9, whose promoter lies within 5 kb of this gene's/
   );
   const lines = await csvLines(page, panel.getByRole("button", { name: "CSV", exact: true }).first());
-  expect(lines[0]).toBe("Partner,Evidence score,Mean correlation,Datasets,Promoter within 5 kb");
-  expect(lines.find((line) => line.startsWith("TIMM9,"))).toMatch(/,yes$/);
-  expect(lines.filter((line) => line.endsWith(",yes"))).toHaveLength(1);
+  expect(lines[0]).toBe("Partner,Evidence score,Mean correlation,Datasets,Promoter within 5 kb,Lowered by the knock-down");
+  expect(lines.find((line) => line.startsWith("TIMM9,"))).toMatch(/,yes,no$/);
+  expect(lines.filter((line) => line.endsWith(",yes,no"))).toHaveLength(1);
 
   await page.goto("/atlas?tab=predictions");
-  await expect(page.getByTestId("atlas-predictions-explain")).toContainText("rest on a partner whose promoter lies within 5 kb of the gene's are hidden");
+  await expect(page.getByTestId("atlas-predictions-explain")).toContainText("whose own mRNA falls under the knock-down, are hidden");
   await expect(page.locator("body")).not.toContainText(/chromosome band/i);
   expect(await errors()).toEqual([]);
 });

@@ -50,6 +50,21 @@ export const NeighbourMark = ({ genes }) => (
   </span>
 );
 
+/** Marker for a partner whose own mRNA falls under the knock-down of the gene (a possible collateral knock-down). */
+export const CollateralMark = ({ genes }) => (
+  <span
+    className={`${styles.mark} ${styles.markWarn}`}
+    data-testid="collateral-mark"
+    title={
+      genes && genes.length > 0
+        ? `Rests on ${genes.join(", ")}, whose own mRNA falls under this knock-down: the guides may silence that gene too, so the prediction may describe it instead`
+        : "The mRNA of this partner falls under the knock-down of the gene: the guides may silence it too, so the similarity may be a collateral effect"
+    }
+  >
+    collateral
+  </span>
+);
+
 /** Marker for a row whose gene belongs to the module or gene set itself. */
 export const MemberMark = ({ title }) => (
   <span className={styles.mark} data-testid="member-mark" title={title}>
