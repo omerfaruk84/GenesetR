@@ -1,370 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { connect } from "react-redux";
-import { FaTrash } from "react-icons/fa";
-import { get, set } from "idb-keyval";
-
-import {
-  Field,
-  Select,
-  Slider,
-  InputGroup,
-  // List,
-  toast,
-  Modal,
-  CheckBox,
-  Spacer,
-} from "@oliasoft-open-source/react-ui-library";
+import { Field, Select, Slider } from "@oliasoft-open-source/react-ui-library";
 import { genelistcompareSettingsChanged } from "../../../store/settings/genelist-compare-settings";
 import { GenelistCompareSettingsTypes } from "./enums";
 import styles from "./settings.module.scss";
-import { Genelist } from "../../genelist";
-import {
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Checkbox,
-  IconButton,
-  Button,
-  Paper,
-  Box,
-} from "@mui/material";
-import {
-  Delete as DeleteIcon,
-  DragHandle as DragHandleIcon,
-  Add as AddIcon,
-} from "@mui/icons-material";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-const reorder = (list, startIndex, endIndex) => {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
-  return result;
-};
+const DEFAULT_WIDTH_RATIOS = [0.23, 0.4];
 
-const GenelistCompareSettings = ({
-  genelistcompareSettings,
-  genelistcompareSettingsChanged,
-}) => {
-  const [genelists, setGeneLists] = useState(genelistcompareSettings.genelists);
-
-  const handleToggle = (name) => {
-    setGeneLists((prevLists) =>
-      prevLists.map((item) =>
-        item.name === name ? { ...item, checked: !item.checked } : item
-      )
-    );
-    refreshList();
-  };
-
-  const handleDragEnd = (result) => {
-    // Dropped outside the list
-    if (!result.destination) return;
-    const newItems = reorder(
-      genelists,
-      result.source.index,
-      result.destination.index
-    );
-    setGeneLists(newItems);
-  };
-
-  const onDeleteItem = (headingKey, itemIndex, item) => {
-    const items = [...genelists.filter((obj) => obj.name !== item.name)];
-    //draft[headingKey].items = items.filter(i => i); //remove empty slots
-    setGeneLists(items);
-  };
-
-  const [newListVisible, setNewListVisible] = useState(false);
-  const SetCombinationType = [
-    "Intersection",
-    "Union",
-    "Composite",
-    "Distinct Intersection",
-  ];
-  useEffect(() => {
-    /*get("geneListNames").then((val) => {
-      if (val) setGeneListNames(val);
-    });*/
-    refreshList();
-  }, []);
-
-  // Get all available genelists from the database
-  const getAllGenelists = () => {
-    return get("geneListNames");
-  };
-
-  //Retrieves local genelists from database
-  const refreshList = () => {
-    return new Promise((resolve, reject) => {
-      getAllGenelists()
-        .then((genelists) => {
-          //console.log("refreshList", genelists);
-          if (genelists) {
-            //setGeneListNames([...genelists]); //converts sets to array
-            resolve();
-          } else {
-            return;
-            //reject("No saved genelists were found!");
-            //throw new Error("No saved genelists were found!")
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-          toast({
-            message: {
-              type: "Error",
-              icon: true,
-              heading: "Genelist Retrival",
-              content: "Failed to get genelists." + error,
-            },
-            autoClose: 2000,
-          });
-          reject(error);
-        });
-    });
-  };
-
-  useEffect(() => {
-    genelistcompareSettingsChanged({
-      settingName: GenelistCompareSettingsTypes.GENELISTS,
-      newValue: genelists,
-    });
-  }, [genelists]);
-
-  const addtolist = (genelist) => {
-    if (genelist && genelists?.length < 10) {
-      // Check if a genelist with the same name already exists
-      const exists = genelists.some((list) => list.name === genelist.name);
-      if (exists) {
-        toast({
-          message: {
-            type: "Warning",
-            icon: true,
-            content: `A gene list named "${genelist.name}" is already in the comparison`,
-          },
-        });
-        return false; // Exit the function to prevent adding the duplicate
-      }
-
-      // If no duplicate was found, proceed to add the new genelist
-      const temp = [...genelists];
-      temp.push({
-        name: genelist?.name,
-        checked: true,
-        content: genelist.description,
-        genes: genelist.genes.split("\n"),
-      });
-      setGeneLists(temp);
-      return true;
-    }
-  };
-
+/**
+ * Figure appearance of the gene list comparison page. The lists themselves,
+ * the plot type and the set mode are chosen on the page.
+ */
+const GenelistCompareSettings = ({ genelistcompareSettings: rawSettings, genelistcompareSettingsChanged }) => {
+  const widthRatios =
+    Array.isArray(rawSettings?.widthRatios) && rawSettings.widthRatios.length === 2 ? rawSettings.widthRatios : DEFAULT_WIDTH_RATIOS;
+  const genelistcompareSettings = { ...rawSettings, widthRatios };
   return (
     <>
-      <Paper sx={{ p: 2, borderRadius: 2, boxShadow: 3 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<AddIcon />}
-            onClick={() => setNewListVisible(true)}
-          >
-            Add List
-          </Button>
-          <Button
-            variant="outlined"
-            color="secondary"
-            disabled={genelists.length === 0}
-            onClick={() => setGeneLists([])}
-          >
-            Remove All
-          </Button>
-        </Box>
-        {genelists.length === 0 ? (
-          <Box sx={{ p: 2, textAlign: "center", color: "text.secondary" }}>
-            No gene lists added yet. Please add at least two gene lists to
-            compare.
-          </Box>
-        ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="droppable-list">
-              {(provided) => (
-                <List
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  component={Paper}
-                  sx={{
-                    p: 0,
-                    bgcolor: "background.paper",
-                    borderRadius: 2,
-                    boxShadow: 1,
-                  }}
-                >
-                  {genelists.map((item, index) => (
-                    <Draggable
-                      key={item.name}
-                      draggableId={`draggable-${item.name}`}
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <ListItem
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          style={{
-                            ...provided.draggableProps.style,
-                            height: "40px",
-                          }}
-                          divider
-                          secondaryAction={
-                            <IconButton
-                              edge="end"
-                              onClick={() =>
-                                onDeleteItem(genelists.key, index, item)
-                              }
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          }
-                          sx={{
-                            py: 0.5, // reduce vertical padding
-                            transition: "background-color 0.3s",
-                            bgcolor: snapshot.isDragging
-                              ? "action.hover"
-                              : "transparent",
-                            "&:hover": {
-                              bgcolor: "action.hover", // lighter color on hover
-                            },
-                          }}
-                        >
-                          {/* Drag handle area */}
-                          <ListItemIcon
-                            {...provided.dragHandleProps}
-                            sx={{ minWidth: "auto", pr: 1, ml: -1 }} // reduce space if needed
-                          >
-                            <DragHandleIcon
-                              color="primary"
-                              style={{ cursor: "grab" }}
-                            />
-                          </ListItemIcon>
-
-                          {/* Checkbox */}
-                          <ListItemIcon sx={{ minWidth: "auto", pr: 1 }}>
-                            <Checkbox
-                              edge="start"
-                              checked={item.checked}
-                              tabIndex={-1}
-                              disableRipple
-                              onClick={() => handleToggle(item.name)}
-                              sx={{
-                                p: 0.5, // adjust size of checkbox area
-                              }}
-                            />
-                          </ListItemIcon>
-
-                          {/* Two-line text */}
-                          <ListItemText
-                            primary={item.name}
-                            secondary={`${item.genes.length} genes`}
-                            sx={{
-                              "& .MuiListItemText-primary": {
-                                fontSize: "0.9rem",
-                                fontWeight: 500,
-                              },
-                              "& .MuiListItemText-secondary": {
-                                fontSize: "0.75rem",
-                                color: "text.secondary",
-                              },
-                            }}
-                          />
-                        </ListItem>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </List>
-              )}
-            </Droppable>
-          </DragDropContext>
-        )}
-      </Paper>
-
-      <Modal visible={newListVisible} centered={true}>
-        <InputGroup width={400}>
-          <Genelist
-            textTooltip={"Please enter your genes"}
-            listTitle={"New Gene List"}
-            setPerturbationList={() => {}}
-            isPerturbationList={false}
-            exampleVisible={false}
-            setVisible={setNewListVisible}
-            closeButton={true}
-            showSaveListCheckBox={true}
-            showAddList={true}
-            returnLists={(genelist) => {
-              return addtolist(genelist);
-            }}
-          />
-        </InputGroup>
-      </Modal>
-      <Spacer height={20} />
-
-      <Field //MODE
-        label="Mode"
-        labelLeft
-        labelWidth={150}
-        helpText="Set mode of genelist comparison."
-      >
-        <Select
-          small
-          onChange={({ target: { value } }) =>
-            genelistcompareSettingsChanged({
-              settingName: GenelistCompareSettingsTypes.MODE,
-              newValue: SetCombinationType.findIndex(
-                (option) => option === value
-              ),
-            })
-          }
-          options={SetCombinationType}
-          value={SetCombinationType[genelistcompareSettings?.mode]}
-        />
-      </Field>
-
-      <CheckBox
-        label="Comparison Graph"
-        helpText="Display a comparison graph showing relationships between gene lists."
-        onChange={({ target: { checked } }) =>
-          genelistcompareSettingsChanged({
-            settingName: GenelistCompareSettingsTypes.SHOW,
-            newValue: checked,
-          })
-        }
-        checked={genelistcompareSettings?.showcomparison}
-      />
-      <Spacer width={20} />
-      <CheckBox
-        label="Venn Diagram"
-        helpText="Display a Venn diagram showing overlaps between gene lists (works best with 2-3 lists)."
-        onChange={({ target: { checked } }) =>
-          genelistcompareSettingsChanged({
-            settingName: GenelistCompareSettingsTypes.SHOWVENN,
-            newValue: checked,
-          })
-        }
-        checked={genelistcompareSettings?.showvenn}
-      />
-
+      <div style={{ fontSize: 12.5, color: "var(--gs-muted)", margin: "4px 0 12px", lineHeight: 1.45 }}>
+        Choose and manage the lists on the page. These settings change how the UpSet plot and Venn diagram look and
+        are exported.
+      </div>
       <Field //MINIMUM SET NUMBER
-        label="Minimum number of set members"
+        label="Smallest combination shown"
         labelLeft
         labelWidth={150}
-        helpText="Set the threshold for minimum number of genes required in an intersection to be displayed in the comparison."
+        helpText="UpSet columns with fewer genes than this are hidden."
       >
         <div className={styles.inputRange}>
           <Slider
             label={genelistcompareSettings?.minsetmember}
             max={50}
-            min={0}
+            min={1}
             value={genelistcompareSettings?.minsetmember}
             onChange={({ target: { value } }) =>
               genelistcompareSettingsChanged({
@@ -724,8 +391,5 @@ const mapDispatchToProps = {
   genelistcompareSettingsChanged,
 };
 
-const MainContainer = connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(GenelistCompareSettings);
+const MainContainer = connect(mapStateToProps, mapDispatchToProps)(GenelistCompareSettings);
 export { MainContainer as GenelistCompareSettings };

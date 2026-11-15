@@ -1,687 +1,398 @@
-import React, { useEffect, useContext, useState } from "react";
-import styles from "./genelist-compare-page.module.scss";
-import { Button, CheckBox, Flex, Spacer } from "@oliasoft-open-source/react-ui-library";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { connect } from "react-redux";
-import { lab } from "d3-color";
-import UpSetJS, {
-  VennDiagram,
-  extractCombinations,
-} from "@upsetjs/react";
-import { useMemo } from "react";
-import { GeneSetEnrichmentTable } from "../enrichment";
-import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { get } from "idb-keyval";
-import GenelistAdd from "../genelist-add";
+import { extractCombinations } from "@upsetjs/react";
+import { toast } from "@oliasoft-open-source/react-ui-library";
 import { genelistcompareSettingsChanged } from "../../store/settings/genelist-compare-settings";
-import { parseGeneFormula } from "../../utils/geneFormula";
 import { withErrorBoundary } from "../error-boundary";
+import { EmptyState, ModuleIntro } from "../ui";
+import { PALETTES } from "../../utils/palette";
+import { usePalette } from "../../utils/theme";
+import { isDrugList } from "../../utils/drugLabels";
+import { deleteGeneList, importWorkspace, listGeneLists, saveGeneList, useWorkspaceVersion } from "../../utils/workspace";
+import {
+  DEFAULT_BACKGROUND,
+  buildMembership,
+  describeCombination,
+  listGenes,
+  membershipRows,
+  pairwiseOverlaps,
+} from "../../utils/geneSetOverlap";
+import ListLibrary, { MAX_COMPARED } from "./list-library";
+import ListEditor from "./list-editor";
+import OverlapPlots, { COMBINATION_TYPES } from "./overlap-plots";
+import SimilarityMatrix from "./similarity-matrix";
+import SelectionPanel from "./selection-panel";
+import MembershipTable from "./membership-table";
+import styles from "./genelist-compare-page.module.scss";
 
-// Add module description for Gene List Comparison
-const moduleDescription = {
-  title: "Genelist Module", 
+const INTRO = {
+  title: "Compare gene lists",
   description:
-    "Create gene lists from your analyses, then compare overlaps across lists to find shared and unique genes. Select an intersection in the plot to run enrichment analysis on the selected gene set.",
+    "Keep the gene lists you collect across GeneSetR in one place and compare them: see which genes they share, how similar they are and whether an overlap is larger than expected by chance. Lists are stored in this browser; export the workspace (top bar) to keep or move them.",
   features: [
-    "Gene list comparison to identify intersections and unique genes",
-    "Venn diagrams for up to 5 gene sets",
-    "UpSetJS visualization for comparisons involving more than 5 sets", 
-    "Gene Set Enrichment Analysis (GSEA) on intersecting gene groups",
-    "Local storage of gene lists for immediate access in future sessions",
-  ]
+    "UpSet plot for any number of lists, Venn diagram for 2–5",
+    "Pairwise Jaccard index, overlap coefficient and hypergeometric enrichment (BH-adjusted)",
+    "Click any intersection, region or matrix cell to list, copy, save or send its genes and test them for enrichment",
+    "Gene × list membership table and every result exportable as CSV, TSV, Excel, SVG or PNG",
+    "Import plain text, CSV or GMT files; create, edit and delete lists in place",
+  ],
 };
 
-// Create a context to manage selection state
-const SelectionContext = React.createContext();
-const UpSetSelection = (props) => {
-  const { selection, setSelection } = useContext(SelectionContext);
+const notify = (type, content, details) => toast({ message: { type, icon: true, content, details }, autoClose: 3000 });
 
-  return (
-    <UpSetJS
-      {...props}
-      id={"upsetcompare"}
-      selection={selection}
-      onHover={setSelection}
-    />
-  );
+const baseName = (fileName) => String(fileName || "Imported list").replace(/\.[^.]+$/, "").trim() || "Imported list";
+
+const uniqueName = (name, taken) => {
+  let candidate = name.length >= 3 ? name : `${name} list`;
+  let n = 2;
+  while (taken.has(candidate)) candidate = `${name} (${n++})`;
+  return candidate;
 };
 
-const VennDiagramSelection = (props) => {
-  const { selection, setSelection } = useContext(SelectionContext);
+const GenelistCompare = ({ settings, settingChanged }) => {
+  const version = useWorkspaceVersion();
+  const [library, setLibrary] = useState(null); // null while loading
+  const [editor, setEditor] = useState({ open: false, list: null });
+  const [hovered, setHovered] = useState(null);
+  const [selection, setSelection] = useState(null); // { label, genes, key, highlight }
+  const [introOpen, setIntroOpen] = useState(undefined);
 
-  return (
-    <VennDiagram
-      {...props}
-      id={"venndiagram"}
-      selection={selection}
-      onHover={setSelection}
-    />
-  );
-};
+  const set = useCallback((settingName, newValue) => settingChanged({ settingName, newValue }), [settingChanged]);
+  const storedIds = Array.isArray(settings.selectedlists) ? settings.selectedlists : null;
+  // Selected ids that still exist (the setting may hold lists deleted elsewhere)
+  const selectedIds = useMemo(() => {
+    if (!storedIds) return [];
+    if (!library) return storedIds;
+    const ids = new Set(library.map((l) => l.id));
+    return storedIds.filter((id) => ids.has(id));
+  }, [storedIds, library]);
 
-const GenelistCompare = ({ genelistcompareSettings, genelistcompareSettingsChanged }) => {
-  const [expanded, setExpanded] = useState(true);
-  const [genelists, setGeneLists] = useState([]);
-  const [newListVisible, setNewListVisible] = useState(false);
-  
-  // Function to sanitize gene names that start with + or -
-  const sanitizeGeneName = (geneName) => {
-    if (!geneName || typeof geneName !== 'string') return geneName;
-    
-    // If gene name starts with + or -, prefix with an underscore to make it safe
-    if (geneName.startsWith('+') || geneName.startsWith('-')) {
-      return '_' + geneName;
+  // ---------------------------------------------------------------- data --
+  const reload = useCallback(async () => {
+    try {
+      const rows = (await listGeneLists())
+        .map((row) => ({ ...row, genes: listGenes(row.genes) }))
+        .filter((row) => row.genes.length > 0);
+      // Keep the same array when nothing changed, so a re-read does not reset the page
+      setLibrary((prev) => (prev && JSON.stringify(prev) === JSON.stringify(rows) ? prev : rows));
+    } catch (error) {
+      setLibrary([]);
+      notify("Error", "Your saved gene lists could not be read", error.message);
     }
-    return geneName;
-  };
-
-  // Saved lists may be plain gene lists or signature formulas ("A+B-C").
-  // The shared formula rules keep hyphenated symbols (HLA-A, MT-ND1) whole;
-  // an explicit sign stays in front of the gene, as before ("+B", "-C").
-  const parseGenesText = (raw) => {
-    const text = String(raw || "").trim();
-    if (!text) return [];
-    return parseGeneFormula(text).map((term) => `${term.op || ""}${term.gene}`);
-  };
-
-  const syncGenelistsFromIdb = async ({ autoSelect = false } = {}) => {
-    const names = await get("geneListNames");
-    const ids = Array.from(names || []).filter(Boolean);
-    if (!ids.length) return;
-
-    const fetched = await Promise.all(ids.map((id) => get(`genelist_${id}`)));
-    const fromIdb = ids
-      .map((id, idx) => {
-        const v = fetched[idx];
-        if (!v) return null;
-        const listName = String(v.name || v.label || id);
-        return {
-          name: listName,
-          checked: false,
-          content: v.description || "",
-          genes: parseGenesText(v.genes),
-        };
-      })
-      .filter(Boolean);
-
-    const existing = genelistcompareSettings?.genelists || [];
-    const existingByName = new Map(existing.map((x) => [x.name, x]));
-    const merged = [
-      ...fromIdb.map((x) => {
-        const prev = existingByName.get(x.name);
-        return prev ? { ...x, checked: !!prev.checked } : x;
-      }),
-      ...existing.filter((x) => !fromIdb.some((y) => y.name === x.name)),
-    ];
-
-    if (!merged.length) return;
-
-    const anyChecked = merged.some((x) => x.checked);
-    const normalized =
-      autoSelect && !anyChecked
-        ? merged.map((x, idx) => ({ ...x, checked: idx < Math.min(2, merged.length) }))
-        : merged;
-
-    genelistcompareSettingsChanged({
-      settingName: "genelists",
-      newValue: normalized,
-    });
-  };
-
-  // Function to restore original gene names for display
-  const restoreGeneName = (sanitizedName) => {
-    if (!sanitizedName || typeof sanitizedName !== 'string') return sanitizedName;
-    
-    // If name starts with underscore followed by + or -, remove the underscore
-    if (sanitizedName.startsWith('_+') || sanitizedName.startsWith('_-')) {
-      return sanitizedName.substring(1);
-    }
-    return sanitizedName;
-  };
-
-  const genesets = useMemo(() => {
-    if (genelists && genelists?.elems && genelists?.elems.length > 2) {
-      // Create a hash of the gene names to use as a unique identifier
-      const geneNames = genelists?.elems?.map((x) => restoreGeneName(x.name)).join(",");
-      const geneHash = geneNames.split(',').length + '_' + geneNames.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '');
-      
-      return { 
-        [`Selected Genes_${geneHash}`]: geneNames
-      };
-    }
-    return {};
-  }, [genelists]);
-
-  useEffect(() => {
-    if (genelistcompareSettings?.genelists) {
-      let geneMap = {};
-      let genelists = genelistcompareSettings.genelists;
-      genelists.forEach((genelist) => {
-        if (genelist.checked) {
-          genelist.genes.forEach((gene) => {
-            if (gene) {
-              // Sanitize gene name to prevent issues with + or - prefixes
-              const sanitizedGene = sanitizeGeneName(gene);
-              if (!geneMap[sanitizedGene]) {
-                geneMap[sanitizedGene] = [];
-              }
-              geneMap[sanitizedGene].push(genelist.name);
-            }
-          });
-        }
-      });
-
-      let elems = Object.keys(geneMap).map((gene) => ({
-        name: gene,
-        sets: geneMap[gene],
-      }));
-
-      setElements(elems);
-      setGeneLists(undefined);
-    }
-  }, [genelistcompareSettings?.genelists]);
-
-  const [elems, setElements] = useState([]);
-  const { sets, combinations } = useMemo(() => {
-    const colors = [
-      "#1f77b4",
-      "#ff7f0e", 
-      "#2ca02c",
-      "#d62728",
-      "#9467bd",
-      "#8c564b",
-      "#e377c2",
-      "#7f7f7f",
-      "#bcbd22",
-      "#17becf"
-    ];
-
-    const SetCombinationType = ["intersection", "union", "difference"];
-    const combinationType = genelistcompareSettings?.mode !== undefined 
-      ? SetCombinationType[genelistcompareSettings.mode] 
-      : SetCombinationType[0]; // default to "intersection"
-    
-    // Early return if elems is empty
-    if (!elems || elems.length === 0) {
-      return { sets: [], combinations: [] };
-    }
-    
-    let { sets, combinations } = extractCombinations(elems, {
-      type: combinationType,
-      setOrder: ["cardinality", "name"],
-      //combinationOrder?: SortCombinationOrder | SortCombinationOrders;
-    });
-
-    sets =
-      genelistcompareSettings?.theme === "Colorful"
-        ? sets.map((s, i) => ({ ...s, color: colors[i % colors.length] }))
-        : sets;
-
-    return {
-      sets: sets,
-      combinations: combinations || [], // Ensure combinations is always an array
-    };
-  }, [elems, genelistcompareSettings?.mode, genelistcompareSettings?.theme]);
-
-  // Auto-collapse accordion when gene lists are present
-  useEffect(() => {
-    if (sets.length > 0) {
-      setExpanded(false);
-    }
-  }, [sets.length]);
-
-  useEffect(() => {
-    // Populate available gene lists from IndexedDB on first load (Redux settings are not persisted).
-    if ((genelistcompareSettings?.genelists || []).length === 0) {
-      syncGenelistsFromIdb({ autoSelect: true }).catch((e) =>
-        console.error("Failed to load saved gene lists:", e)
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refresh after the "new gene list" dialog closes. Skipped on mount: the
-  // effect above already loads the lists then, and a second concurrent sync
-  // (started from the same empty settings) would undo its auto-selection.
-  const didMountRef = React.useRef(false);
   useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      if ((genelistcompareSettings?.genelists || []).length === 0) return;
+    reload();
+  }, [reload, version]);
+
+  // Lists saved by the older gene list boxes do not announce themselves: re-read when the tab regains focus
+  useEffect(() => {
+    const onFocus = () => reload();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [reload]);
+
+  // Pick the two newest lists the first time. Ids of deleted lists are not
+  // pruned from the setting here (a redux update can render before a newer
+  // library state and would drop a list just saved); they are ignored below.
+  useEffect(() => {
+    if (library && !Array.isArray(settings.selectedlists) && library.length >= 2) {
+      set("selectedlists", library.slice(0, 2).map((l) => l.id));
     }
-    if (!newListVisible) {
-      syncGenelistsFromIdb().catch((e) => console.error("Failed to refresh saved gene lists:", e));
-    }
+  }, [library, settings.selectedlists, set]);
+
+  // --------------------------------------------------------------- plots --
+  const pagePalette = usePalette();
+  const themeSetting = settings.theme || "Colorful";
+  const isVega = themeSetting === "Vega";
+  const plotPalette = themeSetting === "Dark" ? PALETTES.dark : isVega ? PALETTES.light : pagePalette;
+  const plot = {
+    theme: isVega ? "vega" : plotPalette.mode,
+    colorful: themeSetting === "Colorful",
+    background: isVega ? "#ffffff" : plotPalette.bg,
+    colors: isVega
+      ? {}
+      : {
+          color: plotPalette.mode === "dark" ? "#aab3c0" : "#4a5462",
+          textColor: plotPalette.text,
+          selectionColor: plotPalette.accent,
+          hoverHintColor: plotPalette.borderStrong,
+          notMemberColor: plotPalette.border,
+          alternatingBackgroundColor: plotPalette.surfaceAlt,
+        },
+  };
+  const series = pagePalette.series;
+
+  const compared = useMemo(() => {
+    if (!library) return [];
+    const byId = new Map(library.map((l) => [l.id, l]));
+    return selectedIds.map((id) => byId.get(id)).filter(Boolean);
+  }, [library, selectedIds]);
+
+  const colors = useMemo(() => {
+    const out = {};
+    compared.forEach((list, index) => {
+      out[list.name] = series[index % series.length];
+    });
+    return out;
+  }, [compared, series]);
+
+  const elems = useMemo(() => buildMembership(compared), [compared]);
+  const mode = Number.isInteger(settings.mode) ? settings.mode : 3;
+
+  const { sets, combinations } = useMemo(() => {
+    if (compared.length < 2) return { sets: [], combinations: [] };
+    const result = extractCombinations(elems, {
+      type: COMBINATION_TYPES[mode] || "distinctIntersection",
+      setOrder: ["cardinality", "name"],
+      combinationOrder: ["cardinality:desc", "degree:asc"],
+    });
+    // UpSetJS draws the last set on top: ascending order puts the largest list on top
+    const ordered = [...result.sets].sort((a, b) => a.cardinality - b.cardinality || b.name.localeCompare(a.name));
+    const colored = plot.colorful ? ordered.map((s) => ({ ...s, color: colors[s.name] })) : ordered;
+    return { sets: colored, combinations: result.combinations || [] };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newListVisible]);
+  }, [elems, mode, plot.colorful, colors, compared.length]);
 
-  const [selection, setSelection] = React.useState();
-  const [selectedOnes, setselectedOnes] = React.useState();
-  
-  // Add debugging to track state changes
-  useEffect(() => {
-    console.log('selectedOnes changed:', selectedOnes);
-  }, [selectedOnes]);
-  
-  useEffect(() => {
-    console.log('genelists changed:', genelists);
-  }, [genelists]);
+  const background = Number(settings.background) > 0 ? Number(settings.background) : DEFAULT_BACKGROUND;
+  const overlaps = useMemo(() => pairwiseOverlaps(compared, background), [compared, background]);
+  const rows = useMemo(() => membershipRows(compared), [compared]);
+  const drugs = useMemo(() => isDrugList(elems.slice(0, 500).map((e) => e.name)), [elems]);
 
-  // Effect to update Venn diagram font sizes when settings change
+  const summary = useMemo(() => {
+    const n = compared.length;
+    const all = rows.filter((r) => r.Lists === n).map((r) => r.Gene);
+    const shared = rows.filter((r) => r.Lists >= 2).map((r) => r.Gene);
+    const single = rows.filter((r) => r.Lists === 1).map((r) => r.Gene);
+    const best = [...overlaps.pairs].sort((a, b) => b.jaccard - a.jaccard)[0];
+    return { n, all, shared, single, best };
+  }, [rows, compared.length, overlaps]);
+
+  // The selection disappears when the lists it came from change
+  const comparedKey = compared.map((l) => `${l.id}:${l.genes.length}`).join("|");
   useEffect(() => {
-    if (genelistcompareSettings?.showvenn && sets.length > 0) {
-      // Small delay to ensure SVG is fully rendered
-      const timer = setTimeout(() => {
-        const vennContainer = document.querySelector('.venndiagram svg');
-        if (vennContainer) {
-          const fontSize = (genelistcompareSettings?.venndiagramfontsize || 16) + "px";
-          
-          // Update combination numbers (inside circles)
-          const valueTexts = vennContainer.querySelectorAll('.valueTextStyle-venndiagram');
-          valueTexts.forEach(text => {
-            text.style.fontSize = fontSize;
-          });
-          
-          // Update set labels (outside circles)
-          const setTexts = vennContainer.querySelectorAll('.setTextStyle-venndiagram');
-          setTexts.forEach(text => {
-            text.style.fontSize = fontSize;
-          });
-          
-          // Keep export buttons at original size
-          const exportTexts = vennContainer.querySelectorAll('.exportTextStyle-venndiagram');
-          exportTexts.forEach(text => {
-            text.style.fontSize = '10px';
-          });
+    setSelection(null);
+    setHovered(null);
+  }, [comparedKey, mode]);
+
+  const elemsByGene = useMemo(() => new Map(elems.map((e) => [e.name, e])), [elems]);
+  const highlightOf = (genes) => genes.map((g) => elemsByGene.get(g)).filter(Boolean);
+
+  const selectCombination = (combination) => {
+    const genes = (combination.elems || []).map((e) => e.name);
+    setSelection({
+      label: describeCombination(combination, compared.map((l) => l.name)),
+      genes,
+      key: `combo:${combination.name}`,
+      highlight: combination,
+    });
+  };
+  const selectGenes = (label, genes, key) => setSelection({ label, genes, key, highlight: highlightOf(genes) });
+
+  // ------------------------------------------------------------- actions --
+  const toggle = (id) => {
+    if (selectedIds.includes(id)) set("selectedlists", selectedIds.filter((x) => x !== id));
+    else if (selectedIds.length < MAX_COMPARED) set("selectedlists", [...selectedIds, id]);
+  };
+
+  const saveList = async ({ name, genes, description, previousName }) => {
+    const id = await saveGeneList(name, genes, description);
+    if (previousName && previousName !== name) await deleteGeneList(previousName);
+    // Read the lists first: the selection only keeps ids the library has
+    await reload();
+    if (previousName && previousName !== name) {
+      set("selectedlists", selectedIds.map((x) => (x === previousName ? id : x)).filter((x, i, a) => a.indexOf(x) === i));
+    } else if (!previousName && !selectedIds.includes(id) && selectedIds.length < MAX_COMPARED) {
+      set("selectedlists", [...selectedIds, id]);
+    }
+    notify("Success", previousName ? `“${name}” updated` : `“${name}” saved`, `${genes.length} genes`);
+  };
+
+  const removeList = async (list) => {
+    if (!window.confirm(`Delete the gene list “${list.name}” (${list.genes.length} genes) from this browser? This cannot be undone.`)) return;
+    try {
+      await deleteGeneList(list.id);
+      set("selectedlists", selectedIds.filter((x) => x !== list.id));
+      notify("Success", `“${list.name}” deleted`);
+    } catch (error) {
+      notify("Error", "The list could not be deleted", error.message);
+    }
+  };
+
+  const importFile = async (file) => {
+    try {
+      const text = await file.text();
+      if (/\.json$/i.test(file.name)) {
+        const count = await importWorkspace(text);
+        notify("Success", `${count} gene list${count === 1 ? "" : "s"} imported`);
+        return;
+      }
+      const taken = new Set((library || []).map((l) => l.name));
+      const imported = [];
+      if (/\.gmt$/i.test(file.name)) {
+        for (const line of text.split(/\r?\n/)) {
+          const [name, description, ...genes] = line.split("\t");
+          const symbols = listGenes(genes.join("\n"));
+          if (!name?.trim() || symbols.length === 0) continue;
+          const unique = uniqueName(name.trim(), taken);
+          taken.add(unique);
+          // eslint-disable-next-line no-await-in-loop
+          imported.push(await saveGeneList(unique, symbols, description && !/^https?:/.test(description) ? description : ""));
         }
-      }, 100);
-      
-      return () => clearTimeout(timer);
+      } else {
+        // .txt / .csv / .tsv: one list; the first column of each line when the file has columns
+        const firstColumn = text
+          .split(/\r?\n/)
+          .map((line) => line.split(/[\t,;]/)[0])
+          .join("\n");
+        const symbols = listGenes(/[\t,;]/.test(text) && text.includes("\n") ? firstColumn : text).filter(
+          (g, i) => !(i === 0 && /^(GENE|SYMBOL|GENES|GENE_SYMBOL|NAME)$/.test(g))
+        );
+        if (symbols.length === 0) throw new Error("No gene symbols found in the file");
+        const unique = uniqueName(baseName(file.name), taken);
+        imported.push(await saveGeneList(unique, symbols, `Imported from ${file.name}`));
+      }
+      if (imported.length === 0) throw new Error("No gene lists found in the file");
+      notify("Success", `${imported.length} gene list${imported.length === 1 ? "" : "s"} imported`, imported.slice(0, 5).join(", "));
+    } catch (error) {
+      notify("Error", "The file could not be imported", error.message);
     }
-  }, [genelistcompareSettings?.venndiagramfontsize, genelistcompareSettings?.showvenn, sets.length]);
-  
-  function mergeColors(colors) {
-    if (colors.length === 0) {
-      return undefined;
-    }
-    if (colors.length === 1) {
-      return colors[0];
-    }
-    const cc = colors.reduce(
-      (acc, d) => {
-        const c = lab(d || "transparent");
-        return {
-          l: acc.l + c.l,
-          a: acc.a + c.a,
-          b: acc.b + c.b,
-        };
-      },
-      { l: 0, a: 0, b: 0 }
-    );
-    return lab(
-      cc.l / colors.length,
-      cc.a / colors.length,
-      cc.b / colors.length
-    ).toString();
-  }
-  
-  // Enhanced click handler to ensure proper state updates
-  const handleSelection = (selection) => {
-    console.log('Selection clicked:', selection);
-    setselectedOnes(selection);
   };
-  
-  useEffect(() => {
-    setGeneLists(selectedOnes);
-  }, [selectedOnes]);
 
-  Object.assign(combinations ?? {});
-
-  //console.log(combinations);
-
-  //document.getElementById("venndiagram")?.setAttribute("viewBox", "-100 -100");
-
-  const savedLists = genelistcompareSettings?.genelists || [];
-  const selectedCount = savedLists.filter((x) => x?.checked).length;
-
-  const setSavedListChecked = (name, checked) => {
-    const next = (savedLists || []).map((x) => (x.name === name ? { ...x, checked } : x));
-    genelistcompareSettingsChanged({ settingName: "genelists", newValue: next });
-  };
+  // -------------------------------------------------------------- render --
+  const comparing = compared.length >= 2;
+  const introExpanded = introOpen === undefined ? !library || library.length === 0 : introOpen;
 
   return (
-    <div id="maincontainer" className={styles.mainView}>
-      {/* Module Description */}
-      <Accordion 
-        expanded={expanded}
-        onChange={(event, isExpanded) => setExpanded(isExpanded)}
-        sx={{
-          marginBottom: '14px',
-          backgroundColor: '#f8f9fa', 
-          border: '1px solid #e9ecef',
-          borderRadius: '8px',
-          '&:before': {
-            display: 'none',
-          },
-          '& .MuiAccordionSummary-root': {
-            minHeight: '30px',
-            height: '30px',
-          },
-          '& .MuiAccordionSummary-root.Mui-expanded': {
-            minHeight: '30px',
-            height: '30px',
-          }
-        }}
-      >
-        <AccordionSummary 
-          expandIcon={<ExpandMoreIcon />}
-          sx={{ 
-            backgroundColor: '#f5f5f5',
-            borderBottom: '1px solid #e0e0e0',
-            minHeight: '30px',
-            '&.Mui-expanded': {
-              minHeight: '30px'
-            }
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '16px' }}>{moduleDescription.title}</h3>
-        </AccordionSummary>
-        <AccordionDetails sx={{ backgroundColor: '#fafafa', padding: '16px' }}>
-          <div style={{ marginBottom: '0px' }}>
-            <p style={{ marginBottom: '16px', lineHeight: '1.6' }}>{moduleDescription.description}</p>
-            <h4 style={{ marginBottom: '12px', color: '#424242' }}>Key Features:</h4>
-            <ul style={{ marginBottom: '16px', paddingLeft: '20px' }}>
-              {moduleDescription.features.map((feature, index) => (
-                <li key={index} style={{ marginBottom: '4px' }}>{feature}</li>
-              ))}
-            </ul>
+    <div className={styles.page} data-testid="genelist-compare">
+      <ModuleIntro
+        title={INTRO.title}
+        description={INTRO.description}
+        features={INTRO.features}
+        expanded={introExpanded}
+        onChange={setIntroOpen}
+      />
 
-            {sets.length === 0 && (
-            <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#e3f2fd', 
-              borderLeft: '4px solid #1976d2',
-              borderRadius: '4px',
-              color: '#1565c0'
-            }}>
-              Tip: create gene lists (saved locally in your browser), then select at least two lists to compare.
+      <div className={styles.topGrid}>
+        <ListLibrary
+          lists={library || []}
+          selected={selectedIds}
+          colors={colors}
+          onToggle={toggle}
+          onSelectAll={() => set("selectedlists", (library || []).slice(0, MAX_COMPARED).map((l) => l.id))}
+          onClear={() => set("selectedlists", [])}
+          onNew={() => setEditor({ open: true, list: null })}
+          onEdit={(list) => setEditor({ open: true, list })}
+          onDelete={removeList}
+          onImportFile={importFile}
+        />
+
+        {comparing && (
+          <div className={styles.kpis} data-testid="genelist-summary">
+            <div className={styles.kpi}>
+              <span className={styles.kpiValue}>{rows.length.toLocaleString()}</span>
+              <span className={styles.kpiLabel}>unique genes in {summary.n} lists</span>
             </div>
+            <button
+              type="button"
+              className={`${styles.kpi} ${styles.kpiButton}`}
+              onClick={() => selectGenes(`Shared by all ${summary.n} lists`, summary.all, "kpi:all")}
+              aria-pressed={selection?.key === "kpi:all"}
+            >
+              <span className={styles.kpiValue}>{summary.all.length.toLocaleString()}</span>
+              <span className={styles.kpiLabel}>shared by all {summary.n}</span>
+            </button>
+            {summary.n > 2 && (
+              <button
+                type="button"
+                className={`${styles.kpi} ${styles.kpiButton}`}
+                onClick={() => selectGenes("In two or more lists", summary.shared, "kpi:shared")}
+                aria-pressed={selection?.key === "kpi:shared"}
+              >
+                <span className={styles.kpiValue}>{summary.shared.length.toLocaleString()}</span>
+                <span className={styles.kpiLabel}>in two or more lists</span>
+              </button>
             )}
-          </div>
-        </AccordionDetails>
-      </Accordion>
-
-      <Flex direction={"column"} width={"100%"} justifyContent={"flex-start"}>
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            justifyItems: "center",
-            justifyContent: "space-around",
-            marginBottom: "20px",
-            alignItems: "center",
-            flexWrap: "wrap",
-            background:
-              genelistcompareSettings?.theme === "Dark" ? "black" : "white",
-            fontFamily: genelistcompareSettings?.fontfamily || "Arial, sans-serif",
-            fontWeight: genelistcompareSettings?.fontweight || "normal",
-            fontStyle: genelistcompareSettings?.fontstyle || "normal",
-          }}
-        >
-          <SelectionContext.Provider value={{ selection, setSelection }}>
-            {sets.length > 0 && selectedCount >= 2 ? (
-              <>
-                {genelistcompareSettings?.showcomparison && (
-                  <>
-                    <div className="upsetjs">
-                      <UpSetSelection
-                                                                   
-                        sets={sets}
-                        onClick={handleSelection}
-                        combinations={combinations.filter((x) => {
-                          return (
-                            // "minimum number of genes in an intersection": at least, not more than
-                            x.elems.length >= Math.max(1, Number(genelistcompareSettings?.minsetmember) || 1)
-                          );
-                        })}
-                        width={Math.min(
-                          document.getElementById("maincontainer")?.offsetWidth -
-                            50,
-                          sets ? sets.length * 120 + 150 : 300
-                        )}
-                        height={350}
-                        
-                        barPadding={genelistcompareSettings?.barpadding || 0}
-                        theme={genelistcompareSettings?.theme?.toLowerCase()}
-                        dotPadding={genelistcompareSettings?.dotpadding || 0}
-                        widthRatios={genelistcompareSettings?.widthRatios}
-                        heightRatios={[genelistcompareSettings?.setheightratio || 1]}
-                        fontSizes={{
-                          chartLabel:
-                            (genelistcompareSettings?.chartfontsize || 12) + "px",
-                          setLabel: (genelistcompareSettings?.setlabelfontsize || genelistcompareSettings?.labelfontsize || 12) + "px",
-                          axisTick: (genelistcompareSettings?.chartfontsize || 12) + "px",
-                          barLabel: (genelistcompareSettings?.chartfontsize || 12) + "px",
-                        }}
-                        fontFamily={genelistcompareSettings?.fontfamily || "Arial, sans-serif"}
-                        fontWeight={genelistcompareSettings?.fontweight || "normal"}
-                        fontStyle={genelistcompareSettings?.fontstyle || "normal"}
-                      />
-                    </div>
-                      {/* barLabelOffset={genelistcompareSettings.dotpadding}
-                      fontSizes={genelistcompareSettings.chartfontsize}
-                      setNameAxisOffset={genelistcompareSettings.settolabel}
-
-                      minsetmember
-                      labelfontsize */}
-                  </>
-                )}
-                {genelistcompareSettings?.showvenn && (
-                  <>
-                    <Spacer height={30} />
-                    <div 
-                      className="venndiagram"
-                      style={{
-                        '--venn-font-size': (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
-                      }}
-                    >
-                      <VennDiagramSelection
-                        onClick={handleSelection}
-                        sets={sets}
-                        combinations={
-                          genelistcompareSettings?.theme === "Colorful"
-                            ? { mergeColors }
-                            : undefined
-                        }
-                        width={Math.min(
-                          document.getElementById("maincontainer")
-                            ?.offsetWidth - 50,
-                          sets ? sets.length * 120 + 150 : 300
-                        )}
-                        height={250}
-                        settings={genelistcompareSettings}
-                        theme={genelistcompareSettings?.theme?.toLowerCase()}
-                        fontFamily={genelistcompareSettings?.fontfamily || "Arial, sans-serif"}
-                        fontWeight={genelistcompareSettings?.fontweight || "normal"}
-                        fontStyle={genelistcompareSettings?.fontstyle || "normal"}
-                        fontSizes={{
-                          setLabel: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
-                          combinationLabel: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
-                          combinationSize: (genelistcompareSettings?.venndiagramfontsize || 16) + "px",
-                        }}
-                        combinationFontSize={(genelistcompareSettings?.venndiagramfontsize || 16) + "px"}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <Spacer height={20} />
-              </>
-            ) : (
-              <div className={styles.emptyState}>
-                <h3 className={styles.emptyStateTitle}>Start by creating or selecting gene lists</h3>
-                <p className={styles.emptyStateText}>
-                  Add gene lists (locally saved) and select at least two lists to compare intersections. Clicking a region
-                  in the plot lets you run enrichment on the selected genes.
-                </p>
-
-                <div className={styles.emptyStateActions}>
-                  <Button
-                    colored="success"
-                    label={savedLists.length ? "Create a new gene list" : "Create your first gene list"}
-                    onClick={() => setNewListVisible(true)}
-                  />
-                  <Button colored label="Refresh saved lists" onClick={() => syncGenelistsFromIdb()} />
-                </div>
-
-                {savedLists.length > 0 && (
-                  <div className={styles.listPicker}>
-                    <div className={styles.listPickerHeader}>
-                      <div className={styles.listPickerTitle}>Select gene lists to compare</div>
-                      <div style={{ color: "#6b7280", fontSize: 12 }}>
-                        Selected: {selectedCount} / {savedLists.length}
-                      </div>
-                    </div>
-
-                    <div className={styles.listPickerItems}>
-                      {savedLists.map((item) => (
-                        <div key={item.name} className={styles.listPickerItem}>
-                          <CheckBox
-                            label={`${item.name} (${(item.genes || []).length} genes)`}
-                            checked={!!item.checked}
-                            onChange={({ target: { checked } }) => setSavedListChecked(item.name, checked)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            <button
+              type="button"
+              className={`${styles.kpi} ${styles.kpiButton}`}
+              onClick={() => selectGenes("In only one list", summary.single, "kpi:single")}
+              aria-pressed={selection?.key === "kpi:single"}
+            >
+              <span className={styles.kpiValue}>{summary.single.length.toLocaleString()}</span>
+              <span className={styles.kpiLabel}>in only one list</span>
+            </button>
+            {summary.best && (
+              <div className={styles.kpi} title={`${summary.best.a} ∩ ${summary.best.b}`}>
+                <span className={styles.kpiValue}>{summary.best.jaccard.toFixed(2)}</span>
+                <span className={styles.kpiLabel}>
+                  highest Jaccard: {summary.best.a} / {summary.best.b}
+                </span>
               </div>
             )}
-          </SelectionContext.Provider>
-        </div>
-
-        {genelists && genelists?.elems && genelists?.elems.length > 2 ? (
-          <>
-            <GeneSetEnrichmentTable genesets={genesets} />
-          </>
-        ) : (
-          genelists &&
-          genelists?.elems &&
-          genelists?.elems.length > 0 && (
-            <div style={{ marginLeft: "40%" }}>
-              {"Genes: " + genelists?.elems?.map((x) => restoreGeneName(x.name)).join(", ")}
-            </div>
-          )
+          </div>
         )}
-      </Flex>
+      </div>
 
-      <GenelistAdd
-        visible={newListVisible}
-        setNewListVisible={setNewListVisible}
-        title="New Gene List"
+      {library && library.length > 0 && !comparing && (
+        <EmptyState
+          title={compared.length === 1 ? "Select one more list" : "Select at least two lists to compare"}
+          hint="Tick the lists above. Up to 10 lists can be compared at once; the Venn diagram shows 2–5."
+        />
+      )}
+
+      {comparing && (
+        <>
+          <OverlapPlots
+            sets={sets}
+            combinations={combinations}
+            view={settings.view || "upset"}
+            onViewChange={(v) => set("view", v)}
+            mode={mode}
+            onModeChange={(m) => set("mode", m)}
+            selection={hovered || selection?.highlight || null}
+            onHover={setHovered}
+            onSelect={selectCombination}
+            settings={settings}
+            plot={plot}
+          />
+
+          <SelectionPanel selection={selection} onClear={() => setSelection(null)} />
+
+          <SimilarityMatrix
+            lists={compared}
+            colors={colors}
+            overlaps={overlaps}
+            background={background}
+            onBackgroundChange={(n) => set("background", n)}
+            onSelectPair={(p, key) => selectGenes(`${p.a} ∩ ${p.b}`, p.genes, key)}
+            activeKey={selection?.key}
+            highlightRgb={pagePalette.highlightRgb}
+          />
+
+          <MembershipTable lists={compared} rows={rows} colors={colors} drugs={drugs} />
+        </>
+      )}
+
+      <ListEditor
+        open={editor.open}
+        initial={editor.list}
+        existingNames={(library || []).map((l) => l.name)}
+        onSave={saveList}
+        onClose={() => setEditor({ open: false, list: null })}
       />
     </div>
   );
 };
 
-const mapStateToProps = ({ settings, calcResults }) => ({
-  calcResults,
-  coreSettings: settings?.core ?? {},
-  genelistcompareSettings: settings?.genelistcompare ?? {},
+const mapStateToProps = ({ settings }) => ({
+  settings: settings?.genelistcompare ?? {},
 });
 
-const mapDispatchToProps = {
-  genelistcompareSettingsChanged,
-};
-
-const ConnectedGenelistCompare = connect(mapStateToProps, mapDispatchToProps)(GenelistCompare);
+const ConnectedGenelistCompare = connect(mapStateToProps, { settingChanged: genelistcompareSettingsChanged })(GenelistCompare);
 
 const MainContainer = withErrorBoundary(ConnectedGenelistCompare, {
   label: "Gene list comparison",
 });
 
 export { MainContainer as GenelistCompare };
-
-export default function Skeleton() {
-  const BG = "#A6A8AB";
-  const EMPTY = "#E1E2E3";
-
-  const wi = 20;
-  const padding = 10;
-
-  const sWidth = 75;
-  const sY = 110;
-
-  const cHeight = 100;
-  const csX = 85;
-
-  const cOffsets = [10, 20, 35, 60, 65, 80, 90];
-  const sOffsets = [50, 30, 15];
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <svg
-        viewBox="0 0 300 200"
-        style={{
-          maxWidth: "80vw",
-          maxHeight: "80vh",
-          flexGrow: 1,
-          background: "#F4F4F4",
-        }}
-      >
-        {cOffsets.map((offset, i) => (
-          <rect
-            key={i}
-            x={csX + i * (wi + padding)}
-            y={offset}
-            width={wi}
-            height={cHeight - offset}
-            fill={BG}
-          />
-        ))}
-        {sOffsets.map((offset, i) => (
-          <rect
-            key={i}
-            x={offset}
-            y={sY + i * (wi + padding)}
-            width={sWidth - offset}
-            height={wi}
-            fill={BG}
-          />
-        ))}
-
-        {cOffsets.map((_, i) =>
-          sOffsets.map((_, j) => {
-            const filled =
-              j === 2 - i ||
-              (i === 3 && j > 0) ||
-              (i === 4 && j !== 1) ||
-              (i === 5 && j < 2) ||
-              i === 6;
-            return (
-              <circle
-                key={`${i}x${j}`}
-                cx={csX + i * (wi + padding) + wi / 2}
-                cy={sY + j * (wi + padding) + wi / 2}
-                r={wi / 2}
-                fill={filled ? BG : EMPTY}
-              />
-            );
-          })
-        )}
-        <rect x="182" y="150" width="6" height="30" fill={BG} />
-        <rect x="212" y="120" width="6" height="60" fill={BG} />
-        <rect x="242" y="120" width="6" height="30" fill={BG} />
-        <rect x="272" y="120" width="6" height="60" fill={BG} />
-      </svg>
-    </div>
-  );
-}

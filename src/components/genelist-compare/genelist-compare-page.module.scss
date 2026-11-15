@@ -1,159 +1,621 @@
-.mainView {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  width: 100%;
-  margin-top: 0px;
-  padding: 10px;
-  padding-top: 0px;
-}
-
-.skeleton {
-  display: flex;
-  justify-content: center;
-  width: 50%;
-}
+// Gene list comparison page. Colours are the tokens of global.scss, so the
+// page follows the light/dark theme.
 
 .page {
-  width: 60%;
-  text-align: center;
-  padding: 40px 0;
-  background: #fff;
-  font-family: "Arvo", serif;
-}
-
-.page img {
-  width: 50%;
-}
-
-.wait_bg {
-  background-image: url(https://cdn.dribbble.com/users/2004171/screenshots/5646149/dribbble_canvas__calculator_.gif);
-  height: 400px;
-  background-position: center;
-}
-
-.wait_bg h1 {
-  font-size: 80px;
-}
-
-.four_zero_four_bg h3 {
-  font-size: 80px;
-}
-
-.wait_message {
-  margin-top: 20px;
-}
-
-.emptyState {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
-  max-width: 980px;
-  margin: 12px auto 0;
+  min-width: 0;
+  color: var(--gs-text);
+
+  // Panels of the shared ui kit stack with the page gap
+  > section {
+    margin: 0;
+  }
+}
+
+.topGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------- summary tiles */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font: inherit;
+  text-align: left;
+}
+
+.kpiButton {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--gs-border-strong);
+    background: var(--gs-hover);
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--gs-accent);
+    background: var(--gs-accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-focus);
+    outline-offset: 1px;
+  }
+}
+
+.kpiValue {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiLabel {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--gs-muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- list library */
+
+.libraryEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   padding: 16px;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
-  box-shadow: 0 6px 18px rgba(20, 30, 40, 0.06);
+  color: var(--gs-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
 }
 
-.emptyStateTitle {
-  margin: 0 0 6px 0;
-  font-size: 18px;
-  color: #1f2937;
-}
-
-.emptyStateText {
-  margin: 0 0 12px 0;
-  color: #4b5563;
-  line-height: 1.55;
-}
-
-.emptyStateActions {
+.libraryToolbar {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.listPicker {
-  border-top: 1px dashed #e5e7eb;
-  padding-top: 12px;
-}
-
-.listPickerHeader {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gs-border);
 }
 
-.listPickerTitle {
-  font-weight: 700;
-  color: #374151;
+.spacer {
+  flex: 1;
 }
 
-.listPickerItems {
-  max-height: 220px;
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 300px;
+  min-width: 160px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-muted);
+
+  &:focus-within {
+    border-color: var(--gs-focus);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--gs-text);
+    font: inherit;
+    font-size: 13px;
+  }
+}
+
+.libraryScroll {
+  max-height: 300px;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.libraryTable {
+  td {
+    vertical-align: middle;
+  }
+}
+
+.colCheck {
+  width: 36px;
+  text-align: center !important;
+
+  input {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: var(--gs-accent);
+  }
+}
+
+.colDate {
+  width: 120px;
+  color: var(--gs-muted);
+  white-space: nowrap;
+}
+
+.colActions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dangerButton:hover {
+  color: var(--gs-danger);
+}
+
+.rowSelected td {
+  background: var(--gs-selected);
+}
+
+.listName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gs-text);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.listNameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listDescription {
+  margin: 2px 0 0 18px;
+  overflow: hidden;
+  color: var(--gs-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+/* ------------------------------------------------------------ list editor */
+
+.editorFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.editorError {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--gs-danger-soft);
+  color: var(--gs-danger);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ toolbar bits */
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+
+  button {
+    height: 28px;
+    padding: 0 12px;
+    border: 0;
+    background: var(--gs-surface);
+    color: var(--gs-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+
+    & + button {
+      border-left: 1px solid var(--gs-border-strong);
+    }
+
+    &[aria-pressed="true"] {
+      background: var(--gs-accent);
+      color: var(--gs-on-accent);
+    }
+
+    &:disabled {
+      color: var(--gs-faint);
+      cursor: not-allowed;
+    }
+  }
+}
+
+.select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--gs-border-strong);
+  border-radius: 6px;
+  background: var(--gs-surface);
+  color: var(--gs-text);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.inlineField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gs-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+
+  input {
+    width: 90px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--gs-border-strong);
+    border-radius: 6px;
+    background: var(--gs-surface);
+    color: var(--gs-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ------------------------------------------------------------------ plots */
+
+.plotBody {
+  width: 100%;
+  min-width: 0;
+}
+
+.plotCanvas {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.plotFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  margin-top: 8px;
+  color: var(--gs-muted);
+  font-size: 12px;
+}
+
+/* ----------------------------------------------------- similarity matrix */
+
+.matrixLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.matrixScroll {
+  overflow-x: auto;
+}
+
+.matrix {
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+
+  // A global rule colours table header rows
+  tr {
+    background: transparent !important;
+  }
+
+  th {
+    max-width: 150px;
+    padding: 2px 6px;
+    border: 0;
+    background: transparent !important;
+    color: var(--gs-muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  thead th {
+    vertical-align: bottom;
+  }
+
+  tbody th {
+    text-align: right;
+  }
+
+  td {
+    min-width: 54px;
+    height: 34px;
+    padding: 0;
+    text-align: center;
+  }
+}
+
+.matrixColHead,
+tbody th .matrixRowHead {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.matrixColHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+tbody th .swatch {
+  margin-right: 6px;
+}
+
+.matrixDiag {
+  border-radius: 4px;
+  background: var(--gs-surface-alt);
+  color: var(--gs-muted);
+}
+
+.matrixCell button {
+  width: 100%;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--gs-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--gs-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gs-focus);
+  }
+}
+
+.matrixActive {
+  border-color: var(--gs-accent) !important;
+  box-shadow: 0 0 0 1px var(--gs-accent);
+}
+
+.matrixNote {
+  margin-top: 6px;
+  color: var(--gs-muted);
+  font-size: 12px;
+}
+
+.pairTableWrap {
+  min-width: 0;
+}
+
+.pairScroll {
+  max-height: 320px;
+}
+
+.clickableRow {
+  cursor: pointer;
+
+  &:hover td {
+    background: var(--gs-hover);
+  }
+}
+
+.pairName {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.significant {
+  color: var(--gs-accent);
+  font-weight: 600;
+}
+
+.pairFoot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------- selected genes */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 260px;
   overflow: auto;
-  padding: 6px 8px;
-  border: 1px solid #eef1f4;
-  border-radius: 10px;
-  background: #ffffff;
 }
 
-.listPickerItem {
-  padding: 6px 0;
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--gs-border);
+  border-radius: 999px;
+  background: var(--gs-surface-alt);
+  color: var(--gs-text);
+  font-family: var(--gs-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 18px;
+  text-decoration: none;
+
+  &:is(a):hover {
+    border-color: var(--gs-link);
+    color: var(--gs-link);
+  }
 }
 
-// CSS to ensure font settings are applied to SVG elements
-:global(.upsetjs) {
-  svg {
-    text {
-      font-family: inherit !important;
-      font-weight: inherit !important;
-      font-style: inherit !important;
+.chipMore {
+  padding: 2px 10px;
+  border: 1px dashed var(--gs-border-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--gs-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.enrichment {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gs-border);
+}
+
+.subheading {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.enrichmentHint {
+  margin-top: 12px;
+}
+
+/* ------------------------------------------------------- membership table */
+
+.membershipScroll {
+  max-height: 460px;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.membershipTable {
+  font-variant-numeric: tabular-nums;
+}
+
+.memberCol {
+  width: 1%;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+th.memberCol {
+  max-width: 120px;
+}
+
+.memberColName {
+  display: inline-block;
+  max-width: 110px;
+  margin-left: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.geneCell {
+  font-family: var(--gs-mono, ui-monospace, monospace);
+  font-size: 12.5px;
+
+  a {
+    color: var(--gs-link);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
     }
   }
 }
 
+.memberDot,
+.memberEmpty {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.memberEmpty {
+  border: 1px solid var(--gs-border-strong);
+}
+
+.tableMore {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  border-top: 1px solid var(--gs-border);
+}
+
+/* --------------------------------------- figure fonts set in the sidebar */
+
+:global(.upsetjs),
 :global(.venndiagram) {
-  svg {
-    text {
-      font-family: inherit !important;
-      font-weight: inherit !important;
-      font-style: inherit !important;
-    }
-    // Target only Venn diagram content text with specific font size
-    .valueTextStyle-venndiagram,
-    .setTextStyle-venndiagram,
-    .titleTextStyle-venndiagram,
-    .descTextStyle-venndiagram,
-    .legendTextStyle-venndiagram {
-      font-size: var(--venn-font-size, 16px) !important;
-    }
-    // Keep export buttons at their original size
-    .exportTextStyle-venndiagram {
-      font-size: 10px !important;
-    }
+  svg text {
+    font-family: inherit !important;
+    font-weight: inherit !important;
+    font-style: inherit !important;
   }
 }
 
-:global(.upsetjs) {
-  svg {
-    text {
-      font-family: inherit !important;
-      font-weight: inherit !important;
-      font-style: inherit !important;
-      font-size: inherit !important;
-    }
-    // Exclude export buttons from font size inheritance
-    .exportButtons text,
-    .exportButton text,
-    .exportTextStyle,
-    .exportButtons-venndiagram text,
-    .exportButton-venndiagram text,
-    .exportTextStyle-venndiagram {
-      font-size: 12px !important;
-    }
+:global(.venndiagram) svg {
+  [class*="valueTextStyle"],
+  [class*="setTextStyle"] {
+    font-size: var(--venn-font-size, 16px) !important;
   }
 }

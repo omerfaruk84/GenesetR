@@ -1,19 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  showvenn: true,
-  showcomparison: true,
-  genelists: [],
+  // Ids (names) of the saved lists being compared; "" until the page has
+  // picked the first two lists on its first load
   selectedlists: "",
-  mode: 0,
+  view: "upset", // "upset" | "venn"
+  // Index into ["intersection", "union", "composite", "distinctIntersection"]
+  mode: 3,
+  background: 20000, // gene universe of the overlap test
   theme: "Colorful",
   order: 1,
   minsetmember: 1,
   barpadding: 0.3,
   dotpadding: 0.7,
-  chartfontsize: 15,
-  labelfontsize: 15,
-  setlabelfontsize: 14, // New: specific font size for set labels
+  chartfontsize: 13,
+  labelfontsize: 13,
+  setlabelfontsize: 13,
   venndiagramfontsize: 16, // New: font size for Venn diagram text
   fontfamily: "Arial, sans-serif", // New: font family setting
   fontweight: "normal", // New: font weight setting
