@@ -23,6 +23,7 @@ export const NAV_GROUPS = [
       { name: TabNames.EXPRESSIONANALYZER, to: ROUTES.EXPRESSIONANALYZER, about: "What changes a gene's expression, and what it changes" },
       { name: TabNames.CELL_CYCLE, to: ROUTES.CELL_CYCLE, about: "Which perturbations push cells into G1, S or G2/M, in every dataset" },
       { name: "Integrated analysis", to: ROUTES.INTEGRATED, about: "Consensus targets and regulators of a gene over all knock-down datasets", secondary: true },
+      { name: "Function atlas", to: ROUTES.ATLAS, about: "Partners and predicted functions of a gene, with a measured confidence", secondary: true },
     ],
   },
   {
@@ -56,6 +57,7 @@ export const NAV_GROUPS = [
     question: "How are these genes connected?",
     items: [
       { name: TabNames.PATHFINDER, to: ROUTES.PATHFINDER, about: "Regulatory paths that connect the genes of a list" },
+      { name: "Function atlas", to: ROUTES.ATLAS, about: "Maps of genes that act together, their modules, predicted functions and the knock-downs that move a pathway" },
       { name: "TF regulators", to: ROUTES.TF_REGULATORS, about: "Activators and repressors of a gene set, supported by overexpression and knock-down", secondary: true },
       { name: "Drug and gene connectivity", to: ROUTES.DRUG, about: "Knock-downs whose profile mimics or reverses a drug", secondary: true },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Upstream and downstream network of one gene", secondary: true },

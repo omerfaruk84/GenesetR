@@ -8,6 +8,7 @@ import { baseSymbol, geneLinks, genePagePath } from "../../utils/geneLinks";
 import { sendGenesTo } from "../../utils/sendTo";
 import { SendToMenu } from "../../components/send-to";
 import { effectNoun, isGainDataset } from "../../utils/perturbationKind";
+import { GeneAtlas } from "./gene-atlas";
 import { GeneConsensus } from "./gene-consensus";
 import { GeneDrugs } from "./gene-drugs";
 import { GeneRegulators } from "./gene-regulators";
@@ -273,6 +274,8 @@ const GenePage = () => {
             </header>
 
             <GeneConsensus symbol={summary.symbol} datasetNames={names} />
+
+            <GeneAtlas symbol={summary.symbol} />
 
             <section className={styles.section}>
               <h2>Across datasets</h2>

@@ -31,7 +31,7 @@ const ANALYSIS_ROUTES = [
   "/genelists",
 ];
 
-const OTHER_ROUTES = ["/", "/datasets", "/drug", "/project-signature", "/tf-regulators", "/integrated", "/upload-dataset", "/about"];
+const OTHER_ROUTES = ["/", "/datasets", "/drug", "/project-signature", "/tf-regulators", "/integrated", "/atlas", "/upload-dataset", "/about"];
 
 test("start page shows the five question groups", async ({ page }) => {
   await mockApi(page);
@@ -396,5 +396,249 @@ test("dataset catalogue shows the complex recovery where the benchmark has the d
   await expect(recovery).toContainText("Complex recovery");
   await expect(recovery).toContainText(/AUROC 0\.\d\d · \d+(\.\d)?% of the top 1,000 pairs/);
   await expect(recovery).toHaveAttribute("title", /same CORUM complex/);
+  expect(await errors()).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// Function atlas: maps, modules, predicted functions, pathway activity
+// ---------------------------------------------------------------------------
+
+test("function atlas: the map finds a gene, shows its panel and the module it is in", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas");
+  await expect(page.getByRole("heading", { level: 1, name: "Function atlas" })).toBeVisible();
+  await expect(page.getByTestId("atlas-explain")).toContainText("Knock-down map");
+  await expect(page.getByTestId("atlas-explain")).toContainText("3,775 genes in 76 modules");
+  const map = page.getByTestId("atlas-map");
+  await expect(map.locator("canvas")).toBeVisible();
+  await expect(map).toContainText("332 genes");
+  await expect(page.getByTestId("atlas-module-list").getByRole("link")).toHaveCount(6);
+
+  // the search box suggests the genes of the map; the gene is in the address
+  await page.getByRole("combobox", { name: "Find a gene on the map" }).fill("ints1");
+  await page.getByRole("option", { name: /^INTS15/ }).click();
+  await expect(page).toHaveURL(/\/atlas\?gene=INTS15$/);
+  const panel = page.getByTestId("atlas-gene-panel");
+  await expect(panel.getByRole("heading", { level: 3, name: "INTS15" })).toBeVisible();
+  await expect(panel).toContainText("integrator complex subunit 15");
+  await expect(panel).toContainText("no GO term");
+  await expect(panel.getByTestId("atlas-gene-partners").locator('a[href*="gene=INTS13"]')).toBeVisible();
+  await expect(panel.getByTestId("atlas-gene-predictions")).toContainText("Integrator complex");
+  await expect(panel.getByTestId("atlas-gene-place-genes")).toContainText("not on the map");
+  await expect(panel.locator('a[href*="/gene?symbol=INTS15"]')).toBeVisible();
+
+  // the module of the gene opens beside it
+  await panel.getByRole("link", { name: "M47: INTS10 / INTS14 / INTS13" }).click();
+  await expect(page).toHaveURL(/\/atlas\?gene=INTS15&module=47$/);
+  const module = page.getByTestId("atlas-module-panel");
+  await expect(module.getByRole("heading", { level: 3, name: "M47: INTS10 / INTS14 / INTS13" })).toBeVisible();
+  await expect(module.getByTestId("atlas-module-terms")).toContainText("histone H3 acetylation");
+  const members = module.getByTestId("atlas-module-members");
+  await expect(members.getByRole("link")).toHaveCount(36);
+  await expect(members.locator('a[data-no-go="true"]', { hasText: "INTS15" })).toBeVisible();
+  await expect(members.locator('a[data-placeholder="true"]')).toHaveText(["C11ORF68"]);
+  await expect(module.getByTestId("atlas-module-down")).toContainText("RPS18");
+  await expect(module.getByTestId("atlas-module-up")).toContainText("GTF3C6");
+  await expect(module.getByRole("button", { name: /Send the genes to/ })).toBeVisible();
+  await expect(page.getByTestId("atlas-module-list").locator('a[aria-current="true"]')).toContainText("M47");
+
+  // the other map: the gene stays chosen, and the page says that it is not on it
+  await page.getByRole("link", { name: "Co-regulated genes" }).click();
+  await expect(page).toHaveURL(/\/atlas\?axis=genes&gene=INTS15$/);
+  await expect(page.getByTestId("atlas-explain")).toContainText("Co-regulation map");
+  await expect(page.getByTestId("atlas-not-on-map")).toContainText("INTS15 is not on this map");
+  await expect(page.getByTestId("atlas-module-list").getByRole("link")).toHaveCount(3);
+  expect(api.atlasRequests.map((request) => request.path)).toEqual(
+    expect.arrayContaining(["summary", "map/pert", "map/genes", "gene/INTS15", "modules/pert/47"])
+  );
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: clicking a point of the map chooses that gene", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas");
+  const canvas = page.getByTestId("atlas-map").locator("canvas").first();
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(500);
+  const box = await canvas.boundingBox();
+  // the chart shows a hand over a point: look for one on a grid
+  let found = false;
+  for (let y = box.y + 20; y < box.y + box.height - 20 && !found; y += 9) {
+    for (let x = box.x + 20; x < box.x + box.width - 20 && !found; x += 9) {
+      await page.mouse.move(x, y);
+      found = await page.evaluate(([px, py]) => getComputedStyle(document.elementFromPoint(px, py)).cursor === "pointer", [x, y]);
+      if (found) await page.mouse.click(x, y);
+    }
+  }
+  expect(found).toBe(true);
+  await expect(page).toHaveURL(/\/atlas\?gene=[A-Z0-9.-]+$/);
+  // the gene has a panel (only three genes have a fixture; the others are answered with 404)
+  await expect(page.getByTestId("atlas-gene-panel").or(page.getByTestId("atlas-gene-missing"))).toBeVisible();
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: predictions that rest on a chromosomal neighbour are hidden until asked for", async ({ page }) => {
+  await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas?gene=KIAA0586");
+  const panel = page.getByTestId("atlas-gene-panel");
+  await expect(panel).toContainText("placeholder name");
+  // TIMM9 is in the same chromosome band
+  const partners = panel.getByTestId("atlas-gene-partners");
+  await expect(partners.getByTestId("neighbour-mark")).toHaveCount(1);
+  await expect(partners.locator("tr", { hasText: "TIMM9" }).getByTestId("neighbour-mark")).toBeVisible();
+  await expect(panel.getByTestId("atlas-gene-hidden")).toContainText("13 predictions hidden");
+  await expect(panel.getByTestId("atlas-gene-predictions").getByTestId("neighbour-mark")).toHaveCount(0);
+
+  await panel.getByLabel("Include possible neighbour effects").check();
+  await expect(page).toHaveURL(/\/atlas\?gene=KIAA0586&neighbours=1$/);
+  await expect(panel.getByTestId("atlas-gene-predictions")).toContainText("Mitochondrial Protein Import");
+  await expect(panel.getByTestId("atlas-gene-predictions").getByTestId("neighbour-mark").first()).toBeVisible();
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: the modules are searchable and open in the module panel", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas");
+  await page.getByRole("tab", { name: "Modules" }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=modules$/);
+  const list = page.getByTestId("atlas-modules");
+  await expect(list.getByRole("link")).toHaveCount(6);
+  await expect(page.getByTestId("atlas-modules-count")).toContainText("6 modules");
+
+  // the search text is in the address and in the request; it also matches enriched gene sets
+  await page.getByRole("searchbox", { name: "Search the modules" }).fill("integrator");
+  await expect(page).toHaveURL(/\/atlas\?tab=modules&q=integrator$/);
+  await expect(list.getByRole("link")).toHaveCount(1);
+  await expect(list).toContainText("M31: transcription by RNA polymerase II");
+  await expect(list).toContainText("Integrator complex");
+  expect(api.atlasRequests.some((request) => request.path === "modules/pert" && request.query.q === "integrator")).toBe(true);
+
+  await page.goto("/atlas?tab=modules&module=47");
+  const panel = page.getByTestId("atlas-module-panel");
+  await expect(panel.getByRole("heading", { level: 3, name: "M47: INTS10 / INTS14 / INTS13" })).toBeVisible();
+  await expect(panel).toContainText("named after its most central members");
+  // a member opens on the map
+  await expect(panel.getByTestId("atlas-module-members").locator('a[href$="/atlas?gene=INTS15&module=47"]')).toBeVisible();
+  await panel.getByRole("link", { name: "Show on the map" }).click();
+  await expect(page).toHaveURL(/\/atlas\?module=47$/);
+  await expect(page.getByTestId("atlas-map").locator("canvas")).toBeVisible();
+
+  // a co-regulation programme: the consequence is the knock-downs that move it
+  await page.goto("/atlas?tab=modules&axis=genes&module=26");
+  await expect(panel.getByRole("heading", { level: 3, name: "P26: Cholesterol Homeostasis" })).toBeVisible();
+  await expect(panel.getByTestId("atlas-module-terms")).toContainText("Cholesterol Biosynthesis");
+  await expect(panel.getByTestId("atlas-module-down")).toContainText("MBTPS1");
+  await expect(panel.getByTestId("atlas-module-up").getByTestId("member-mark")).toHaveCount(7);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: predicted functions follow the filters; the calibration is shown", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  const asked = (test) => api.atlasRequests.some((request) => request.path === "predictions" && test(request.query));
+  await page.goto("/atlas?tab=predictions");
+  await expect(page.getByTestId("atlas-predictions-explain")).toContainText("lower bound");
+  const calibration = page.getByTestId("atlas-calibration");
+  await expect(calibration.locator("tbody tr")).toHaveCount(7);
+  await expect(calibration.locator("tbody tr").last()).toContainText("≥ 12");
+  await expect(calibration.locator("tbody tr").last()).toContainText("46%");
+
+  const count = page.getByTestId("atlas-predictions-count");
+  const table = page.getByTestId("atlas-predictions");
+  await expect(count).toContainText("17,947 predictions for 2,717 genes");
+  await expect(table.locator('a[href*="/gene?symbol=PSMG3"]').first()).toBeVisible();
+  await expect(table.getByTestId("neighbour-mark")).toHaveCount(0);
+  expect(api.atlasRequests.find((request) => request.path === "predictions").query).toMatchObject({
+    novel: "true",
+    min_confidence: "0.3",
+    include_neighbours: "false",
+    limit: "50",
+    offset: "0",
+  });
+
+  await page.getByLabel("Only placeholder names").check();
+  await expect(page).toHaveURL(/\/atlas\?tab=predictions&placeholder=1$/);
+  await expect(count).toContainText("139 predictions for 24 genes");
+  await expect(table.locator('a[href*="/gene?symbol=FAM153CP"]').first()).toBeVisible();
+  await expect(table).toContainText("family with sequence similarity 153 member C");
+  await page.getByLabel("Only placeholder names").uncheck();
+
+  await page.getByLabel("Include possible neighbour effects").check();
+  await expect(page).toHaveURL(/\/atlas\?tab=predictions&neighbours=1$/);
+  await expect(table.getByTestId("neighbour-mark").first()).toBeVisible();
+  await expect(table.locator("tr", { hasText: "FTSJ3" }).getByTestId("neighbour-mark")).toHaveAttribute("title", /PSMC5/);
+
+  await page.getByLabel("Only genes without GO terms").check();
+  await expect(page).toHaveURL(/nogo=1/);
+  await expect.poll(() => asked((query) => query.max_annotations === "0" && query.include_neighbours === "true")).toBe(true);
+  await page.getByRole("button", { name: "Minimum confidence 50%" }).click();
+  await expect(page).toHaveURL(/conf=0\.5/);
+  await expect.poll(() => asked((query) => query.min_confidence === "0.5")).toBe(true);
+  await page.getByLabel("Function contains").fill("snRNA");
+  await expect(page).toHaveURL(/term=snRNA/);
+  await expect.poll(() => asked((query) => query.term === "snRNA")).toBe(true);
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect.poll(() => asked((query) => query.offset === "50")).toBe(true);
+  expect(await errors()).toEqual([]);
+});
+
+test("function atlas: pathways show the knock-downs that move a gene set, and the gene sets a knock-down moves", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/atlas?tab=pathways");
+  await expect(page.getByTestId("atlas-pathways-explain")).toContainText("Meta z");
+  await page.getByRole("combobox", { name: "Search a gene set" }).fill("cholesterol");
+  await page.getByRole("option", { name: /^Cholesterol Homeostasis/ }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis$/);
+  await expect(page.getByTestId("atlas-pathway").getByRole("heading", { level: 2, name: "Cholesterol Homeostasis" })).toBeVisible();
+  const down = page.getByTestId("atlas-pathway-down");
+  await expect(down.locator('a[href*="by=gene"][href*="pert=MBTPS1"]')).toBeVisible();
+  await expect(down.locator('a[href*="/gene?symbol=MBTPS1"]')).toBeVisible();
+  // SREBF2 is itself in the set
+  await expect(down.getByTestId("member-mark")).toHaveCount(1);
+  await expect(down.locator("tr", { hasText: "SREBF2" }).getByTestId("member-mark")).toBeVisible();
+  await expect(page.getByTestId("atlas-pathway-up").locator('a[href*="pert=ATP6V1A"]')).toBeVisible();
+  await expect(down.getByRole("button", { name: /Send the genes to/ })).toBeVisible();
+
+  // the minimum number of contexts is part of the address and of the request
+  await page.getByRole("button", { name: "Minimum contexts 3" }).click();
+  await expect(page).toHaveURL(/contexts=3/);
+  await expect.poll(() => api.atlasRequests.some((request) => request.path === "pathway" && request.query.min_contexts === "3")).toBe(true);
+
+  // from a knock-down to the gene sets it moves, and back to a gene set
+  await down.locator('a[href*="pert=SCAP"]').first().click();
+  await expect(page).toHaveURL(/tab=pathways&by=gene&.*pert=SCAP/);
+  const sets = page.getByTestId("atlas-perturbation-down");
+  await expect(sets).toContainText("P26: Cholesterol Homeostasis");
+  await expect(sets).toContainText("Programmes");
+  await sets.getByRole("link", { name: "Cholesterol Homeostasis", exact: true }).click();
+  await expect(page).toHaveURL(/\/atlas\?tab=pathways&lib=hallmark&set=Cholesterol%20Homeostasis/);
+  await expect(page).not.toHaveURL(/by=gene/);
+  await expect(page.getByTestId("atlas-pathway-down")).toBeVisible();
+
+  await page.goto("/atlas?tab=pathways&by=gene&pert=NOTAGENE1");
+  await expect(page.getByRole("alert")).toContainText("is not a perturbed gene of the pathway atlas");
+  expect(await errors()).toEqual([]);
+});
+
+test("gene page has a Function atlas block that opens the gene in the atlas", async ({ page }) => {
+  const api = await mockApi(page);
+  const errors = watchErrors(page);
+  await page.goto("/gene?symbol=ATF4");
+  const block = page.getByTestId("gene-atlas");
+  await expect(block.getByRole("heading", { level: 2, name: "Function atlas" })).toBeVisible();
+  await expect(block.getByTestId("gene-atlas-pert")).toContainText("M48: Ribosomal Scanning And Start Codon Recognition");
+  await expect(block.getByTestId("gene-atlas-genes")).toContainText("P9: PSAT1 / MTHFD2 / GARS1");
+  await expect(block.getByTestId("gene-atlas-predictions").locator("tbody tr")).toHaveCount(5);
+  await expect(block.getByTestId("gene-atlas-predictions")).toContainText("42%");
+  expect(api.atlasRequests.some((request) => request.path === "gene/ATF4")).toBe(true);
+  await block.getByRole("link", { name: "Open in the Function atlas" }).click();
+  await expect(page).toHaveURL(/\/atlas\?gene=ATF4&module=48$/);
+  await expect(page.getByTestId("atlas-gene-panel").getByRole("heading", { level: 3, name: "ATF4" })).toBeVisible();
   expect(await errors()).toEqual([]);
 });

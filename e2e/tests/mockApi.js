@@ -34,6 +34,19 @@ const FIXTURES = {
   // Local enrichment and the CORUM benchmark
   enrichment: fixture("enrichment_isr"),
   benchmarkCorum: fixture("benchmark_corum"),
+  // Function atlas: answers of the API's /api/v1/atlas endpoints (real data, 2026-11-15).
+  // The maps are cut to the points of a few modules; the lists of modules to the same ones.
+  atlasSummary: fixture("atlas_summary"),
+  atlasMaps: { pert: fixture("atlas_map_pert"), genes: fixture("atlas_map_genes") },
+  atlasModules: { pert: fixture("atlas_modules_pert"), genes: fixture("atlas_modules_genes") },
+  atlasModule: { "pert/47": fixture("atlas_module_pert_47"), "genes/26": fixture("atlas_module_genes_26") },
+  atlasGenes: { INTS15: fixture("atlas_gene_INTS15"), ATF4: fixture("atlas_gene_ATF4"), KIAA0586: fixture("atlas_gene_KIAA0586") },
+  atlasPredictions: fixture("atlas_predictions"),
+  atlasPredictionsPlaceholder: fixture("atlas_predictions_placeholder"),
+  atlasPredictionsNeighbours: fixture("atlas_predictions_neighbours"),
+  atlasPathways: fixture("atlas_pathways"),
+  atlasPathwayCholesterol: fixture("atlas_pathway_cholesterol"),
+  atlasPathwaysSCAP: fixture("atlas_pathways_perturbation_SCAP"),
   // Output of the backend's clusterData() for 60 K562 perturbations
   corrCluster: fixture("corr_cluster"),
   // Cell cycle: answers of the API's /api/v1/cellcycle endpoints (real data, 2026-11-15)
@@ -76,6 +89,7 @@ const mockApi = async (page) => {
   const taskRequests = []; // request types posted to /getData
   const regulatorRequests = []; // bodies posted to /api/v1/regulators/gene-set
   const integratedRequests = []; // { path, body } posted to /api/v1/integrated/* and /api/v1/enrichment
+  const atlasRequests = []; // { path, query } asked from /api/v1/atlas/*
   const postBody = (request) => {
     try {
       return JSON.parse(request.postData() || "{}");
@@ -197,6 +211,48 @@ const mockApi = async (page) => {
       return json(route, FIXTURES.enrichment);
     }
     if (pathname === "/api/v1/benchmark/corum") return json(route, FIXTURES.benchmarkCorum);
+    if (pathname.startsWith("/api/v1/atlas/")) {
+      const query = Object.fromEntries(url.searchParams.entries());
+      const atlasPath = decodeURIComponent(pathname.slice("/api/v1/atlas/".length));
+      atlasRequests.push({ path: atlasPath, query });
+      const missing = (what) => json(route, { error: { code: "NOT_FOUND", message: `${what} not found`, details: {} } }, 404);
+      if (atlasPath === "summary") return json(route, FIXTURES.atlasSummary);
+      const [head, second, third] = atlasPath.split("/");
+      if (head === "map" && FIXTURES.atlasMaps[second]) return json(route, FIXTURES.atlasMaps[second]);
+      if (head === "modules" && FIXTURES.atlasModules[second] && !third) {
+        // like the API: `q` matches the name, an enriched term or a member gene
+        const wanted = (query.q || "").toLowerCase();
+        const modules = FIXTURES.atlasModules[second].modules.filter(
+          (entry) =>
+            !wanted ||
+            entry.name.toLowerCase().includes(wanted) ||
+            entry.terms.some((term) => term.set.toLowerCase().includes(wanted)) ||
+            entry.members.some((gene) => gene.toLowerCase() === wanted)
+        );
+        return json(route, { ...FIXTURES.atlasModules[second], total: modules.length, modules });
+      }
+      if (head === "modules") return FIXTURES.atlasModule[`${second}/${third}`] ? json(route, FIXTURES.atlasModule[`${second}/${third}`]) : missing("Module");
+      if (head === "gene") return FIXTURES.atlasGenes[second.toUpperCase()] ? json(route, FIXTURES.atlasGenes[second.toUpperCase()]) : missing("Gene");
+      if (atlasPath === "predictions") {
+        if (query.uncharacterised === "true") return json(route, FIXTURES.atlasPredictionsPlaceholder);
+        if (query.include_neighbours === "true") return json(route, FIXTURES.atlasPredictionsNeighbours);
+        return json(route, FIXTURES.atlasPredictions);
+      }
+      if (atlasPath === "pathways") {
+        const wanted = (query.q || "").toLowerCase();
+        const sets = FIXTURES.atlasPathways.sets.filter(
+          (entry) => entry.name.toLowerCase().includes(wanted) && (!query.library || entry.library === query.library)
+        );
+        return json(route, { sets });
+      }
+      if (atlasPath === "pathway") {
+        return query.library === "hallmark" && query.name === "Cholesterol Homeostasis" ? json(route, FIXTURES.atlasPathwayCholesterol) : missing("Gene set");
+      }
+      if (head === "pathways" && second === "perturbation") {
+        return (third || "").toUpperCase() === "SCAP" ? json(route, FIXTURES.atlasPathwaysSCAP) : missing("Perturbation");
+      }
+      return missing("Atlas endpoint");
+    }
     // every dataset answers with the K562 essential table, every perturbation with CDK1
     if (pathname === "/api/v1/cellcycle/datasets") return json(route, FIXTURES.cellCycleDatasets);
     if (/^\/api\/v1\/cellcycle\/datasets\/[^/]+\/perturbations$/.test(pathname)) return json(route, FIXTURES.cellCycleTable);
@@ -227,7 +283,7 @@ const mockApi = async (page) => {
     return notFound(route);
   });
 
-  return { requests, unmocked, enrichr, taskRequests, regulatorRequests, integratedRequests };
+  return { requests, unmocked, enrichr, taskRequests, regulatorRequests, integratedRequests, atlasRequests };
 };
 
 /**

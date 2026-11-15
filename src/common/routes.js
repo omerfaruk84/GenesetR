@@ -6,6 +6,7 @@ const ROUTES = Object.freeze({
   PROJECT_SIGNATURE: "/project-signature",
   TF_REGULATORS: "/tf-regulators",
   INTEGRATED: "/integrated",
+  ATLAS: "/atlas",
   PERMALINK: "/r",
   CORRELATION: "/correlation",
   DR: "/dr",
