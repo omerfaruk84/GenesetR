@@ -277,15 +277,14 @@ test("limits: 4,000 characters per question and ten questions per conversation",
   expect(await errors()).toEqual([]);
 });
 
-test("the navigation leads to the page", async ({ page }) => {
+test("the navigation does not offer the page while the assistant is switched off", async ({ page }) => {
   await mockApi(page);
   await page.goto("/datasets");
   await page.getByRole("button", { name: /Explore a gene$/ }).first().click();
-  await page.getByRole("menuitem", { name: /Ask GeneSetR/ }).click();
-  await expect(page).toHaveURL(/\/ask$/);
-  await expect(page.getByRole("heading", { name: "Ask GeneSetR", level: 1 })).toBeVisible();
-  // the group of the page is marked as the current one, and the menu has closed
+  await expect(page.getByRole("menuitem", { name: /Gene page/ })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Ask GeneSetR/ })).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.getByText("Ask GeneSetR")).toHaveCount(0);
 });
 
 for (const [width, height] of [

@@ -17,7 +17,8 @@ export const NAV_GROUPS = [
     question: "What does my gene do, and what controls it?",
     items: [
       { name: "Gene page", to: ROUTES.GENE, about: "Everything about one gene across all datasets" },
-      { name: "Ask GeneSetR", to: ROUTES.ASK, about: "Ask in plain words what a gene does or what controls it; an AI model answers from the tables and lists what it read" },
+      // "Ask GeneSetR" (ROUTES.ASK) is left out of the navigation while the assistant is switched off;
+      // to offer it again, add: { name: "Ask GeneSetR", to: ROUTES.ASK, about: "Ask in plain words what a gene does or what controls it; an AI model answers from the tables and lists what it read" },
       { name: "Explore a drug", to: ROUTES.DRUG, about: "One drug in 47 cell lines: response by dose, genes it changes, similar drugs and knock-downs" },
       { name: TabNames.GENE_REGULATION, to: ROUTES.GENE_REGULATION, about: "Network of regulators and targets of a gene" },
       { name: TabNames.GENE_REGULATION_ENHANCED, to: ROUTES.GENE_REGULATION_ENHANCED, about: "Regulation network combined over several datasets" },
